@@ -4,10 +4,6 @@ const webpack = require('webpack')
  */
 require('now-env')
 
-console.log({
-  SECRET: process.env.IPSTACK_KEY
-})
-
 /**
  * If some of the envs are public, like a google maps key, but you still
  * want to keep them secret from the repo, the following code will allow you
