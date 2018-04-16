@@ -9,6 +9,13 @@ const handle = app.getRequestHandler()
 app.prepare()
 .then(() => {
   const server = express()
+  
+  server.get('/check', function (req, res) {
+    let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
+    if (dev) ip = '72.213.157.196'
+    
+    res.send({ ip: ip })
+  })
 
   server.get('/a', (req, res) => {
     return app.render(req, res, '/b', req.query)
