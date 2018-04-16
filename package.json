@@ -7,6 +7,7 @@
     "express": "^4.16.3",
     "iplocation": "^5.0.0",
     "next": "^5.1.0",
+    "now-env": "^3.0.4",
     "react": "^16.3.2",
     "react-dom": "^16.3.2"
   },
@@ -16,6 +17,11 @@
     "build": "next build",
     "start": "NODE_ENV=production node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "now": {
+    "env": {
+      "IPSTACK_KEY": "@ipstack-key"
+    }
   },
   "keywords": [
     "burn",
