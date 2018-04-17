@@ -23,7 +23,8 @@
   "now": {
     "env": {
       "IPSTACK_KEY": "@ipstack-key",
-      "GOOGLE_KEY": "@google-key"
+      "GOOGLE_KEY": "@google-key",
+      "OK_DATA_URL": "@ok-data-url-json"
     }
   },
   "keywords": [
