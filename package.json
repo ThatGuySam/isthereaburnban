@@ -21,7 +21,8 @@
   },
   "now": {
     "env": {
-      "IPSTACK_KEY": "@ipstack-key"
+      "IPSTACK_KEY": "@ipstack-key",
+      "GOOGLE_KEY": "@google-key"
     }
   },
   "keywords": [

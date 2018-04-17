@@ -1,4 +1,18 @@
+require('now-env')
 const iplocation = require('iplocation')
+const NodeGeocoder = require('node-geocoder')
+
+const geocoderOptions = {
+  provider: 'google',
+
+  // Optional depending on the providers
+  httpAdapter: 'https', // Default
+  apiKey: process.env.GOOGLE_KEY, // for Mapquest, OpenCage, Google Premier
+  formatter: null         // 'gpx', 'string', ...
+}
+
+// Setup Geocoder instance
+const geocoder = NodeGeocoder(geocoderOptions)
 
 const fetchIPInfo = (ip) =>  new Promise(function(resolve, reject) {
   
@@ -30,11 +44,7 @@ const fetchIPInfo = (ip) =>  new Promise(function(resolve, reject) {
     if (error) {
       reject(Error("It broke"));
     } else {
-      resolve({
-        ip: ip,
-        info: ipres,
-        providers: providers
-      })
+      resolve(ipres)
     }
 
   })
@@ -42,7 +52,18 @@ const fetchIPInfo = (ip) =>  new Promise(function(resolve, reject) {
 
 module.exports = async (ip) => {
   
-  const info = await fetchIPInfo(ip)
+  const ipInfo = await fetchIPInfo(ip)
   
-  return info
+  let locationInfo
+  
+  // Or using Promise
+  await geocoder.geocode(ipInfo.city)
+    .then(function(res) {
+      locationInfo = res
+    })
+    .catch(function(err) {
+      console.log(err)
+    })
+  
+  return locationInfo
 }

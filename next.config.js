@@ -13,7 +13,8 @@ module.exports = {
   webpack: config => {
     config.plugins.push(
       new webpack.DefinePlugin({
-        'process.env.IPSTACK_KEY': JSON.stringify(process.env.IPSTACK_KEY)
+        'process.env.IPSTACK_KEY': JSON.stringify(process.env.IPSTACK_KEY),
+        'process.env.GOOGLE_KEY': JSON.stringify(process.env.GOOGLE_KEY)
       })
       // Same as above
       // new webpack.EnvironmentPlugin(['SECRET'])

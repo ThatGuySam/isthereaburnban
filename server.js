@@ -1,7 +1,7 @@
 const express = require('express')
 const next = require('next')
 
-const getCounty = require('./helpers/getCounty')
+const getLocationInfo = require('./helpers/getLocationInfo')
 
 const port = parseInt(process.env.PORT, 10) || 3000
 const dev = process.env.NODE_ENV !== 'production'
@@ -16,9 +16,12 @@ app.prepare()
     let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
     // Broken Arrow - '72.213.157.196'
     // Catoosa - '98.184.172.52'
-    if (dev) ip = '98.184.172.52'
+    if (dev) ip = '72.213.157.196'
     
-    const county = await getCounty(ip)
+    const locationInfo = await getLocationInfo(ip)
+    
+    const googleCountyName = locationInfo[0].administrativeLevels.level2long
+    const county = googleCountyName.toLowerCase().replace("county", "")
     
     console.log(county)
     
