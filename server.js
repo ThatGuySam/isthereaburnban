@@ -1,6 +1,8 @@
 const express = require('express')
 const next = require('next')
 
+const getCounty = require('./helpers/getCounty')
+
 const port = parseInt(process.env.PORT, 10) || 3000
 const dev = process.env.NODE_ENV !== 'production'
 const app = next({ dev })
@@ -10,11 +12,17 @@ app.prepare()
 .then(() => {
   const server = express()
   
-  server.get('/check', function (req, res) {
+  server.get('/check', async function (req, res) {
     let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
-    if (dev) ip = '72.213.157.196'
+    // Broken Arrow - '72.213.157.196'
+    // Catoosa - '98.184.172.52'
+    if (dev) ip = '98.184.172.52'
     
-    res.send({ ip: ip })
+    const county = await getCounty(ip)
+    
+    console.log(county)
+    
+    res.send(county)
   })
 
   server.get('/a', (req, res) => {
