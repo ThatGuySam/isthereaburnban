@@ -4,6 +4,7 @@
   "description": "Tells you if there is a burn ban",
   "main": "index.js",
   "dependencies": {
+    "@zeit/next-css": "^0.1.5",
     "express": "^4.16.3",
     "iplocation": "^5.0.0",
     "isomorphic-unfetch": "^2.0.0",
