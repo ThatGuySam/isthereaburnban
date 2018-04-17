@@ -1,6 +1,11 @@
 require('now-env')
+const slug = require('slug')
 const iplocation = require('iplocation')
 const NodeGeocoder = require('node-geocoder')
+
+const cacheable = require('./cacheable')
+
+const oneHour = (1000 * 60 * 60)
 
 const geocoderOptions = {
   provider: 'google',
@@ -52,18 +57,23 @@ const fetchIPInfo = (ip) =>  new Promise(function(resolve, reject) {
 
 module.exports = async (ip) => {
   
-  const ipInfo = await fetchIPInfo(ip)
+  // const ipInfo = await fetchIPInfo(ip)
   
-  let locationInfo
+  const ipInfo = await cacheable(`ip-${ip}-info`, oneHour, async () => {
+    return await fetchIPInfo(ip)
+  })
   
-  // Or using Promise
-  await geocoder.geocode(ipInfo.city)
-    .then(function(res) {
-      locationInfo = res
-    })
-    .catch(function(err) {
-      console.log(err)
-    })
+  // let locationInfo
+    
+  const locationInfo = await cacheable(`city-${slug(ipInfo.city)}-info`, oneHour, async () => {
+    return await geocoder.geocode(ipInfo.city)
+      .then(function(res) {
+        return res
+      })
+      .catch(function(err) {
+        console.log(err)
+      })
+  })
   
   return locationInfo
 }

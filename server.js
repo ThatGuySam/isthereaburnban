@@ -3,6 +3,9 @@ const next = require('next')
 
 const getLocationInfo = require('./helpers/getLocationInfo')
 const getOKBurnBans = require('./helpers/getOKBurnBans')
+const cacheable = require('./helpers/cacheable')
+
+const oneHour = (1000 * 60 * 60)
 
 const port = parseInt(process.env.PORT, 10) || 3000
 const dev = process.env.NODE_ENV !== 'production'
@@ -15,7 +18,7 @@ app.prepare()
   
   server.get('/check', async function (req, res) {
     
-    const bans = await getOKBurnBans()
+    const bans = await cacheable('ok-bans', oneHour, async () => await getOKBurnBans())
     
     let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
     // Broken Arrow - '72.213.157.196'
@@ -24,6 +27,12 @@ app.prepare()
     if (dev) ip = '72.213.157.196'
     
     const locationInfo = await getLocationInfo(ip)
+    
+    // const bans = await cacheable('ok-bans', oneHour, async () => {
+    //   const fetchBans = await getOKBurnBans()
+    //   return fetchBans
+    // })
+    
     const googleCountyName = locationInfo[0].administrativeLevels.level2long
     const countyName = googleCountyName.toLowerCase().replace("county", "").trim()
     
