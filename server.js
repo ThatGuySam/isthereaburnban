@@ -27,9 +27,14 @@ app.prepare()
     const googleCountyName = locationInfo[0].administrativeLevels.level2long
     const countyName = googleCountyName.toLowerCase().replace("county", "").trim()
     
-    const county = bans.filter(function( county ) {
+    const foundCounty = bans.filter(function( county ) {
       return county.name.toLowerCase() == countyName
     })[0]
+    
+    const county = {
+      ...foundCounty,
+      longName: googleCountyName
+    }
     
     res.send({
       ip: ip,

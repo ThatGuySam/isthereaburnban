@@ -24,7 +24,8 @@ module.exports = async (ip) => {
     const county = {
       id: ban.attributes.OBJECTID,
       name: ban.attributes.county_nam,
-      status: ban.attributes.Burn_Ban_Status
+      status: ban.attributes.Burn_Ban_Status,
+      inEffect: (ban.attributes.Burn_Ban_Status !== 'None')
     }
     
     mapped.push(county)
