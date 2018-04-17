@@ -18,9 +18,13 @@
     "dev": "node server.js",
     "build": "next build",
     "start": "NODE_ENV=production node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "deploy": "now",
+    "deploy-live": "now && now alias && now isthereaburnban --safe"
   },
   "now": {
+    "name": "isthereaburnban",
+    "alias": "isthereaburnban.com",
     "env": {
       "IPSTACK_KEY": "@ipstack-key",
       "GOOGLE_KEY": "@google-key",
