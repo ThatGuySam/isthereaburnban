@@ -2,6 +2,7 @@ const is = require('./is')
 const cacheable = require('./cacheable')
 const getOKBurnBans = require('./getOKBurnBans')
 const getLocationInfo = require('./getLocationInfo')
+const getMessage = require('./messages')
 
 const oneHour = (1000 * 60 * 60)
 
@@ -15,28 +16,35 @@ module.exports = async (ip) => {
   if (is.dev()) ip = '156.77.54.32'
   
   const locationInfo = await getLocationInfo(ip)
+  const locationName = locationInfo[0].formattedAddress
   const state = locationInfo[0].administrativeLevels.level1long
-  
-  if (state !== 'Oklahoma') return {
-    error: 'stateNotSupported',
-    message: `Sorry we don't support your state yet`
-  }
-  
   const googleCountyName = locationInfo[0].administrativeLevels.level2long
   const countyName = googleCountyName.toLowerCase().replace("county", "").trim()
   
-  const foundCounty = bans.filter(function( county ) {
+  if (state !== 'Oklahoma') return {
+    key: 'stateNotSupported',
+    status: getMessage('stateNotSupported', {name: locationName})
+  }
+  
+  const county = bans.filter(function( county ) {
     return county.name.toLowerCase() == countyName
   })[0]
   
-  const county = {
-    ...foundCounty,
-    longName: googleCountyName
+  const key = (county.inEffect) ? 'yes' : 'no'
+  const location = {
+    ip: ip,
+    name: locationName,
+    county: {
+      ...county,
+      longName: googleCountyName
+    }
   }
   
+  console.log(getMessage('yes', {name: locationName}))
+  
   return {
-    ip: ip,
-    place: locationInfo[0].formattedAddress,
-    county: county
+    key: key,
+    status: getMessage(key, location),
+    location: location
   }
 }

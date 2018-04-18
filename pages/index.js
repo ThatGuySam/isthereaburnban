@@ -20,8 +20,6 @@ export default class Index extends Component {
 
     this.state = {
       hasFetched: false,
-      place: null,
-      inEffect: null,
       backgroundColor: '#9a9a9a',
       word: 'Checking',
       message: ''
@@ -30,18 +28,14 @@ export default class Index extends Component {
   
   componentDidMount = async () => {
     const res = await fetch('/check')
-    const json = await res.json()
-    const inEffect = json.county.inEffect
-    
-    console.log(json.county)
+    const result = await res.json()
+    const status = result.status
     
     this.setState({
       hasFetched: true,
-      place: json.place,
-      inEffect: inEffect,
-      backgroundColor: (inEffect) ? '#f34f49' : '#35c28c',
-      word: (inEffect) ? 'Yes' : 'Nope',
-      message: (inEffect) ? `There is a ban in effect for ${json.place}` : `There is no burn ban active for ${json.place}`,
+      backgroundColor: status.backgroundColor,
+      word: status.word,
+      message: status.message,
     })
   }
   
