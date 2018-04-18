@@ -1,9 +1,7 @@
 const express = require('express')
 const next = require('next')
 
-const getLocationInfo = require('./helpers/getLocationInfo')
-const getOKBurnBans = require('./helpers/getOKBurnBans')
-const cacheable = require('./helpers/cacheable')
+const getBanStatus = require('./helpers/getBanStatus')
 
 const oneHour = (1000 * 60 * 60)
 
@@ -17,39 +15,10 @@ app.prepare()
   const server = express()
   
   server.get('/check', async function (req, res) {
-    
-    const bans = await cacheable('ok-bans', oneHour, async () => await getOKBurnBans())
-    
     let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
-    // Broken Arrow - '72.213.157.196'
-    // Catoosa - '98.184.172.52'
-    // Cleveland, OH - '156.77.54.32'
-    if (dev) ip = '72.213.157.196'
+    const result = await getBanStatus(ip)
     
-    const locationInfo = await getLocationInfo(ip)
-    
-    // const bans = await cacheable('ok-bans', oneHour, async () => {
-    //   const fetchBans = await getOKBurnBans()
-    //   return fetchBans
-    // })
-    
-    const googleCountyName = locationInfo[0].administrativeLevels.level2long
-    const countyName = googleCountyName.toLowerCase().replace("county", "").trim()
-    
-    const foundCounty = bans.filter(function( county ) {
-      return county.name.toLowerCase() == countyName
-    })[0]
-    
-    const county = {
-      ...foundCounty,
-      longName: googleCountyName
-    }
-    
-    res.send({
-      ip: ip,
-      place: locationInfo[0].formattedAddress,
-      county: county
-    })
+    res.send(result)
   })
 
   server.get('*', (req, res) => {
