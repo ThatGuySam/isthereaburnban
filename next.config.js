@@ -17,7 +17,7 @@ const config = config => {
       // Shared with front-end
       // 'process.env.IPSTACK_KEY': JSON.stringify(process.env.IPSTACK_KEY),
       // 'process.env.GOOGLE_KEY': JSON.stringify(process.env.GOOGLE_KEY),
-      'process.env.OK_DATA_URL': JSON.stringify(process.env.OK_DATA_URL)
+      'process.env.FACEBOOK_APP_ID': JSON.stringify(process.env.FACEBOOK_APP_ID)
     })
     // Same as above
     // new webpack.EnvironmentPlugin(['SECRET'])
