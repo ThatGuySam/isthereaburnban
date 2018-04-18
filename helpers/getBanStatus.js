@@ -17,8 +17,6 @@ module.exports = async (ip) => {
   const locationInfo = await getLocationInfo(ip)
   const state = locationInfo[0].administrativeLevels.level1long
   
-  // console.log('locationInfo', locationInfo)
-  
   if (state !== 'Oklahoma') return {
     error: 'stateNotSupported',
     message: `Sorry we don't support your state yet`

@@ -18,8 +18,6 @@ app.prepare()
     let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
     const result = await getBanStatus(ip)
     
-    console.log(result)
-    
     res.send(result)
   })
 
