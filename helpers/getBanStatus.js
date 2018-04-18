@@ -12,9 +12,17 @@ module.exports = async (ip) => {
   // Broken Arrow - '72.213.157.196'
   // Catoosa - '98.184.172.52'
   // Cleveland, OH - '156.77.54.32'
-  if (is.dev()) ip = '72.213.157.196'
+  if (is.dev()) ip = '156.77.54.32'
   
   const locationInfo = await getLocationInfo(ip)
+  const state = locationInfo[0].administrativeLevels.level1long
+  
+  // console.log('locationInfo', locationInfo)
+  
+  if (state !== 'Oklahoma') return {
+    error: 'stateNotSupported',
+    message: `Sorry we don't support your state yet`
+  }
   
   const googleCountyName = locationInfo[0].administrativeLevels.level2long
   const countyName = googleCountyName.toLowerCase().replace("county", "").trim()
