@@ -1,4 +1,3 @@
-require('now-env')
 const is = require('is_js')
 
 const customIs = {}
@@ -10,7 +9,13 @@ customIs.browser = () => typeof window !== 'undefined'
 customIs.server = () => !customIs.browser
 
 // Is development environment
-customIs.dev = () => (process.env.NODE_ENV !== 'production')
+customIs.dev = () => {
+  if (!customIs.server()) {
+    console.log("%c Whoa! This isn't a server", 'background: #f00; color: #fff')
+    return Error("Using is.dev in browser")
+  }
+  return (process.env.NODE_ENV !== 'production')
+}
 
 // Is production environment
 customIs.production = () => !customIs.dev
