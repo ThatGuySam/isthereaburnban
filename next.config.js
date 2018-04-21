@@ -15,7 +15,7 @@ const config = config => {
   config.plugins.push(
     new webpack.DefinePlugin({
       // Shared with front-end
-      // 'process.env.IPSTACK_KEY': JSON.stringify(process.env.IPSTACK_KEY),
+      'process.env.IPSTACK_KEY': JSON.stringify(process.env.IPSTACK_KEY),
       'process.env.GOOGLE_KEY': JSON.stringify(process.env.GOOGLE_KEY),
       'process.env.FACEBOOK_APP_ID': JSON.stringify(process.env.FACEBOOK_APP_ID)
     })
