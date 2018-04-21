@@ -10,15 +10,6 @@ module.exports = async (geolocation) => {
   
   const bans = await cacheable('ok-bans', oneHour, async () => await getOKBurnBans())
   
-  // Broken Arrow - '72.213.157.196'
-  // Catoosa - '98.184.172.52'
-  // Cleveland, OH - '156.77.54.32'
-  // if (is.dev()) ip = '98.184.172.52'
-  
-  // console.log('geolocation', geolocation)
-  // console.log('geolocation.address', geolocation.address)
-  
-  // const locationInfo = await getLocationInfo(ip)
   const locationName = `${geolocation.address.city}, ${geolocation.address.stateCode}`
   const state = geolocation.address.state
   const googleCountyName = geolocation.address.region

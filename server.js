@@ -2,6 +2,8 @@ const express = require('express')
 const next = require('next')
 const bodyParser = require('body-parser')
 
+const is = require('./helpers/is')
+const getIpInfo = require('./helpers/getIpInfo')
 const getBanStatus = require('./helpers/getBanStatus')
 
 const oneHour = (1000 * 60 * 60)
@@ -22,6 +24,26 @@ app.prepare()
     const result = await getBanStatus(req.body.geolocation)
     
     res.send(result)
+  })
+  
+  server.get('/getip', async function (req, res) {
+    let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
+    
+    // Broken Arrow - '72.213.157.196'
+    // Catoosa - '98.184.172.52'
+    // Cleveland, OH - '156.77.54.32'
+    if (is.dev()) ip = '98.184.172.52'
+    
+    const ipInfo = await getIpInfo(ip)
+    
+    res.setHeader('Content-Type', 'application/json')
+    // Set callback name
+    if (typeof req.query.callback !== 'undefined') {
+      server.set(req.query.callback, 'cb')
+      res.jsonp(ipInfo)
+    } else {
+      res.send(ipInfo)
+    }
   })
 
   server.get('*', (req, res) => {
