@@ -9,7 +9,7 @@ module.exports = async (ip) => {
   
   const requestUrl = `http://api.ipstack.com/${ip}?access_key=${process.env.IPSTACK_KEY}`
   
-  const ipInfo = await cacheable(`ip-${ip}-info`, oneHour, async () => {
+  const ipInfo = await cacheable(`ip-${ip}-info`, (oneHour * 24 * 30), async () => {
     return await fetch(requestUrl).then(r => r.json())
   })
   
