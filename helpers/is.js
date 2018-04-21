@@ -3,10 +3,10 @@ const is = require('is_js')
 const customIs = {}
 
 // If there's a window there's probably a browser
-customIs.browser = () => typeof window !== 'undefined'
+customIs.browser = () => (typeof window !== 'undefined')
 
 // Whatever the opposite of customIs.browser is
-customIs.server = () => !customIs.browser
+customIs.server = () => !customIs.browser()
 
 // Is development environment
 customIs.dev = () => {
@@ -18,7 +18,7 @@ customIs.dev = () => {
 }
 
 // Is production environment
-customIs.production = () => !customIs.dev
+customIs.production = () => !customIs.dev()
 
 // Is referrer current site
 customIs.refferedLocally = () => (document.referrer.indexOf(location.protocol + '//' + location.host) === 0)
