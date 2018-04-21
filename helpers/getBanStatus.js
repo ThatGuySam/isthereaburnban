@@ -6,19 +6,22 @@ const getMessage = require('./messages')
 
 const oneHour = (1000 * 60 * 60)
 
-module.exports = async (ip) => {
+module.exports = async (geolocation) => {
   
   const bans = await cacheable('ok-bans', oneHour, async () => await getOKBurnBans())
   
   // Broken Arrow - '72.213.157.196'
   // Catoosa - '98.184.172.52'
   // Cleveland, OH - '156.77.54.32'
-  if (is.dev()) ip = '156.77.54.32'
+  // if (is.dev()) ip = '98.184.172.52'
   
-  const locationInfo = await getLocationInfo(ip)
-  const locationName = locationInfo[0].formattedAddress
-  const state = locationInfo[0].administrativeLevels.level1long
-  const googleCountyName = locationInfo[0].administrativeLevels.level2long
+  // console.log('geolocation', geolocation)
+  // console.log('geolocation.address', geolocation.address)
+  
+  // const locationInfo = await getLocationInfo(ip)
+  const locationName = `${geolocation.address.city}, ${geolocation.address.stateCode}`
+  const state = geolocation.address.state
+  const googleCountyName = geolocation.address.region
   const countyName = googleCountyName.toLowerCase().replace("county", "").trim()
   
   if (state !== 'Oklahoma') return {
@@ -31,8 +34,7 @@ module.exports = async (ip) => {
   })[0]
   
   const key = (county.inEffect) ? 'yes' : 'no'
-  const location = {
-    ip: ip,
+  const locationResponse = {
     name: locationName,
     county: {
       ...county,
@@ -40,11 +42,11 @@ module.exports = async (ip) => {
     }
   }
   
-  console.log(getMessage('yes', {name: locationName}))
+  const status = getMessage(key, locationResponse)
   
   return {
     key: key,
-    status: getMessage(key, location),
-    location: location
+    location: locationResponse,
+    ...status
   }
 }

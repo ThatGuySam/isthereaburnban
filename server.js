@@ -1,5 +1,6 @@
 const express = require('express')
 const next = require('next')
+const bodyParser = require('body-parser')
 
 const getBanStatus = require('./helpers/getBanStatus')
 
@@ -14,9 +15,11 @@ app.prepare()
 .then(() => {
   const server = express()
   
-  server.get('/check', async function (req, res) {
-    let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress
-    const result = await getBanStatus(ip)
+  server.use(bodyParser.json()); // support json encoded bodies
+  server.use(bodyParser.urlencoded({ extended: true })); // support encoded bodies
+  
+  server.all('/check', async function (req, res) {
+    const result = await getBanStatus(req.body.geolocation)
     
     res.send(result)
   })
