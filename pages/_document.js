@@ -15,7 +15,7 @@ export default class MyDocument extends Document {
         <Head>
           <meta name='viewport' content='width=device-width, height=device-height, initial-scale=1' />
           <link rel='stylesheet' href='https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css' integrity='sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4' crossOrigin='anonymous' />
-          <link rel='stylesheet' href='/_next/static/style.css' />
+          <link rel='stylesheet' href='/static/style.css' />
         </Head>
         <body>
           <Main />
