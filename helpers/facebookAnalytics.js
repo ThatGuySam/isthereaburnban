@@ -7,7 +7,7 @@ module.exports = () => {
   const id = 'facebook-jssdk'
   const fbAppId = process.env.FACEBOOK_APP_ID
   
-  let js, fjs = document.getElementsByTagName(s)[0]
+  let js, fjs = document.getElementsByTagName('script')[0]
   if (document.getElementById(id)) return
   js = document.createElement('script')
   js.id = id
