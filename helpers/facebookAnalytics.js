@@ -1,8 +1,13 @@
 const is = require('./is')
 
-module.exports = () => {
+export default () => {
   // Cancel if there's no document
   if (typeof document !== 'object') return
+  
+  window.fbAsyncInit = function() {
+    // console.log('Facebook Analytics Initialized')
+    FB.AppEvents.logPageView()
+  }
   
   const id = 'facebook-jssdk'
   const fbAppId = process.env.FACEBOOK_APP_ID
