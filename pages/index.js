@@ -3,6 +3,7 @@ import { bindActionCreators } from 'redux'
 import { connect } from 'react-redux'
 import { initStore, startClock, addCount, setBanStatus, serverRenderClock } from '../store'
 import withRedux from 'next-redux-wrapper'
+import initFBAnalytics from '../helpers/facebookAnalytics'
 import Link from 'next/link'
 import IsThereABurnBan from '../components/IsThereABurnBan'
 // checking - #9a9a9a
@@ -14,6 +15,10 @@ class Index extends Component {
     // store.dispatch(addCount())
 
     return { isServer }
+  }
+  
+  componentDidMount() {
+    initFBAnalytics()
   }
 
   render () {
