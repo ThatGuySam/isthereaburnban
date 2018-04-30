@@ -13,7 +13,22 @@ export default class MyDocument extends Document {
     return (
       <html>
         <Head>
-          <meta name='viewport' content='width=device-width, height=device-height, initial-scale=1' />
+          <meta charSet='utf-8' />
+          <meta name='viewport' content='width=device-width, height=device-height, initial-scale=1, shrink-to-fit=no' />
+          
+          <title>{ process.env.APP_NAME }</title>
+          
+          <meta name='description' content={ process.env.APP_DESCRIPTION } />
+          
+          <meta property='fb:app_id' content={ process.env.FACEBOOK_APP_ID } />
+          <meta property='og:url' content='https://isthereaburnban.com' />
+          <meta property='og:type' content='website' />
+          <meta property='og:title' content={ process.env.APP_NAME } />
+          <meta property='og:description' content={ process.env.APP_DESCRIPTION } />
+          <meta property='og:site_name' content={ process.env.APP_NAME } />
+          <meta property='og:locale' content='en_US' />
+          
+          <link rel='stylesheet' href='https://use.typekit.net/xdl0ouy.css' />
           <link rel='stylesheet' href='https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css' integrity='sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4' crossOrigin='anonymous' />
           <link rel='stylesheet' href='/static/style.css' />
         </Head>
