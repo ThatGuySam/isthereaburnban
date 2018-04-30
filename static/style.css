@@ -1,3 +1,50 @@
+@font-face {
+  font-family: 'Trueno';
+      src: url('/static/fonts/trueno/TruenoBold.otf') format('opentype');
+  font-weight: bold;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Trueno';
+      src: url('/static/fonts/trueno/TruenoBoldItalic.otf') format('opentype');
+  font-weight: bold;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'Trueno';
+      src: url('/static/fonts/trueno/TruenoRegular.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Trueno';
+      src: url('/static/fonts/trueno/TruenoRegularItalic.otf') format('opentype');
+  font-weight: normal;
+  font-style: italic;
+}
+      
+@font-face {
+  font-family: 'Trueno';
+      src: url('/static/fonts/trueno/TruenoUltraBlack.otf') format('opentype');
+  font-weight: 900;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Trueno';
+      src: url('/static/fonts/trueno/TruenoUltraBlackItalic.otf') format('opentype');
+  font-weight: 900;
+  font-style: italic;
+}
+      
+
+body {
+  font-family: "Trueno", -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+}
+
 .main-container {
   min-height: 100vh;
 }
