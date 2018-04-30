@@ -24,7 +24,7 @@ export default class MyDocument extends Document {
           <meta property='og:url' content='https://isthereaburnban.com' />
           <meta property='og:type' content='website' />
           <meta property='og:title' content={ process.env.APP_NAME } />
-          <meta property='og:image' content='http://example.com/image.jpg' />
+          <meta property='og:image' content='http://isthereaburnban.com/static/images/og-image.png' />
           <meta property='og:description' content={ process.env.APP_DESCRIPTION } />
           <meta property='og:site_name' content={ process.env.APP_NAME } />
           <meta property='og:locale' content='en_US' />
