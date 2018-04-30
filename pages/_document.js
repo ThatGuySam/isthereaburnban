@@ -28,7 +28,6 @@ export default class MyDocument extends Document {
           <meta property='og:site_name' content={ process.env.APP_NAME } />
           <meta property='og:locale' content='en_US' />
           
-          <link rel='stylesheet' href='https://use.typekit.net/xdl0ouy.css' />
           <link rel='stylesheet' href='https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css' integrity='sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4' crossOrigin='anonymous' />
           <link rel='stylesheet' href='/static/style.css' />
         </Head>
