@@ -1,8 +1,9 @@
 import Link from 'next/link'
 import { connect } from 'react-redux'
 import NoSSR from 'react-no-ssr'
-import Location from '../components/Location'
 import classNames from 'classnames'
+import is from '../helpers/is'
+import Location from '../components/Location'
 
 export default connect(state => state)(({ banStatus }) => {
   return (
@@ -12,10 +13,10 @@ export default connect(state => state)(({ banStatus }) => {
         <div className={'container'}>
             <div className='row justify-content-center align-content-center'>
                 <div className='col-sm-4 text-center'>
-                    <div className='display-4 font-weight-bold'>
+                    <div className='display-4 font-weight-bold pb-3'>
                       { banStatus.word }
                     </div>
-                    <div>
+                    <div className='pb-3'>
                       <span className={classNames({'shimmer': (banStatus.key === 'checking') })}>
                         { banStatus.message }
                       </span>
@@ -23,6 +24,21 @@ export default connect(state => state)(({ banStatus }) => {
                     <Location />
                 </div>
             </div>
+            { is.propertyDefined(banStatus, 'button') &&
+              <div className='button-row row justify-content-center align-content-center py-4'>
+                <div className='col-sm-4 text-center'>
+                  <div className='pb-4'>
+                    <a
+                      href={ banStatus.button.url }
+                      className='btn bg-white'
+                      style={{ color: banStatus.backgroundColor }}
+                    >
+                      { banStatus.button.label }
+                    </a>
+                  </div>
+                </div>
+              </div>
+            }
         </div>
     </div>
   )
