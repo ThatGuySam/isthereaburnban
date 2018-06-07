@@ -4,6 +4,7 @@ import NoSSR from 'react-no-ssr'
 import classNames from 'classnames'
 import is from '../helpers/is'
 import Location from '../components/Location'
+import Footer from './Footer'
 
 export default connect(state => state)(({ banStatus }) => {
   return (
@@ -39,6 +40,7 @@ export default connect(state => state)(({ banStatus }) => {
                 </div>
               </div>
             }
+            <Footer />
         </div>
     </div>
   )
