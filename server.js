@@ -5,6 +5,7 @@ const bodyParser = require('body-parser')
 const is = require('./helpers/is')
 const getIpInfo = require('./helpers/getIpInfo')
 const getBanStatus = require('./helpers/getBanStatus')
+const getButton = require('./helpers/getButton')
 
 const oneHour = (1000 * 60 * 60)
 
@@ -17,13 +18,17 @@ app.prepare()
 .then(() => {
   const server = express()
   
-  server.use(bodyParser.json()); // support json encoded bodies
-  server.use(bodyParser.urlencoded({ extended: true })); // support encoded bodies
+  server.use(bodyParser.json()) // support json encoded bodies
+  server.use(bodyParser.urlencoded({ extended: true })) // support encoded bodies
   
   server.all('/check', async function (req, res) {
-    const result = await getBanStatus(req.body.geolocation)
+    const banStatus = await getBanStatus(req.body.geolocation)
+    const button = await getButton()
     
-    res.send(result)
+    res.send({
+      ...banStatus,
+      button: button
+    })
   })
   
   server.get('/getip', async function (req, res) {
