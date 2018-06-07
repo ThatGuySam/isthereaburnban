@@ -31,7 +31,7 @@ export default connect(state => state)(({ banStatus }) => {
                   <div className='pb-4'>
                     <a
                       href={ banStatus.button.url }
-                      className='btn bg-white'
+                      className='btn btn-light'
                       style={{ color: banStatus.backgroundColor }}
                     >
                       { banStatus.button.label }
