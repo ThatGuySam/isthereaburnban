@@ -45,8 +45,9 @@
       "APP_DESCRIPTION": "@app-description",
       "IPSTACK_KEY": "@ipstack-key",
       "GOOGLE_KEY": "@google-key",
+      "FACEBOOK_APP_ID": "@facebook-app-id",
       "OK_DATA_URL": "@ok-data-url-json",
-      "FACEBOOK_APP_ID": "@facebook-app-id"
+      "SETTINGS_SHEET_KEY": "@settings-sheet-key"
     }
   },
   "keywords": [
