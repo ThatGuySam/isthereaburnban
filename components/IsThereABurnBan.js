@@ -4,8 +4,11 @@ import NoSSR from 'react-no-ssr'
 import classNames from 'classnames'
 import is from '../helpers/is'
 import Location from '../components/Location'
+import Footer from './Footer'
 
 export default connect(state => state)(({ banStatus }) => {
+  const hasButton = is.propertyDefined(banStatus, 'button')
+  const thereIsNotABan = (banStatus.key === 'no')
   return (
     <div
       className='main-container d-flex align-items-center text-light'
@@ -24,13 +27,13 @@ export default connect(state => state)(({ banStatus }) => {
                     <Location />
                 </div>
             </div>
-            { is.propertyDefined(banStatus, 'button') &&
+            { (hasButton && thereIsNotABan) &&
               <div className='button-row row justify-content-center align-content-center py-4'>
                 <div className='col-sm-4 text-center'>
                   <div className='pb-4'>
                     <a
                       href={ banStatus.button.url }
-                      className='btn bg-white'
+                      className='btn btn-light'
                       style={{ color: banStatus.backgroundColor }}
                     >
                       { banStatus.button.label }
@@ -39,6 +42,7 @@ export default connect(state => state)(({ banStatus }) => {
                 </div>
               </div>
             }
+            <Footer />
         </div>
     </div>
   )

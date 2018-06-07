@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800px" height="1300px" viewBox="0 0 800 1300" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>SCC Logo</title>
+    <desc>Sam Carlton Creative</desc>
+    <defs></defs>
+    <g id="Symbols" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="SCC-Logo-Inherit" fill="currentColor">
+            <path d="M2.84217094e-14,0 L800,0 L800,1300 L2.84217094e-14,1300 L2.84217094e-14,0 Z M325,725 L325,825 L475,825 L475,725 L325,725 Z M475,825 L325,825 C325,921.649831 246.650017,1000 150,1000 L150,1150 C329.492889,1150 475,1004.49254 475,825 Z M325,475 L475,475 C475,378.350169 553.349983,300 650,300 L650,150 C470.507111,150 325,295.507456 325,475 Z M325,475 L325,575 L475,575 L475,475 L325,475 Z M650,375 C594.771525,375 550,419.771525 550,475 C550,530.228475 594.771525,575 650,575 L650,375 Z" id="Logo-Reversed"></path>
+        </g>
+    </g>
+</svg>

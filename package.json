@@ -28,7 +28,9 @@
     "slug": "^0.9.1",
     "universal-cookie": "^2.1.2"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "babel-plugin-inline-react-svg": "^0.5.2"
+  },
   "scripts": {
     "dev": "node server.js",
     "build": "next build",
