@@ -5,7 +5,6 @@
   "main": "index.js",
   "dependencies": {
     "@zeit/next-css": "^0.1.5",
-    "babel-plugin-inline-react-svg": "^0.5.2",
     "body-parser": "^1.18.2",
     "classnames": "^2.2.5",
     "express": "^4.16.3",
@@ -29,7 +28,9 @@
     "slug": "^0.9.1",
     "universal-cookie": "^2.1.2"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "babel-plugin-inline-react-svg": "^0.5.2"
+  },
   "scripts": {
     "dev": "node server.js",
     "build": "next build",
