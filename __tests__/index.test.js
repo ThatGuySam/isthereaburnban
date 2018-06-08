@@ -2,9 +2,7 @@
 
 import { shallow } from 'enzyme'
 import React from 'react'
-import renderer from 'react-test-renderer'
-import configureStore from 'redux-mock-store'
-import thunk from 'redux-thunk'
+// import renderer from 'react-test-renderer'
 
 import getOKBurnBans from '../helpers/getOKBurnBans'
 import App from '../pages/index.js'
@@ -14,12 +12,6 @@ describe('Server', () => {
   it('Can Request OK Burn Bans"',  async () => {
     const burnBans = await getOKBurnBans()
     
-    // expect(burnBans).toMatchSnapshot()
-    // expect.objectContaining({
-    //     x: expect.any(Number),
-    //     y: expect.any(Number),
-    //   }));
-    // }
     expect(burnBans).toContainEqual(
       expect.objectContaining({
         "id": expect.any(Number),
