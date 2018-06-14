@@ -10,10 +10,25 @@ module.exports = async (geolocation) => {
   
   const bans = await cacheable('ok-bans', oneHour, async () => await getOKBurnBans())
   
-  const locationName = `${geolocation.address.city}, ${geolocation.address.stateCode}`
-  const state = geolocation.address.state
-  const googleCountyName = geolocation.address.region
-  const countyName = googleCountyName.toLowerCase().replace("county", "").trim()
+  let locationName
+  let state
+  let googleCountyName
+  let countyName
+  
+  if (is.propertyDefined(geolocation, 'address')) {
+    locationName = `${geolocation.address.city}, ${geolocation.address.stateCode}`
+    state = geolocation.address.state
+    googleCountyName = geolocation.address.region
+    countyName = googleCountyName.toLowerCase().replace("county", "").trim()
+  } else {
+    const location = await getLocationInfo(geolocation)
+    
+    locationName = `${location.city}, ${location.administrativeLevels.level1short}`
+    state = location.administrativeLevels.level1long
+    googleCountyName = location.administrativeLevels.level2long
+    countyName = googleCountyName.toLowerCase().replace("county", "").trim()
+  }
+  
   
   if (state !== 'Oklahoma') return {
     key: 'stateNotSupported',
