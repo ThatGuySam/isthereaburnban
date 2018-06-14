@@ -3,6 +3,7 @@ const next = require('next')
 const bodyParser = require('body-parser')
 
 const is = require('./helpers/is')
+const redirectNakedToWww = require('./helpers/redirectNakedToWww')
 const getIpInfo = require('./helpers/getIpInfo')
 const getBanStatus = require('./helpers/getBanStatus')
 const getButton = require('./helpers/getButton')
@@ -18,6 +19,7 @@ app.prepare()
 .then(() => {
   const server = express()
   
+  server.use(redirectNakedToWww) // 
   server.use(bodyParser.json()) // support json encoded bodies
   server.use(bodyParser.urlencoded({ extended: true })) // support encoded bodies
   
