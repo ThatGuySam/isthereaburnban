@@ -32,7 +32,7 @@ module.exports = async (geolocation) => {
   
   if (state !== 'Oklahoma') return {
     key: 'stateNotSupported',
-    status: getMessage('stateNotSupported', {name: locationName})
+    ...getMessage('stateNotSupported', {name: locationName})
   }
   
   const county = bans.filter(function( county ) {
