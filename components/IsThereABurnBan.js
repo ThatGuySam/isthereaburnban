@@ -7,7 +7,7 @@ import Location from '../components/Location'
 import Footer from './Footer'
 
 export default connect(state => state)(({ banStatus }) => {
-  const hasButton = is.propertyDefined(banStatus, 'button')
+  const hasButton = (is.propertyDefined(banStatus, 'button') && !!banStatus.button)
   const thereIsNotABan = (banStatus.key === 'no')
   return (
     <div
