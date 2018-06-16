@@ -31,6 +31,12 @@ module.exports = (key, location = null) => {
       word: 'Oops',
       message: `Sorry we don't support your state yet`,
       backgroundColor: '#323232'
+    },
+    {
+      key: 'error',
+      word: 'Uh-oh',
+      message: 'There was problem checking. ',
+      backgroundColor: '#323232'
     }
   ]
   
