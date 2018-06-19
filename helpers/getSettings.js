@@ -30,7 +30,7 @@ const requestSettings = async () => {
       return
     })
   if (!response) return
-  const json = await response.json()
+  const json = await response.data
   const rawSettings = json.feed.entry
   const mappedSettings = mapRawSettings(rawSettings)
   
