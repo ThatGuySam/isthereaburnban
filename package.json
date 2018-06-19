@@ -52,6 +52,7 @@
     "name": "isthereaburnban",
     "alias": "isthereaburnban.com",
     "env": {
+      "APP_URL": "@app-url",
       "APP_NAME": "@app-name",
       "APP_DESCRIPTION": "@app-description",
       "IPSTACK_KEY": "@ipstack-key",
