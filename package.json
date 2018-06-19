@@ -59,6 +59,7 @@
       "GOOGLE_KEY": "@google-key",
       "FACEBOOK_APP_ID": "@facebook-app-id",
       "OK_DATA_URL": "@ok-data-url-json",
+      "TX_DATA_URL": "@tx-data-url-txt",
       "SETTINGS_SHEET_KEY": "@settings-sheet-key"
     }
   },
