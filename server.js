@@ -2,24 +2,29 @@ const express = require('express')
 const next = require('next')
 const bodyParser = require('body-parser')
 
+// Setup file deps
 const is = require('./helpers/is')
 const redirectNakedToWww = require('./helpers/redirectNakedToWww')
 const getIpInfo = require('./helpers/getIpInfo')
 const getBanStatus = require('./helpers/getBanStatus')
 const getButton = require('./helpers/getButton')
+const createSitemap = require('./helpers/createSitemap')
 
+// Setup variables
 const oneHour = (1000 * 60 * 60)
-
 const port = parseInt(process.env.PORT, 10) || 3000
 const dev = process.env.NODE_ENV !== 'production'
+
+// Setup Instances
 const app = next({ dev })
 const handle = app.getRequestHandler()
+const sitemap = createSitemap()
 
 app.prepare()
 .then(() => {
   const server = express()
   
-  server.use(redirectNakedToWww) // 
+  server.use(redirectNakedToWww) // Redirect naken domain to www.
   server.use(bodyParser.json()) // support json encoded bodies
   server.use(bodyParser.urlencoded({ extended: true })) // support encoded bodies
   
@@ -51,6 +56,16 @@ app.prepare()
     } else {
       res.send(ipInfo)
     }
+  })
+  
+  server.get('/sitemap.xml', function(req, res) {
+    sitemap.toXML( function (err, xml) {
+        if (err) {
+          return res.status(500).end()
+        }
+        res.header('Content-Type', 'application/xml')
+        res.send( xml )
+    })
   })
 
   server.get('*', (req, res) => {
