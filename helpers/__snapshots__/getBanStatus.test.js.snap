@@ -37,3 +37,16 @@ Object {
   "word": "Yes",
 }
 `;
+
+exports[`Check Bans Can Handle Missing County: [object Object] 1`] = `
+Object {
+  "backgroundColor": "#123646",
+  "button": Object {
+    "label": "Texas Forest Service",
+    "url": "http://texasforestservice.tamu.edu/TexasBurnBans/",
+  },
+  "key": "noCounty",
+  "message": "There was problem getting your county. Try checking your state's burn ban site. ",
+  "word": "D'oh",
+}
+`;

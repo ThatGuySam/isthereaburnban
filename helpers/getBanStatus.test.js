@@ -30,5 +30,18 @@ describe('Check Bans', () => {
       'word': expect.any(String)
     })
   })
+  
+  it('Can Handle Missing County', async () => {
+    const geolocation = mockGeolocations('canadian')
+    const burnBans = await getBanStatus(geolocation)
+
+    expect(burnBans).toMatchSnapshot({
+      'backgroundColor': expect.any(String),
+      'button': expect.any(Object),
+      'key': 'noCounty',
+      'message': expect.any(String),
+      'word': expect.any(String)
+    })
+  })
 
 })

@@ -27,6 +27,7 @@ module.exports = (key) => {
       },
       timestamp: 1528944033344.24
     },
+    // Texas
     'elpaso': {
       coords: {
         accuracy: 5,
@@ -35,6 +36,18 @@ module.exports = (key) => {
         heading: -1,
         latitude: 31.7688106,
         longitude: -106.4436692,
+        speed: -1
+      },
+      timestamp: 1528944033344.24
+    },
+    'canadian': {
+      coords: {
+        accuracy: 5,
+        altitude: 0,
+        altitudeAccuracy: -1,
+        heading: -1,
+        latitude: 35.7297121,
+        longitude: -100.5130764,
         speed: -1
       },
       timestamp: 1528944033344.24
