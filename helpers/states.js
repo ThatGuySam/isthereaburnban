@@ -1,6 +1,7 @@
 const is = require('is_js')
 const cacheable = require('./cacheable')
 const getOKBurnBans = require('./getOKBurnBans')
+const getTXBurnBans = require('./getTXBurnBans')
 
 const oneHour = (1000 * 60 * 60)
 
@@ -16,6 +17,18 @@ module.exports = (stateCode) => {
           name: 'Source',
           // description: '',
           urls: ['http://www.forestry.ok.gov/burn-ban-info']
+        }
+      ]
+    },
+    'TX': {
+      getBans: () => {
+        return cacheable('texas-bans', oneHour, async () => await getTXBurnBans())
+      },
+      details: [
+        {
+          name: 'Source',
+          // description: '',
+          urls: ['http://texasforestservice.tamu.edu/TexasBurnBans/']
         }
       ]
     }
