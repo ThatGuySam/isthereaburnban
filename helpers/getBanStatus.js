@@ -7,6 +7,7 @@ module.exports = async (geolocation) => {
   
   let locationName
   let stateName
+  let stateCode
   let googleCountyName
   let countyName
   
