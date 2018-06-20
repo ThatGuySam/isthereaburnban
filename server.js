@@ -7,7 +7,6 @@ const is = require('./helpers/is')
 const redirectNakedToWww = require('./helpers/redirectNakedToWww')
 const getIpInfo = require('./helpers/getIpInfo')
 const getBanStatus = require('./helpers/getBanStatus')
-const getButton = require('./helpers/getButton')
 const createSitemap = require('./helpers/createSitemap')
 
 // Setup variables
@@ -30,12 +29,8 @@ app.prepare()
   
   server.all('/check', async function (req, res) {
     const banStatus = await getBanStatus(req.body.geolocation)
-    const button = await getButton()
     
-    res.send({
-      ...banStatus,
-      button: button
-    })
+    res.send(banStatus)
   })
   
   server.get('/getip', async function (req, res) {

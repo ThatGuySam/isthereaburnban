@@ -27,7 +27,7 @@ export default connect(state => state)(({ banStatus }) => {
                     <Location />
                 </div>
             </div>
-            { (hasButton && thereIsNotABan) &&
+            { (hasButton) &&
               <div className='button-row row justify-content-center align-content-center py-4'>
                 <div className='col-md-4 text-center'>
                   <div className='pb-4'>
