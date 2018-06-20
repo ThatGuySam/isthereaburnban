@@ -1,10 +1,10 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
-import { addCount, setBanStatus } from '../store'
 import Cookies from 'universal-cookie'
+import axios from 'axios'
+import { addCount, setBanStatus } from '../store'
 import is from '../helpers/is'
-import geolocator from '../helpers/geolocator'
 import getMessage from '../helpers/messages'
 
 class Location extends Component {
@@ -38,17 +38,26 @@ class Location extends Component {
     })
   }
   
-  onLocated = (err, location) => {
-    if (err) {
-      this.setLocationPermission(false)
-      return console.log(err)
+  onLocated = (positionInstance) => {
+    // Convert Position stance to object so it can object things
+    // like get sent via axios
+    const geolocation = {
+      timestamp: positionInstance.timestamp,
+      coords: {
+        accuracy: positionInstance.coords.accuracy,
+        altitude: positionInstance.coords.altitude,
+        altitudeAccuracy: positionInstance.coords.altitudeAccuracy,
+        heading: positionInstance.coords.heading,
+        latitude: positionInstance.coords.latitude,
+        longitude: positionInstance.coords.longitude,
+        speed: positionInstance.coords.speed
+      }
     }
-    
+    // Record that we've got location permission
+    // so we don't ask every time
     this.setLocationPermission(true)
-    
-    // console.log('location', location)
-    
-    this.getBanStatus(location)
+    // Get the status
+    this.getBanStatus(geolocation)
   }
   
   locate = () => {
@@ -68,20 +77,17 @@ class Location extends Component {
         staticMap: true         // get a static map image URL (boolean or options object)
     }
     
-    geolocator.locate(options, this.onLocated)
+    navigator.geolocation.getCurrentPosition(this.onLocated, (error) => {
+      this.setLocationPermission(false)
+      console.log('Geolocation error', error)
+    })
   }
   
   getBanStatus = async (geolocation) => {
-    const status = await fetch('/check', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ geolocation: geolocation })
-    }).then( r => {
-      // console.log()
-      // open(r.headers.get('location'));
-      return r.json();
+    const status = await axios.post('/check', {
+      geolocation: geolocation
+    }).then( response => {
+      return response.data
     })
     
     this.props.setBanStatus(status)
