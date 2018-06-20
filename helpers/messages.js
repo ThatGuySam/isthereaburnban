@@ -33,6 +33,12 @@ module.exports = (key, location = null) => {
       backgroundColor: '#323232'
     },
     {
+      key: 'noCounty',
+      word: "D'oh",
+      message: 'There was problem getting your county. Try checking your state\'s burn ban site. ',
+      backgroundColor: '#123646'
+    },
+    {
       key: 'error',
       word: 'Uh-oh',
       message: 'There was problem checking. ',
