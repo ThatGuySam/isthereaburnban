@@ -7,8 +7,6 @@ module.exports = async (geolocation) => {
   
   const location = await getLocationInfo(geolocation)
   
-  console.log('location', location)
-  
   const locationName = `${location.city}, ${location.administrativeLevels.level1short}`
   const stateName = location.administrativeLevels.level1long
   const stateCode = location.administrativeLevels.level1short
