@@ -93,7 +93,7 @@ class Location extends Component {
     return (
       <div>
           { (banStatus.key === 'ready') && 
-            <div className='btn btn-light' onClick={this.locate}>Is there a Burn Ban?</div>
+            <div className='btn btn-light' onClick={this.locate}>Check for Burn Ban</div>
           }
       </div>
     )
