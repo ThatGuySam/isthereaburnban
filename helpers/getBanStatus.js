@@ -7,10 +7,18 @@ module.exports = async (geolocation) => {
   
   const location = await getLocationInfo(geolocation)
   
-  const locationName = `${location.city}, ${location.administrativeLevels.level1short}`
-  const stateName = location.administrativeLevels.level1long
-  const stateCode = location.administrativeLevels.level1short
+  // console.log('location', location)
+  
   const googleCountyName = location.administrativeLevels.level2long || null
+  // City or County name
+  const placeName = location.city || googleCountyName
+  // OK, TX, etc...
+  const stateCode = location.administrativeLevels.level1short
+  // Put together the name of this place
+  const locationName = `${placeName}, ${stateCode}`
+  // Full state name
+  const stateName = location.administrativeLevels.level1long
+  // Name of county, minus the word "county"
   const countyName = (googleCountyName) ? googleCountyName.toLowerCase().replace("county", "").trim() : null
 
   const state = states(stateCode)
