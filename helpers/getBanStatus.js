@@ -21,8 +21,6 @@ module.exports = async (geolocation) => {
     ...getMessage('stateNotSupported', {name: locationName})
   }
   
-  const bans = await state.getBans()
-  
   // Check if has a county
   if (countyName === null) return {
     key: 'noCounty',
@@ -32,6 +30,8 @@ module.exports = async (geolocation) => {
     },
     ...getMessage('noCounty', {name: locationName}),
   }
+  
+  const bans = await state.getBans()
   
   const county = bans.filter(function( county ) {
     return county.name.toLowerCase() == countyName
