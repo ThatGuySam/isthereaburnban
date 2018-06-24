@@ -52,7 +52,8 @@
     "start": "NODE_ENV=production node server.js",
     "test": "NODE_ENV=test jest",
     "deploy": "now",
-    "deploy-live": "now && now alias && now isthereaburnban --safe"
+    "deploy-live": "now && now alias && now isthereaburnban --safe",
+    "lint": "eslint ."
   },
   "now": {
     "name": "isthereaburnban",
