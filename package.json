@@ -42,7 +42,9 @@
     "eslint-plugin-import": "^2.13.0",
     "eslint-plugin-jsx-a11y": "^6.0.3",
     "eslint-plugin-react": "^7.9.1",
+    "husky": "^0.14.3",
     "jest": "22.0.1",
+    "lint-staged": "^7.2.0",
     "react-addons-test-utils": "^15.6.2",
     "react-test-renderer": "16.2.0"
   },
@@ -53,7 +55,14 @@
     "test": "NODE_ENV=test jest",
     "deploy": "now",
     "deploy-live": "now && now alias && now isthereaburnban --safe",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "precommit": "lint-staged"
+  },
+  "lint-staged": {
+    "*.{js,jsx}": [
+      "eslint --fix",
+      "git add"
+    ]
   },
   "now": {
     "name": "isthereaburnban",
