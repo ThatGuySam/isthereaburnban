@@ -56,7 +56,8 @@
     "test": "NODE_ENV=test jest",
     "deploy": "now",
     "deploy-live": "now && now alias && now isthereaburnban --safe",
-    "lint": "eslint .",
+    "lint": "eslint --ext .js,.js .",
+    "fix": "eslint --ext .js,.js . --fix",
     "precommit": "lint-staged"
   },
   "lint-staged": {
