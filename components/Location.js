@@ -4,7 +4,6 @@ import { bindActionCreators } from 'redux'
 import Cookies from 'universal-cookie'
 import axios from 'axios'
 import { addCount, setBanStatus } from '../store'
-import is from '../helpers/is'
 import getMessage from '../helpers/messages'
 
 class Location extends Component {
@@ -28,14 +27,8 @@ class Location extends Component {
   }
   
   componentDidMount = async () => {
-    if (this.state.hasLocationPermission) this.locate()
-  }
-  
-  setLocationPermission = (canUseLocation) => {
-    this.cookies.set('hasLocationPermission', canUseLocation)
-    this.setState({
-      hasLocationPermission: canUseLocation,
-    })
+    const { hasLocationPermission } = this.state
+    if (hasLocationPermission) this.locate()
   }
   
   onLocated = (positionInstance) => {
@@ -60,22 +53,28 @@ class Location extends Component {
     this.getBanStatus(geolocation)
   }
   
+  setLocationPermission = (canUseLocation) => {
+    this.cookies.set('hasLocationPermission', canUseLocation)
+    this.setState({
+      hasLocationPermission: canUseLocation,
+    })
+  }
+  
+  getBanStatus = async (geolocation) => {
+    const { setBanStatus } = this.props
+    const status = await axios.post('/check', {
+      geolocation: geolocation
+    }).then( response => {
+      return response.data
+    })
+    
+    setBanStatus(status)
+  }
+  
   locate = () => {
-    
+    const { setBanStatus } = this.props
     const checkingStatus = getMessage('checking')
-    this.props.setBanStatus(checkingStatus)
-    
-    const options = {
-        enableHighAccuracy: true,
-        timeout: 5000,
-        maximumWait: 10000,     // max wait time for desired accuracy
-        maximumAge: 0,          // disable cache
-        desiredAccuracy: 30,    // meters
-        fallbackToIP: true,     // fallback to IP if Geolocation fails or rejected
-        addressLookup: true,    // requires Google API key if true
-        timezone: true,         // requires Google API key if true
-        staticMap: true         // get a static map image URL (boolean or options object)
-    }
+    setBanStatus(checkingStatus)
     
     navigator.geolocation.getCurrentPosition(this.onLocated, (error) => {
       this.setLocationPermission(false)
@@ -83,24 +82,16 @@ class Location extends Component {
     })
   }
   
-  getBanStatus = async (geolocation) => {
-    const status = await axios.post('/check', {
-      geolocation: geolocation
-    }).then( response => {
-      return response.data
-    })
-    
-    this.props.setBanStatus(status)
-  }
-  
 
   render = () => {
-    const banStatus = this.props.banStatus
+    const { banStatus } = this.props
     return (
       <div>
-          { (banStatus.key === 'ready') && 
-            <div className='btn btn-light' onClick={this.locate}>Check for Burn Ban</div>
-          }
+        { (banStatus.key === 'ready') && (
+        <button className='btn btn-light' type='button' onClick={this.locate}>
+Check for Burn Ban
+        </button>
+)}
       </div>
     )
   }
