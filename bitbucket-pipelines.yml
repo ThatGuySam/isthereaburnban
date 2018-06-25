@@ -10,5 +10,6 @@ pipelines:
         caches:
           - node
         script: # Modify the commands below to build your repository.
+          - cp now-secrets-example.json now-secrets.json
           - npm install
           - npm test
