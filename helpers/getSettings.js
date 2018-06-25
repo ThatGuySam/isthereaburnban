@@ -1,8 +1,5 @@
 const axios = require('axios')
-const is = require('./is')
 const cacheable = require('./cacheable')
-const getMessage = require('./messages')
-
 
 const oneHour = (1000 * 60 * 60)
 

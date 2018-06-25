@@ -1,6 +1,4 @@
 require('now-env')
-const slug = require('slug')
-const iplocation = require('iplocation')
 const NodeGeocoder = require('node-geocoder')
 
 const cacheable = require('./cacheable')

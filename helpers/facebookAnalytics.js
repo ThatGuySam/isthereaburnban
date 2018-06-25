@@ -1,11 +1,10 @@
-const is = require('./is')
-
 export default () => {
   // Cancel if there's no document
   if (typeof document !== 'object') return
   
   window.fbAsyncInit = function() {
     // console.log('Facebook Analytics Initialized')
+    const FB = window.FB
     FB.AppEvents.logPageView()
   }
   

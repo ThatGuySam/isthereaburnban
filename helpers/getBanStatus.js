@@ -1,4 +1,3 @@
-const is = require('./is')
 const states = require('./states')
 const getLocationInfo = require('./getLocationInfo')
 const getMessage = require('./messages')
@@ -16,10 +15,8 @@ module.exports = async (geolocation) => {
   const stateCode = location.administrativeLevels.level1short
   // Put together the name of this place
   const locationName = `${placeName}, ${stateCode}`
-  // Full state name
-  const stateName = location.administrativeLevels.level1long
   // Name of county, minus the word "county"
-  const countyName = (googleCountyName) ? googleCountyName.toLowerCase().replace("county", "").trim() : null
+  const countyName = (googleCountyName) ? googleCountyName.toLowerCase().replace('county', '').trim() : null
 
   const state = states(stateCode)
   
