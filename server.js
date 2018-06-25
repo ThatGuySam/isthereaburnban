@@ -10,7 +10,6 @@ const getBanStatus = require('./helpers/getBanStatus')
 const createSitemap = require('./helpers/createSitemap')
 
 // Setup variables
-const oneHour = (1000 * 60 * 60)
 const port = parseInt(process.env.PORT, 10) || 3000
 const dev = process.env.NODE_ENV !== 'production'
 
