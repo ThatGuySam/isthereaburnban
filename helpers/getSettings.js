@@ -1,4 +1,4 @@
-const is = require('./is')
+const axios = require('axios')
 const cacheable = require('./cacheable')
 
 const oneHour = (1000 * 60 * 60)
@@ -21,8 +21,13 @@ const mapRawSettings = async (rawSettings) => {
 const requestSettings = async () => {
   // https://spreadsheets.google.com/feeds/list/12qMxDnJDAACrdYimZzanNeAdOqXD84FFQhLonfeJa04/od6/public/values?alt=json
   const sheetUrl = `https://spreadsheets.google.com/feeds/list/${process.env.SETTINGS_SHEET_KEY}/od6/public/values?alt=json`
-  const response = await fetch(sheetUrl) 
-  const json = await response.json()
+  const response = await axios.get(sheetUrl)
+    .catch((error) => {
+      console.log('Error getting settings sheet', error)
+      return
+    })
+  if (!response) return
+  const json = await response.data
   const rawSettings = json.feed.entry
   const mappedSettings = mapRawSettings(rawSettings)
   

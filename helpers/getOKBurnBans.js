@@ -1,18 +1,9 @@
 require('now-env')
 const fetch = require('isomorphic-unfetch')
 
-const fetchBans = (ip) => new Promise(function(resolve, reject) {
+module.exports = async () => {
   
-  if (error) {
-    reject(Error("It broke"));
-  } else {
-    resolve(ipres)
-  }
-  
-})
-
-module.exports = async (ip) => {
-  
+  // TODO: Convert to axios
   const response = await fetch(process.env.OK_DATA_URL)
   
   const json = await response.json()

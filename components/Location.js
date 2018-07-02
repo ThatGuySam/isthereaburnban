@@ -1,10 +1,9 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
-import { addCount, setBanStatus } from '../store'
 import Cookies from 'universal-cookie'
-import is from '../helpers/is'
-import geolocator from '../helpers/geolocator'
+import axios from 'axios'
+import { addCount, setBanStatus } from '../store'
 import getMessage from '../helpers/messages'
 
 class Location extends Component {
@@ -28,7 +27,30 @@ class Location extends Component {
   }
   
   componentDidMount = async () => {
-    if (this.state.hasLocationPermission) this.locate()
+    const { hasLocationPermission } = this.state
+    if (hasLocationPermission) this.locate()
+  }
+  
+  onLocated = (positionInstance) => {
+    // Convert Position stance to object so it can object things
+    // like get sent via axios
+    const geolocation = {
+      timestamp: positionInstance.timestamp,
+      coords: {
+        accuracy: positionInstance.coords.accuracy,
+        altitude: positionInstance.coords.altitude,
+        altitudeAccuracy: positionInstance.coords.altitudeAccuracy,
+        heading: positionInstance.coords.heading,
+        latitude: positionInstance.coords.latitude,
+        longitude: positionInstance.coords.longitude,
+        speed: positionInstance.coords.speed
+      }
+    }
+    // Record that we've got location permission
+    // so we don't ask every time
+    this.setLocationPermission(true)
+    // Get the status
+    this.getBanStatus(geolocation)
   }
   
   setLocationPermission = (canUseLocation) => {
@@ -38,63 +60,38 @@ class Location extends Component {
     })
   }
   
-  onLocated = (err, location) => {
-    if (err) {
-      this.setLocationPermission(false)
-      return console.log(err)
-    }
+  getBanStatus = async (geolocation) => {
+    const { setBanStatus } = this.props
+    const status = await axios.post('/check', {
+      geolocation: geolocation
+    }).then( response => {
+      return response.data
+    })
     
-    this.setLocationPermission(true)
-    
-    // console.log('location', location)
-    
-    this.getBanStatus(location)
+    setBanStatus(status)
   }
   
   locate = () => {
-    
+    const { setBanStatus } = this.props
     const checkingStatus = getMessage('checking')
-    this.props.setBanStatus(checkingStatus)
+    setBanStatus(checkingStatus)
     
-    const options = {
-        enableHighAccuracy: true,
-        timeout: 5000,
-        maximumWait: 10000,     // max wait time for desired accuracy
-        maximumAge: 0,          // disable cache
-        desiredAccuracy: 30,    // meters
-        fallbackToIP: true,     // fallback to IP if Geolocation fails or rejected
-        addressLookup: true,    // requires Google API key if true
-        timezone: true,         // requires Google API key if true
-        staticMap: true         // get a static map image URL (boolean or options object)
-    }
-    
-    geolocator.locate(options, this.onLocated)
-  }
-  
-  getBanStatus = async (geolocation) => {
-    const status = await fetch('/check', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ geolocation: geolocation })
-    }).then( r => {
-      // console.log()
-      // open(r.headers.get('location'));
-      return r.json();
+    navigator.geolocation.getCurrentPosition(this.onLocated, (error) => {
+      this.setLocationPermission(false)
+      console.log('Geolocation error', error)
     })
-    
-    this.props.setBanStatus(status)
   }
   
 
   render = () => {
-    const banStatus = this.props.banStatus
+    const { banStatus } = this.props
     return (
       <div>
-          { (banStatus.key === 'ready') && 
-            <div className='btn btn-light' onClick={this.locate}>Is there a Burn Ban?</div>
-          }
+        { (banStatus.key === 'ready') && (
+        <button className='btn btn-light' type='button' onClick={this.locate}>
+Check for Burn Ban
+        </button>
+)}
       </div>
     )
   }

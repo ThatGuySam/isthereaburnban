@@ -1,24 +1,42 @@
-const is = require('./is')
-const cacheable = require('./cacheable')
-const getOKBurnBans = require('./getOKBurnBans')
+const states = require('./states')
 const getLocationInfo = require('./getLocationInfo')
 const getMessage = require('./messages')
 
-const oneHour = (1000 * 60 * 60)
-
 module.exports = async (geolocation) => {
   
-  const bans = await cacheable('ok-bans', oneHour, async () => await getOKBurnBans())
+  const location = await getLocationInfo(geolocation)
   
-  const locationName = `${geolocation.address.city}, ${geolocation.address.stateCode}`
-  const state = geolocation.address.state
-  const googleCountyName = geolocation.address.region
-  const countyName = googleCountyName.toLowerCase().replace("county", "").trim()
+  // console.log('location', location)
   
-  if (state !== 'Oklahoma') return {
+  const googleCountyName = location.administrativeLevels.level2long || null
+  // City or County name
+  const placeName = location.city || googleCountyName
+  // OK, TX, etc...
+  const stateCode = location.administrativeLevels.level1short
+  // Put together the name of this place
+  const locationName = `${placeName}, ${stateCode}`
+  // Name of county, minus the word "county"
+  const countyName = (googleCountyName) ? googleCountyName.toLowerCase().replace('county', '').trim() : null
+
+  const state = states(stateCode)
+  
+  // Check if state is supported
+  if (state === null) return {
     key: 'stateNotSupported',
-    status: getMessage('stateNotSupported', {name: locationName})
+    ...getMessage('stateNotSupported', {name: locationName})
   }
+  
+  // Check if has a county
+  if (countyName === null) return {
+    key: 'noCounty',
+    button: {
+      label: state.source.name,
+      url: state.source.url
+    },
+    ...getMessage('noCounty', {name: locationName}),
+  }
+  
+  const bans = await state.getBans()
   
   const county = bans.filter(function( county ) {
     return county.name.toLowerCase() == countyName
