@@ -12,25 +12,19 @@ module.exports = (stateCode) => {
       getBans: () => {
         return cacheable('ok-bans', oneHour, async () => await getOKBurnBans())
       },
-      details: [
-        {
-          name: 'Source',
-          // description: '',
-          urls: ['http://www.forestry.ok.gov/burn-ban-info']
-        }
-      ]
+      source: {
+        name: 'Oklahoma Forestry',
+        url: 'http://www.forestry.ok.gov/burn-ban-info'
+      }
     },
     'TX': {
       getBans: () => {
         return cacheable('texas-bans', oneHour, async () => await getTXBurnBans())
       },
-      details: [
-        {
-          name: 'Source',
-          // description: '',
-          urls: ['http://texasforestservice.tamu.edu/TexasBurnBans/']
-        }
-      ]
+      source: {
+        name: 'Texas Forest Service',
+        url: 'http://texasforestservice.tamu.edu/TexasBurnBans/'
+      }
     }
   }
   

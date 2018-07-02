@@ -1,31 +1,22 @@
-const is = require('./is')
 const states = require('./states')
 const getLocationInfo = require('./getLocationInfo')
 const getMessage = require('./messages')
 
 module.exports = async (geolocation) => {
   
-  let locationName
-  let stateName
-  let stateCode
-  let googleCountyName
-  let countyName
+  const location = await getLocationInfo(geolocation)
   
-  if (is.propertyDefined(geolocation, 'address')) {
-    locationName = `${geolocation.address.city}, ${geolocation.address.stateCode}`
-    stateName = geolocation.address.state
-    stateCode = geolocation.address.stateCode
-    googleCountyName = geolocation.address.region
-    countyName = googleCountyName.toLowerCase().replace("county", "").trim()
-  } else {
-    const location = await getLocationInfo(geolocation)
-    
-    locationName = `${location.city}, ${location.administrativeLevels.level1short}`
-    stateName = location.administrativeLevels.level1long
-    stateCode = location.administrativeLevels.level1short
-    googleCountyName = location.administrativeLevels.level2long
-    countyName = googleCountyName.toLowerCase().replace("county", "").trim()
-  }
+  // console.log('location', location)
+  
+  const googleCountyName = location.administrativeLevels.level2long || null
+  // City or County name
+  const placeName = location.city || googleCountyName
+  // OK, TX, etc...
+  const stateCode = location.administrativeLevels.level1short
+  // Put together the name of this place
+  const locationName = `${placeName}, ${stateCode}`
+  // Name of county, minus the word "county"
+  const countyName = (googleCountyName) ? googleCountyName.toLowerCase().replace('county', '').trim() : null
 
   const state = states(stateCode)
   
@@ -33,6 +24,16 @@ module.exports = async (geolocation) => {
   if (state === null) return {
     key: 'stateNotSupported',
     ...getMessage('stateNotSupported', {name: locationName})
+  }
+  
+  // Check if has a county
+  if (countyName === null) return {
+    key: 'noCounty',
+    button: {
+      label: state.source.name,
+      url: state.source.url
+    },
+    ...getMessage('noCounty', {name: locationName}),
   }
   
   const bans = await state.getBans()

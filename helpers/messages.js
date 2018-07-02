@@ -29,8 +29,14 @@ module.exports = (key, location = null) => {
     {
       key: 'stateNotSupported',
       word: 'Oops',
-      message: `Sorry we don't support your state yet`,
+      message: 'Sorry we don\'t support your state yet',
       backgroundColor: '#323232'
+    },
+    {
+      key: 'noCounty',
+      word: 'D\'oh',
+      message: 'There was problem getting your county. Try checking your state\'s burn ban site. ',
+      backgroundColor: '#123646'
     },
     {
       key: 'error',

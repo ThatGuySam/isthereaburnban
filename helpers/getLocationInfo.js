@@ -1,6 +1,4 @@
 require('now-env')
-const slug = require('slug')
-const iplocation = require('iplocation')
 const NodeGeocoder = require('node-geocoder')
 
 const cacheable = require('./cacheable')
@@ -21,8 +19,8 @@ const geocoder = NodeGeocoder(geocoderOptions)
 
 module.exports = async (geolocation) => {
   
-  const latitude = geolocation.coords.latitude
-  const longitude = geolocation.coords.longitude
+  const latitude = (+geolocation.coords.latitude).toFixed(3)
+  const longitude = (+geolocation.coords.longitude).toFixed(3)
   const cacheKey = `geocode-${latitude},${longitude}`
     
   const locationInfo = await cacheable(cacheKey, oneDayCacheTime, async () => {

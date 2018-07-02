@@ -1,5 +1,4 @@
 import React, { Component } from 'react'
-import is from '../helpers/is'
 import Navbar from './Navbar'
 import SCCLogo from '../static/images/logo.svg'
 

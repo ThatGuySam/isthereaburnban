@@ -10,6 +10,7 @@
     "babel-jest": "22.4.3",
     "body-parser": "^1.18.3",
     "classnames": "^2.2.5",
+    "eslint-plugin-jest": "^21.17.0",
     "express": "^4.16.3",
     "geolocator": "^2.1.3",
     "iplocation": "^5.0.1",
@@ -22,7 +23,6 @@
     "now-env": "^3.0.4",
     "react": "^16.4.0",
     "react-dom": "^16.4.0",
-    "react-facebook": "^5.0.3",
     "react-no-ssr": "^1.1.0",
     "react-redux": "^5.0.7",
     "redux": "^4.0.0",
@@ -33,10 +33,19 @@
     "universal-cookie": "^2.1.5"
   },
   "devDependencies": {
+    "babel-eslint": "^8.2.5",
     "babel-plugin-inline-react-svg": "^0.5.2",
     "enzyme": "^3.2.0",
     "enzyme-adapter-react-16": "^1.1.1",
+    "eslint": "^4.19.1",
+    "eslint-config-airbnb": "^17.0.0",
+    "eslint-loader": "^2.0.0",
+    "eslint-plugin-import": "^2.13.0",
+    "eslint-plugin-jsx-a11y": "^6.0.3",
+    "eslint-plugin-react": "^7.9.1",
+    "husky": "^0.14.3",
     "jest": "22.0.1",
+    "lint-staged": "^7.2.0",
     "react-addons-test-utils": "^15.6.2",
     "react-test-renderer": "16.2.0"
   },
@@ -46,7 +55,16 @@
     "start": "NODE_ENV=production node server.js",
     "test": "NODE_ENV=test jest",
     "deploy": "now",
-    "deploy-live": "now && now alias && now isthereaburnban --safe"
+    "deploy-live": "now && now alias && now isthereaburnban --safe",
+    "lint": "eslint --ext .js,.js .",
+    "fix": "eslint --ext .js,.js . --fix",
+    "precommit": "lint-staged"
+  },
+  "lint-staged": {
+    "*.{js,jsx}": [
+      "eslint --fix",
+      "git add"
+    ]
   },
   "now": {
     "name": "isthereaburnban",

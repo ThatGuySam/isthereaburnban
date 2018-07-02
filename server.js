@@ -7,11 +7,9 @@ const is = require('./helpers/is')
 const redirectNakedToWww = require('./helpers/redirectNakedToWww')
 const getIpInfo = require('./helpers/getIpInfo')
 const getBanStatus = require('./helpers/getBanStatus')
-const getButton = require('./helpers/getButton')
 const createSitemap = require('./helpers/createSitemap')
 
 // Setup variables
-const oneHour = (1000 * 60 * 60)
 const port = parseInt(process.env.PORT, 10) || 3000
 const dev = process.env.NODE_ENV !== 'production'
 
@@ -30,12 +28,8 @@ app.prepare()
   
   server.all('/check', async function (req, res) {
     const banStatus = await getBanStatus(req.body.geolocation)
-    const button = await getButton()
     
-    res.send({
-      ...banStatus,
-      button: button
-    })
+    res.send(banStatus)
   })
   
   server.get('/getip', async function (req, res) {
