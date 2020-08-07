@@ -21,5 +21,8 @@
             "headers": { "cache-control": "s-maxage=3600" },
             "dest": "/api/check"
         }
-    ]
+    ],
+    "github": {
+        "silent": true
+    }
 }
