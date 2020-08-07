@@ -4,7 +4,7 @@
   "description": "Tells you if there is a burn ban",
   "main": "index.js",
   "dependencies": {
-    "@zeit/next-css": "^0.2.0",
+    "@zeit/next-css": "^1.0.1",
     "axios": "^0.18.0",
     "babel-core": "7.0.0-bridge.0",
     "babel-jest": "22.4.3",
@@ -17,12 +17,12 @@
     "is_js": "^0.9.0",
     "isomorphic-unfetch": "^2.0.0",
     "lru-cache": "^4.1.3",
-    "next": "^6.0.3",
+    "next": "^9.5.1",
     "next-redux-wrapper": "^1.3.5",
     "node-geocoder": "^3.22.0",
     "now-env": "^3.0.4",
-    "react": "^16.4.0",
-    "react-dom": "^16.4.0",
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1",
     "react-no-ssr": "^1.1.0",
     "react-redux": "^5.0.7",
     "redux": "^4.0.0",
@@ -51,10 +51,11 @@
   },
   "scripts": {
     "dev": "node server.js",
+    "vercel-dev": "vercel dev",
     "build": "next build",
-    "start": "NODE_ENV=production node server.js",
+    "start": "next start -p $PORT",
     "test": "NODE_ENV=test jest",
-    "deploy": "now",
+    "deploy": "vercel",
     "deploy-live": "now && now alias && now isthereaburnban --safe",
     "lint": "eslint --ext .js,.js .",
     "fix": "eslint --ext .js,.js . --fix",
@@ -65,21 +66,6 @@
       "eslint --fix",
       "git add"
     ]
-  },
-  "now": {
-    "name": "isthereaburnban",
-    "alias": "isthereaburnban.com",
-    "env": {
-      "APP_URL": "@app-url",
-      "APP_NAME": "@app-name",
-      "APP_DESCRIPTION": "@app-description",
-      "IPSTACK_KEY": "@ipstack-key",
-      "GOOGLE_KEY": "@google-key",
-      "FACEBOOK_APP_ID": "@facebook-app-id",
-      "OK_DATA_URL": "@ok-data-url-json",
-      "TX_DATA_URL": "@tx-data-url-txt",
-      "SETTINGS_SHEET_KEY": "@settings-sheet-key"
-    }
   },
   "keywords": [
     "burn",
