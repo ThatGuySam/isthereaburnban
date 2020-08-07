@@ -1,0 +1,25 @@
+{
+    "version": 2,
+    "alias": [
+        "isthereaburnban",
+        "isthereaburnban.com"
+    ],
+    "env": {
+        "APP_URL": "@app-url",
+        "APP_NAME": "@app-name",
+        "APP_DESCRIPTION": "@app-description",
+        "IPSTACK_KEY": "@ipstack-key",
+        "GOOGLE_KEY": "@google-key",
+        "FACEBOOK_APP_ID": "@facebook-app-id",
+        "OK_DATA_URL": "@ok-data-url-json",
+        "TX_DATA_URL": "@tx-data-url-txt",
+        "SETTINGS_SHEET_KEY": "@settings-sheet-key"
+    },
+    "routes": [
+        {
+            "src": "/check",
+            "headers": { "cache-control": "s-maxage=3600" },
+            "dest": "/api/check"
+        }
+    ]
+}
