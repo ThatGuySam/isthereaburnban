@@ -51,10 +51,11 @@
   },
   "scripts": {
     "dev": "node server.js",
+    "vercel-dev": "vercel dev",
     "build": "next build",
-    "start": "NODE_ENV=production node server.js",
+    "start": "next start -p $PORT",
     "test": "NODE_ENV=test jest",
-    "deploy": "now",
+    "deploy": "vercel",
     "deploy-live": "now && now alias && now isthereaburnban --safe",
     "lint": "eslint --ext .js,.js .",
     "fix": "eslint --ext .js,.js . --fix",
