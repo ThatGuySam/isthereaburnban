@@ -1,4 +1,4 @@
-export default () => {
+export default function facebookAnalytics () {
   // Cancel if there's no document
   if (typeof document !== 'object') return
   
