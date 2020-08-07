@@ -68,3 +68,5 @@ typings/
 .env
 /stats.json
 /now-secrets.json
+
+.vercel
