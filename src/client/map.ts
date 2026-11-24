@@ -7,6 +7,7 @@ import type { Feature, Geometry } from "geojson";
 import { heroStyle, renderStatusHtml } from "../shared/render";
 import { STATE_BY_FIPS } from "../shared/states-fips";
 import type { CountyStatus, LookupResult, SourceHealth } from "../shared/types";
+import { bindSheetTriggers } from "./place";
 
 type Coverage = Record<string, { abbr: string; coverage: "live" | "restrictions" | "directory" }>;
 type Bans = { generated: string; counties: CountyStatus[]; sources: SourceHealth[] };
@@ -18,9 +19,10 @@ export async function initMap(): Promise<void> {
   const loading = document.querySelector<HTMLElement>("[data-map-loading]");
   const panel = document.querySelector<HTMLElement>("[data-map-panel]")!;
   const slot = panel.querySelector<HTMLElement>("[data-status-slot]")!;
-  const alertBtn = panel.querySelector<HTMLButtonElement>("[data-alert-open]")!;
+  const alertBtn = panel.querySelector<HTMLButtonElement>('[data-sheet="alert"]')!;
   const pinToggle = document.querySelector<HTMLButtonElement>("[data-pin-toggle]")!;
   const coverage = JSON.parse(el.dataset.coverage || "{}") as Coverage;
+  bindSheetTriggers();
 
   const [topo, bans] = await Promise.all([
     fetch("/data/counties.topo.json").then((r) => r.json() as Promise<Topology>),
