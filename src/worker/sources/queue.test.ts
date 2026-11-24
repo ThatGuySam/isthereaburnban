@@ -2,7 +2,7 @@
 import { Database } from "bun:sqlite";
 import { afterEach, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { STATES_DIR } from "../counties";
+import { COUNTIES, STATES_DIR } from "../counties";
 import { SNAPSHOT_KEY } from "../env";
 import { withFireWeather } from "../fire-weather";
 import { lookup } from "../lookup";
@@ -128,7 +128,7 @@ test("registry and states.json agree in both directions, and source IDs are uniq
   expect([...new Set(active.filter(({ coverage }) => coverage === "live").map(({ state }) => state))].sort()).toEqual(live);
   expect(new Set(SOURCES.map(({ id }) => id)).size).toBe(SOURCES.length);
   const dailyPolls = active.reduce((total, { cadence }) => total + (cadence.kind === "hourly" ? 24 : cadence.hours.length), 0);
-  expect(24 * (MAX_CACHED_STATES + 3)).toBeLessThan(1000); // D1 source revisions; capped shards, two active formats, and index
+  expect(23 * (MAX_CACHED_STATES + 3) + 51 + 3).toBeLessThan(1000); // one full KV bootstrap and 23 capped publications
   expect((dailyPolls + 24 * (1 + 51 + 4)) * 3).toBeLessThanOrEqual(10000); // enqueue, dequeue, delete
   for (const item of active) {
     if (item.product === "fire-weather") {
@@ -224,7 +224,7 @@ test("queue stores one revision, absorbs duplicate deliveries and skips unchange
   await poll(box, src, initial);
   await merge(box, [src], initial);
   expect(called).toBe(1);
-  expect(box.puts).toHaveLength(MAX_CACHED_STATES + 3);
+  expect(box.puts).toHaveLength(51 + 3);
   expect(box.puts.slice(-3)).toEqual([ACTIVE_KEY, PRETTY_ACTIVE_KEY, INDEX_KEY]);
   expect(box.sqlite.query("SELECT count(*) as count FROM snapshot_state").get().count).toBe(51);
   expect(box.sqlite.query("SELECT count(*) as count FROM source_payload").get().count).toBe(1);
@@ -235,7 +235,7 @@ test("queue stores one revision, absorbs duplicate deliveries and skips unchange
   await merge(box, [src], nextHour + 3_600_000);
   await poll(box, src, initial - 1);
   expect(called).toBe(3);
-  expect(box.puts).toHaveLength(MAX_CACHED_STATES + 3);
+  expect(box.puts).toHaveLength(51 + 3);
   const snapshot = box.snapshot();
   applyChecks(snapshot, await readHeads(box.env.DB), new Date(nextHour + 3_600_000));
   expect(snapshot.counties["41039"].checked).toBe(new Date(nextHour + 3_600_000).toISOString());
@@ -314,6 +314,30 @@ test("one dirty state rewrites only its shard and readers pin the catalog revisi
   expect(border.results.map(({ state, status }) => [state, status])).toEqual([["OR", "none"], ["TX", "none"]]);
   expect(box.gets.filter((key) => key === INDEX_KEY)).toHaveLength(1);
   expect(box.gets.every((key) => [INDEX_KEY, stateKey("OR"), stateKey("TX")].includes(key))).toBe(true);
+});
+
+test("a busy hour limits KV writes and still serves every changed state", async () => {
+  const box = sandbox();
+  const start = Date.now() - 7_200_000;
+  const next = start + 3_600_000;
+  const counties = new Map(COUNTIES.map(({ state, fips, name }) => [state, { state, fips, county: name }]));
+  let status = "none";
+  const sources = [...counties].map(([state, county]) =>
+    source(`fixture-${state}`, async ({ now }) => ({ rows: [row(status, now.toISOString(), county)] }), { state }));
+  for (const src of sources) await poll(box, src, start);
+  await merge(box, sources, start);
+  expect(Object.values(box.catalog().states).every(({ cached }) => cached)).toBe(true);
+  box.puts.length = 0;
+  status = "ban";
+  for (const src of sources) await poll(box, src, next);
+  await merge(box, sources, next);
+  expect(box.puts).toHaveLength(MAX_CACHED_STATES + 3);
+  const overflow = Object.keys(box.catalog().states).filter((state) => !box.catalog().states[state].cached);
+  expect(overflow).toHaveLength(51 - MAX_CACHED_STATES);
+  const state = overflow[0];
+  const result = await snapshotReader(box.env, { fresh: true }).state(state);
+  expect(result.counties[counties.get(state).fips].status).toBe("ban");
+  expect(box.gets).not.toContain(stateKey(state));
 });
 
 test("v1 KV remains readable and the first v2 merge preserves history and resumes pending legacy notices", async () => {

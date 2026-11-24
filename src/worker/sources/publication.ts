@@ -21,6 +21,7 @@ type StateJob = { state: string; signature: string; cache: boolean };
 type RunRow = { id: string; slot: number; generated: string; plan: string; cursor: number };
 type Run = Omit<RunRow, "plan"> & { plan: StateJob[] };
 type SendNotices = (env: Env, runId: string, notices: Notice[]) => Promise<unknown>;
+type PublishedState = { state: string; revision: string; cached: number; summary: string };
 
 export function buildStatePublication(prev: SnapshotData | null, inputs: SourceInput[], now: Date, state: string, revision: string, signature: string) {
   const { snapshot, transitions } = mergeSources(prev, inputs, now);
@@ -64,7 +65,9 @@ export async function planPublication(env: Env, slot: number, now: Date, sources
     const state = STATES[(offset + i + STATES.length) % STATES.length].abbr;
     const material = materialRevisions(stateSources(sources, state), heads, now, weather.get(state) ?? new Map());
     const signature = createHash("sha256").update(JSON.stringify([MERGE_VERSION, material])).digest("hex");
-    if (signature !== previous?.states[state]?.signature) plan.push({ state, signature, cache: plan.length < MAX_CACHED_STATES });
+    if (signature !== previous?.states[state]?.signature) {
+      plan.push({ state, signature, cache: !previous || plan.length < MAX_CACHED_STATES });
+    }
   }
   // Refresh a global health-only change (for example a failing NWS poll with an empty feed).
   const healthChanged = national.some(({ id }) => {
@@ -119,15 +122,13 @@ async function mergeState(env: Env, run: Run, job: StateJob, sources: readonly S
 // All shards are staged before this runs. Previous rows remain available for cached indexes.
 const CURRENT_STATES = "rowid IN (SELECT MAX(rowid) FROM snapshot_state GROUP BY state)";
 
-async function publishCatalog(env: Env, run: Run, sources: readonly Source[]) {
-  const { results } = await env.DB.prepare(`SELECT state, revision, cached, summary FROM snapshot_state WHERE ${CURRENT_STATES}`)
-    .all<{ state: string; revision: string; cached: number; summary: string }>();
-  const heads = await readHeads(env.DB);
+export function buildCatalog(run: Pick<Run, "id" | "generated">, states: PublishedState[],
+  sources: readonly Pick<Source, "id">[], heads: Map<string, SourceHead>): SnapshotIndex {
   const sourceVersions: Record<string, string> = {};
   const index: SnapshotIndex = { version: 2, revision: run.id, generated: run.generated,
     states: {}, sources: [], sourceVersions, orderChecks: {} };
   const health = new Map<string, SourceHealth>();
-  for (const { state, revision, summary, cached } of results) {
+  for (const { state, revision, summary, cached } of states) {
     const { signature, lastChanged, sources: local, sourceVersions: versions }: StateSummary = JSON.parse(summary);
     index.states[state] = { revision, signature, lastChanged, cached: Boolean(cached) };
     Object.assign(sourceVersions, versions);
@@ -150,7 +151,14 @@ async function publishCatalog(env: Env, run: Run, sources: readonly Source[]) {
     }
     return [row];
   });
-  const serialized = JSON.stringify(index);
+  return index;
+}
+
+async function publishCatalog(env: Env, run: Run, sources: readonly Source[]) {
+  const { results } = await env.DB.prepare(`SELECT state, revision, cached, summary FROM snapshot_state WHERE ${CURRENT_STATES}`)
+    .all<PublishedState>();
+  const heads = await readHeads(env.DB);
+  const serialized = JSON.stringify(buildCatalog(run, results, sources, heads));
   await env.KV.put(INDEX_KEY, serialized);
   await env.DB.prepare(`INSERT INTO snapshot_publication (singleton, slot, catalog) VALUES (1, ?, ?)
     ON CONFLICT(singleton) DO UPDATE SET slot = excluded.slot, catalog = excluded.catalog`).bind(run.slot, serialized).run();

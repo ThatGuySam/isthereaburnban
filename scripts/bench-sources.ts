@@ -408,7 +408,7 @@ for (const [label, inputs] of [
     const state = benchmark.stateCases.map((entry) => ({ state: entry.state, ...timings(entry[key]) })).sort((a, b) => b.p95 - a.p95)[0];
     console.log(`${`${name} (${state.state}, max p95)`.padEnd(55)} p50 ${state.p50.toFixed(3)}  p95 ${state.p95.toFixed(3)}`);
   }
-  measure("Cold rebuild total across 51 state jobs", benchmark.coldRebuild);
+  measure("Cold rebuild incl. state jobs and catalog", benchmark.coldRebuild);
   measure("Join the active projection", benchmark.joinActive);
   measure("Legacy parse, merge and encode", benchmark.wholeMerge);
   measure("Parse the catalog", benchmark.parseIndex);

@@ -8,7 +8,7 @@ import { withPublishedChecks } from "../src/worker/published-checks";
 import { decodeActive, encodeActive, type SnapshotIndex, type StateSnapshot, type StateSummary } from "../src/worker/snapshot-v2";
 import { withCurrentLinks } from "../src/worker/snapshot";
 import { mergeSources, type SourceInput } from "../src/worker/sources/merge";
-import { buildStatePublication } from "../src/worker/sources/publication";
+import { buildCatalog, buildStatePublication } from "../src/worker/sources/publication";
 import { applyChecks, type SourceHead } from "../src/worker/sources/state";
 
 declare global {
@@ -123,6 +123,8 @@ export function snapshotBenchmarks(inputs: SourceInput[], now: Date) {
     })) };
   const indexJson = JSON.stringify(index);
   const largest = previous.reduce((max, entry) => entry.snapshot.length > max.length ? entry.snapshot : max, "");
+  const registry = inputs.map(({ source }) => source);
+  const run = { id: "fixture", generated: now.toISOString() };
   const readActive = (format: BanFormat, clock = now) => {
     const projection = decodeActive(format === "pretty" ? pretty : active);
     const catalog: SnapshotIndex = JSON.parse(indexJson);
@@ -135,8 +137,17 @@ export function snapshotBenchmarks(inputs: SourceInput[], now: Date) {
       maxStateBytes: Math.max(...previous.map(({ snapshot }) => Buffer.byteLength(snapshot))) },
     wholeRead: () => statusFor(read(JSON.parse(originalJson)), "40143"),
     wholeMerge: () => JSON.stringify(mergeSources(null, aggregateInputs.map(({ meta, payload }) => ({ ...meta, ...JSON.parse(payload) })), now).snapshot),
-    coldRebuild: () => encodeActive("fixture", states.map(({ state, decode }) =>
-      buildStatePublication(null, decode(), now, state, "fixture", "signature"))),
+    coldRebuild: () => {
+      const shards = states.map(({ state, decode }) => ({
+        ...buildStatePublication(null, decode(), now, state, run.id, "signature"),
+        state, revision: run.id, cached: 1,
+      }));
+      return {
+        index: JSON.stringify(buildCatalog(run, shards, registry, heads)),
+        active: encodeActive(run.id, shards),
+        pretty: encodeActive(run.id, shards.map((shard) => ({ ...shard, active: shard.pretty }))),
+      };
+    },
     joinActive: () => encodeActive("fixture", previous),
     readActive: () => new Response(readActive("compact").body),
     readActiveMcp: () => new Response(new Blob(['{"content":[{"type":"text","text":', readActive("pretty").body, '}] }'])),
