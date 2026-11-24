@@ -1,6 +1,6 @@
 import type { CountyStatus, LookupResult, SnapshotData } from "../shared/types";
 import { cityRulesUrl } from "../shared/city-rules";
-import { DEPENDS_SENTENCE, placeStatus, statusSentence, statusTheme } from "../shared/render";
+import { DEPENDS_SENTENCE, locationConfirmation, placeName, placeStatus, statusSentence, statusTheme, unknownStatus } from "../shared/render";
 import { countyDecision } from "./county-decision";
 import { ADAPTERS } from "./adapters";
 import { COUNTY_BY_FIPS, countyPath, STATE_DIR_BY_ABBR } from "./counties";
@@ -43,12 +43,21 @@ export function statusFor(snapshot: SnapshotData, fips: string, now = Date.now()
   };
 }
 
-export function buildResult(query: LookupResult["query"], fipsList: string[], snapshot: SnapshotData | ((fips: string) => SnapshotData), approximate = false): LookupResult {
+export function buildResult(query: LookupResult["query"], fipsList: string[], snapshot: SnapshotData | ((fips: string) => SnapshotData)): LookupResult {
   const results = fipsList.map((f) => ({ ...statusFor(typeof snapshot === "function" ? snapshot(f) : snapshot, f), url: countyPath(f) }));
-  return { query, answer: placeStatus(results), ambiguous: results.length > 1, approximate, results, disclaimer: DISCLAIMER };
+  return { query, answer: placeStatus(results), ambiguous: results.length > 1, approximate: false, results, disclaimer: DISCLAIMER };
 }
 
-/** ZIP -> county FIPS list (largest land overlap first). Unknown ZIPs fall back to the nearest ZIP in the same 3-digit shard. */
+function locationCandidates(query: LookupResult["query"], ids: string[], reason: string, matchedZip?: string): LookupResult {
+  const results = ids.map((id) => {
+    const county = COUNTY_BY_FIPS.get(id)!;
+    return { ...unknownStatus(county, STATE_DIR_BY_ABBR.get(county.state), ""), label: "Location needs confirmation", url: countyPath(id) };
+  });
+  return { query, answer: "unknown", approximate: true, ambiguous: results.length > 1,
+    matchedZip, approximationReason: reason, results, disclaimer: DISCLAIMER };
+}
+
+/** ZIP -> counties in land-overlap order. An absent ZIP gets a numeric substitute within the prefix. */
 export async function zipToFips(env: Env, zip: string): Promise<{ fips: string[]; approximate: boolean; matched: string }> {
   if (!/^\d{5}$/.test(zip)) throw new LookupError("zip must be 5 digits");
   const res = await env.ASSETS.fetch(new Request(`https://assets.local/zip/${zip.slice(0, 3)}.json`));
@@ -67,21 +76,19 @@ export async function coordsToFips(lat: number, lon: number): Promise<string[]> 
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) throw new LookupError("lat and lon must be valid coordinates");
   const x = lon.toFixed(3);
   const y = lat.toFixed(3);
-  const url = `https://geocoding.geo.census.gov/geocoder/geographies/coordinates?x=${x}&y=${y}&benchmark=Public_AR_Current&vintage=Current_Current&layers=Counties&format=json`;
+  // County routes and ZIP overlaps are keyed to 2020 geographies, including Connecticut's historic counties.
+  const url = `https://geocoding.geo.census.gov/geocoder/geographies/coordinates?x=${x}&y=${y}&benchmark=Public_AR_Current&vintage=Census2020_Current&layers=Counties&format=json`;
   const cache = typeof caches !== "undefined" ? (caches as unknown as { default: Cache }).default : undefined;
   const key = new Request(url);
-  let res = await cache?.match(key);
-  if (!res) {
-    res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    if (!res.ok) throw new LookupError(`location lookup failed (Census geocoder HTTP ${res.status})`, 502);
-    const body = await res.text();
-    res = new Response(body, { headers: { "content-type": "application/json", "cache-control": "public, max-age=2592000" } });
-    await cache?.put(key, res.clone());
-  }
+  const cached = await cache?.match(key).catch(() => undefined);
+  if (cached) return cached.json<string[]>();
+  const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+  if (!res.ok) throw new LookupError(`location lookup failed (Census geocoder HTTP ${res.status})`, 502);
   const json = (await res.json()) as { result?: { geographies?: Record<string, { GEOID?: string }[]> } };
   const counties = json.result?.geographies?.Counties ?? [];
   const fips = counties.map((c) => c.GEOID ?? "").filter((g) => COUNTY_BY_FIPS.has(g));
   if (!fips.length) throw new LookupError("that location is not inside a US county we know", 404);
+  await cache?.put(key, Response.json(fips, { headers: { "cache-control": "public, max-age=2592000" } })).catch(() => undefined);
   return fips;
 }
 
@@ -89,20 +96,26 @@ export async function coordsToFips(lat: number, lon: number): Promise<string[]> 
 export async function lookup(
   env: Env,
   snapshots: SnapshotReader,
-  q: { zip?: string; lat?: number; lon?: number; fips?: string; city?: string; state?: string },
+  q: LookupResult["query"],
 ): Promise<LookupResult> {
-  const result = async (query: LookupResult["query"], fips: string[], approximate = false) => {
+  const result = async (query: LookupResult["query"], fips: string[]) => {
     const states = await snapshots.forCounties(fips);
-    return buildResult(query, fips, (id) => states.get(countyState(id))!, approximate);
+    return buildResult(query, fips, (id) => states.get(countyState(id))!);
   };
   if (q.zip) {
-    const z = await zipToFips(env, q.zip.trim());
-    return result({ zip: q.zip.trim() }, z.fips, z.approximate);
+    const query = { zip: q.zip.trim() };
+    const z = await zipToFips(env, query.zip);
+    if (z.approximate) {
+      return locationCandidates(query, z.fips,
+        "The requested ZIP has no Census ZIP-area entry. We used the closest ZIP by number with the same first three digits.", z.matched);
+    }
+    return { ...await result(query, z.fips), matchedZip: z.matched };
   }
   if (q.lat !== undefined || q.lon !== undefined) {
     const lat = Number(q.lat);
     const lon = Number(q.lon);
-    return result({ lat, lon }, await coordsToFips(lat, lon));
+    const ids = await coordsToFips(lat, lon);
+    return q.here ? locationCandidates({ here: true }, ids, "We estimated the county from your IP address.") : result({ lat, lon }, ids);
   }
   if (q.fips) {
     const f = q.fips.trim();
@@ -140,6 +153,10 @@ export function resultSentence(r: CountyStatus): string {
 
 /** Share the place qualifier and county answers across the text API and MCP. */
 export function lookupText(result: LookupResult): string {
+  if (result.approximate) {
+    const counties = result.results.map((row) => `- ${placeName(row)}`).join("\n");
+    return `${locationConfirmation(result)}\n${counties}`;
+  }
   const lines = result.results.map(resultSentence);
   if (result.answer === "depends") lines.unshift(`${DEPENDS_SENTENCE}.`);
   if (result.place) {

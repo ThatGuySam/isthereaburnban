@@ -115,13 +115,15 @@ export type PlaceStatus = BanStatus | "depends";
 
 export type LookupResult = {
   answer: PlaceStatus;
-  query: { zip?: string; lat?: number; lon?: number; fips?: string; city?: string; state?: string };
+  query: { zip?: string; lat?: number; lon?: number; fips?: string; city?: string; state?: string; here?: true };
   /** set for city= lookups: the matched incorporated place and its page (or its county page when it has none) */
   place?: { name: string; state: string; url: string; counties: string[]; localRulesUrl?: string };
   /** true if a ZIP touches more than one county; UI should ask the user to pick */
   ambiguous: boolean;
-  /** true if the ZIP was not in Census ZCTA data and we used the nearest ZIP */
+  /** An approximate result contains county candidates pending confirmation. */
   approximate: boolean;
+  matchedZip?: string;
+  approximationReason?: string;
   results: (CountyStatus & { url: string })[]; // url = canonical county page path, e.g. /us/ok/tulsa-county/
   disclaimer: string;
 };

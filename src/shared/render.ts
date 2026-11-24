@@ -1,6 +1,6 @@
 // Status wording, colors and hero markup. Pure functions shared by the Worker (HTMLRewriter
 // injection) and the browser (client-side lookups), so every surface says the same thing.
-import type { BanStatus, CountyStatus, FireWeatherAlert, PlaceStatus, StateDirectoryEntry } from "./types";
+import type { BanStatus, CountyStatus, FireWeatherAlert, LookupResult, PlaceStatus, StateDirectoryEntry } from "./types";
 
 export type HeroStatus = PlaceStatus | "checking";
 
@@ -258,6 +258,11 @@ export function localDate(iso: string | null | undefined, state: string): string
 export function placeStatus(list: Pick<CountyStatus, "status">[]): PlaceStatus {
   const first = list[0]?.status;
   return first === undefined ? "unknown" : list.every((c) => c.status === first) ? first : "depends";
+}
+
+export function locationConfirmation(result: LookupResult): string {
+  const match = result.matchedZip ? `ZIP ${result.query.zip} uses ZIP ${result.matchedZip} as a substitute. ` : "";
+  return `${match}${result.approximationReason ?? "The location is approximate."} Confirm your county.`;
 }
 
 export const DEPENDS_SENTENCE = "Depends on your county";

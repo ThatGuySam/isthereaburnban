@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import type { CountyStatus } from "../shared/types";
 import type { Adapter } from "./adapters/common";
 import { alertNotices, buildSnapshot } from "./snapshot";
-import { buildResult, resultSentence, statusFor } from "./lookup";
+import { buildResult, coordsToFips, DISCLAIMER, resultSentence, statusFor } from "./lookup";
 import { activeBans } from "./api";
 import { formatNationalBans } from "./active-bans";
 import { decodeActive, encodeActive, encodeState } from "./snapshot-v2";
@@ -148,4 +148,50 @@ test("standing activity rules are reported separately from the temporary county 
     countywide: { status: "none" },
     orders: [{ standing: true, scopeNote: "Residential properties" }],
   });
+});
+
+test("approximate ZIP lookup asks for confirmation and withholds definitive answers on every wire format", async () => {
+  const { default: worker } = await import("./index");
+  const generated = new Date().toISOString();
+  const env = {
+    SITE_URL: "https://burn.example",
+    ASSETS: { fetch: async () => Response.json({ "74103": ["40143"] }) },
+    DB: { prepare: () => ({ first: async () => null }) },
+    KV: { get: async () => ({ version: 1, counties: { "40143": row("40143", "ban", generated) }, generated, changed: {}, sources: [] }) },
+  };
+  const context = { waitUntil() {}, passThroughOnException() {} };
+  const get = (path) => worker.fetch(new Request(`https://burn.example${path}`), env, context);
+  const json = await (await get("/api/v1/status?zip=74100")).json();
+  expect(json).toMatchObject({ approximate: true, answer: "unknown", matchedZip: "74103", approximationReason: expect.stringContaining("by number") });
+  expect(json.results).toMatchObject([{ fips: "40143", status: "unknown" }]);
+  const text = await (await get("/api/v1/status?zip=74100&format=text")).text();
+  for (const item of ["74100", "74103", "by number", "Confirm your county", "Tulsa County"]) expect(text).toContain(item);
+  expect(text).not.toMatch(/Yes:|Nope:/);
+
+  const mcp = await worker.fetch(new Request("https://burn.example/mcp", {
+    method: "POST", headers: { "content-type": "application/json", accept: "application/json, text/event-stream", host: "burn.example" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call",
+      params: { name: "check_burn_ban", arguments: { zip: "74100" } } }),
+  }), env, context);
+  const payload = await mcp.text();
+  const data = payload.split("\n").find((line) => line.startsWith("data: "));
+  const [summary, detail] = JSON.parse(data ? data.slice(6) : payload).result.content;
+  expect(summary.text).toBe(text.split(DISCLAIMER)[0].trim());
+  expect(JSON.parse(detail.text)).toEqual(json);
+});
+
+test("coordinates use the Census vintage with Hartford County FIPS", async () => {
+  const realFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async (input) => {
+      const p = new URL(input).searchParams;
+      expect(p.get("x")).toBe("-72.674");
+      expect(p.get("y")).toBe("41.764");
+      const fips = p.get("vintage") === "Census2020_Current" ? "09003" : "09110";
+      return Response.json({ result: { geographies: { Counties: [{ GEOID: fips }] } } });
+    };
+    expect(await coordsToFips(41.764, -72.674)).toEqual(["09003"]);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });

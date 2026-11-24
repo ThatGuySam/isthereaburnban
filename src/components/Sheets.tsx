@@ -2,7 +2,8 @@
 // Pages open it with openSheet() (src/client/place.ts) or any [data-sheet] element.
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Drawer } from "vaul";
-import { renderStatusHtml, statusTheme } from "../shared/render";
+import type { LookupResult } from "../shared/types";
+import { locationConfirmation, renderStatusHtml, statusTheme } from "../shared/render";
 import {
   COUNTY_CLOSED,
   emitResolved,
@@ -174,7 +175,7 @@ function CountySheet() {
 function LocationSheet({ detail, done }: { detail: OpenDetail; done: () => void }) {
   const [msg, setMsg] = useState(detail.message ?? "");
   const [busy, setBusy] = useState(false);
-  const [choices, setChoices] = useState<{ zip: string; results: Result[] } | null>(null);
+  const [choices, setChoices] = useState<LookupResult | null>(null);
   const hasPlace = Boolean(readPlace()?.fips);
 
   function choose(result: Result, extra: Omit<ResolvedDetail, "result"> = {}) {
@@ -193,8 +194,8 @@ function LocationSheet({ detail, done }: { detail: OpenDetail; done: () => void 
     try {
       const res = await lookupStatus({ zip });
       if (!res.results?.length) return setMsg("We couldn't find that ZIP. Try another.");
-      if (res.ambiguous && res.results.length > 1) return setChoices({ zip, results: res.results });
-      choose(res.results[0], { zip, note: res.approximate ? `Closest match for ZIP ${zip}` : undefined });
+      if (res.approximate || res.ambiguous) return setChoices(res);
+      choose(res.results[0], { zip });
     } catch {
       setMsg("Lookup failed. Try again in a minute.");
     } finally {
@@ -231,20 +232,39 @@ function LocationSheet({ detail, done }: { detail: OpenDetail; done: () => void 
     else setMsg("Enter a 5-digit ZIP.");
   }
 
+  async function chooseCounty(candidate: Result) {
+    if (!choices?.approximate) return choose(candidate, { zip: choices?.query.zip });
+    setBusy(true);
+    setMsg("");
+    try {
+      const { results } = await lookupStatus({ fips: candidate.fips });
+      if (!results[0]) throw new Error("missing county");
+      choose(results[0]);
+    } catch {
+      setMsg("Couldn't load that county's report. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (choices) {
     return (
       <div className="vs-body">
-        <Drawer.Title className="vs-title">Which county?</Drawer.Title>
-        <p className="vs-sub">ZIP {choices.zip} touches {choices.results.length} counties.</p>
+        <Drawer.Title className="vs-title">{choices.approximate ? "Confirm your county" : "Which county?"}</Drawer.Title>
+        <p className="vs-sub">{choices.approximate
+          ? locationConfirmation(choices)
+          : `Our Census ZIP area for ${choices.query.zip} overlaps ${choices.results.length} counties.`}</p>
+        <p className="vs-msg" aria-live="polite">{msg}</p>
         <ul className="vs-list" role="list">
           {choices.results.map((r) => (
             <li key={r.fips}>
-              <button type="button" onClick={() => choose(r, { zip: choices.zip })}>
+              <button type="button" onClick={() => void chooseCounty(r)} disabled={busy}>
                 {r.county}, {r.state}
               </button>
             </li>
           ))}
         </ul>
+        <button type="button" className="vs-btn vs-btn--quiet" disabled={busy} onClick={() => { setChoices(null); setMsg(""); }}>Try another ZIP</button>
       </div>
     );
   }

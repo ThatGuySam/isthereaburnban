@@ -74,10 +74,9 @@ export function initHero(): void {
       return openSheet({ sheet: "location", message: "We couldn't reach our status service. Try again in a minute." });
     }
     if (!res.results?.length) return openSheet({ sheet: "location", message: "We couldn't find a US county there. Try a ZIP." });
-    if (res.ambiguous && res.results.length > 1) return openSheet({ sheet: "location", zip: params.zip });
+    if (res.approximate || res.ambiguous) return openSheet({ sheet: "location", zip: params.zip });
     const r = res.results[0];
-    const note = res.approximate ? `Closest match${res.query.zip ? ` for ZIP ${res.query.zip}` : ""}` : undefined;
-    paint(r, { ...extra, note });
+    paint(r, extra);
   }
 
   document.addEventListener("itabb:resolved", (e) => {

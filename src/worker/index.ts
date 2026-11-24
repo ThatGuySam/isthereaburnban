@@ -28,8 +28,8 @@ function jsonResponse(body: string, status = 200, cache = "public, max-age=300")
   });
 }
 
-function text(body: string, status = 200): Response {
-  return new Response(body, { status, headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=300", ...CORS } });
+function text(body: string, status = 200, cache = "public, max-age=300"): Response {
+  return new Response(body, { status, headers: { "content-type": "text/plain; charset=utf-8", "cache-control": cache, ...CORS } });
 }
 
 function error(message: string, status = 400): Response {
@@ -76,7 +76,7 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
       const cf = request.cf as { latitude?: string; longitude?: string } | undefined;
       if (here && !(cf?.latitude && cf?.longitude)) return error("could not locate this request; try zip= instead", 422);
       const q = here
-        ? { lat: Number(cf!.latitude), lon: Number(cf!.longitude) }
+        ? { lat: Number(cf!.latitude), lon: Number(cf!.longitude), here: true as const }
         : {
             zip: p.get("zip") ?? undefined,
             fips: p.get("fips") ?? undefined,
@@ -85,8 +85,9 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
             lon: p.has("lon") ? Number(p.get("lon")) : undefined,
           };
       const result = await lookup(env, snapshots, q);
-      if (p.get("format") === "text") return text(lookupText(result) + `\n${DISCLAIMER}\n`);
-      return json(result, 200, here ? "private, max-age=300" : undefined);
+      const cache = here || q.lat !== undefined || q.lon !== undefined ? "private, no-store" : undefined;
+      if (p.get("format") === "text") return text(lookupText(result) + `\n${DISCLAIMER}\n`, 200, cache);
+      return json(result, 200, cache);
     }
     if (path === "/api/v1/map-status") {
       const map = await snapshots.mapStatus();
