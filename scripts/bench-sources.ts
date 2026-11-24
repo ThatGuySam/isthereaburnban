@@ -13,6 +13,11 @@ import { parseArizonaAreaA } from "../src/worker/sources/az/area-a";
 import { azGrandCanyonFire, parseGrandCanyonFire } from "../src/worker/sources/az/grand-canyon";
 import { azPimaWildfire, parsePimaWildfire } from "../src/worker/sources/az/pima";
 import { parsePfirs, pfirs } from "../src/worker/sources/ca/pfirs";
+import {
+  coArapahoeFire, coBoulderFire, coDouglasFire, coElPasoFire, coEstesFire, coLarimerFire,
+  parseArapahoeFire, parseBoulderFire, parseDouglasFire, parseElPasoFire, parseEstesFire, parseLarimerFire,
+} from "../src/worker/sources/co/county-status";
+import { coDenverAir, parseDenverAir } from "../src/worker/sources/co/denver-air";
 import { gaEpdNonSummer, parseEpdSeasonal } from "../src/worker/sources/ga/epd";
 import { parseGwinnett } from "../src/worker/sources/ga/gwinnett";
 import { codedDomains, dataLastEditDate, findOperationalLayers } from "../src/worker/sources/lib/arcgis";
@@ -90,6 +95,23 @@ const parseAzAreaAFixture = async () => parseArizonaAreaA(await extractHtml(azSt
 const parseWaEcologyFixture = () => parseEcologyAir(waEcologyHtml, now);
 const parseWaPugetFixture = () => parsePugetSound(waPugetHtml, now);
 const parseWaKingFixture = async () => parseKingFireSafety(await extractHtml(waKingHtml), now);
+const coFixture = (name: string, ext: string) => utf8(`co/fixtures/${name}-2026-11-24.${ext}`);
+const coDouglasJson = coFixture("douglas-status", "json");
+const coElPasoJson = coFixture("el-paso-status", "json");
+const coBoulderHtml = coFixture("boulder-status", "html");
+const coArapahoeHtml = coFixture("arapahoe-status", "html");
+const coEstesHtml = coFixture("estes-status", "html");
+const coLarimerJson = coFixture("larimer-aegis", "json");
+const coDenverHtml = coFixture("denver-air", "html");
+const coJobs = [
+  ["CO Douglas County WordPress", coDouglasFire, () => parseDouglasFire(JSON.parse(coDouglasJson), now)],
+  ["CO El Paso County WordPress", coElPasoFire, () => parseElPasoFire(JSON.parse(coElPasoJson), now)],
+  ["CO Boulder County WordPress", coBoulderFire, async () => parseBoulderFire(await extractHtml(coBoulderHtml), now)],
+  ["CO Arapahoe County Revize", coArapahoeFire, async () => parseArapahoeFire(await extractHtml(coArapahoeHtml), now)],
+  ["CO Estes Valley district", coEstesFire, async () => parseEstesFire(await extractHtml(coEstesHtml, { links: true }), now)],
+  ["CO Larimer Aegis Experience", coLarimerFire, () => parseLarimerFire(JSON.parse(coLarimerJson), now)],
+  ["CO CDPHE Denver Metro advisory", coDenverAir, async () => parseDenverAir(await extractHtml(coDenverHtml), now)],
+] as const;
 
 const adapters: Array<[string, () => CountyStatus[]]> = [
   ["OK ArcGIS", () => parseOk(JSON.parse(ok), checked)],
@@ -118,6 +140,7 @@ recordedInputs.push(
   { source: waEcologyAir, rows: await parseWaEcologyFixture(), checked },
   { source: waPugetSoundAir, rows: await parseWaPugetFixture(), checked },
   { source: waKingFireSafety, rows: await parseWaKingFixture(), checked },
+  ...await Promise.all(coJobs.map(async ([, source, parse]) => ({ source, rows: await parse(), checked }))),
 );
 
 const states = new Map<string, CountyStatus[]>();
@@ -174,6 +197,7 @@ const jobs: Array<[string, () => unknown]> = [
   ["WA Ecology air quality orders", parseWaEcologyFixture],
   ["WA Puget Sound air quality grid", parseWaPugetFixture],
   ["WA King County fire safety", parseWaKingFixture],
+  ...coJobs.map(([name, , parse]): [string, () => unknown] => [name, parse]),
   ["Merge and encode current sources", () => JSON.stringify(mergeSources(null, recordedInputs, now).snapshot)],
   ["Parse, merge, encode 51-area projection", () => JSON.stringify(mergeSources(null,
     fullInputs.map((input, index) => ({ ...input, rows: JSON.parse(serializedFull[index]) })), now).snapshot)],

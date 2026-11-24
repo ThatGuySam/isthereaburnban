@@ -95,15 +95,55 @@
     "abbr": "CO",
     "name": "Colorado",
     "coverage": "restrictions",
-    "publisher": "Colorado State Forest Service",
+    "publisher": "Local Colorado fire authorities and the Air Pollution Control Division",
     "officialUrl": "https://csfs.colostate.edu/wildfire-mitigation/current-wildfire-information-fire-restrictions/",
     "extraUrls": [
       {
+        "label": "Colorado fire restriction directory",
+        "url": "https://dfpc.colorado.gov/firerestriction"
+      },
+      {
         "label": "Rocky Mountain interagency restrictions map",
-        "url": "https://www.arcgis.com/home/item.html?id=407bde860acc492bb53c972275bfbd33"
+        "url": "https://www.arcgis.com/apps/dashboards/407bde860acc492bb53c972275bfbd33"
+      },
+      {
+        "label": "Colorado BLM fire restrictions and closures",
+        "url": "https://www.blm.gov/programs/fire/regional-info/colorado/fire-restrictions"
+      },
+      {
+        "label": "Denver metro indoor burning advisory",
+        "url": "https://www.colorado.gov/airquality/advisory.aspx"
+      },
+      {
+        "label": "Front Range open-burning forecast",
+        "url": "https://www.colorado.gov/airquality/burn_forecast.aspx"
+      },
+      {
+        "label": "Arapahoe County Sheriff restrictions",
+        "url": "https://arapahoeco.gov/your_county/county_departments/sheriffs_office/how_do_i/learn_about_the_burn_ban.php"
+      },
+      {
+        "label": "Boulder County fire restrictions",
+        "url": "https://bouldercounty.gov/safety/fire/fire-restrictions/"
+      },
+      {
+        "label": "Douglas County Sheriff restrictions",
+        "url": "https://dcsheriff.net/sheriffs-office/divisions/emergency-management/fire-restrictions/"
+      },
+      {
+        "label": "El Paso County Sheriff fire information",
+        "url": "https://epcsheriffsoffice.com/services/fire-information/"
+      },
+      {
+        "label": "Larimer County fire danger and restrictions",
+        "url": "https://aegis.larimer.gov/pages/fire-danger"
+      },
+      {
+        "label": "Estes Valley Fire Protection District restrictions",
+        "url": "https://www.estesvalleyfire.org/fire-restrictions-bans"
       }
     ],
-    "notes": "County sheriffs, towns, fire districts and federal land managers issue fire restrictions in Colorado. The State Forest Service links to them."
+    "notes": "County sheriffs and commissioners, municipalities, fire districts, and federal land managers can issue restrictions for their own areas. We track some local orders and Denver-area indoor wood-burning advisories. Check your local fire authority, land manager and air-quality rules for the burn location."
   },
   {
     "abbr": "CT",

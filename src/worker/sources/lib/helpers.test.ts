@@ -11,7 +11,7 @@ import { blockAfterHeading, extractHtml, extractHtmlGrid, localClock, parseEndDa
 import { BlockedError, fetchSource, HttpError, USER_AGENT } from "./http";
 import { manualPdf } from "./pdf";
 import { parseSharePointItems, sharePointListItems, sharePointListUrl, sharePointRows } from "./sharepoint";
-import { ninjaTablesUrl, parseNinjaRows, parseWpItems, wpRestUrl } from "./wordpress";
+import { ninjaTablesUrl, parseNinjaRows, parseWpItems, parseWpPage, wpRestUrl } from "./wordpress";
 import { checkLink, htmlLinks } from "../../../../scripts/check-links";
 
 const data = (name) => readFileSync(new URL(`./fixtures/${name}`, import.meta.url));
@@ -244,6 +244,19 @@ test("WordPress parses Faulkner's REST search and Mississippi's Ninja Tables row
   const ms = JSON.parse(readFileSync(new URL("../../adapters/fixtures/ms.json", import.meta.url), "utf8"));
   expect(parseNinjaRows(ms)[0]).toEqual(ms[0].value);
   expect(() => parseWpItems({ code: "rest_forbidden" })).toThrow();
+});
+
+test("WordPress validates a published page and keeps its rendered structure", () => {
+  const url = "https://county.gov/fire-status/";
+  const expected = { id: 12, url };
+  const page = { id: 12, link: url, status: "publish", modified_gmt: "2026-02-03T19:25:00",
+    content: { rendered: "<h2>Current</h2><p>Stage 1</p>", protected: false } };
+  expect(new URL(wpRestUrl("https://county.gov", "pages/12")).pathname).toBe("/wp-json/wp/v2/pages/12");
+  expect(parseWpPage(page, expected)).toEqual({ html: page.content.rendered, modified: "2026-02-03T19:25:00Z" });
+  expect(() => parseWpPage({ ...page, id: 18 }, expected)).toThrow("Invalid public WordPress page");
+  expect(() => parseWpPage({ ...page, status: "draft" }, expected)).toThrow("Invalid public WordPress page");
+  expect(() => parseWpPage({ ...page, modified_gmt: "2026-02-30T19:25:00" }, expected)).toThrow("Invalid public WordPress page");
+  expect(() => parseWpPage({ ...page, content: { ...page.content, protected: true } }, expected)).toThrow("Invalid public WordPress page");
 });
 
 test("CivicPlus recognizes related links in Placer mobile News Flash, and both desktop families", () => {

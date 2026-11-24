@@ -1,0 +1,106 @@
+{
+  "publishTimestamp": 1793745909997,
+  "pages": {
+    "page_0": {
+      "id": "page_0",
+      "mode": "AUTO_SCROLL",
+      "type": "NORMAL",
+      "layout": {
+        "LARGE": "layout_0",
+        "SMALL": "layout_1006",
+        "MEDIUM": "layout_1070"
+      },
+      "isDefault": true,
+      "isVisible": true,
+      "bodyBackgroundColor": "#ffffff",
+      "header": false,
+      "footer": false,
+      "oneByOneEffect": {
+        "type": "NONE",
+        "option": {
+          "direction": null,
+          "start": "AFTER_PREVIOUS",
+          "parentMode": "ONE_BY_ONE"
+        }
+      },
+      "label": "Fire Danger",
+      "maxWidth": 1280
+    }
+  },
+  "widgets": {
+    "widget_991": {
+      "uri": "widgets/common/text/",
+      "version": "1.21.0",
+      "label": "Text 71",
+      "config": {
+        "text": "<p style=\"text-align: center;\"><strong style=\"font-size: 1.125rem;\">This interactive map provides an at-a-glance view of current fire restrictions across Larimer County, divided into three elevation zones: below 6,000 feet, 6,000–9,000 feet, and above 9,000 feet. The map reflects county, private, and state land status to help you plan responsibly. </strong></p><p style=\"text-align: center;\"><span style=\"font-size: 1.125rem;\">Please note: fire restrictions for federal lands and municipalities—like Rocky Mountain National Park and U.S. Forest Service areas—are not shown. For those areas, </span><a href=\"layout_0_block_51\" target=\"_self\" data-uniqueid=\"86829695_bceb_cba8_2276_3381cf6aedea\" data-dsid=\"\" data-link=\"%7B%22linkType%22%3A%22BLOCK%22%2C%22value%22%3A%22layout_0_block_51%22%7D\" style=\"font-size: 1.125rem;\">visit the respective agency’s website.</a></p>",
+        "style": {
+          "wrap": true
+        }
+      },
+      "id": "widget_991",
+      "style": {
+        "background": {
+          "color": "rgba(0,0,0,0)",
+          "fillType": "fill",
+          "image": {
+            "url": ""
+          }
+        }
+      },
+      "useDataSourcesEnabled": false
+    },
+    "widget_1190": {
+      "uri": "widgets/common/text/",
+      "version": "1.21.0",
+      "label": "Text 92",
+      "config": {
+        "text": "<h3 style=\"text-align: center;\"><span style=\"font-family: Calibri; font-size: 1.875rem;\">No Restrictions Are In Effect Throughout Unincorporated Larimer County </span></h3><p style=\"text-align: center;\"><span style=\"font-size: 1.125rem;\"> Check back for updates.</span></p>",
+        "style": {
+          "wrap": true
+        }
+      },
+      "id": "widget_1190"
+    },
+    "widget_1142": {
+      "uri": "widgets/common/text/",
+      "version": "1.21.0",
+      "label": "Text 74",
+      "config": {
+        "text": "<p style=\"text-align: center;\"><strong style=\"font-size: 1.25rem; color: var(--dark-800);\">No restrictions are in place.</strong><span style=\"font-size: 1.25rem;\">&nbsp;&nbsp;</span></p>",
+        "style": {
+          "verticalAlign": "start",
+          "wrap": true
+        }
+      },
+      "id": "widget_1142"
+    },
+    "widget_1168": {
+      "uri": "widgets/common/text/",
+      "version": "1.21.0",
+      "label": "Text 80",
+      "config": {
+        "text": "<p style=\"text-align: center;\"><strong style=\"font-size: 1.25rem; color: var(--dark-800);\">No restrictions are in place.</strong></p>",
+        "style": {
+          "verticalAlign": "start",
+          "wrap": true
+        }
+      },
+      "id": "widget_1168"
+    },
+    "widget_1179": {
+      "uri": "widgets/common/text/",
+      "version": "1.21.0",
+      "label": "Text 86",
+      "config": {
+        "text": "<p style=\"text-align: center;\"><strong style=\"font-size: 1.25rem; color: var(--dark-800);\">No restrictions are in place.</strong></p>",
+        "style": {
+          "verticalAlign": "start",
+          "wrap": true
+        }
+      },
+      "id": "widget_1179",
+      "useDataSourcesEnabled": false
+    }
+  }
+}

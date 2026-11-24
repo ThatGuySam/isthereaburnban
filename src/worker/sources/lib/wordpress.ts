@@ -1,11 +1,30 @@
+import { z } from "zod";
 import { htmlText } from "./html";
 
 // Inventory: WordPress, including the Faulkner REST search and Mississippi's Ninja Tables JSON.
 // Use the REST query only when the site exposes the relevant content there.
-export function wpRestUrl(site: string, kind: "posts" | "pages" | "search", query: Record<string, string> = {}): string {
+export function wpRestUrl(site: string, kind: "posts" | "pages" | "search" | `pages/${number}`, query: Record<string, string> = {}): string {
   const url = new URL(`wp-json/wp/v2/${kind}`, site.replace(/\/?$/, "/"));
   url.search = new URLSearchParams(query).toString();
   return url.href;
+}
+
+const wpPage = z.object({
+  id: z.number().int().positive(),
+  status: z.literal("publish"),
+  link: z.url(),
+  modified_gmt: z.iso.datetime({ local: true, precision: 0 }),
+  content: z.object({ rendered: z.string().trim().min(1), protected: z.literal(false) }),
+});
+
+/** Keep rendered markup so callers can distinguish the current status from historical or explanatory text. */
+export function parseWpPage(data: unknown, expected: { id: number; url: string }) {
+  const page = wpPage.safeParse(data);
+  if (!page.success || page.data.id !== expected.id || page.data.link !== expected.url) {
+    throw new Error(`Invalid public WordPress page: ${expected.url}`);
+  }
+  const stamp = page.data.modified_gmt;
+  return { html: page.data.content.rendered, modified: stamp.endsWith("Z") ? stamp : `${stamp}Z` };
 }
 
 export function ninjaTablesUrl(site: string, tableId: number): string {

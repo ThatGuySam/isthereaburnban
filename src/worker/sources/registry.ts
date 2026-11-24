@@ -8,6 +8,8 @@ import { azAreaASummer } from "./az/area-a";
 import { azGrandCanyonFire } from "./az/grand-canyon";
 import { azPimaWildfire } from "./az/pima";
 import { pfirs } from "./ca/pfirs";
+import { coArapahoeFire, coBoulderFire, coDouglasFire, coElPasoFire, coEstesFire, coLarimerFire } from "./co/county-status";
+import { coDenverAir } from "./co/denver-air";
 import { gaEpdNonSummer, gaEpdSummer } from "./ga/epd";
 import { gaGwinnett } from "./ga/gwinnett";
 import type { ArcgisResponse } from "./lib/arcgis";
@@ -60,6 +62,34 @@ export const SOURCES: readonly Source[] = [
   waEcologyAir,
   waPugetSoundAir,
   waKingFireSafety,
+  coArapahoeFire,
+  coBoulderFire,
+  coDouglasFire,
+  coElPasoFire,
+  coEstesFire,
+  coLarimerFire,
+  coDenverAir,
+  {
+    id: "co-dfpc-fire", state: "CO", scope: "part", stack: "Drupal / HTML directory", mode: "manual", cadence: null,
+    sourceName: "Colorado Division of Fire Prevention and Control",
+    sourceUrl: "https://dfpc.colorado.gov/firerestriction",
+    officialUrl: "https://dfpc.colorado.gov/firerestriction",
+    error: "The directory returned CloudFront HTTP 403 on 2026-11-24. It directs users to local fire authorities and federal land managers.",
+  },
+  {
+    id: "co-rocky-mountain-fire", state: "CO", scope: "part", stack: "ArcGIS Dashboard / WebMap", mode: "manual", cadence: null,
+    sourceName: "Rocky Mountain Area Coordination Center",
+    sourceUrl: "https://www.arcgis.com/sharing/rest/content/items/f0a56c48c00a4adfa7ceadba4fbdebe9/data?f=json",
+    officialUrl: "https://www.arcgis.com/apps/dashboards/407bde860acc492bb53c972275bfbd33",
+    error: "Colorado county boundaries carry no order status. The dashboard includes separate land-manager layers and Wyoming county orders.",
+  },
+  {
+    id: "co-sable-altura", state: "CO", scope: "part", stack: "WordPress REST / Popup Maker", mode: "manual", cadence: null,
+    sourceName: "Sable Altura Fire Protection District",
+    sourceUrl: "https://sablealturafire.org/wp-json/wp/v2/popups/3229",
+    officialUrl: "https://sablealturafire.org/fireprevention/",
+    error: "The district's Arapahoe County Stage 1 text appears next to older no-ban artwork. Confirm the order with the district.",
+  },
   {
     id: "wa-dnr-fdra", state: "WA", scope: "part", stack: "ArcGIS MapServer", mode: "manual", cadence: null,
     sourceName: "Washington DNR",
