@@ -226,7 +226,7 @@ function initLocate(say: (t: string) => void) {
 
 // ---------- /us/{st}/ ----------
 
-type BanRow = Pick<CountyStatus, "fips" | "county" | "status" | "label" | "scope">;
+type BanRow = Pick<CountyStatus, "fips" | "county" | "status" | "label" | "scopedBan">;
 
 export function initCountyFinder(): void {
   const list = document.querySelector<HTMLElement>("[data-county-list]");
@@ -284,7 +284,7 @@ function loadBans(list: HTMLElement) {
         if (!li) continue;
         const tag = document.createElement("span");
         tag.className = `tag tag--${c.status}`;
-        tag.textContent = c.status === "ban" ? "Burn ban" : /^Burn ban in /i.test(c.label) ? "Local burn ban" : "Restricted";
+        tag.textContent = c.status === "ban" ? "Burn ban" : c.scopedBan ? "Local burn ban" : "Restricted";
         tag.title = c.label;
         li.querySelector("a")?.appendChild(tag);
         const copy = li.cloneNode(true) as HTMLElement;

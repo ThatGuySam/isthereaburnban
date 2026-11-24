@@ -1,5 +1,5 @@
 import type { CountyStatus, SnapshotData } from "../shared/types";
-import { countyDecision } from "./county-decision";
+import { countyDecision, isScopedBan } from "./county-decision";
 import { COUNTY_BY_FIPS } from "./counties";
 import { withFireWeather } from "./fire-weather";
 import { DISCLAIMER } from "./lookup";
@@ -64,7 +64,7 @@ export function prepareBanEntries(snapshot: SnapshotData) {
   for (const [fips] of ordered) {
     const row = selected[fips];
     if (!row?.checked || snapshot.fireWeather?.[fips] || (row.status !== "ban" && row.orders?.some((order) =>
-      order.status === "ban" || (!active(row) && active(order))))) {
+      isScopedBan(order) || (!active(row) && active(order))))) {
       compact.push([fips]);
       pretty.push([fips]);
       if (row) weatherCounties[fips] = row;

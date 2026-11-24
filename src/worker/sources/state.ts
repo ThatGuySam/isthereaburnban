@@ -49,7 +49,7 @@ function normalize(source: ActiveSource, result: Exclude<SourceResult, { notModi
   if (!rows.length && source.mode === "full") throw new Error("Full source returned no rows");
   const ordered = rows.map((row) => {
     const { fips, state, county, label, since, expires, sourceUpdated, sourceName, sourceUrl, officialUrl, note,
-      scopeNote, validFrom, validUntil, standing } = row;
+      scopeNote, validFrom, validUntil, standing, scopedBan } = row;
     const scope = source.scope === "part" ? source.scope : row.scope ?? source.scope;
     if (state !== source.state || COUNTY_BY_FIPS.get(fips)?.state !== source.state || !BY_VALIDITY.has(row.status) ||
       (validFrom && !Number.isFinite(Date.parse(validFrom))) || (validUntil && !Number.isFinite(Date.parse(validUntil))) ||
@@ -59,7 +59,7 @@ function normalize(source: ActiveSource, result: Exclude<SourceResult, { notModi
     const status = row.status === "none" && source.mode === "positive-only" && scope !== "part" ? "unknown" : row.status;
     return { fips, state, county, status, label: status === row.status ? label : "Countywide status unconfirmed",
       since, expires, sourceUpdated, sourceName, sourceUrl, officialUrl, note,
-      scope, scopeNote, sourceId: source.id, validFrom, validUntil, standing };
+      scope, scopeNote, sourceId: source.id, validFrom, validUntil, standing, scopedBan };
   });
   const boundaries = [...new Set(ordered.flatMap(({ validFrom, validUntil }) =>
     [validFrom, validUntil].filter((value): value is string => Boolean(value))))].sort();

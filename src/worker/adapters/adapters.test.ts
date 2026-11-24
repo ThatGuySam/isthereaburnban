@@ -126,7 +126,7 @@ test("Indiana local orders retain their limited scope and do not use a report ti
   const record = j.features.find(({ attributes }) => attributes.orginating_county === "Sullivan");
   record.attributes.countyburnbanstatus = "Local Burn Ban";
   const rows = parseIn(j, checked);
-  expect(rows.find((r) => r.fips === "18153")).toMatchObject({ status: "restricted", scope: "part",
+  expect(rows.find((r) => r.fips === "18153")).toMatchObject({ status: "restricted", scope: "part", scopedBan: true,
     scopeNote: expect.stringContaining("part of"), since: null, sourceUpdated: expect.any(String) });
   record.attributes.countyburnbanstatus = "No open burning allowed";
   expect(parseIn(j, checked).find((r) => r.fips === "18153")?.status).toBe("unknown");

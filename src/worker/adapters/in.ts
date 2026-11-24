@@ -29,7 +29,7 @@ export function parse(json: ArcgisResponse, checked: string): CountyStatus[] {
     return {
       county,
       ...c,
-      ...(c.status === "restricted" ? { scope: "part" as const, scopeNote, label: `Burn ban in ${scopeNote}` } : {}),
+      ...(c.status === "restricted" ? { scope: "part" as const, scopedBan: true as const, scopeNote, label: `Burn ban in ${scopeNote}` } : {}),
       sourceUpdated: reported,
       note: "Fire chiefs, cities and towns can issue their own restrictions.",
     };

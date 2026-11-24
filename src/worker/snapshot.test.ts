@@ -218,3 +218,20 @@ test("legacy snapshots do not expose guessed effective dates", () => {
   const snapshot = { generated: now.toISOString(), changed: {}, sources: [], counties: { [old.fips]: old } };
   expect(statusFor(snapshot, old.fips)).toMatchObject({ since: null, firstSeenAt: null, statusChangedAt: null });
 });
+
+test("a scoped emergency ban can trigger an alert when a standing rule already makes the county restricted", () => {
+  const t0 = new Date("2026-11-24T10:00:00Z");
+  const t1 = new Date("2026-11-24T11:00:00Z");
+  const t2 = new Date("2026-11-24T12:00:00Z");
+  const checked = t0.toISOString();
+  const county = row("40143", "none", checked, { scope: "county" });
+  const standing = row("40143", "restricted", checked, { scope: "county", standing: true, scopeNote: "Residential properties" });
+  const district = row("40143", "ban", t1.toISOString(), { scope: "part", scopeNote: "Example Fire District" });
+  const adapters = [...A, adapter("standing", "OK"), adapter("district", "OK")];
+  const baseline = buildSnapshot(null, adapters, [ok([county]), ok([standing]), ok([])], t0);
+  const next = buildSnapshot(baseline.snapshot, adapters, [ok([county]), ok([standing]), ok([district])], t1);
+  expect(next.transitions).toHaveLength(1);
+  expect(alertNotices(next.transitions, next.snapshot)[0].title).toBe("Burn ban in Example Fire District");
+  const nextCheck = buildSnapshot(next.snapshot, adapters, [ok([county]), ok([standing]), ok([district])], t2);
+  expect(nextCheck.transitions).toEqual([]);
+});

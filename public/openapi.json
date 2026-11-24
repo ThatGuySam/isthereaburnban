@@ -684,6 +684,11 @@
                 "description": "Issuing order, agency report or official directory link. Empty if unavailable."
               }
             }
+          },
+          "scopedBan": {
+            "type": "boolean",
+            "const": true,
+            "description": "An explicit burn ban applies within the stated part of the county."
           }
         }
       },
@@ -1156,6 +1161,11 @@
             "type": "string",
             "description": "Exclusive UTC cutoff for the report’s validity or freshness window, when known.",
             "format": "date-time"
+          },
+          "scopedBan": {
+            "type": "boolean",
+            "const": true,
+            "description": "An explicit burn ban applies within the stated part of the county."
           }
         }
       }

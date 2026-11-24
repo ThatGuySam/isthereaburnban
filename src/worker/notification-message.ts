@@ -1,5 +1,6 @@
 import { statusSentence } from "../shared/render";
 import type { BanStatus, CountyStatus } from "../shared/types";
+import { isScopedBan } from "./county-decision";
 import { countyPath, COUNTY_BY_FIPS } from "./counties";
 
 export type Transition = { fips: string; oldStatus: BanStatus; newStatus: BanStatus; at: string };
@@ -20,7 +21,8 @@ function countyLabel(fips: string): string {
 export function transitionNotice(t: Transition, county?: CountyStatus): Notice {
   const where = county ? `${county.county}, ${county.state}` : countyLabel(t.fips);
   const title =
-    t.newStatus === "ban" ? `Burn ban: ${where}`
+    county && isScopedBan(county) ? county.label
+    : t.newStatus === "ban" ? `Burn ban: ${where}`
     : t.newStatus === "restricted" ? `Burning restricted: ${where}`
     : t.oldStatus === "ban" ? `Burn ban lifted: ${where}`
     : `Burn status changed: ${where}`;
