@@ -67,15 +67,39 @@ function filterRows(root: HTMLElement, q: string[]): number {
 // ---------- /us/ ----------
 
 type CountyIndex = { name: string; st: string; stName: string; words: string[]; stWords: string[] }[];
+/** public/data/places/<letter>.json rows (scripts/build-places.ts), most populous first. */
+type PlaceRow = [name: string, st: string, path: string, counties: string[], county: string];
+type PlaceIndex = { name: string; st: string; path: string; county: string; words: string[]; stWords: string[] }[];
 
 const COUNTY_HITS = 8;
+const CITY_HITS = 6;
+
+function hitRow(name: string, href: string, aside: string, cls: string): HTMLLIElement {
+  const li = document.createElement("li");
+  li.dataset.hit = "";
+  const a = document.createElement("a");
+  a.className = `row ${cls}`;
+  a.href = href;
+  const n = document.createElement("span");
+  n.className = "row-name";
+  n.textContent = name;
+  const st = document.createElement("span");
+  st.className = "row-abbr";
+  st.textContent = aside;
+  a.appendChild(n);
+  a.appendChild(st);
+  li.appendChild(a);
+  return li;
+}
 
 export function initStateFinder(): void {
   const form = document.querySelector<HTMLFormElement>("[data-finder]");
   const input = form?.querySelector<HTMLInputElement>("input[type=search]");
   const list = document.querySelector<HTMLElement>("[data-state-list]");
   const hits = document.querySelector<HTMLElement>("[data-county-hits]");
-  if (!form || !input || !list || !hits) return;
+  const cityHits = document.querySelector<HTMLElement>("[data-city-hits]");
+  if (!form || !input || !list || !hits || !cityHits) return;
+  const cityList = cityHits.querySelector("ul")!;
   const say = announcer(document.querySelector<HTMLElement>("[data-finder-status]"));
   const hitList = hits.querySelector("ul")!;
   const more = hits.querySelector<HTMLElement>("[data-more]")!;
@@ -99,6 +123,39 @@ export function initStateFinder(): void {
         loading = null;
       }));
 
+  // Cities load one first-letter shard at a time (a few KB gzipped), only once someone types.
+  const shards = new Map<string, PlaceIndex | Promise<void>>();
+  function cityIndex(letter: string): PlaceIndex | null {
+    const have = shards.get(letter);
+    if (Array.isArray(have)) return have;
+    if (!have)
+      shards.set(
+        letter,
+        fetch(`/data/places/${letter}.json`)
+          .then((r) => (r.ok ? (r.json() as Promise<PlaceRow[]>) : []))
+          .then((rows) => {
+            shards.set(
+              letter,
+              rows.map(([name, st, path, , county]) => ({ name, st, path, county, words: words(name), stWords: [st.toLowerCase(), ...words(stateNames[st] ?? st)] })),
+            );
+            render();
+          })
+          .catch(() => void shards.delete(letter)),
+      );
+    return null;
+  }
+
+  function cityHitsFor(q: string[]) {
+    const letter = q[0]?.[0];
+    const idx = letter ? cityIndex(/[a-z]/.test(letter) ? letter : "0") : null;
+    if (!idx) return { list: [] as PlaceIndex, total: 0 };
+    const found = idx.filter((c) => c.words.some((w) => w.startsWith(q[0])) && matches(q, [...c.words, ...c.stWords]));
+    const lead = q.join(" ");
+    // Prefix matches first; otherwise keep the shard's population order.
+    const sorted = [...found].sort((a, b) => Number(!a.name.toLowerCase().startsWith(lead)) - Number(!b.name.toLowerCase().startsWith(lead)));
+    return { list: sorted.slice(0, CITY_HITS), total: found.length };
+  }
+
   function countyHits(q: string[]) {
     if (!index || !q.length) return { list: [] as CountyIndex, total: 0 };
     // The first word must hit the county name so "texas" doesn't list all 254 Texas counties.
@@ -113,31 +170,16 @@ export function initStateFinder(): void {
     document.body.toggleAttribute("data-filtering", q.length > 0);
     const states = filterRows(list!, q);
     const { list: found, total } = countyHits(q);
-    hitList.replaceChildren(
-      ...found.map((c) => {
-        const li = document.createElement("li");
-        li.dataset.hit = "";
-        const a = document.createElement("a");
-        a.className = "row row--county";
-        a.href = `/us/${c.st.toLowerCase()}/${countySlug(c.name)}/`;
-        const name = document.createElement("span");
-        name.className = "row-name";
-        name.textContent = c.name;
-        const st = document.createElement("span");
-        st.className = "row-abbr";
-        st.textContent = c.stName;
-        a.appendChild(name);
-        a.appendChild(st);
-        li.appendChild(a);
-        return li;
-      }),
-    );
+    const { list: cities, total: cityTotal } = cityHitsFor(q);
+    cityList.replaceChildren(...cities.map((c) => hitRow(c.name, c.path, `${c.county}, ${stateNames[c.st] ?? c.st}`, "row--city")));
+    cityHits!.hidden = cities.length === 0;
+    hitList.replaceChildren(...found.map((c) => hitRow(c.name, `/us/${c.st.toLowerCase()}/${countySlug(c.name)}/`, c.stName, "row--county")));
     more.textContent = total > found.length ? `${total - found.length} more. Keep typing to narrow it down.` : "";
     hits!.hidden = found.length === 0;
     if (!q.length) return say("");
     if (!index) return say(plural(states, "state", "states"));
-    if (!states && !total) return say("No matches. Try “Use my location”.");
-    say(`${plural(states, "state", "states")}, ${plural(total, "county", "counties")}`);
+    if (!states && !total && !cityTotal) return say("No matches. Try “Use my location”.");
+    say(`${plural(states, "state", "states")}, ${plural(cityTotal, "city or town", "cities and towns")}, ${plural(total, "county", "counties")}`);
   }
 
   input.addEventListener("focus", load, { once: true });

@@ -17,7 +17,7 @@ const blurb = {
   directory: "No machine-readable feed yet. We link the official source.",
 };
 ---
-<Base title="Burn bans by state · Is There a Burn Ban?" description="Find your state or county: live county burn ban status where an official feed exists, and the official source for every state." path="/us/">
+<Base title="Burn bans by state · Is There a Burn Ban?" description="Find your state, county or city: live county burn ban status where an official feed exists, and the official source for every state." path="/us/">
   <main id="content" class="page browse">
     <nav class="crumbs" aria-label="Breadcrumb">
       <ol>
@@ -28,8 +28,8 @@ const blurb = {
     <h1>Burn bans by state</h1>
 
     <form class="finder" data-finder role="search" action="/us/">
-      <label class="finder-label" for="q">Find your state or county</label>
-      <input id="q" name="q" type="search" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="go" placeholder="Texas, TX or Travis" />
+      <label class="finder-label" for="q">Find your state, county or city</label>
+      <input id="q" name="q" type="search" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="go" placeholder="Texas, Travis or Austin" />
       <p class="finder-status" data-finder-status role="status"></p>
     </form>
     <div class="locate">
@@ -70,6 +70,11 @@ const blurb = {
         </section>
       ))}
     </div>
+
+    <section class="county-hits" data-city-hits aria-labelledby="city-hits-h" hidden>
+      <h2 class="az-head" id="city-hits-h">Cities and towns</h2>
+      <ul class="rows" role="list"></ul>
+    </section>
 
     <section class="county-hits" data-county-hits aria-labelledby="county-hits-h" hidden>
       <h2 class="az-head" id="county-hits-h">Counties</h2>

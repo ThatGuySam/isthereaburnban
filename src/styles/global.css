@@ -521,7 +521,9 @@ body[data-filtering] [data-unfiltered] {
   letter-spacing: 0.04em;
   color: var(--muted);
 }
-.row--county .row-abbr {
+.row--county .row-abbr,
+.row--city .row-abbr,
+.rows--places .row-abbr {
   letter-spacing: 0;
   font-weight: 600;
 }

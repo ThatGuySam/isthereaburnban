@@ -101,7 +101,9 @@ const jsonLd = [
         burning rules, and they are often stricter. Before you burn, check the official source and the {p.name} fire department.
       </p>
       <p>
-        {p.name} is a {kind} in <a href={countyPath(primary)}>{primary.name}</a>, {stateName}{seatOf.length ? `, and the county seat of ${seatOf.join(" and ")}` : ""}.
+        {seatOf.includes(primary.name)
+          ? <>{p.name} is a {kind} in {stateName} and the county seat of <a href={countyPath(primary)}>{primary.name}</a>{seatOf.length > 1 ? ` and ${seatOf.filter((n) => n !== primary.name).join(" and ")}` : ""}.</>
+          : <>{p.name} is a {kind} in <a href={countyPath(primary)}>{primary.name}</a>, {stateName}{seatOf.length ? `, and the county seat of ${seatOf.join(" and ")}` : ""}.</>}
         Population about {pop} (Census 2024 estimate).
       </p>
     </section>
