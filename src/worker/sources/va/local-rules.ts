@@ -562,7 +562,7 @@ export const vaLocalCalendars = sites.map((site, index) => {
     id, fips, kind: review.kind,
     ...reviewedLocalCalendar({
       publisher: { id: `va-${id}-local-rule`, state: county.state, scope, stack, sourceName, sourceUrl, officialUrl },
-      county, rule, review, zone: US_ZONES.Eastern, hour: (index * 5) % 24,
+      counties: [county], rule, review, zone: US_ZONES.Eastern, hour: (index * 5) % 24,
     }),
   };
 });

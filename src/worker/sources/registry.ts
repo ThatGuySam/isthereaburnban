@@ -46,6 +46,10 @@ import { meOpenBurningPermits } from "./me/open-burning";
 import { meTownPermitHolds } from "./me/town-permits";
 import { miPermits } from "./mi/permits";
 import { mnRestrictions } from "./mn/restrictions";
+import { moCapeGirardeau } from "./mo/cape-girardeau";
+import { moLakeOzark } from "./mo/lake-ozark";
+import { moLocalCalendars } from "./mo/local-rules";
+import { moMountainView } from "./mo/mountain-view";
 import { moShowMeFireBans } from "./mo/show-me-fire";
 import { moYardWaste } from "./mo/yard-waste";
 import { mtDeqFall } from "./mt/deq-fall";
@@ -187,6 +191,10 @@ export const SOURCES: readonly Source[] = [
   ncPermits,
   moShowMeFireBans,
   moYardWaste,
+  moCapeGirardeau,
+  moLakeOzark,
+  moMountainView,
+  ...moLocalCalendars.map(({ source }) => source),
   tnForestryPermitHolds,
   tnSeasonalBurnPermits,
   nyDecBrushBurning,

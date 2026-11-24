@@ -57,6 +57,28 @@ export function civicPlusAlertDetails(parts: HtmlParts, heading: RegExp): string
   return blocks.filter(({ tag }) => tag === "p").map(({ text }) => text);
 }
 
+/** Read live CivicEngage Alert Center cards and ignore toolbar links and archived notices. */
+export async function civicPlusActiveAlerts(input: Response | string, pageUrl: string) {
+  const header = '[id$="_divAlertCenterHeader"]';
+  const card = '[id$="_categoriesUpdatePanel"] ol.alerts-list > li > .alert.on';
+  const title = `${card} > h3 > a`;
+  const [heading, ...alerts] = await extractHtmlGrid(input, {
+    row: `${header}, ${card}`,
+    cell: `${header} h1, ${title}, ${card} > p`,
+  });
+  if (heading?.length !== 1 || heading[0].text !== "Alert Center") throw new Error("Expected a CivicEngage Alert Center");
+  const page = new URL(pageUrl);
+  return alerts.map(([link, ...paragraphs]) => {
+    const url = link?.href && new URL(link.href, page);
+    const text = paragraphs.map((paragraph) => paragraph.text).filter(Boolean).join(" ");
+    if (!url || url.origin !== page.origin || url.pathname !== page.pathname || !url.searchParams.get("AID") ||
+        !link.text) {
+      throw new Error("Unexpected CivicEngage Alert Center card");
+    }
+    return { title: link.text, url: url.href, text };
+  });
+}
+
 export function civicPlusNotices(parts: HtmlParts, pageUrl: string): { title: string; url: string }[] {
   const home = new URL(pageUrl);
   const found = new Map<string, { title: string; url: string }>();

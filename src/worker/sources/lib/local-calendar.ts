@@ -12,7 +12,7 @@ export type LocalCalendarEvidence = { digest: string } & (
 type Publisher = Pick<ActiveSource, "id" | "state" | "scope" | "stack" | "sourceName" | "sourceUrl" | "officialUrl">;
 type ReviewedLocalCalendar = {
   publisher: Publisher & { scope: "county" | "part" };
-  county: { fips: string; name: string };
+  counties: readonly { fips: string; name: string }[];
   rule: LocalCalendarRule;
   review: LocalCalendarEvidence;
   zone: string;
@@ -20,7 +20,7 @@ type ReviewedLocalCalendar = {
 };
 
 /** Poll the reviewed document before applying the standing local restriction. */
-export function reviewedLocalCalendar({ publisher, county, rule, review, zone, hour }: ReviewedLocalCalendar) {
+export function reviewedLocalCalendar({ publisher, counties, rule, review, zone, hour }: ReviewedLocalCalendar) {
   async function parse(input: Response, now: Date) {
     const digest = review.kind === "html"
       ? await reviewedHtmlDigest(input, review.selector, review.startsWith)
@@ -28,7 +28,7 @@ export function reviewedLocalCalendar({ publisher, county, rule, review, zone, h
     if (digest !== review.digest) throw new Error(`${publisher.id}: reviewed local burning rule changed`);
     return calendarStatusRows({
       ...rule, zone, state: publisher.state, scope: publisher.scope, officialUrl: publisher.officialUrl, status: "restricted",
-    }, [county], publisher, now, { includeTomorrow: true, includeSeasonDates: true });
+    }, counties, publisher, now, { includeTomorrow: true, includeSeasonDates: true });
   }
 
   const source: ActiveSource = {

@@ -62,6 +62,10 @@ import { meOpenBurningPermits, parseMaineOpenBurning } from "../src/worker/sourc
 import { meTownPermitHolds, parseMaineTownPermits } from "../src/worker/sources/me/town-permits";
 import { miPermits, parseMichiganPermits } from "../src/worker/sources/mi/permits";
 import { mnRestrictions, parseMinnesotaRestrictions } from "../src/worker/sources/mn/restrictions";
+import { moCapeGirardeau, parseCapeGirardeauDay } from "../src/worker/sources/mo/cape-girardeau";
+import { moLakeOzark, parseLakeOzarkDay } from "../src/worker/sources/mo/lake-ozark";
+import { moLocalCalendars } from "../src/worker/sources/mo/local-rules";
+import { moMountainView, parseMountainViewAlerts } from "../src/worker/sources/mo/mountain-view";
 import { moShowMeFireBans, parseShowMeFireBans } from "../src/worker/sources/mo/show-me-fire";
 import { moYardWaste, parseMoYardWaste } from "../src/worker/sources/mo/yard-waste";
 import { mtDeqFall, parseDeqFall } from "../src/worker/sources/mt/deq-fall";
@@ -434,6 +438,17 @@ const moDefinitions = raw("mo/fixtures/epa-definitions-2026-11-24.pdf");
 const parseMoBansFixture = () => parseShowMeFireBans(JSON.parse(moActive), moCaptured);
 const parseMoSipFixture = async () => parseMoYardWaste(await extractHtml(moSip, { links: true }), moCaptured,
   async (url) => new Response(url === moYardWaste.officialUrl ? moRegulation : moDefinitions));
+const moCountyCaptured = new Date("2026-11-24T22:25:00Z");
+const moCapeDay = utf8("mo/fixtures/cape-girardeau-day-2026-11-24.html");
+const moLakeDay = utf8("mo/fixtures/lake-ozark-day-2026-11-24.html");
+const moMountainAlerts = utf8("mo/fixtures/mountain-view-alerts-2026-11-24.html");
+const parseMoCapeDay = () => parseCapeGirardeauDay(moCapeDay, moCountyCaptured);
+const parseMoLakeDay = () => parseLakeOzarkDay(moLakeDay, moCountyCaptured);
+const parseMoMountainAlerts = () => parseMountainViewAlerts(moMountainAlerts, moCountyCaptured);
+const moLocalFixtures = moLocalCalendars.map(({ id, kind, source, parse }) => {
+  const body = raw(`mo/fixtures/rule-${id}-2026-11-24.${kind}`);
+  return { source, parse: () => parse(new Response(body), moCountyCaptured) };
+});
 const tnCaptured = new Date("2026-11-24T12:31:02Z");
 const tnRoster = utf8("tn/fixtures/permit-roster-2026-11-24.json");
 const tnPermitDetails = utf8("tn/fixtures/permit-details-2026-11-24.json");
@@ -582,6 +597,12 @@ recordedInputs.push(
   { source: ncAirHours, rows: await parseNcAirFixture(), checked: ncNow.toISOString() },
   { source: moShowMeFireBans, rows: parseMoBansFixture(), checked: moCaptured.toISOString() },
   { source: moYardWaste, rows: await parseMoSipFixture(), checked: moCaptured.toISOString() },
+  { source: moCapeGirardeau, rows: await parseMoCapeDay(), checked: moCountyCaptured.toISOString() },
+  { source: moLakeOzark, rows: await parseMoLakeDay(), checked: moCountyCaptured.toISOString() },
+  { source: moMountainView, rows: await parseMoMountainAlerts(), checked: moCountyCaptured.toISOString() },
+  ...await Promise.all(moLocalFixtures.map(async ({ source, parse }) => ({
+    source, rows: await parse(), checked: moCountyCaptured.toISOString(),
+  }))),
   { source: tnForestryPermitHolds, rows: parseTnHolds(), checked: tnCaptured.toISOString() },
   { source: tnSeasonalBurnPermits, rows: await parseTnSeason(), checked: tnCaptured.toISOString() },
   { source: nwsFireWeather, rows: [], fireWeather: parseNwsLive(), checked: nwsCaptured.toISOString() },
@@ -693,6 +714,10 @@ const jobs: Array<[string, () => unknown]> = [
   ["NC DEQ open-burning hours and calendar", parseNcAirFixture],
   ["MO Show Me Fire active county JSON", parseMoBansFixture],
   ["MO EPA SIP index, PDFs and calendar", parseMoSipFixture],
+  ["MO Cape Girardeau daily Elementor notice", parseMoCapeDay],
+  ["MO Lake Ozark daily Wix banner", parseMoLakeDay],
+  ["MO Mountain View CivicEngage active alerts", parseMoMountainAlerts],
+  ...moLocalFixtures.map(({ source, parse }): [string, typeof parse] => [source.id, parse]),
   ["TN Forestry fiResponse roster and permit details", parseTnHolds],
   ["TN Forestry permit-season HTML and calendar", parseTnSeason],
   ["NY DEC brush rules and Fire Towns", parseNyDecFixture],
