@@ -4,6 +4,8 @@ import { parse as parseIa } from "../adapters/ia";
 import { parse as parseIn } from "../adapters/in";
 import { parse as parseLa } from "../adapters/la";
 import { parse as parseOk } from "../adapters/ok";
+import { akDnrPermitZones } from "./ak/permits";
+import { akDecWinterBurning, akDnrFireSeason } from "./ak/seasonal";
 import { azAreaASummer } from "./az/area-a";
 import { azGrandCanyonFire } from "./az/grand-canyon";
 import { azPimaWildfire } from "./az/pima";
@@ -92,6 +94,23 @@ export const SOURCES: readonly Source[] = [
   idIdlStages,
   idKootenaiAir,
   idSeasonal,
+  akDnrPermitZones,
+  akDnrFireSeason,
+  akDecWinterBurning,
+  {
+    id: "ak-dec-air-advisories", state: "AK", scope: "part", stack: "ASP.NET MVC / HTML and PDF", mode: "manual", cadence: null,
+    sourceName: "Alaska Department of Environmental Conservation",
+    sourceUrl: "https://dec.alaska.gov/Applications/Air/airtoolsweb/advisories/",
+    officialUrl: "https://dec.alaska.gov/Applications/Air/airtoolsweb/advisories/",
+    error: "The alert table and North Pole Stage 2 notice returned a DataDome challenge (HTTP 403) on 2026-11-24.",
+  },
+  {
+    id: "ak-anchorage-fire-safety", state: "AK", scope: "part", stack: "Revize / HTML and image", mode: "manual", cadence: null,
+    sourceName: "Anchorage Fire Department",
+    sourceUrl: "https://www.muni.org/departments/fire/wildfire_home/is_today_a_burn_day.php",
+    officialUrl: "https://www.muni.org/departments/fire/wildfire_home/is_today_a_burn_day.php",
+    error: "A reusable image shows the municipal recreational-fire decision, with no decision timestamp. Check the page or call 907-267-5020.",
+  },
   {
     id: "id-deq-outdoor-map", state: "ID", scope: "part", stack: "ASP.NET MVC / GeoJSON", mode: "manual", cadence: null,
     sourceName: "Idaho Department of Environmental Quality",

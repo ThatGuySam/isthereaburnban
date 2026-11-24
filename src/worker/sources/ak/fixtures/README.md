@@ -1,0 +1,24 @@
+# Alaska publisher captures
+
+These public GETs were made on November 24, 2026 with the site status checker's user agent. ArcGIS fixtures retain the complete attribute and metadata responses. BASIS fixtures retain the Legislature's print fragments, with line endings and indentation normalized and trailing whitespace removed.
+
+| Fixture | Request | Captured (UTC) |
+| --- | --- | --- |
+| `permit-layer-2026-11-24.json` | [DNR FeatureServer metadata](https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Alaska_Burn_Permit_Zones_Public_View/FeatureServer/0?f=json) | 08:47:10 |
+| `permit-zones-2026-11-24.json` | [DNR ordered zone attributes](https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Alaska_Burn_Permit_Zones_Public_View/FeatureServer/0/query?where=1%3D1&outFields=FID%2CName%2CGlobalID%2CShape__Area%2CShape__Length%2CBurnPermitLink%2CStatus&returnGeometry=false&f=json&orderByFields=FID+ASC&resultOffset=0&resultRecordCount=1000) | 08:48:53 |
+| `as-41-15-050-2026-11-24.html` | [AS 41.15.050, Fire season](https://www.akleg.gov/basis/statutes.asp?media=print&secStart=41.15.050&secEnd=41.15.050) | 08:50:59 |
+| `11-aac-95-412-2026-11-24.html` | [11 AAC 95.412, Permit required](https://www.akleg.gov/basis/aac.asp?media=print&secStart=11.95.412&secEnd=11.95.412) | 08:50:57 |
+| `18-aac-50-065-2026-11-24.html` | [18 AAC 50.065, Open burning](https://www.akleg.gov/basis/aac.asp?media=print&secStart=18.50.065&secEnd=18.50.065) | 08:50:56 |
+| `18-aac-50-015-through-025-2026-11-24.html` | [18 AAC 50.015 through .025, designated areas](https://www.akleg.gov/basis/aac.asp?media=print&secStart=18.50.015&secEnd=18.50.025) | 08:51:00 |
+
+## DNR map and candidate notices
+
+The area directory embeds a public ArcGIS Instant App. Its web map reads the captured FeatureServer layer. The layer's data edit timestamp was September 15 at 18:15:15 UTC. Its 22 features contained 15 no-permit codes, six open-with-permit codes and one null. The Mat-Su area page separately displayed the end of the permit requirement for its four active subzones. [Area directory](https://dnr.alaska.gov/burn/fireareas), [Instant App data](https://nifc.maps.arcgis.com/sharing/rest/content/items/91303bbfa5d54269a378cfbbd161d122/data?f=json), [web map data](https://nifc.maps.arcgis.com/sharing/rest/content/items/1e12baa53a654f05a0b58d6ead8bf9d0/data?f=json), [Mat-Su permits](https://dnr.alaska.gov/burn/fireareas/mat-su).
+
+The three inventory news posts all returned 200. On June 1, Forestry suspended permits in Mat-Su and Kenai-Kodiak. On June 5, it suspended permits in Fairbanks, Salcha and Railbelt. On August 12, it suspended permits in Fairbanks, Delta and Tok, including the named subzones. The notices tell readers to check the area hotline as conditions change. The DNR FAQ describes the seasonal permit rule, its exceptions, and how suspensions differ from emergency closures. [June 1 notice](https://akfireinfo.com/2026/06/01/permits-suspended-mat-su-kenai-kodiak/), [June 5 notice](https://akfireinfo.com/2026/06/05/permits-suspended-fairbanks/), [August 12 notice](https://akfireinfo.com/2026/08/12/fairbanks-delta-and-tok-areas-begin-burn-suspension/), [DNR FAQ](https://dnr.alaska.gov/burn/faq).
+
+## Permit zone county intersections
+
+Join geometry to the ordered attributes by FID and name. Use the ArcGIS rings in Alaska Albers (EPSG:3338), grouping clockwise shells and their counterclockwise holes, and project the 2025 Census county and county-equivalent land features from NAD83 (EPSG:4269) to the same CRS. Repair invalid polygons before intersecting. Keep intersections of at least 1 km² to drop narrow boundary mismatches between the two datasets. Record FID, name, GlobalID, the native layer's area and length attributes, and the sorted county FIPS codes in `../zone-counties.json`. The 22 zones intersect 29 of the site's 30 Alaska county equivalents at that threshold. The Worker checks the identifiers and both dimensions before applying the mapping. Use DNR's map for an address or a boundary location. [DNR geometry captured at 08:48:50 UTC](https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Alaska_Burn_Permit_Zones_Public_View/FeatureServer/0/query?where=1%3D1&outFields=FID%2CName&returnGeometry=true&outSR=3338&maxAllowableOffset=25&f=json), [Census boundaries captured at 08:48:51 UTC](https://www2.census.gov/geo/tiger/GENZ2025/shp/cb_2025_us_county_500k.zip).
+
+The geometry response SHA-256 was `49723775e2e739cca22524acdf12cf37a4f2faa9f60da5c6ae4f0ada9e3a6212`, and the Census county archive SHA-256 was `aa976c00b181939755d0da757f4c7c2dc0103c3b3b4530fb2a91c2bb62fc777c`. The permit calendar follows local time on each side of the 169°30′ W Aleutian time-zone boundary. [49 CFR § 71.12](https://www.govinfo.gov/content/pkg/CFR-2025-title49-vol1/xhtml/CFR-2025-title49-vol1-part71.html).

@@ -5,6 +5,8 @@ export const US_ZONES = {
   Mountain: "America/Denver",
   Pacific: "America/Los_Angeles",
   Arizona: "America/Phoenix",
+  Alaska: "America/Anchorage",
+  Aleutian: "America/Adak",
 } as const;
 
 const formatters = new Map<string, Intl.DateTimeFormat>();

@@ -8,7 +8,7 @@ import { civicPlusAlertDetails, civicPlusNotices, civicPlusUrl } from "./civicpl
 import { localDayWindow, parseWeekdayDate, reportWindow } from "./dates";
 import { decodeFeed, parseCsv, parseDotNetJsonDate, parseFeed, parseJson } from "./feeds";
 import { blockAfterHeading, extractHtml, extractHtmlGrid, localClock, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, US_ZONES } from "./html";
-import { BlockedError, fetchSource, HttpError, USER_AGENT } from "./http";
+import { BlockedError, fetchSource, HttpError, pacedTextReader, USER_AGENT } from "./http";
 import { manualPdf } from "./pdf";
 import { parseSharePointItems, parseSharePointPage, sharePointListItems, sharePointListUrl, sharePointRows } from "./sharepoint";
 import { ninjaTablesUrl, parseNinjaRows, parseWpItems, parseWpPage, wpRestUrl } from "./wordpress";
@@ -78,7 +78,24 @@ test("HTTP rejects publisher access-denied HTML, including HTTP 200 error docume
   await expect(fetchSource(url, { fetchImpl: async () => new Response(
     '<script src="/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1"></script>', { status: 503 },
   ) })).rejects.toBeInstanceOf(BlockedError);
+  await expect(fetchSource(url, { fetchImpl: async () => new Response("challenge", {
+    status: 403, headers: { "x-datadome-traffic-rule-response": "block" },
+  }) })).rejects.toThrow("DataDome challenge");
+  await expect(fetchSource(url, { fetchImpl: async () => new Response(
+    '<script>var dd={host:"geo.captcha-delivery.com"}</script>',
+  ) })).rejects.toThrow("DataDome challenge");
   await expect(fetchSource(url, { fetchImpl: async () => new Response("missing", { status: 404 }) })).rejects.toBeInstanceOf(HttpError);
+});
+
+test("a paced reader spaces same-publisher requests and returns their bounded text", async () => {
+  const starts: number[] = [];
+  const read = pacedTextReader({ maxBytes: 20, fetchImpl: async (url) => {
+    starts.push(Date.now());
+    return new Response(new URL(url).pathname);
+  } }, 20);
+  expect(await read("https://example.gov/metadata")).toBe("/metadata");
+  expect(await read("https://example.gov/query")).toBe("/query");
+  expect(starts[1] - starts[0]).toBeGreaterThanOrEqual(19);
 });
 
 test("HTTP sends validators, retains them on 304 and retries unblocked transient GET failures", async () => {

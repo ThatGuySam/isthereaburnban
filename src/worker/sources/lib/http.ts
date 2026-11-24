@@ -34,6 +34,9 @@ export function blockedReason(status: number, headers: Headers, prefix = ""): st
   if (headers.get("cf-mitigated") === "challenge" || /\/cdn-cgi\/challenge-platform\/|\bcf-chl-|_cf_chl_opt\b/i.test(prefix)) {
     return "Cloudflare challenge";
   }
+  if (headers.get("x-datadome-traffic-rule-response") === "block" || /\bgeo\.captcha-delivery\.com\b/i.test(prefix)) {
+    return "DataDome challenge";
+  }
   if (/<(?:title|h1)\b[^>]*>\s*Access Denied\b/i.test(prefix)) return "Access Denied";
   if (/incapsula incident id|<title>\s*Request Rejected\s*<\/title>/i.test(prefix)) return "Imperva challenge";
   if (status === 403) return headers.get("server")?.includes("Akamai") ? "Akamai Access Denied" : "Forbidden";
@@ -155,4 +158,15 @@ export async function getText(url: string, options: Options = {}): Promise<strin
   const reply = await fetchSource(url, options);
   if (reply.notModified) throw new Error("Use fetchSource to handle a conditional response");
   return reply.response.text();
+}
+
+/** Space a publisher's sequential requests within one poll. */
+export function pacedTextReader(options: Options, intervalMs = 1_000) {
+  let nextStart = 0;
+  return async (url: string) => {
+    const wait = nextStart - Date.now();
+    if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+    nextStart = Date.now() + intervalMs;
+    return getText(url, { attempts: 1, ...options });
+  };
 }

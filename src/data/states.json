@@ -11,15 +11,35 @@
     "abbr": "AK",
     "name": "Alaska",
     "coverage": "restrictions",
-    "publisher": "Alaska DNR Division of Forestry",
+    "publisher": "Alaska Division of Forestry & Fire Protection and Alaska Department of Environmental Conservation",
     "officialUrl": "https://dnr.alaska.gov/burn/fireareas",
     "extraUrls": [
       {
         "label": "DEC fire restrictions directory",
         "url": "https://dec.alaska.gov/air/anpms/alaska-fire-restrictions/"
+      },
+      {
+        "label": "DEC winter open-burning rules and maps",
+        "url": "https://dec.alaska.gov/air/burnwise/open-burn-prohibition"
+      },
+      {
+        "label": "DEC current air quality advisories",
+        "url": "https://dec.alaska.gov/Applications/Air/airtoolsweb/advisories/"
+      },
+      {
+        "label": "Anchorage recreational fire status",
+        "url": "https://www.muni.org/departments/fire/wildfire_home/is_today_a_burn_day.php"
+      },
+      {
+        "label": "Juneau open-burning permits",
+        "url": "https://juneau.org/fire/burn-permit"
+      },
+      {
+        "label": "BLM Alaska fire restrictions",
+        "url": "https://www.blm.gov/programs/fire-and-aviation/regional-info/alaska-fire-service/fire-restrictions"
       }
     ],
-    "notes": "The Division of Forestry sets burn-permit status by state permit zone. Local fire departments and federal land managers set their own rules."
+    "notes": "State Forestry generally requires burn permits April 1 through August 31 and can suspend permits by zone or order emergency closures. Alaska DEC restricts open burning in designated parts of Fairbanks North Star Borough and Juneau in winter and can issue separate air quality restrictions. Check your local fire department and land manager for other rules."
   },
   {
     "abbr": "AZ",

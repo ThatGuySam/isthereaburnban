@@ -9,6 +9,8 @@ import { parse as parseMs } from "../src/worker/adapters/ms";
 import { parse as parseOk } from "../src/worker/adapters/ok";
 import { parse as parseTx, parseTxt } from "../src/worker/adapters/tx";
 import { COUNTIES } from "../src/worker/counties";
+import { parseAlaskaPermitZones } from "../src/worker/sources/ak/permits";
+import { akDecWinterBurning, parseAlaskaFireSeason, parseAlaskaWinterBurning } from "../src/worker/sources/ak/seasonal";
 import { parseArizonaAreaA } from "../src/worker/sources/az/area-a";
 import { azGrandCanyonFire, parseGrandCanyonFire } from "../src/worker/sources/az/grand-canyon";
 import { azPimaWildfire, parsePimaWildfire } from "../src/worker/sources/az/pima";
@@ -130,6 +132,17 @@ const idStatute = utf8("id/fixtures/section-38-115-2026-11-24.html");
 const parseIdlFixture = () => parseIdlStages(JSON.parse(idLayer), arcgisRows(JSON.parse(idZones), { requireComplete: true }), idCaptured);
 const parseIdForecastFixture = () => parseKootenaiAir(idForecast, idCaptured);
 const parseIdStatuteFixture = (time = summerDay) => parseIdahoSeasonal(idStatute, time);
+const akPermitLayer = utf8("ak/fixtures/permit-layer-2026-11-24.json");
+const akPermitZones = utf8("ak/fixtures/permit-zones-2026-11-24.json");
+const akFireSeason = utf8("ak/fixtures/as-41-15-050-2026-11-24.html");
+const akFirePermitLaw = utf8("ak/fixtures/11-aac-95-412-2026-11-24.html");
+const akWinterLaw = utf8("ak/fixtures/18-aac-50-065-2026-11-24.html");
+const akWinterAreas = utf8("ak/fixtures/18-aac-50-015-through-025-2026-11-24.html");
+const parseAkZones = () => parseAlaskaPermitZones(
+  JSON.parse(akPermitLayer), arcgisRows(JSON.parse(akPermitZones), { requireComplete: true }), new Date("2026-09-16T18:15:15Z"),
+);
+const parseAkSummer = () => parseAlaskaFireSeason(akFireSeason, akFirePermitLaw, summerDay);
+const parseAkWinter = () => parseAlaskaWinterBurning(akWinterLaw, akWinterAreas, now);
 const coFixture = (name: string, ext: string) => utf8(`co/fixtures/${name}-2026-11-24.${ext}`);
 const coDouglasJson = coFixture("douglas-status", "json");
 const coElPasoJson = coFixture("el-paso-status", "json");
@@ -188,6 +201,7 @@ recordedInputs.push(
   { source: waKingFireSafety, rows: await parseWaKingFixture(), checked },
   ...await Promise.all(coJobs.map(async ([, source, parse]) => ({ source, rows: await parse(), checked }))),
   ...await Promise.all(orJobs.map(async ([, source, parse]) => ({ source, rows: await parse(), checked }))),
+  { source: akDecWinterBurning, rows: await parseAkWinter(), checked },
   { source: kyForestryCountyBans, rows: await parseKyListFixture(), checked: kyCaptured.toISOString() },
   { source: kySeasonal, rows: await parseKyStatuteFixture(), checked: kyCaptured.toISOString() },
   { source: paCarrollValley, rows: await parsePaNewsFixture(), checked: paCaptured.toISOString() },
@@ -261,6 +275,9 @@ const jobs: Array<[string, () => unknown]> = [
   ["ID IDL stage zones", parseIdlFixture],
   ["ID Kootenai district air forecast", parseIdForecastFixture],
   ["ID closed fire season and calendar", parseIdStatuteFixture],
+  ["AK DNR permit zone statuses", parseAkZones],
+  ["AK DNR fire-season permit law", parseAkSummer],
+  ["AK DEC winter open-burning rule", parseAkWinter],
   ["NWS live fire-weather GeoJSON", parseNwsLive],
   ["NWS archived RFW GeoJSON", parseNwsArchive],
   ["Merge and encode current sources", () => JSON.stringify(mergeSources(null, recordedInputs, now).snapshot)],

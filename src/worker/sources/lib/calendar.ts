@@ -1,6 +1,6 @@
 import { atLocalTime, localClock, localDayWindow, shiftDay, US_ZONES } from "./dates";
 
-// Inventory: AZ Area A, Idaho closed fire season, NY DEC Open Burning, GA EPD Summer Open Burning Ban, KY fire hazard seasons, OH DNR Open Burning Regulations,
+// Inventory: Alaska burn permits and winter air rules, AZ Area A, Idaho closed fire season, NY DEC Open Burning, GA EPD Summer Open Burning Ban, KY fire hazard seasons, OH DNR Open Burning Regulations,
 // PA state forest fires, VA DOF 4 PM Burning Law, WV Forestry Fire Burning Guidelines, and MD DNR Burning Guidance.
 export type CalendarRule = {
   state: string;
@@ -59,6 +59,20 @@ const GA_COUNTIES = new Set((
 ).toLowerCase().split(","));
 
 export const CALENDAR_RULES: Record<string, CalendarRule> = {
+  AK: {
+    state: "AK", zone: US_ZONES.Alaska, status: "restricted", scope: "part",
+    scopeNote: "Outdoor burning covered by Alaska’s state fire-season permit rule",
+    officialUrl: "https://dnr.alaska.gov/burn/index",
+    label: "Fire-season burn permits required", seasons: [["04-01", "08-31"]],
+    note: "Alaska generally requires a permit for outdoor burning from April 1 through August 31. Certain small campfires and approved burning devices are exempt. Check your local permit issuer and land manager. The state can extend the permit season.",
+  },
+  AK_WINTER: {
+    state: "AK", zone: US_ZONES.Alaska, status: "ban", scope: "part",
+    scopeNote: "Designated wood smoke control or PM2.5 nonattainment area",
+    officialUrl: "https://dec.alaska.gov/air/burnwise/open-burn-prohibition",
+    label: "Winter open-burning prohibition", seasons: [["11-01", "03-31"]],
+    note: "Alaska DEC prohibits open burning in this designated area from November 1 through March 31. Check DEC’s boundary maps and any separate local rules or air-quality alerts.",
+  },
   AZ: {
     state: "AZ", zone: US_ZONES.Arizona, status: "restricted", scope: "part",
     scopeNote: "Area A within the county, as defined in A.R.S. § 49-541",
