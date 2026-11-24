@@ -98,6 +98,9 @@ import { parseTennesseePermitHolds, parseTennesseePermitRoster, tnForestryPermit
 import { parseTennesseePermitSeason, tnSeasonalBurnPermits } from "../src/worker/sources/tn/seasonal";
 import { parseUtahOrders, utFfslFireOrders } from "../src/worker/sources/ut/orders";
 import { parseUtahSeasonal, utClosedFireSeason } from "../src/worker/sources/ut/seasonal";
+import { parseBrunswickNotices, vaBrunswickBurnBan } from "../src/worker/sources/va/brunswick";
+import { vaLocalCalendars } from "../src/worker/sources/va/local-rules";
+import { parseNottowayNews, vaNottowayBurnBan } from "../src/worker/sources/va/nottoway";
 import { parseRapidanAlerts, vaRapidanAlerts } from "../src/worker/sources/va/rapidan";
 import { parseVirginiaSeasonal, vaSeasonal } from "../src/worker/sources/va/seasonal";
 import { parseShenandoahAlerts, vaShenandoahAlerts } from "../src/worker/sources/va/shenandoah";
@@ -265,6 +268,14 @@ const parseNyNycFixture = async () => parseNycBarbecuing(await extractHtml(nyNyc
 const vaStatute = utf8("va/fixtures/section-10.1-1142-2026-11-24.html");
 const vaRapidanHtml = utf8("va/fixtures/rapidan-wma-2026-11-24.html");
 const vaParkJson = utf8("va/fixtures/shen-park-alerts-2026-11-24.json");
+const vaBrunswickHtml = utf8("va/fixtures/brunswick-public-notices-2026-11-24.html");
+const parseVaBrunswickFixture = () => parseBrunswickNotices(vaBrunswickHtml, now);
+const vaNottowayHtml = utf8("va/fixtures/nottoway-news-2026-11-24.html");
+const parseVaNottowayFixture = () => parseNottowayNews(vaNottowayHtml, now);
+const vaLocalFixtures = vaLocalCalendars.map(({ id, kind, source, parse }) => {
+  const body = raw(`va/fixtures/rule-${id}-2026-11-24.${kind}`);
+  return { source, parse: () => parse(new Response(body), now) };
+});
 const vaSpring = new Date("2027-02-15T05:00:00Z");
 const parseVaStatuteFixture = async (at: Date) => parseVirginiaSeasonal(await extractHtml(vaStatute), at);
 const parseVaRapidanFixture = async () => parseRapidanAlerts(await extractHtml(vaRapidanHtml), now);
@@ -494,6 +505,9 @@ recordedInputs.push(
   { source: vaSeasonal, rows: await parseVaStatuteFixture(now), checked },
   { source: vaRapidanAlerts, rows: await parseVaRapidanFixture(), checked },
   { source: vaShenandoahAlerts, rows: parseVaParkFixture(), checked },
+  { source: vaBrunswickBurnBan, rows: await parseVaBrunswickFixture(), checked },
+  { source: vaNottowayBurnBan, rows: await parseVaNottowayFixture(), checked },
+  ...await Promise.all(vaLocalFixtures.map(async ({ source, parse }) => ({ source, rows: await parse(), checked }))),
   { source: wvForestryFireSeason, rows: await parseWvForestryFixture(), checked: wvDaytime.toISOString() },
   { source: mdDnrWoodland, rows: await parseMdWoodlandFixture(), checked },
   { source: mdSummerAir, rows: await parseMdSummerFixture(now), checked },
@@ -686,6 +700,9 @@ const jobs: Array<[string, () => unknown]> = [
   ["VA 4 p.m. statute and calendar", () => parseVaStatuteFixture(vaSpring)],
   ["VA DWR Rapidan WordPress notice table", parseVaRapidanFixture],
   ["VA NPS Shenandoah park-alert JSON", parseVaParkFixture],
+  ["VA Brunswick CivicLive public notice", parseVaBrunswickFixture],
+  ["VA Nottoway Revize news carousel", parseVaNottowayFixture],
+  ...vaLocalFixtures.map(({ source, parse }): [string, typeof parse] => [source.id, parse]),
   ["WV Forestry WordPress and fire-season calendar", parseWvForestryFixture],
   ["MD DNR SharePoint woodland guidance and calendar", parseMdWoodlandFixture],
   ["MD COMAR summer air-quality rule and calendar", () => parseMdSummerFixture(mdSummer)],

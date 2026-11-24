@@ -86,6 +86,9 @@ import { tnSeasonalBurnPermits } from "./tn/seasonal";
 import type { ActiveSource, Source } from "./types";
 import { utFfslFireOrders } from "./ut/orders";
 import { utClosedFireSeason } from "./ut/seasonal";
+import { vaBrunswickBurnBan } from "./va/brunswick";
+import { vaLocalCalendars } from "./va/local-rules";
+import { vaNottowayBurnBan } from "./va/nottoway";
 import { vaRapidanAlerts } from "./va/rapidan";
 import { vaSeasonal } from "./va/seasonal";
 import { vaShenandoahAlerts } from "./va/shenandoah";
@@ -191,6 +194,9 @@ export const SOURCES: readonly Source[] = [
   vaSeasonal,
   vaRapidanAlerts,
   vaShenandoahAlerts,
+  vaBrunswickBurnBan,
+  vaNottowayBurnBan,
+  ...vaLocalCalendars.map(({ source }) => source),
   wvForestryFireSeason,
   mdDnrWoodland,
   mdSummerAir,

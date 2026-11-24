@@ -1168,19 +1168,19 @@
   {
     "abbr": "VA",
     "name": "Virginia",
-    "coverage": "restrictions",
-    "publisher": "Virginia Department of Forestry, Virginia Department of Wildlife Resources, and National Park Service",
+    "coverage": "live",
+    "publisher": "Virginia Department of Forestry, local fire authorities, and public land managers",
     "officialUrl": "https://www.dof.virginia.gov/wildland-prescribed-fire/fire-laws/local-burn-bans/",
     "extraUrls": [
       { "label": "Virginia 4 p.m. burning law", "url": "https://law.lis.virginia.gov/vacode/title10.1/chapter11/section10.1-1142/" },
       { "label": "Virginia DEQ open burning rules and local ordinances", "url": "https://www.deq.virginia.gov/air-energy/monitoring-assessments/air-quality-planning/open-burning" },
       { "label": "Shenandoah National Park alerts and conditions", "url": "https://www.nps.gov/shen/planyourvisit/conditions.htm" },
-      { "label": "Rapidan Wildlife Management Area notices", "url": "https://dwr.virginia.gov/wma/rapidan/" },
+      { "label": "Virginia local emergency managers directory", "url": "https://lemd.vdem.virginia.gov/public/" },
       { "label": "Loudoun County open burning rules", "url": "https://sheriff.loudoun.gov/openburning" },
       { "label": "Fairfax County recreational fires and open burning", "url": "https://www.fairfaxcounty.gov/fire-ems/fire-marshal/recreational-fires" },
       { "label": "Prince William County burning rules", "url": "https://www.pwcva.gov/department/fire-marshals-office/burning-regulations/" }
     ],
-    "notes": "From February 15 through April 30, Virginia limits when you can start a covered fire near woodland, brushland or dry fields. The Governor can issue emergency orders. Counties, independent cities and land managers can add their own restrictions. Check your local fire marshal and the land manager for your address or burn site."
+    "notes": "Virginia coverage combines monitored local notices, standing local restrictions and public-land orders. From February 15 through April 30, Virginia limits when you can start a covered fire near woodland, brushland or dry fields. The Governor can issue emergency orders. Check your local fire marshal and the land manager for your address or burn site."
   },
   {
     "abbr": "WA",
