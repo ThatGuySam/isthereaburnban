@@ -24,6 +24,8 @@ import { ohSeasonal } from "./oh/seasonal";
 import { orLrapaHeating, orLrapaOutdoor } from "./or/lrapa";
 import { orOdfPublicUse } from "./or/odf";
 import { orWillametteBackyard } from "./or/willamette";
+import { paCarrollValley } from "./pa/carroll-valley";
+import { paStateForestSpring } from "./pa/seasonal";
 import type { ActiveSource, Source } from "./types";
 import { waEcologyAir } from "./wa/ecology-air";
 import { waKingFireSafety } from "./wa/king-fire-safety";
@@ -82,6 +84,15 @@ export const SOURCES: readonly Source[] = [
   orOdfPublicUse,
   kyForestryCountyBans,
   kySeasonal,
+  paCarrollValley,
+  paStateForestSpring,
+  {
+    id: "pa-dcnr-county-bans", state: "PA", scope: "county", stack: "Adobe AEM / PDF map", mode: "manual", cadence: null,
+    sourceName: "Pennsylvania DCNR Bureau of Forestry",
+    sourceUrl: "https://elibrary.dcnr.pa.gov/PDFProvider.ashx?action=PDFStream&docID=8921989&docName=County+Burn+Bans&nativeExt=pdf",
+    officialUrl: "https://www.pa.gov/agencies/dcnr/programs-and-services/community-outreach-and-development/wildfire/burn-bans",
+    error: "The map viewed on November 24 was dated November 1. County bans are marked by map color and require review.",
+  },
   {
     id: "ky-louisville-open-burning", state: "KY", scope: "part", stack: "HTML / Cloudflare", mode: "manual", cadence: null,
     sourceName: "Louisville Metro Air Pollution Control District",

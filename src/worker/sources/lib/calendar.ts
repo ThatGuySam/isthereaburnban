@@ -1,7 +1,7 @@
 import { atLocalTime, localClock, localDayWindow, shiftDay, US_ZONES } from "./dates";
 
 // Inventory: AZ Area A, NY DEC Open Burning, GA EPD Summer Open Burning Ban, KY fire hazard seasons, OH DNR Open Burning Regulations,
-// VA DOF 4 PM Burning Law, WV Forestry Fire Burning Guidelines, and MD DNR Burning Guidance.
+// PA state forest fires, VA DOF 4 PM Burning Law, WV Forestry Fire Burning Guidelines, and MD DNR Burning Guidance.
 export type CalendarRule = {
   state: string;
   officialUrl: string;
@@ -91,6 +91,13 @@ export const CALENDAR_RULES: Record<string, CalendarRule> = {
     officialUrl: "https://codes.ohio.gov/ohio-revised-code/section-1503.18",
     label: "Seasonal daytime burning restriction", seasons: [["03-01", "05-31"], ["10-01", "11-30"]], hours: [360, 1080],
     note: "The rule covers outdoor burning of wood, brush, weeds, grass or rubbish from 6 a.m. to 6 p.m. Eastern in March–May and October–November. Ohio law excepts fires in plowed fields, gardens or on public roads at least 200 feet from woods, brush or fields with dry grass or other flammable material. Check with your local fire department about other rules.",
+  },
+  PA: {
+    state: "PA", zone: US_ZONES.Eastern, status: "restricted", scope: "part",
+    scopeNote: "Fire rings and fireplaces on state forest lands within the county",
+    officialUrl: "https://www.pacodeandbulletin.gov/secure/pacode/data/017/chapter21/s21.118.html",
+    label: "Spring state forest fire restriction", seasons: [["03-01", "05-25"]],
+    note: "From March 1 through May 25, fires in rings and fireplaces on Pennsylvania state forest land require permission from DCNR. Check with the district forester about permission and fire danger.",
   },
   VA: {
     state: "VA", zone: US_ZONES.Eastern, status: "restricted", scope: "part", scopeNote: "Within 300 feet of woods or vegetation that could carry fire to woods",

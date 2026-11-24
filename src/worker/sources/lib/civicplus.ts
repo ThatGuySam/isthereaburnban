@@ -1,4 +1,5 @@
-import { blockAfterHeading, type HtmlParts } from "./html";
+import { parseUsDate } from "./dates";
+import { blockAfterHeading, extractHtmlGrid, type HtmlParts } from "./html";
 
 // Inventory: CivicPlus/CivicEngage, including AlertCenter, CivicAlerts and mobile News Flash
 // in Pima, Angel Fire, Greenwich, Placer, and Puget Sound Clean Air's embedded status table.
@@ -32,4 +33,29 @@ export function civicPlusNotices(parts: HtmlParts, pageUrl: string): { title: st
     found.set(url.href, { title: text, url: url.href });
   }
   return [...found.values()];
+}
+
+/** Read the active category list in the redesigned CivicPlus News Flash, excluding the carousel. */
+export async function civicPlusNewsFlash(input: Response | string, { id, name }: { id: number; name: string }) {
+  if (!Number.isSafeInteger(id) || id < 1) throw new Error("Invalid News Flash category ID");
+  const header = `#articles-category-${id}-header`;
+  const list = `#list-articles-category-${id}`;
+  const [category, ...items] = await extractHtmlGrid(input, {
+    row: `${header}, ${list} > li`,
+    cell: `${header} h2, ${header} .category-count, ${list} .article-list-header, ${list} .article-preview, ${list} .article-list-footer .fst-italic`,
+  });
+  const count = /^(\d+) news items?$/.exec(category?.[1]?.text ?? "");
+  if (category?.length !== 2 || category[0].text !== name || !count || Number(count[1]) !== items.length) {
+    throw new Error("CivicPlus News Flash: expected a complete active category list");
+  }
+  return items.map((cells) => {
+    const [title, preview, date] = cells.map(({ text }) => text);
+    const stamp = /^Posted on ([^|]+?)(?: \| Last Updated on (.+))?$/.exec(date ?? "");
+    const posted = stamp && parseUsDate(stamp[1]);
+    const updated = stamp?.[2] ? parseUsDate(stamp[2]) : posted;
+    if (cells.length !== 3 || !title || !posted || !updated || updated < posted) {
+      throw new Error("CivicPlus News Flash: expected a title, preview and valid publication date");
+    }
+    return { title, preview, posted, updated };
+  });
 }

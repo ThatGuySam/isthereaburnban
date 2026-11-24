@@ -41,6 +41,8 @@ import { ohSeasonal, parseOhioSeasonal } from "../src/worker/sources/oh/seasonal
 import { orLrapaHeating, orLrapaOutdoor, parseLrapaHeating, parseLrapaOutdoor } from "../src/worker/sources/or/lrapa";
 import { orOdfPublicUse, parseOdfPublicUse } from "../src/worker/sources/or/odf";
 import { orWillametteBackyard, parseWillametteBackyard } from "../src/worker/sources/or/willamette";
+import { paCarrollValley, parseCarrollValley } from "../src/worker/sources/pa/carroll-valley";
+import { paStateForestSpring, parsePaStateForestSpring } from "../src/worker/sources/pa/seasonal";
 import { parseEcologyAir, waEcologyAir } from "../src/worker/sources/wa/ecology-air";
 import { parseKingFireSafety, waKingFireSafety } from "../src/worker/sources/wa/king-fire-safety";
 import { parsePugetSound, waPugetSoundAir } from "../src/worker/sources/wa/puget-sound";
@@ -111,6 +113,12 @@ const kyStatute = raw("ky/fixtures/krs-149.400-2026-11-24.pdf");
 const kyCaptured = new Date("2026-11-24T07:31:07Z");
 const parseKyListFixture = () => parseKentuckyCountyBans(JSON.parse(kyList), kyCaptured);
 const parseKyStatuteFixture = () => parseKentuckySeasonal(new Response(kyStatute), kyCaptured);
+const paNews = utf8("pa/fixtures/carroll-valley-news-2026-11-24.html");
+const paStatute = utf8("pa/fixtures/state-forest-fires-2026-11-24.html");
+const paCaptured = new Date("2026-11-24T08:11:00Z");
+const paSpringDay = new Date("2026-05-25T15:00:00Z");
+const parsePaNewsFixture = () => parseCarrollValley(paNews, paCaptured);
+const parsePaStatuteFixture = (time = paSpringDay) => extractHtml(paStatute).then((parts) => parsePaStateForestSpring(parts, time));
 const coFixture = (name: string, ext: string) => utf8(`co/fixtures/${name}-2026-11-24.${ext}`);
 const coDouglasJson = coFixture("douglas-status", "json");
 const coElPasoJson = coFixture("el-paso-status", "json");
@@ -171,6 +179,8 @@ recordedInputs.push(
   ...await Promise.all(orJobs.map(async ([, source, parse]) => ({ source, rows: await parse(), checked }))),
   { source: kyForestryCountyBans, rows: await parseKyListFixture(), checked: kyCaptured.toISOString() },
   { source: kySeasonal, rows: await parseKyStatuteFixture(), checked: kyCaptured.toISOString() },
+  { source: paCarrollValley, rows: await parsePaNewsFixture(), checked: paCaptured.toISOString() },
+  { source: paStateForestSpring, rows: await parsePaStatuteFixture(paCaptured), checked: paCaptured.toISOString() },
   { source: nwsFireWeather, rows: [], fireWeather: parseNwsLive(), checked: nwsCaptured.toISOString() },
 );
 
@@ -232,6 +242,8 @@ const jobs: Array<[string, () => unknown]> = [
   ...orJobs.map(([name, , parse]): [string, () => unknown] => [name, parse]),
   ["KY Forestry SharePoint list", parseKyListFixture],
   ["KY statute PDF and calendar", parseKyStatuteFixture],
+  ["PA Carroll Valley CivicPlus", parsePaNewsFixture],
+  ["PA state forest statute and calendar", parsePaStatuteFixture],
   ["NWS live fire-weather GeoJSON", parseNwsLive],
   ["NWS archived RFW GeoJSON", parseNwsArchive],
   ["Merge and encode current sources", () => JSON.stringify(mergeSources(null, recordedInputs, now).snapshot)],

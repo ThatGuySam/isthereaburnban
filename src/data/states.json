@@ -588,10 +588,32 @@
   {
     "abbr": "PA",
     "name": "Pennsylvania",
-    "coverage": "directory",
-    "publisher": "Pennsylvania DCNR",
+    "coverage": "restrictions",
+    "publisher": "Pennsylvania DCNR and Carroll Valley Borough",
     "officialUrl": "https://www.pa.gov/agencies/dcnr/programs-and-services/community-outreach-and-development/wildfire/burn-bans",
-    "notes": "Pennsylvania counties issue burn bans, and DCNR publishes a county map. Towns and state forests have separate rules."
+    "extraUrls": [
+      {
+        "label": "Carroll Valley Borough announcements",
+        "url": "https://www.carrollvalley.gov/m/newsflash?cat=5"
+      },
+      {
+        "label": "State forest fire rules",
+        "url": "https://www.pacodeandbulletin.gov/secure/pacode/data/017/chapter21/s21.118.html"
+      },
+      {
+        "label": "DCNR wildfire danger maps",
+        "url": "https://www.pa.gov/agencies/dcnr/programs-and-services/community-outreach-and-development/wildfire"
+      },
+      {
+        "label": "DEP open-burning and air-quality rules",
+        "url": "https://www.pa.gov/agencies/dep/programs-and-services/air/bureau-of-air-quality/open-burning-information"
+      },
+      {
+        "label": "County emergency management contacts",
+        "url": "https://www.pa.gov/agencies/ready/contact/contact-county"
+      }
+    ],
+    "notes": "County officials can issue temporary bans, and the Governor can issue a statewide proclamation. We track Carroll Valley Borough notices in Adams County and the spring fire-ring and fireplace rule on state forest lands. Check the date on DCNR's county map and ask your county, municipality or land manager about current rules."
   },
   {
     "abbr": "RI",
