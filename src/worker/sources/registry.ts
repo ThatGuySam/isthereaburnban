@@ -39,6 +39,8 @@ import { orOdfPublicUse } from "./or/odf";
 import { orWillametteBackyard } from "./or/willamette";
 import { paCarrollValley } from "./pa/carroll-valley";
 import { paStateForestSpring } from "./pa/seasonal";
+import { scAirQuality } from "./sc/air-quality";
+import { scfcDebris } from "./sc/debris";
 import type { ActiveSource, Source } from "./types";
 import { utFfslFireOrders } from "./ut/orders";
 import { utClosedFireSeason } from "./ut/seasonal";
@@ -121,6 +123,22 @@ export const SOURCES: readonly Source[] = [
   ndDesRestrictions,
   nvTmfpdPileBurning,
   nvUsfsSpringMountains,
+  ...scfcDebris,
+  scAirQuality,
+  {
+    id: "sc-scfc-issued-orders", state: "SC", scope: "part", stack: "WordPress / PDF", mode: "manual", cadence: null,
+    sourceName: "South Carolina Forestry Commission",
+    sourceUrl: "https://www.scfc.gov/news-releases/",
+    officialUrl: "https://www.scfc.gov/protection/fire-burning/fire-resources/bans-alerts/",
+    error: "Read the dated advisories and lifts to confirm which unincorporated areas and activities the latest order covers.",
+  },
+  {
+    id: "sc-horry-county-orders", state: "SC", scope: "part", stack: "Umbraco / HTML notices", mode: "manual", cadence: null,
+    sourceName: "Horry County Fire Rescue",
+    sourceUrl: "https://www.horrycountysc.gov/news/public-safety",
+    officialUrl: "https://www.horrycountysc.gov/departments/fire-rescue/open-burning/",
+    error: "The county posts orders and lifts for unincorporated Horry County. The archive has no current status field.",
+  },
   {
     id: "ar-forestry-county-bans", state: "AR", scope: "county", stack: "ASP.NET Core / AgTools HTML",
     mode: "manual", cadence: null, sourceName: "Arkansas Forestry Division",

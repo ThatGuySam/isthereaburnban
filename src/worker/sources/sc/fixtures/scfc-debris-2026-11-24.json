@@ -1,0 +1,462 @@
+[
+  {
+    "county": "\ufeffAbbeville",
+    "burn_ban": "--no",
+    "status": {
+      "county": "158",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-16 14:37:11"
+    }
+  },
+  {
+    "county": "Aiken",
+    "burn_ban": "--no",
+    "status": {
+      "county": "159",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-21 13:49:15"
+    }
+  },
+  {
+    "county": "Allendale",
+    "burn_ban": "--no",
+    "status": {
+      "county": "160",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-21 13:49:15"
+    }
+  },
+  {
+    "county": "Anderson",
+    "burn_ban": "--no",
+    "status": {
+      "county": "161",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-16 14:37:11"
+    }
+  },
+  {
+    "county": "Bamberg",
+    "burn_ban": "--no",
+    "status": {
+      "county": "162",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-21 13:49:15"
+    }
+  },
+  {
+    "county": "Barnwell",
+    "burn_ban": "--no",
+    "status": {
+      "county": "163",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-21 13:49:15"
+    }
+  },
+  {
+    "county": "Beaufort",
+    "burn_ban": "--no",
+    "status": {
+      "county": "164",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-21 13:49:15"
+    }
+  },
+  {
+    "county": "Berkeley",
+    "burn_ban": "--no",
+    "status": {
+      "county": "165",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-21 13:49:30"
+    }
+  },
+  {
+    "county": "Calhoun",
+    "burn_ban": "--no",
+    "status": {
+      "county": "166",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-21 13:49:30"
+    }
+  },
+  {
+    "county": "Charleston",
+    "burn_ban": "--no",
+    "status": {
+      "county": "167",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-21 13:49:30"
+    }
+  },
+  {
+    "county": "Cherokee",
+    "burn_ban": "--no",
+    "status": {
+      "county": "168",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-16 14:36:49"
+    }
+  },
+  {
+    "county": "Chester",
+    "burn_ban": "--no",
+    "status": {
+      "county": "169",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-16 14:36:49"
+    }
+  },
+  {
+    "county": "Chesterfield",
+    "burn_ban": "--no",
+    "status": {
+      "county": "170",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-23 12:06:06"
+    }
+  },
+  {
+    "county": "Clarendon",
+    "burn_ban": "--no",
+    "status": {
+      "county": "171",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-23 12:06:06"
+    }
+  },
+  {
+    "county": "Colleton",
+    "burn_ban": "--no",
+    "status": {
+      "county": "172",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-21 13:49:15"
+    }
+  },
+  {
+    "county": "Darlington",
+    "burn_ban": "--no",
+    "status": {
+      "county": "173",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-23 12:06:06"
+    }
+  },
+  {
+    "county": "Dillon",
+    "burn_ban": "--no",
+    "status": {
+      "county": "174",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-23 12:05:50"
+    }
+  },
+  {
+    "county": "Dorchester",
+    "burn_ban": "--no",
+    "status": {
+      "county": "175",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-21 13:49:30"
+    }
+  },
+  {
+    "county": "Edgefield",
+    "burn_ban": "--no",
+    "status": {
+      "county": "176",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-16 14:37:11"
+    }
+  },
+  {
+    "county": "Fairfield",
+    "burn_ban": "--no",
+    "status": {
+      "county": "177",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-16 14:36:49"
+    }
+  },
+  {
+    "county": "Florence",
+    "burn_ban": "--no",
+    "status": {
+      "county": "178",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-23 12:05:50"
+    }
+  },
+  {
+    "county": "Georgetown",
+    "burn_ban": "--no",
+    "status": {
+      "county": "179",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-23 12:05:50"
+    }
+  },
+  {
+    "county": "Greenville",
+    "burn_ban": "--no",
+    "status": {
+      "county": "180",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-16 14:37:11"
+    }
+  },
+  {
+    "county": "Greenwood",
+    "burn_ban": "--no",
+    "status": {
+      "county": "181",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-16 14:37:11"
+    }
+  },
+  {
+    "county": "Hampton",
+    "burn_ban": "--no",
+    "status": {
+      "county": "182",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-21 13:49:15"
+    }
+  },
+  {
+    "county": "Horry",
+    "burn_ban": "--no",
+    "status": {
+      "county": "183",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-23 12:05:50"
+    }
+  },
+  {
+    "county": "Jasper",
+    "burn_ban": "--no",
+    "status": {
+      "county": "184",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-21 13:49:15"
+    }
+  },
+  {
+    "county": "Kershaw",
+    "burn_ban": "--no",
+    "status": {
+      "county": "185",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-23 12:06:06"
+    }
+  },
+  {
+    "county": "Lancaster",
+    "burn_ban": "--no",
+    "status": {
+      "county": "186",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-23 12:06:06"
+    }
+  },
+  {
+    "county": "Laurens",
+    "burn_ban": "--no",
+    "status": {
+      "county": "187",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-16 14:37:11"
+    }
+  },
+  {
+    "county": "Lee",
+    "burn_ban": "--no",
+    "status": {
+      "county": "188",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-23 12:06:06"
+    }
+  },
+  {
+    "county": "Lexington",
+    "burn_ban": "--no",
+    "status": {
+      "county": "189",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-16 14:36:49"
+    }
+  },
+  {
+    "county": "Marion",
+    "burn_ban": "--no",
+    "status": {
+      "county": "190",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-23 12:05:50"
+    }
+  },
+  {
+    "county": "Marlboro",
+    "burn_ban": "--no",
+    "status": {
+      "county": "191",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-23 12:06:06"
+    }
+  },
+  {
+    "county": "McCormick",
+    "burn_ban": "--no",
+    "status": {
+      "county": "192",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-16 14:37:11"
+    }
+  },
+  {
+    "county": "Newberry",
+    "burn_ban": "--no",
+    "status": {
+      "county": "193",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-16 14:36:49"
+    }
+  },
+  {
+    "county": "Oconee",
+    "burn_ban": "--no",
+    "status": {
+      "county": "194",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-16 14:37:11"
+    }
+  },
+  {
+    "county": "Orangeburg",
+    "burn_ban": "--no",
+    "status": {
+      "county": "195",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-21 13:49:30"
+    }
+  },
+  {
+    "county": "Pickens",
+    "burn_ban": "--no",
+    "status": {
+      "county": "196",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-16 14:37:11"
+    }
+  },
+  {
+    "county": "Richland",
+    "burn_ban": "--no",
+    "status": {
+      "county": "197",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-16 14:36:49"
+    }
+  },
+  {
+    "county": "Saluda",
+    "burn_ban": "--no",
+    "status": {
+      "county": "198",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-16 14:37:11"
+    }
+  },
+  {
+    "county": "Spartanburg",
+    "burn_ban": "--no",
+    "status": {
+      "county": "199",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-16 14:36:49"
+    }
+  },
+  {
+    "county": "Sumter",
+    "burn_ban": "--no",
+    "status": {
+      "county": "200",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-23 12:06:06"
+    }
+  },
+  {
+    "county": "Union",
+    "burn_ban": "--no",
+    "status": {
+      "county": "201",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-16 14:36:49"
+    }
+  },
+  {
+    "county": "Williamsburg",
+    "burn_ban": "--no",
+    "status": {
+      "county": "202",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-23 12:05:50"
+    }
+  },
+  {
+    "county": "York",
+    "burn_ban": "--no",
+    "status": {
+      "county": "203",
+      "post_type": "burn_status",
+      "post_status": "publish",
+      "post_date_gmt": "2026-11-16 14:36:49"
+    }
+  }
+]

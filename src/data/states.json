@@ -710,10 +710,16 @@
   {
     "abbr": "SC",
     "name": "South Carolina",
-    "coverage": "directory",
-    "publisher": "South Carolina Forestry Commission",
-    "officialUrl": "https://www.scfc.gov/protection/fire-burning/fire-resources/bans-alerts/",
-    "notes": "The State Forester or Governor can issue burn bans, which do not cover incorporated towns and cities. Local governments can add their own."
+    "coverage": "restrictions",
+    "publisher": "South Carolina Forestry Commission and Department of Environmental Services",
+    "officialUrl": "https://www.scfc.gov/notify/",
+    "extraUrls": [
+      { "label": "State Forestry Commission orders and lifts", "url": "https://www.scfc.gov/news-releases/" },
+      { "label": "State bans and Red Flag Fire Alerts", "url": "https://www.scfc.gov/protection/fire-burning/fire-resources/bans-alerts/" },
+      { "label": "State air-quality open-burning rules", "url": "https://des.sc.gov/programs/bureau-air-quality/air-pollutants/open-burning" },
+      { "label": "Horry County Fire Rescue open-burning rules", "url": "https://www.horrycountysc.gov/departments/fire-rescue/open-burning/" }
+    ],
+    "notes": "The State Forester or Governor can issue temporary burn bans outside city and town limits. We check the Forestry Commission for current residential yard-debris closures and track state limits on land-clearing and residential construction burns. Check the state notices and your local fire department for other orders and the rules for your location."
   },
   {
     "abbr": "SD",

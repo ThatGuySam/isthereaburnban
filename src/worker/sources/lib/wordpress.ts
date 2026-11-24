@@ -4,7 +4,12 @@ import { htmlText } from "./html";
 // Inventory: WordPress, including the Faulkner REST search and Mississippi's Ninja Tables JSON.
 // Use the REST query only when the site exposes the relevant content there.
 export function wpRestUrl(site: string, kind: "posts" | "pages" | "search" | `pages/${number}`, query: Record<string, string> = {}): string {
-  const url = new URL(`wp-json/wp/v2/${kind}`, site.replace(/\/?$/, "/"));
+  return wpRestEndpoint(site, `wp/v2/${kind}`, query);
+}
+
+/** Build a URL for a public core or plugin REST route relative to the WordPress install. */
+export function wpRestEndpoint(site: string, route: string, query: Record<string, string> = {}): string {
+  const url = new URL(`wp-json/${route}`, site.replace(/\/?$/, "/"));
   url.search = new URLSearchParams(query).toString();
   return url.href;
 }

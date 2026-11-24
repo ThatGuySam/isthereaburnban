@@ -55,6 +55,8 @@ import { orOdfPublicUse, parseOdfPublicUse } from "../src/worker/sources/or/odf"
 import { orWillametteBackyard, parseWillametteBackyard } from "../src/worker/sources/or/willamette";
 import { paCarrollValley, parseCarrollValley } from "../src/worker/sources/pa/carroll-valley";
 import { paStateForestSpring, parsePaStateForestSpring } from "../src/worker/sources/pa/seasonal";
+import { parseScAirQuality, scAirQuality } from "../src/worker/sources/sc/air-quality";
+import { parseScfcDebris } from "../src/worker/sources/sc/debris";
 import { parseUtahOrders, utFfslFireOrders } from "../src/worker/sources/ut/orders";
 import { parseUtahSeasonal, utClosedFireSeason } from "../src/worker/sources/ut/seasonal";
 import { parseEcologyAir, waEcologyAir } from "../src/worker/sources/wa/ecology-air";
@@ -180,6 +182,16 @@ const arCaptured = new Date("2026-11-24T10:31:53Z");
 const arBanner = utf8("ar/fixtures/faulkner-banner-2026-11-24.html");
 const arOrder = raw("ar/fixtures/faulkner-order-26-204-2026-11-24.pdf");
 const parseArFaulknerFixture = () => parseFaulknerBan(arBanner, arCaptured, () => manualPdf(new Response(arOrder)));
+const scCaptured = new Date("2026-11-24T10:50:00Z");
+const scDebris = utf8("sc/fixtures/scfc-debris-2026-11-24.json");
+const scRegulation = raw("sc/fixtures/des-61-62-2-2026-11-24.pdf");
+const parseScDebrisFixture = () => {
+  const entries: Array<{ county: string; status: { county: string } }> = JSON.parse(scDebris);
+  return entries.flatMap((data) => parseScfcDebris(data, scCaptured, {
+    name: data.county, wpId: Number(data.status.county), sourceId: "sc-scfc-debris",
+  }));
+};
+const parseScRegulationFixture = () => parseScAirQuality(new Response(scRegulation), scCaptured);
 const akPermitLayer = utf8("ak/fixtures/permit-layer-2026-11-24.json");
 const akPermitZones = utf8("ak/fixtures/permit-zones-2026-11-24.json");
 const akFireSeason = utf8("ak/fixtures/as-41-15-050-2026-11-24.html");
@@ -268,6 +280,7 @@ recordedInputs.push(
   { source: nvTmfpdPileBurning, rows: await parseNvTmfpdFixture(), checked: nvCaptured.toISOString() },
   { source: nvUsfsSpringMountains, rows: await parseNvForestFixture(), checked: nvForestCaptured.toISOString() },
   { source: arFaulknerCountyOrders, rows: await parseArFaulknerFixture(), checked: arCaptured.toISOString() },
+  { source: scAirQuality, rows: await parseScRegulationFixture(), checked: scCaptured.toISOString() },
   { source: nwsFireWeather, rows: [], fireWeather: parseNwsLive(), checked: nwsCaptured.toISOString() },
 );
 
@@ -339,6 +352,8 @@ const jobs: Array<[string, () => unknown]> = [
   ["ND DES ArcGIS daily restrictions", parseNdFixture],
   ["NV Truckee Meadows WordPress / Oxygen", parseNvTmfpdFixture],
   ["AR Faulkner County WordPress / Elementor and PDF", parseArFaulknerFixture],
+  ["SC Forestry Commission custom WordPress REST", parseScDebrisFixture],
+  ["SC DES regulation PDF and calendar", parseScRegulationFixture],
   ["NV Spring Mountains Drupal order table", parseNvForestFixture],
   ["UT FFSL fire order polygons", parseUtOrders],
   ["UT closed fire season and calendar", parseUtStatute],

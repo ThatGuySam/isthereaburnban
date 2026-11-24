@@ -11,7 +11,7 @@ import { blockAfterHeading, extractHtml, extractHtmlGrid, localClock, parseEndDa
 import { BlockedError, fetchSource, HttpError, pacedTextReader, USER_AGENT } from "./http";
 import { manualPdf } from "./pdf";
 import { parseSharePointItems, parseSharePointPage, sharePointListItems, sharePointListUrl, sharePointRows } from "./sharepoint";
-import { ninjaTablesUrl, parseNinjaRows, parseWpItems, parseWpPage, wpRestUrl } from "./wordpress";
+import { ninjaTablesUrl, parseNinjaRows, parseWpItems, parseWpPage, wpRestEndpoint, wpRestUrl } from "./wordpress";
 import { checkLink, htmlLinks } from "../../../../scripts/check-links";
 
 const data = (name) => readFileSync(new URL(`./fixtures/${name}`, import.meta.url));
@@ -140,6 +140,18 @@ test("a paced reader spaces same-publisher requests and returns their bounded te
   expect(await read("https://example.gov/metadata")).toBe("/metadata");
   expect(await read("https://example.gov/query")).toBe("/query");
   expect(starts[1] - starts[0]).toBeGreaterThanOrEqual(19);
+});
+
+test("a paced read-only POST can send a different lookup body on each request", async () => {
+  const read = pacedTextReader({ method: "POST", headers: { "content-type": "application/json" },
+    fetchImpl: async (_, { method, headers, body }) => {
+      expect(method).toBe("POST");
+      expect(headers.get("content-type")).toBe("application/json");
+      return new Response(body);
+    },
+  }, 0);
+  expect(await read("https://example.gov/status", { body: '{"county":1}' })).toBe('{"county":1}');
+  expect(await read("https://example.gov/status", { body: '{"county":2}' })).toBe('{"county":2}');
 });
 
 test("HTTP sends validators, retains them on 304 and retries unblocked transient GET failures", async () => {
@@ -322,6 +334,12 @@ test("WordPress parses Faulkner's REST search and Mississippi's Ninja Tables row
   const ms = JSON.parse(readFileSync(new URL("../../adapters/fixtures/ms.json", import.meta.url), "utf8"));
   expect(parseNinjaRows(ms)[0]).toEqual(ms[0].value);
   expect(() => parseWpItems({ code: "rest_forbidden" })).toThrow();
+});
+
+test("WordPress builds a custom REST route below a subdirectory install", () => {
+  const url = new URL(wpRestEndpoint("https://county.gov/site/", "agency/v2/lookup", { county: "New City" }));
+  expect(url.pathname).toBe("/site/wp-json/agency/v2/lookup");
+  expect(url.searchParams.get("county")).toBe("New City");
 });
 
 test("WordPress validates a published page and keeps its rendered structure", () => {
