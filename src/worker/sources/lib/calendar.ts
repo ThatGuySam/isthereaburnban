@@ -14,6 +14,7 @@ export type CalendarRule = {
   zone: string;
   seasons?: readonly (readonly [start: string, end: string])[]; // inclusive MM-DD
   hours?: readonly [start: number, end: number]; // local minutes, end exclusive
+  hoursByDay?: Readonly<Record<string, readonly [start: number, end: number]>>; // MM-DD override
   counties?: ReadonlySet<string>; // publisher county names without "County"
 };
 
@@ -23,12 +24,20 @@ function inSeason(rule: CalendarRule, date: string): boolean {
     start <= end ? day >= start && day <= end : day >= start || day <= end);
 }
 
+function hoursOn(rule: CalendarRule, date: string) {
+  return rule.hoursByDay?.[date.slice(5)] ?? rule.hours;
+}
+
 /** UTC validity windows within the rule's current local date. Geography is applied by the caller. */
 export function calendarDayWindows(rule: CalendarRule, now: Date) {
-  const { date } = localClock(now, rule.zone);
+  return windowsOn(rule, localClock(now, rule.zone).date);
+}
+
+function windowsOn(rule: CalendarRule, date: string) {
   if (!inSeason(rule, date)) return [];
-  if (!rule.hours) return [localDayWindow(date, rule.zone)];
-  const [start, end] = rule.hours;
+  const hours = hoursOn(rule, date);
+  if (!hours) return [localDayWindow(date, rule.zone)];
+  const [start, end] = hours;
   const periods: [number, number][] = start <= end ? [[start, end]] : [[0, end], [start, 1440]];
   const instant = (minute: number) => minute === 1440
     ? atLocalTime(shiftDay(date, 1), 0, rule.zone)
@@ -43,22 +52,30 @@ export function calendarDayWindows(rule: CalendarRule, now: Date) {
 
 type CalendarPublisher = Pick<CountyStatus, "sourceName" | "sourceUrl"> & { id: string };
 
-/** Emit a calendar rule's effective windows for its mapped counties, including later windows today. */
+/** Emit effective windows for the mapped counties, optionally covering the next local day. */
 export function calendarStatusRows(
   rule: CalendarRule,
   counties: ReadonlyArray<{ fips: string; name: string }>,
   publisher: CalendarPublisher,
   now: Date,
+  { includeTomorrow = false } = {},
 ): CountyStatus[] {
   const checked = now.toISOString();
   const covered = rule.counties ? counties.filter(({ name }) => ruleCoversCounty(rule, name)) : counties;
   const { state, status, label, note, scope, scopeNote, officialUrl } = rule;
   const { id: sourceId, sourceName, sourceUrl } = publisher;
-  return calendarDayWindows(rule, now).filter(({ validUntil }) => validUntil > checked)
-    .flatMap((window) => covered.map(({ fips, name }) => ({
-      ...window, fips, county: name, state, status, label, note, scope, scopeNote,
-      sourceId, sourceName, sourceUrl, officialUrl, checked, sourceUpdated: null, since: null, expires: null,
-    })));
+  const { date } = localClock(now, rule.zone);
+  const dates = includeTomorrow ? [date, shiftDay(date, 1)] : [date];
+  const windows: ReturnType<typeof windowsOn> = [];
+  for (const window of dates.flatMap((day) => windowsOn(rule, day))) {
+    const previous = windows.at(-1);
+    if (previous?.validUntil === window.validFrom) previous.validUntil = window.validUntil;
+    else if (window.validUntil > checked) windows.push(window);
+  }
+  return windows.flatMap((window) => covered.map(({ fips, name }) => ({
+    ...window, fips, county: name, state, status, label, note, scope, scopeNote,
+    sourceId, sourceName, sourceUrl, officialUrl, checked, sourceUpdated: null, since: null, expires: null,
+  })));
 }
 
 function ruleCoversCounty(rule: CalendarRule, county?: string) {
@@ -69,8 +86,9 @@ export function activeRule(rule: CalendarRule, now: Date, county?: string) {
   if (!ruleCoversCounty(rule, county)) return undefined;
   const { date, minute } = localClock(now, rule.zone);
   if (!inSeason(rule, date)) return undefined;
-  if (rule.hours) {
-    const [start, end] = rule.hours;
+  const hours = hoursOn(rule, date);
+  if (hours) {
+    const [start, end] = hours;
     if (!(start <= end ? minute >= start && minute < end : minute >= start || minute < end)) return undefined;
   }
   return { status: rule.status, label: rule.label, note: rule.note, scope: rule.scope, scopeNote: rule.scopeNote, officialUrl: rule.officialUrl };
@@ -179,6 +197,14 @@ export const CALENDAR_RULES: Record<string, CalendarRule> = {
     officialUrl: "https://codes.ohio.gov/ohio-revised-code/section-1503.18",
     label: "Seasonal daytime burning restriction", seasons: [["03-01", "05-31"], ["10-01", "11-30"]], hours: [360, 1080],
     note: "The rule covers outdoor burning of wood, brush, weeds, grass or rubbish from 6 a.m. to 6 p.m. Eastern in March–May and October–November. Ohio law excepts fires in plowed fields, gardens or on public roads at least 200 feet from woods, brush or fields with dry grass or other flammable material. Check with your local fire department about other rules.",
+  },
+  TN: {
+    state: "TN", zone: US_ZONES.Central, status: "restricted", scope: "part",
+    officialUrl: "https://www.tn.gov/tnwildlandfire/prevention/safe-debris-burning/permits.html",
+    scopeNote: "Debris and prescribed fires near forests, grasslands or woodlands where the state permit program applies",
+    label: "Seasonal burn permit required",
+    seasons: [["10-15", "05-15"]], hoursByDay: { "10-15": [8 * 60, 1440] },
+    note: "Tennessee generally requires a Division of Forestry permit for covered fires within 500 feet of a forest, grassland or woodland from 8 a.m. local time on October 15 through May 15. Local burning ordinances and permit programs may apply.",
   },
   MO_ST_LOUIS_YARD_WASTE_CLOSED: {
     state: "MO", zone: US_ZONES.Central, status: "restricted", scope: "part",

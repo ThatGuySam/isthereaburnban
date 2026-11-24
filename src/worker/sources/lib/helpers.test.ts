@@ -5,7 +5,7 @@ import { syncfusionGridRows, webFormsPost } from "./aspnet";
 import { arcgisDateOnly, arcgisDistinctUrl, arcgisEditWindow, arcgisLocalDate, arcgisRows, arcgisTimestampOffset, codedDomains, dataLastEditDate, findOperationalLayers, queryArcgis } from "./arcgis";
 import { activeRule, calendarDayWindows, calendarStatusRows, CALENDAR_RULES } from "./calendar";
 import { civicPlusAlertDetails, civicPlusNotices, civicPlusUrl } from "./civicplus";
-import { localDayWindow, parseWeekdayDate, reportWindow, weekdayOnOrAfter } from "./dates";
+import { localDayWindow, parseLocalIsoTimestamp, parseWeekdayDate, reportWindow, weekdayOnOrAfter } from "./dates";
 import { decodeFeed, parseCsv, parseDotNetJsonDate, parseFeed, parseJson } from "./feeds";
 import { blockAfterHeading, extractHtml, extractHtmlGrid, localClock, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, US_ZONES } from "./html";
 import { BlockedError, fetchSource, HttpError, pacedSourceReader, pacedTextReader, USER_AGENT } from "./http";
@@ -62,6 +62,26 @@ test("calendar rows keep only covered counties and windows that have not ended",
   expect(rows.map(({ fips, sourceId, validFrom, validUntil }) => ({ fips, sourceId, validFrom, validUntil }))).toEqual([{
     fips: "04013", sourceId: "az-example", validFrom: "2026-06-02T01:00:00.000Z", validUntil: "2026-06-02T07:00:00.000Z",
   }]);
+});
+
+test("calendar lookahead joins adjacent days and applies the opening day's hours", () => {
+  const rule = { ...CALENDAR_RULES.NY, hoursByDay: { "03-16": [8 * 60, 1440] } };
+  const counties = [{ fips: "36001", name: "Albany County" }];
+  const publisher = { id: "ny-example", sourceName: "Publisher", sourceUrl: rule.officialUrl };
+  const now = date("2026-03-16T05:00:00Z");
+  expect(activeRule(rule, now)).toBeUndefined();
+  expect(activeRule(rule, date("2026-03-16T12:00:00Z"))?.status).toBe("restricted");
+  expect(calendarStatusRows(rule, counties, publisher, now, { includeTomorrow: true })).toMatchObject([{
+    checked: now.toISOString(), validFrom: "2026-03-16T12:00:00.000Z", validUntil: "2026-03-18T04:00:00.000Z",
+  }]);
+});
+
+test("offset-free ISO timestamps use the stated zone and reject invalid local times", () => {
+  expect(parseLocalIsoTimestamp("2026-11-24T00:01:02.1234567", US_ZONES.Central)).toBe("2026-11-24T06:01:02.123Z");
+  expect(parseLocalIsoTimestamp("2026-11-24T00:01:02", US_ZONES.Eastern)).toBe("2026-11-24T05:01:02.000Z");
+  expect(parseLocalIsoTimestamp("2026-03-08T02:30:00", US_ZONES.Eastern)).toBeNull();
+  expect(parseLocalIsoTimestamp("2026-02-30T00:00:00", US_ZONES.Central)).toBeNull();
+  expect(parseLocalIsoTimestamp("2026-11-24T00:00:00Z", US_ZONES.Central)).toBeNull();
 });
 
 test("publisher-local dates allow a comma before a whole hour with meridiem", () => {

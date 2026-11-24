@@ -46,6 +46,8 @@ import { paCarrollValley } from "./pa/carroll-valley";
 import { paStateForestSpring } from "./pa/seasonal";
 import { scAirQuality } from "./sc/air-quality";
 import { scfcDebris } from "./sc/debris";
+import { tnForestryPermitHolds } from "./tn/permit-holds";
+import { tnSeasonalBurnPermits } from "./tn/seasonal";
 import type { ActiveSource, Source } from "./types";
 import { utFfslFireOrders } from "./ut/orders";
 import { utClosedFireSeason } from "./ut/seasonal";
@@ -135,6 +137,29 @@ export const SOURCES: readonly Source[] = [
   ncPermits,
   moShowMeFireBans,
   moYardWaste,
+  tnForestryPermitHolds,
+  tnSeasonalBurnPermits,
+  {
+    id: "tn-commissioner-burn-bans", state: "TN", scope: "part", stack: "Adobe AEM / ArcGIS Dashboard", mode: "manual", cadence: null,
+    sourceName: "Tennessee Division of Forestry",
+    sourceUrl: "https://services.arcgis.com/lvPBAGXeSupVUvx2/ArcGIS/rest/services/Burn_Ban_WFL1/FeatureServer/0",
+    officialUrl: "https://www.tn.gov/tnwildlandfire/prevention/safe-debris-burning/burn-bans.html",
+    error: "The dashboard layer last changed county data in March 2024. Confirm current orders with the Division of Forestry or local fire officials.",
+  },
+  {
+    id: "tn-rutherford-fire-marshal", state: "TN", scope: "part", stack: "GovOffice / HTML notices", mode: "manual", cadence: null,
+    sourceName: "Rutherford County Fire Marshal",
+    sourceUrl: "https://rutherfordcountytn.gov/index.asp?MODE=LIST&SEC=%7B763D13EF-A556-49BB-B17F-430551ED58A0%7D&Type=B_PR",
+    officialUrl: "https://rutherfordcountytn.gov/fire-marshal",
+    error: "The archived October 2023 and August 2024 orders were lifted. Ask the Fire Marshal about current restrictions in unincorporated Rutherford County.",
+  },
+  {
+    id: "tn-shelby-open-burning", state: "TN", scope: "part", stack: "CivicPlus / HTML and PDF", mode: "manual", cadence: null,
+    sourceName: "Shelby County Health Department",
+    sourceUrl: "https://www.shelbycountytn.gov/DocumentCenter/View/883/open_burn_rules",
+    officialUrl: "https://www.shelbytnhealth.com/176/Open-Burning-Land-Clearing-Contractors",
+    error: "The county PDF returned Cloudflare 403. The Health Department explains standing local rules and exceptions. Ask about current restrictions for your address.",
+  },
   {
     id: "mo-sema-daily-brief", state: "MO", scope: "county", stack: "PDF map", mode: "manual", cadence: null,
     sourceName: "Missouri State Emergency Management Agency",

@@ -64,6 +64,8 @@ import { paCarrollValley, parseCarrollValley } from "../src/worker/sources/pa/ca
 import { paStateForestSpring, parsePaStateForestSpring } from "../src/worker/sources/pa/seasonal";
 import { parseScAirQuality, scAirQuality } from "../src/worker/sources/sc/air-quality";
 import { parseScfcDebris } from "../src/worker/sources/sc/debris";
+import { parseTennesseePermitHolds, parseTennesseePermitRoster, tnForestryPermitHolds } from "../src/worker/sources/tn/permit-holds";
+import { parseTennesseePermitSeason, tnSeasonalBurnPermits } from "../src/worker/sources/tn/seasonal";
 import { parseUtahOrders, utFfslFireOrders } from "../src/worker/sources/ut/orders";
 import { parseUtahSeasonal, utClosedFireSeason } from "../src/worker/sources/ut/seasonal";
 import { parseEcologyAir, waEcologyAir } from "../src/worker/sources/wa/ecology-air";
@@ -227,6 +229,12 @@ const moDefinitions = raw("mo/fixtures/epa-definitions-2026-11-24.pdf");
 const parseMoBansFixture = () => parseShowMeFireBans(JSON.parse(moActive), moCaptured);
 const parseMoSipFixture = async () => parseMoYardWaste(await extractHtml(moSip, { links: true }), moCaptured,
   async (url) => new Response(url === moYardWaste.officialUrl ? moRegulation : moDefinitions));
+const tnCaptured = new Date("2026-11-24T12:31:02Z");
+const tnRoster = utf8("tn/fixtures/permit-roster-2026-11-24.json");
+const tnPermitDetails = utf8("tn/fixtures/permit-details-2026-11-24.json");
+const tnPermitSeason = utf8("tn/fixtures/permit-season-2026-11-24.html");
+const parseTnHolds = () => parseTennesseePermitHolds(tnPermitDetails, parseTennesseePermitRoster(tnRoster), tnCaptured);
+const parseTnSeason = async () => parseTennesseePermitSeason(await extractHtml(tnPermitSeason), tnCaptured);
 const akPermitLayer = utf8("ak/fixtures/permit-layer-2026-11-24.json");
 const akPermitZones = utf8("ak/fixtures/permit-zones-2026-11-24.json");
 const akFireSeason = utf8("ak/fixtures/as-41-15-050-2026-11-24.html");
@@ -321,6 +329,8 @@ recordedInputs.push(
   { source: ncAirHours, rows: await parseNcAirFixture(), checked: ncNow.toISOString() },
   { source: moShowMeFireBans, rows: parseMoBansFixture(), checked: moCaptured.toISOString() },
   { source: moYardWaste, rows: await parseMoSipFixture(), checked: moCaptured.toISOString() },
+  { source: tnForestryPermitHolds, rows: parseTnHolds(), checked: tnCaptured.toISOString() },
+  { source: tnSeasonalBurnPermits, rows: await parseTnSeason(), checked: tnCaptured.toISOString() },
   { source: nwsFireWeather, rows: [], fireWeather: parseNwsLive(), checked: nwsCaptured.toISOString() },
 );
 
@@ -399,6 +409,8 @@ const jobs: Array<[string, () => unknown]> = [
   ["NC DEQ open-burning hours and calendar", parseNcAirFixture],
   ["MO Show Me Fire active county JSON", parseMoBansFixture],
   ["MO EPA SIP index, PDFs and calendar", parseMoSipFixture],
+  ["TN Forestry fiResponse roster and permit details", parseTnHolds],
+  ["TN Forestry permit-season HTML and calendar", parseTnSeason],
   ["NV Spring Mountains Drupal order table", parseNvForestFixture],
   ["UT FFSL fire order polygons", parseUtOrders],
   ["UT closed fire season and calendar", parseUtStatute],

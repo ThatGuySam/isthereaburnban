@@ -776,10 +776,36 @@
   {
     "abbr": "TN",
     "name": "Tennessee",
-    "coverage": "directory",
+    "coverage": "restrictions",
     "publisher": "Tennessee Division of Forestry",
-    "officialUrl": "https://www.tn.gov/tnwildlandfire/prevention/safe-debris-burning/burn-bans.html",
-    "notes": "Tennessee counties issue burn bans, and the Division of Forestry issues burn permits separately. Some towns issue their own permits."
+    "officialUrl": "https://tn.firesponse.com/burn-permit/public-restrictions/",
+    "extraUrls": [
+      {
+        "label": "Tennessee burn permits and seasonal rules",
+        "url": "https://www.tn.gov/tnwildlandfire/prevention/safe-debris-burning/permits.html"
+      },
+      {
+        "label": "State burn-ban guidance",
+        "url": "https://www.tn.gov/tnwildlandfire/prevention/safe-debris-burning/burn-bans.html"
+      },
+      {
+        "label": "County and municipal burning contacts",
+        "url": "https://www.tn.gov/tnwildlandfire/prevention/safe-debris-burning/permits/county-municipality-list.html"
+      },
+      {
+        "label": "Tennessee air-quality rules for open burning",
+        "url": "https://www.tn.gov/environment/air/open-burning.html"
+      },
+      {
+        "label": "Rutherford County Fire Marshal",
+        "url": "https://rutherfordcountytn.gov/fire-marshal"
+      },
+      {
+        "label": "Shelby County open burning and land clearing",
+        "url": "https://www.shelbytnhealth.com/176/Open-Burning-Land-Clearing-Contractors"
+      }
+    ],
+    "notes": "We track temporary holds on state burn permits and the October 15 through May 15 permit season. The Agriculture Commissioner can issue bans in consultation with the State Forester and county mayors, and the Governor can issue regional or statewide bans. Check with your local fire authority for rules and orders that apply to your address."
   },
   {
     "abbr": "TX",

@@ -104,6 +104,18 @@ export function parseLocalDateTime(raw: string, zone: string, defaultYear?: numb
   return instant ? new Date(Date.parse(instant) + seconds * 1000).toISOString() : null;
 }
 
+/** Parse an offset-free ISO timestamp as the publisher's local wall time. */
+export function parseLocalIsoTimestamp(value: unknown, zone: string): string | null {
+  if (typeof value !== "string") return null;
+  const match = /^(\d{4}-\d{2}-\d{2})T([01]\d|2[0-3]):([0-5]\d):([0-5]\d)(?:\.(\d{1,9}))?$/.exec(value);
+  if (!match) return null;
+  const [, day, hour, minute, second, fraction = ""] = match;
+  const instant = atLocalTime(day, Number(hour) * 60 + Number(minute), zone);
+  if (!instant) return null;
+  const milliseconds = Number(fraction.padEnd(3, "0").slice(0, 3));
+  return new Date(Date.parse(instant) + Number(second) * 1000 + milliseconds).toISOString();
+}
+
 export function shiftDay(date: string, days: number): string {
   return new Date(Date.parse(date + "T00:00:00Z") + days * 86_400_000).toISOString().slice(0, 10);
 }
