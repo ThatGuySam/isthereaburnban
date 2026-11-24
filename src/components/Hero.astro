@@ -1,5 +1,6 @@
 ---
-import { heroStyle, renderCheckingHtml } from "../shared/render";
+import { heroStyle, renderAskHtml, renderCheckingHtml } from "../shared/render";
+import { PLACE_KEY } from "../client/place";
 import Mark from "./Mark.astro";
 
 interface Props {
@@ -15,7 +16,7 @@ interface Props {
 const { mode, fips, place, url, note } = Astro.props;
 const home = mode === "home";
 // Keep this markup in sync with src/worker/pages.ts, which rewrites [data-hero] and [data-status-slot].
-const ask = `<div class="status" data-status="checking"><p class="status-word status-word--long">Where?</p><p class="status-sentence">Is there a burn ban near you?</p></div>`;
+const ask = renderAskHtml();
 ---
 <main
   id="content"
@@ -52,17 +53,16 @@ const ask = `<div class="status" data-status="checking"><p class="status-word st
 </main>
 
 {home && (
-  <script is:inline>
-    // Paint the remembered place before anything else loads (no flash of the question).
+  <script is:inline define:vars={{ placeKey: PLACE_KEY, checking: renderCheckingHtml(), checkingStyle: heroStyle("checking") }}>
     try {
-      var p = JSON.parse(localStorage.getItem("itabb:place") || "null");
-      if (p && p.html && p.style) {
+      var stored = JSON.parse(localStorage.getItem(placeKey) || localStorage.getItem("itabb:last") || "null");
+      var query = new URLSearchParams(location.search);
+      if (/^\d{5}$/.test(stored?.fips || "") || query.has("zip") || query.has("fips") || (query.has("lat") && query.has("lon"))) {
         var h = document.querySelector("[data-hero]");
-        h.dataset.state = "answer";
-        h.dataset.status = p.status;
-        h.style.cssText = p.style;
-        h.querySelector("[data-status-slot]").innerHTML = p.html;
-        document.documentElement.style.backgroundColor = getComputedStyle(h).getPropertyValue("--bg");
+        h.dataset.state = "checking";
+        h.dataset.status = "checking";
+        h.style.cssText = checkingStyle;
+        h.querySelector("[data-status-slot]").innerHTML = checking;
       }
     } catch (e) {}
   </script>

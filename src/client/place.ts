@@ -5,51 +5,68 @@ import type { CountyStatus, LookupResult } from "../shared/types";
 
 export type Result = CountyStatus & { url?: string };
 
-export type StoredPlace = {
-  fips: string;
-  /** "Tulsa County, OK" */
-  label: string;
-  url?: string;
-  zip?: string;
-  lat?: number;
-  lon?: number;
-  /** epoch ms when the user chose this place */
-  ts: number;
-  /** last painted status + hero markup, so a return visit paints before any fetch */
-  status?: string;
-  style?: string;
-  html?: string;
-};
+export type StoredPlace = { fips: string; label: string; url?: string };
+type StoredAnswer = { result: Result; savedAt: number; expiresAt: number };
 
 export const PLACE_KEY = "itabb:place";
+const ANSWER_KEY = "itabb:answer";
 const LEGACY_KEY = "itabb:last";
+export const HOME_ANSWER_TTL_MS = 2 * 60_000;
 
 export function readPlace(): StoredPlace | null {
   try {
     const raw = localStorage.getItem(PLACE_KEY);
-    if (raw) return JSON.parse(raw) as StoredPlace;
-    const legacy = localStorage.getItem(LEGACY_KEY);
-    if (legacy) {
-      const l = JSON.parse(legacy) as { fips: string; place: string; url?: string };
-      return l.fips ? { fips: l.fips, label: l.place, url: l.url, ts: 0 } : null;
-    }
+    const value = JSON.parse(raw ?? localStorage.getItem(LEGACY_KEY) ?? "null");
+    const label = value?.label ?? value?.place;
+    if (typeof value?.fips !== "string" || !/^\d{5}$/.test(value.fips) || typeof label !== "string") return null;
+    const place: StoredPlace = { fips: value.fips, label, url: typeof value.url === "string" ? value.url : undefined };
+    if (raw !== JSON.stringify(place)) savePlace(place);
+    return place;
   } catch {
-    /* private mode or bad JSON */
+    return null;
   }
-  return null;
 }
 
-export function savePlace(p: StoredPlace): void {
+export function savePlace(place: StoredPlace): void {
   try {
-    localStorage.setItem(PLACE_KEY, JSON.stringify(p));
+    localStorage.setItem(PLACE_KEY, JSON.stringify(place));
     localStorage.removeItem(LEGACY_KEY);
   } catch {
-    /* private mode */
+    /* Private mode or storage full. */
   }
+}
+
+/** A saved answer is used only as a historical report after revalidation fails. */
+export function readLastAnswer(fips: string): Result | undefined {
+  try {
+    const saved = JSON.parse(localStorage.getItem(ANSWER_KEY) ?? "null") as StoredAnswer | null;
+    const result = saved?.result;
+    if (result?.fips !== fips || result.status === "unknown" || !result.sourceUrl || !result.checked ||
+      !Number.isFinite(Date.parse(result.checked)) || typeof result.label !== "string") return;
+    return result;
+  } catch {
+    return undefined;
+  }
+}
+
+export function saveAnswer(result: Result, now = Date.now()): number {
+  const deadline = result.validUntil ? Date.parse(result.validUntil) : NaN;
+  const expiresAt = Number.isFinite(deadline) ? Math.min(now + HOME_ANSWER_TTL_MS, deadline) : now + HOME_ANSWER_TTL_MS;
+  const answer: StoredAnswer = { result, savedAt: now, expiresAt };
+  try {
+    localStorage.setItem(ANSWER_KEY, JSON.stringify(answer));
+  } catch {
+    /* Private mode or storage full. */
+  }
+  return expiresAt;
 }
 
 export async function lookupStatus(params: Record<string, string>): Promise<LookupResult> {
-  const res = await fetch(`/api/v1/status?${new URLSearchParams(params)}`, { headers: { accept: "application/json" } });
+  const res = await fetch(`/api/v1/status?${new URLSearchParams(params)}`, {
+    headers: { accept: "application/json" },
+    cache: "no-store",
+    signal: AbortSignal.timeout(10_000),
+  });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return (await res.json()) as LookupResult;
 }
@@ -80,7 +97,7 @@ export type OpenDetail = {
   /** open the location sheet on this ZIP's county choices */
   zip?: string;
 };
-export type ResolvedDetail = { result: Result; note?: string; zip?: string; lat?: number; lon?: number };
+export type ResolvedDetail = { result: Result };
 
 type PendingWindow = Window & { __itabbSheet?: OpenDetail };
 

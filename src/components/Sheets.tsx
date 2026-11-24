@@ -15,7 +15,6 @@ import {
   readPlace,
   takePendingSheet,
   type OpenDetail,
-  type ResolvedDetail,
   type Result,
 } from "../client/place";
 
@@ -178,10 +177,10 @@ function LocationSheet({ detail, done }: { detail: OpenDetail; done: () => void 
   const [choices, setChoices] = useState<LookupResult | null>(null);
   const hasPlace = Boolean(readPlace()?.fips);
 
-  function choose(result: Result, extra: Omit<ResolvedDetail, "result"> = {}) {
+  function choose(result: Result) {
     // Pages that take the result in place (the home hero, the map) listen for itabb:resolved.
     if (document.querySelector("[data-hero], [data-resolves-place]")) {
-      emitResolved({ result, ...extra });
+      emitResolved({ result });
       done();
     } else if (result.url) {
       location.href = result.url;
@@ -195,7 +194,7 @@ function LocationSheet({ detail, done }: { detail: OpenDetail; done: () => void 
       const res = await lookupStatus({ zip });
       if (!res.results?.length) return setMsg("We couldn't find that ZIP. Try another.");
       if (res.approximate || res.ambiguous) return setChoices(res);
-      choose(res.results[0], { zip });
+      choose(res.results[0]);
     } catch {
       setMsg("Lookup failed. Try again in a minute.");
     } finally {
@@ -217,7 +216,7 @@ function LocationSheet({ detail, done }: { detail: OpenDetail; done: () => void 
       const r = res.results?.[0];
       if (!r) return setMsg("We couldn't find a US county there. Try a ZIP.");
       setMsg("");
-      choose(r, { lat: Number(lat), lon: Number(lon) });
+      choose(r);
     } catch (err) {
       setMsg(err instanceof GeolocationPositionError || (err as Error)?.message === "unsupported" ? "Location is off. Enter a ZIP instead." : "Lookup failed. Try again in a minute.");
     } finally {
@@ -233,7 +232,7 @@ function LocationSheet({ detail, done }: { detail: OpenDetail; done: () => void 
   }
 
   async function chooseCounty(candidate: Result) {
-    if (!choices?.approximate) return choose(candidate, { zip: choices?.query.zip });
+    if (!choices?.approximate) return choose(candidate);
     setBusy(true);
     setMsg("");
     try {

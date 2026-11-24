@@ -199,7 +199,7 @@ html:has(.hero[data-mode="home"]) {
   align-items: center;
   gap: 0.5rem;
 }
-.hero[data-state="answer"] .hero-ask,
+.hero:not([data-state="ask"]) .hero-ask,
 .hero[data-state="ask"] .hero-links {
   display: none;
 }

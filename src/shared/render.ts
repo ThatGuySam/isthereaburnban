@@ -115,6 +115,7 @@ export function shortDate(iso: string | null | undefined): string {
 export type RenderOptions = {
   /** epoch ms used for "checked N min ago" (defaults to now) */
   relativeTimeBase?: number;
+  lastKnown?: boolean;
   /** link to the county page ("More about Tulsa County") */
   link?: string;
   /** extra quiet line under the sentence, e.g. "Closest match for 74199" */
@@ -127,7 +128,7 @@ function timeTag(iso: string, text: string): string {
 
 /** Hero markup: big word, sentence, and one quiet official-source / checked line. All text escaped. */
 export function renderStatusHtml(cs: CountyStatus, opts: RenderOptions = {}): string {
-  const theme = statusTheme(cs.status);
+  const theme = statusTheme(opts.lastKnown ? "unknown" : cs.status);
   const base = opts.relativeTimeBase ?? Date.now();
   const official = cs.officialUrl
     ? `<a class="official" href="${escapeHtml(cs.officialUrl)}" target="_blank" rel="noopener">Official source<span class="sr-only"> (${escapeHtml(cs.sourceName || "official site")}, opens in new tab)</span></a>`
@@ -143,9 +144,10 @@ export function renderStatusHtml(cs: CountyStatus, opts: RenderOptions = {}): st
   if (cs.expires) meta.push(`<span>until <time datetime="${escapeHtml(cs.expires)}">${escapeHtml(shortDate(cs.expires))}</time></span>`);
   const weather = renderAlertLineHtml(cs, base);
 
+  const sentence = opts.lastKnown ? `Last known on ${shortDate(cs.checked)} · ${statusSentence(cs)}` : statusSentence(cs);
   const lines: string[] = [
     `<p class="status-word${theme.word.length > 5 ? " status-word--long" : ""}">${escapeHtml(theme.word)}</p>`,
-    `<p class="status-sentence">${escapeHtml(statusSentence(cs))}</p>`,
+    `<p class="status-sentence">${escapeHtml(sentence)}</p>`,
   ];
   if (meta.length) lines.push(`<p class="status-meta">${meta.join('<span aria-hidden="true"> · </span>')}</p>`);
   if (weather) lines.push(weather);
@@ -202,10 +204,14 @@ export function renderAlertLineHtml(cs: Pick<CountyStatus, "alerts" | "state">, 
   return `<p class="status-alert"><span aria-hidden="true">\u26A0\uFE0E </span>${items.join('<span aria-hidden="true"> · </span>')}</p>`;
 }
 
+export function renderAskHtml(): string {
+  return '<div class="status" data-status="checking"><p class="status-word status-word--long">Where?</p><p class="status-sentence">Is there a burn ban near you?</p></div>';
+}
+
 /** Static "Checking" markup used as the prerendered fallback. */
 export function renderCheckingHtml(place?: string): string {
   const sentence = place ? `Looking up burn bans for ${place}…` : "Looking up burn bans near you…";
-  return `<div class="status" data-status="checking"><p class="status-word status-word--long">Checking</p><p class="status-sentence">${escapeHtml(sentence)}</p></div>`;
+  return `<div class="status" data-status="checking"><p class="status-word status-word--long">Checking…</p><p class="status-sentence">${escapeHtml(sentence)}</p></div>`;
 }
 
 /** A county we have no live status for: "Not sure" plus the state's official link. Never "none". */
