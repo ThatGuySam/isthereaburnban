@@ -157,6 +157,9 @@ export async function handlePage(request: Request, env: Env, snapshot: Snapshot)
 
 // ---------- Sitemaps ----------
 
+/** Site-wide pages listed first in /sitemaps/core.xml (state hubs and city indexes follow). Also used by scripts/indexnow.ts. */
+export const CORE_PATHS = ["/", "/map/", "/us/", "/developers/", "/data/"];
+
 const XML_HEAD = '<?xml version="1.0" encoding="UTF-8"?>\n';
 
 function xml(body: string, status = 200): Response {
@@ -209,7 +212,7 @@ export async function handleSitemap(request: Request, env: Env, snapshot: Snapsh
 
   if (path === "/sitemaps/core.xml") {
     const cityIndexes = await Promise.all(STATES.map(async (s) => ((await cityRows(env, s.abbr)).length ? [`/us/${s.abbr.toLowerCase()}/city/`] : [])));
-    const paths = ["/", "/map/", "/us/", "/developers/", ...STATES.map((s) => `/us/${s.abbr.toLowerCase()}/`), ...cityIndexes.flat()];
+    const paths = [...CORE_PATHS, ...STATES.map((s) => `/us/${s.abbr.toLowerCase()}/`), ...cityIndexes.flat()];
     return xml(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${paths.map((p) => urlEntry(origin + p)).join("")}</urlset>`);
   }
 
