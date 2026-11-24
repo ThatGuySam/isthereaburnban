@@ -17,6 +17,9 @@ import { mnRestrictions } from "./mn/restrictions";
 import { njRestrictions } from "./nj/restrictions";
 import { ohSeasonal } from "./oh/seasonal";
 import type { ActiveSource, Source } from "./types";
+import { waEcologyAir } from "./wa/ecology-air";
+import { waKingFireSafety } from "./wa/king-fire-safety";
+import { waPugetSoundAir } from "./wa/puget-sound";
 import { wiPermits } from "./wi/permits";
 
 const ARCGIS_PARSERS = new Map([
@@ -54,6 +57,30 @@ export const SOURCES: readonly Source[] = [
   azPimaWildfire,
   azGrandCanyonFire,
   azAreaASummer,
+  waEcologyAir,
+  waPugetSoundAir,
+  waKingFireSafety,
+  {
+    id: "wa-dnr-fdra", state: "WA", scope: "part", stack: "ArcGIS MapServer", mode: "manual", cadence: null,
+    sourceName: "Washington DNR",
+    sourceUrl: "https://gis.dnr.wa.gov/site3/rest/services/Public_Wildfire/WADNR_PUBLIC_WD_WildfireDanger/MapServer/1",
+    officialUrl: "https://dnr.wa.gov/wildfire-resources/outdoor-burning/burn-restrictions",
+    error: "Fire danger polygons do not establish order boundaries. Code 4 carries free-text exceptions and this layer exposes no report edit date.",
+  },
+  {
+    id: "wa-everett-fire", state: "WA", scope: "part", stack: "CivicPlus / HTML", mode: "manual", cadence: null,
+    sourceName: "Everett Fire Department",
+    sourceUrl: "https://www.everettwa.gov/2332/Outdoor-Burning",
+    officialUrl: "https://www.everettwa.gov/2332/Outdoor-Burning",
+    error: "The outdoor burning page returned a Cloudflare challenge (HTTP 403) on 2026-11-24.",
+  },
+  {
+    id: "wa-south-county-fire", state: "WA", scope: "part", stack: "Granicus / Vision HTML", mode: "manual", cadence: null,
+    sourceName: "South County Fire Regional Fire Authority",
+    sourceUrl: "https://www.southsnofire.org/about-us/divisions/fire-marshal/burn-bans-and-regulations",
+    officialUrl: "https://www.southsnofire.org/about-us/divisions/fire-marshal/burn-bans-and-regulations",
+    error: "The burn bans and regulations page returned Akamai Access Denied (HTTP 403) on 2026-11-24.",
+  },
   {
     id: "az-dffm-trust-lands", state: "AZ", scope: "part", stack: "ArcGIS FeatureServer", mode: "manual", cadence: null,
     sourceName: "Arizona Department of Forestry and Fire Management",

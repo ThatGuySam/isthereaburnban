@@ -30,6 +30,9 @@ import { miPermits, parseMichiganPermits } from "../src/worker/sources/mi/permit
 import { mnRestrictions, parseMinnesotaRestrictions } from "../src/worker/sources/mn/restrictions";
 import { njRestrictions, parseNjRestrictions } from "../src/worker/sources/nj/restrictions";
 import { ohSeasonal, parseOhioSeasonal } from "../src/worker/sources/oh/seasonal";
+import { parseEcologyAir, waEcologyAir } from "../src/worker/sources/wa/ecology-air";
+import { parseKingFireSafety, waKingFireSafety } from "../src/worker/sources/wa/king-fire-safety";
+import { parsePugetSound, waPugetSoundAir } from "../src/worker/sources/wa/puget-sound";
 import { parseWisconsinPermits, wiPermits } from "../src/worker/sources/wi/permits";
 
 const sourceUrl = new URL("../src/worker/sources/", import.meta.url);
@@ -55,6 +58,9 @@ const gaNonSummerHtml = utf8("ga/fixtures/epd-non-summer-2026-11-24.html");
 const azPimaHtml = utf8("az/fixtures/pima-wildfire-2026-11-24.html");
 const azGrandCanyonHtml = utf8("az/fixtures/grand-canyon-fire-2026-11-24.html");
 const azStatute = utf8("az/fixtures/section-49-501-2026-11-24.html");
+const waEcologyHtml = utf8("wa/fixtures/ecology-burn-bans-2026-11-24.html");
+const waPugetHtml = utf8("wa/fixtures/puget-status-2026-11-24.html");
+const waKingHtml = utf8("wa/fixtures/king-fire-safety-2026-11-24.html");
 const michigan = fixture("michigan-form.html");
 const kentucky = fixture("kentucky-list.html");
 const placer = fixture("placer-newsflash.html");
@@ -81,6 +87,9 @@ const parseGaNonSummerFixture = async () => parseEpdSeasonal(await extractHtml(g
 const parseAzPimaFixture = async () => parsePimaWildfire(await extractHtml(azPimaHtml), now);
 const parseAzGrandCanyonFixture = async () => parseGrandCanyonFire(await extractHtml(azGrandCanyonHtml), now);
 const parseAzAreaAFixture = async () => parseArizonaAreaA(await extractHtml(azStatute), summerDay);
+const parseWaEcologyFixture = () => parseEcologyAir(waEcologyHtml, now);
+const parseWaPugetFixture = () => parsePugetSound(waPugetHtml, now);
+const parseWaKingFixture = async () => parseKingFireSafety(await extractHtml(waKingHtml), now);
 
 const adapters: Array<[string, () => CountyStatus[]]> = [
   ["OK ArcGIS", () => parseOk(JSON.parse(ok), checked)],
@@ -106,6 +115,9 @@ recordedInputs.push(
   { source: gaEpdNonSummer, rows: await parseGaNonSummerFixture(), checked },
   { source: azPimaWildfire, rows: await parseAzPimaFixture(), checked },
   { source: azGrandCanyonFire, rows: await parseAzGrandCanyonFixture(), checked },
+  { source: waEcologyAir, rows: await parseWaEcologyFixture(), checked },
+  { source: waPugetSoundAir, rows: await parseWaPugetFixture(), checked },
+  { source: waKingFireSafety, rows: await parseWaKingFixture(), checked },
 );
 
 const states = new Map<string, CountyStatus[]>();
@@ -159,6 +171,9 @@ const jobs: Array<[string, () => unknown]> = [
   ["AZ Pima wildfire bulletin", parseAzPimaFixture],
   ["AZ Grand Canyon fire bulletin", parseAzGrandCanyonFixture],
   ["AZ Area A statute and calendar", parseAzAreaAFixture],
+  ["WA Ecology air quality orders", parseWaEcologyFixture],
+  ["WA Puget Sound air quality grid", parseWaPugetFixture],
+  ["WA King County fire safety", parseWaKingFixture],
   ["Merge and encode current sources", () => JSON.stringify(mergeSources(null, recordedInputs, now).snapshot)],
   ["Parse, merge, encode 51-area projection", () => JSON.stringify(mergeSources(null,
     fullInputs.map((input, index) => ({ ...input, rows: JSON.parse(serializedFull[index]) })), now).snapshot)],

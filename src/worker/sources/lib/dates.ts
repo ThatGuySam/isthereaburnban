@@ -69,11 +69,11 @@ export function atLocalTime(day: string, minute: number, zone: string): string |
 }
 
 export function parseLocalDateTime(raw: string, zone: string, defaultYear?: number): string | null {
-  const clock = /^(.*?)(?:\s+at)?[ T]+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([ap]\.?m\.?)?$/i.exec(raw.trim());
-  if (!clock) return null;
+  const clock = /^(.*?)(?:,|\s+at)?[ T]+(\d{1,2})(?::(\d{2})(?::(\d{2}))?)?\s*([ap]\.?m\.?)?$/i.exec(raw.trim());
+  if (!clock || (!clock[3] && !clock[5])) return null;
   const day = parseUsDate(clock[1], defaultYear);
   const hour = +clock[2];
-  const minute = +clock[3];
+  const minute = +(clock[3] ?? 0);
   const seconds = +(clock[4] ?? 0);
   if (!day || minute > 59 || seconds > 59 || (clock[5] ? hour < 1 || hour > 12 : hour > 23)) return null;
   const hour24 = clock[5] ? hour % 12 + (clock[5].toLowerCase().startsWith("p") ? 12 : 0) : hour;

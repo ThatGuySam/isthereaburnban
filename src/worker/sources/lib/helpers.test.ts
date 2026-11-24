@@ -7,7 +7,7 @@ import { activeRule, calendarDayWindows, CALENDAR_RULES } from "./calendar";
 import { civicPlusAlertDetails, civicPlusNotices, civicPlusUrl } from "./civicplus";
 import { localDayWindow, reportWindow } from "./dates";
 import { decodeFeed, parseCsv, parseDotNetJsonDate, parseFeed, parseJson } from "./feeds";
-import { blockAfterHeading, extractHtml, localClock, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, US_ZONES } from "./html";
+import { blockAfterHeading, extractHtml, extractHtmlGrid, localClock, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, US_ZONES } from "./html";
 import { BlockedError, fetchSource, HttpError, USER_AGENT } from "./http";
 import { manualPdf } from "./pdf";
 import { parseSharePointItems, sharePointListItems, sharePointListUrl, sharePointRows } from "./sharepoint";
@@ -18,6 +18,29 @@ const data = (name) => readFileSync(new URL(`./fixtures/${name}`, import.meta.ur
 const text = (name) => data(name).toString();
 const json = (name) => JSON.parse(text(name));
 const date = (s) => new Date(s);
+
+test("HTML tables can follow a publisher's text labels instead of heading tags", async () => {
+  const markup = '<h2>Orders</h2><p>Stage &amp; status</p><p>Scope</p><table><tr><td>Active</td></tr></table>';
+  const options = { tableHeading: ({ tag, text }) => tag === "p" && text === "Stage & status" };
+  for (const parts of [parseHtml(markup, options), await extractHtml(markup, options)]) {
+    expect(parts.tables).toEqual([{ heading: "Stage & status", id: undefined, rows: [["Active"]] }]);
+  }
+  expect((await extractHtml(markup)).tables[0].heading).toBe("Orders");
+});
+
+test("HTML status grids extract only selected rows and keep cell data", async () => {
+  const markup = '<div class="cell">Outside</div><section id="status"><div class="row">' +
+    '<span class="cell">One&nbsp;&amp; <strong>Two</strong></span><span class="cell active">On</span></div></section>';
+  expect(await extractHtmlGrid(markup, { row: "#status > .row", cell: ".cell" })).toEqual([[
+    { text: "One & Two", className: "cell" }, { text: "On", className: "cell active" },
+  ]]);
+});
+
+test("publisher-local dates allow a comma before a whole hour with meridiem", () => {
+  expect(parseLocalDateTime("Wednesday, November 18, 2026, 9 a.m.", US_ZONES.Pacific)).toBe("2026-11-18T17:00:00.000Z");
+  expect(parseLocalDateTime("November 18, 2026, 12 p.m.", US_ZONES.Pacific)).toBe("2026-11-18T20:00:00.000Z");
+  expect(parseLocalDateTime("November 18, 2026, 9", US_ZONES.Pacific)).toBeNull();
+});
 
 test("legacy .NET JSON dates preserve the UTC instant regardless of the optional offset", () => {
   expect(parseDotNetJsonDate("/Date(1795437502000)/")).toEqual(date("2026-11-23T12:38:22Z"));

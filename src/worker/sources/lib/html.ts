@@ -37,7 +37,9 @@ const IGNORED = /^(?:script|style|template|noscript)$/;
 const HTML_TAG = "h1,h2,h3,h4,h5,h6,p,li,dt,dd,blockquote,figcaption,table,tr,th,td,br,a,script,style,template,noscript";
 type ActiveTable = { table: Table; row?: string[]; cell?: string };
 
-function collector(includeLinks: boolean) {
+type HtmlOptions = { links?: boolean; tableHeading?: (block: Block) => boolean };
+
+function collector({ links: includeLinks = false, tableHeading }: HtmlOptions) {
   const parts: HtmlParts = { blocks: [], tables: [], links: [] };
   const tables: ActiveTable[] = [];
   const blocks: Block[] = [];
@@ -57,7 +59,7 @@ function collector(includeLinks: boolean) {
   function finishBlock() {
     const block = blocks.pop()!;
     block.text = cleanText(block.text);
-    if (HEAD.test(block.tag) && block.text) heading = block.text;
+    if (block.text && (HEAD.test(block.tag) || tableHeading?.(block))) heading = block.text;
   }
   function finishLink() {
     if (link) {
@@ -133,8 +135,8 @@ function collector(includeLinks: boolean) {
 }
 
 /** Small fallback for fixtures and scripts. Supports quoted attributes and optional table end tags. */
-export function parseHtml(html: string, { links = false } = {}): HtmlParts {
-  const out = collector(links);
+export function parseHtml(html: string, options: HtmlOptions = {}): HtmlParts {
+  const out = collector(options);
   const tokens = /<!--[\s\S]*?(?:-->|$)|<(script|style|template|noscript)\b[^>]*>[\s\S]*?<\/\1\s*>|<(\/?)([a-z][\w:-]*)((?:"[^"]*"|'[^']*'|[^'">])*)>|[^<]+|</gi;
   for (const [token, ignored, close, rawTag, rawAttrs] of html.matchAll(tokens)) {
     if (ignored || token.startsWith("<!--")) continue;
@@ -153,9 +155,9 @@ export function parseHtml(html: string, { links = false } = {}): HtmlParts {
 }
 
 /** Stream the publisher response through Workers HTMLRewriter. Tests can call parseHtml directly. */
-export async function extractHtml(input: Response | string, { links = false } = {}): Promise<HtmlParts> {
-  if (typeof HTMLRewriter === "undefined") return parseHtml(typeof input === "string" ? input : await input.text(), { links });
-  const out = collector(links);
+export async function extractHtml(input: Response | string, options: HtmlOptions = {}): Promise<HtmlParts> {
+  if (typeof HTMLRewriter === "undefined") return parseHtml(typeof input === "string" ? input : await input.text(), options);
+  const out = collector(options);
   const rewriter = new HTMLRewriter()
     .on(HTML_TAG, {
       element(element) {
@@ -182,6 +184,41 @@ export async function extractHtml(input: Response | string, { links = false } = 
   const response = rewriter.transform(typeof input === "string" ? new Response(input) : input);
   if (response.body) await response.body.pipeTo(new WritableStream({ write() {} }));
   return out.finish();
+}
+
+/** Read a CSS-selected status grid whose rows and cells use ordinary elements instead of table tags. */
+export async function extractHtmlGrid(input: Response | string, selectors: { row: string; cell: string }) {
+  const rows: { text: string; className: string }[][] = [];
+  let row: (typeof rows)[number] | undefined;
+  let cell: (typeof rows)[number][number] | undefined;
+  const rewriter = new HTMLRewriter()
+    .on(selectors.row, {
+      element(element) {
+        if (row) throw new Error("Nested status grid rows");
+        row = [];
+        rows.push(row);
+        element.onEndTag(() => { row = undefined; });
+      },
+    })
+    .on(selectors.cell, {
+      element(element) {
+        if (!row) return;
+        if (cell) throw new Error("Nested status grid cells");
+        cell = { text: "", className: element.getAttribute("class") ?? "" };
+        row.push(cell);
+        element.onEndTag(() => {
+          if (cell) cell.text = cleanText(decodeEntities(cell.text));
+          cell = undefined;
+        });
+      },
+      text(chunk) {
+        if (cell) cell.text += chunk.text;
+      },
+    });
+  const response = rewriter.transform(typeof input === "string" ? new Response(input) : input);
+  if (response.body) await response.body.pipeTo(new WritableStream({ write() {} }));
+  if (row || cell) throw new Error("Incomplete status grid");
+  return rows;
 }
 
 export function blockAfterHeading(blocks: Block[], pattern: RegExp): Block[] {

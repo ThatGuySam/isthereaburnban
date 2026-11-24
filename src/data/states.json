@@ -581,15 +581,35 @@
     "abbr": "WA",
     "name": "Washington",
     "coverage": "restrictions",
-    "publisher": "Washington DNR",
-    "officialUrl": "https://dnr.wa.gov/wildfire-resources/outdoor-burning/burn-restrictions",
+    "publisher": "Washington Department of Ecology",
+    "officialUrl": "https://ecology.wa.gov/air-climate/air-quality/smoke-fire/burn-bans",
     "extraUrls": [
       {
-        "label": "Ecology burn bans",
-        "url": "https://ecology.wa.gov/air-climate/air-quality/smoke-fire/burn-bans"
+        "label": "Washington DNR burn restrictions",
+        "url": "https://dnr.wa.gov/wildfire-resources/outdoor-burning/burn-restrictions"
+      },
+      {
+        "label": "Puget Sound air quality burn ban status",
+        "url": "https://pscleanair.gov/168/Air-Quality-Burn-Ban-Status"
+      },
+      {
+        "label": "King County fire safety burn bans",
+        "url": "https://kingcounty.gov/en/dept/local-services/governance-leadership/local-government-for-unincorporated-king-county/fire-safety"
+      },
+      {
+        "label": "Spokane County current burn restrictions",
+        "url": "https://spokanecleanair.org/burning/burn-restrictions/"
+      },
+      {
+        "label": "Snohomish County outdoor burning",
+        "url": "https://www.snohomishcountywa.gov/1144/Outdoor-Burning-Information"
+      },
+      {
+        "label": "Northwest Clean Air Agency",
+        "url": "https://nwcleanairwa.gov/"
       }
     ],
-    "notes": "Washington DNR sets burn restrictions on the land it protects, and Ecology and local air agencies declare burn bans. Counties and fire districts have their own rules."
+    "notes": "Ecology and local clean air agencies issue air quality burn bans. DNR sets fire safety restrictions on land it protects, and counties, fire districts, Tribes, and federal land managers have separate rules. Check the agency for your address and the kind of burning you plan."
   },
   {
     "abbr": "WV",
