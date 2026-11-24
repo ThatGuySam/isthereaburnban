@@ -21,7 +21,7 @@ test("Connecticut maps DEEP's High report to scoped restrictions across the eigh
       status: "restricted", scope: "part", checked: captured.toISOString(),
       label: "Brush burning restricted by high fire danger",
       scopeNote: "Brush burning within 100 feet of woodland or grassland",
-      sourceUpdated: null, validFrom: "2026-11-24T05:00:00.000Z", validUntil: midnightEastern.toISOString(),
+      sourceUpdated: "2026-11-24", validFrom: "2026-11-24T05:00:00.000Z", validUntil: midnightEastern.toISOString(),
     });
   }
   const input = { source: ctDeepFireDanger, rows, checked: captured.toISOString() };
@@ -51,6 +51,24 @@ test("Connecticut rejects stale and future reports, changed layout and uncertain
   await expect(parseCtFireDanger(fixture.replaceAll("HIGH", "SEVERE"), captured)).rejects.toThrow("unrecognized fire danger rating");
   for (const geography of ["", "All counties MODERATE", "All counties HIGH except Litchfield County west of Route 8"]) {
     await expect(parseCtFireDanger(fixture.replace("All counties HIGH", geography), captured)).rejects.toThrow("all-counties rating");
+  }
+});
+
+test("Connecticut retries a rejected 200 with the current report's public embed headers", async () => {
+  const requests = [];
+  const original = globalThis.fetch;
+  globalThis.fetch = async (url, { headers }) => {
+    requests.push({ url, referer: headers.get("referer"), cache: headers.get("cache-control") });
+    return new Response(requests.length === 1 ? "<h1>The requested URL was rejected</h1>" : fixture);
+  };
+  try {
+    const { rows } = await ctDeepFireDanger.fetch({ now: captured });
+    expect(rows).toHaveLength(8);
+    expect(requests).toHaveLength(2);
+    expect(requests[1]).toMatchObject({ referer: ctDeepFireDanger.officialUrl, cache: "no-cache" });
+    expect(rows[0].officialUrl).toBe(ctDeepFireDanger.sourceUrl);
+  } finally {
+    globalThis.fetch = original;
   }
 });
 

@@ -16,6 +16,7 @@ const META = {
 const ISSUE = /^Rapidan WMA:\s*Beginning (.+?), at (\d{1,2}(?::\d{2})? [ap]\.m\.), (.+)$/i;
 const LIFT = /^Rapidan WMA:\s*(?:The )?(?:fire ban|fire restrictions?) (?:has|have) been (?:lifted|rescinded)\.$/i;
 const FIRE_NOTICE = /\b(?:fire (?:ban|restrictions?)|fires? (?:will be |are )?prohibited|(?:campfire|burning) (?:ban|restrictions?))\b/i;
+const ISSUE_HEADING = /^Rapidan WMA:\s*(?:Fires Prohibited\s*)?(?=Beginning\b)/i;
 const PARK_REFERENCE = " Shenandoah National Park, which borders the WMA, also has a fire ban in place.";
 // Check the complete terms so a new end date, activity, or footprint needs review.
 const OPEN_ENDED_ORDER = "fires will be prohibited in Rapidan Wildlife Management Area due to exceptionally dry conditions and elevated wildfire risk affecting the area. " +
@@ -36,7 +37,8 @@ export function parseRapidanAlerts({ blocks, tables }: HtmlParts, now: Date): Co
 
   const relevant = notices[0].rows.slice(1).map(([text]) => text.replace(PARK_REFERENCE, "")).filter((text) => FIRE_NOTICE.test(text));
   if (!relevant.length || (relevant.length === 1 && LIFT.test(relevant[0]))) return [];
-  const issue = relevant.length === 1 && ISSUE.exec(relevant[0]);
+  // The publisher joins the notice title and body in adjacent spans, sometimes without a space.
+  const issue = relevant.length === 1 && ISSUE.exec(relevant[0].replace(ISSUE_HEADING, "Rapidan WMA: "));
   if (!issue || issue[3] !== OPEN_ENDED_ORDER) throw new Error("Virginia DWR: unrecognized Rapidan fire restriction terms");
   const since = parseWeekdayDate(issue[1]);
   const validFrom = since && parseLocalDateTime(`${since} ${issue[2]}`, US_ZONES.Eastern);
