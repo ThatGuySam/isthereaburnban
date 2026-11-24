@@ -1,6 +1,6 @@
 import { atLocalTime, localClock, localDayWindow, shiftDay, US_ZONES } from "./dates";
 
-// Inventory: AZ Area A, NY DEC Open Burning, GA EPD Summer Open Burning Ban, OH DNR Open Burning Regulations,
+// Inventory: AZ Area A, NY DEC Open Burning, GA EPD Summer Open Burning Ban, KY fire hazard seasons, OH DNR Open Burning Regulations,
 // VA DOF 4 PM Burning Law, WV Forestry Fire Burning Guidelines, and MD DNR Burning Guidance.
 export type CalendarRule = {
   state: string;
@@ -78,6 +78,13 @@ export const CALENDAR_RULES: Record<string, CalendarRule> = {
     officialUrl: "https://epd.georgia.gov/air-protection-branch/open-burning-rules-georgia/summer-open-burning-ban",
     label: "Summer yard and land-clearing debris ban", seasons: [["05-01", "09-30"]], counties: GA_COUNTIES,
     note: "May 1 through September 30, Georgia EPD prohibits burning yard and land-clearing debris here. Check the rule for activity-specific exceptions.",
+  },
+  KY: {
+    state: "KY", zone: US_ZONES.Eastern, status: "restricted", scope: "part",
+    scopeNote: "In or within 150 feet of woodland or brushland",
+    officialUrl: "https://eec.ky.gov/natural-resources/forestry/wildland-fire-management/pages/outdoor-burning-laws.aspx",
+    label: "Seasonal daytime burning restriction", seasons: [["02-15", "04-30"], ["10-01", "12-15"]], hours: [360, 1080],
+    note: "Kentucky limits burning materials that can spread fire from 6 a.m. to 6 p.m. local time during February 15 through April 30 and October 1 through December 15. The law makes exceptions for snow-covered ground and certain activities. Check local orders and air-quality rules before burning.",
   },
   OH: {
     state: "OH", zone: US_ZONES.Eastern, status: "restricted", scope: "part", scopeNote: "Unincorporated areas outside railroad-controlled land",

@@ -35,6 +35,24 @@ export function parseSharePointItems(data: unknown): { rows: Record<string, unkn
   return { rows, next: envelope["@odata.nextLink"] ?? envelope["odata.nextLink"] ?? envelope.d?.__next };
 }
 
+/** Validate the single publishing page returned by a file-name filter. */
+export function parseSharePointPage(data: unknown, { fileName, contentField }: { fileName: string; contentField: string }) {
+  const { rows, next } = parseSharePointItems(data);
+  const [row] = rows;
+  if (next || rows.length !== 1 || row.FileLeafRef !== fileName) throw new Error(`Expected one SharePoint page: ${fileName}`);
+  const content = row[contentField];
+  const stamp = row.Modified;
+  if (typeof content !== "string" || !content.trim() || typeof stamp !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(stamp)) {
+    throw new Error(`Missing SharePoint page content or UTC edit time: ${fileName}`);
+  }
+  const time = Date.parse(stamp);
+  if (!Number.isFinite(time)) throw new Error(`Invalid SharePoint edit time: ${fileName}`);
+  const modified = new Date(time).toISOString();
+  if (modified !== stamp && modified.replace(".000Z", "Z") !== stamp) throw new Error(`Invalid SharePoint edit time: ${fileName}`);
+  return { content, modified };
+}
+
 export async function readSharePointList(url: string, maxPages = 10): Promise<Record<string, unknown>[]> {
   const origin = new URL(url).origin;
   const rows: Record<string, unknown>[] = [];

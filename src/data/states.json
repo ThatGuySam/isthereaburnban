@@ -286,10 +286,28 @@
   {
     "abbr": "KY",
     "name": "Kentucky",
-    "coverage": "directory",
+    "coverage": "restrictions",
     "publisher": "Kentucky Division of Forestry",
     "officialUrl": "https://eec.ky.gov/Natural-Resources/Forestry/wildland-fire-management/pages/county-burn-bans.aspx",
-    "notes": "Kentucky counties and cities issue burn bans, and the Division of Forestry lists the ones it is told about. Spring and fall fire season burning hours apply statewide."
+    "extraUrls": [
+      {
+        "label": "Kentucky fire-season rules",
+        "url": "https://eec.ky.gov/natural-resources/forestry/wildland-fire-management/pages/outdoor-burning-laws.aspx"
+      },
+      {
+        "label": "Kentucky Division for Air Quality burning rules",
+        "url": "https://eec.ky.gov/Environmental-Protection/Air/Pages/Open-Burning.aspx"
+      },
+      {
+        "label": "Kentucky county offices",
+        "url": "https://dlg.ky.gov/counties/Pages/county-list.aspx"
+      },
+      {
+        "label": "Louisville Metro open burning",
+        "url": "https://louisvilleky.gov/government/air-pollution-control-district/open-burning-louisville"
+      }
+    ],
+    "notes": "County judge-executives and cities can issue local burn bans. The Division of Forestry lists orders reported to it. During spring and fall fire seasons, state law limits daytime burning in or near woods or brush. Check with your county judge-executive or fire department for local orders and exceptions."
   },
   {
     "abbr": "LA",

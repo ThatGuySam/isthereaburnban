@@ -12,6 +12,8 @@ import { coArapahoeFire, coBoulderFire, coDouglasFire, coElPasoFire, coEstesFire
 import { coDenverAir } from "./co/denver-air";
 import { gaEpdNonSummer, gaEpdSummer } from "./ga/epd";
 import { gaGwinnett } from "./ga/gwinnett";
+import { kyForestryCountyBans } from "./ky/county-bans";
+import { kySeasonal } from "./ky/seasonal";
 import type { ArcgisResponse } from "./lib/arcgis";
 import { fetchSource } from "./lib/http";
 import { miPermits } from "./mi/permits";
@@ -76,6 +78,15 @@ export const SOURCES: readonly Source[] = [
   orLrapaHeating,
   orWillametteBackyard,
   orOdfPublicUse,
+  kyForestryCountyBans,
+  kySeasonal,
+  {
+    id: "ky-louisville-open-burning", state: "KY", scope: "part", stack: "HTML / Cloudflare", mode: "manual", cadence: null,
+    sourceName: "Louisville Metro Air Pollution Control District",
+    sourceUrl: "https://louisvilleky.gov/government/air-pollution-control-district/open-burning-louisville",
+    officialUrl: "https://louisvilleky.gov/government/air-pollution-control-district/open-burning-louisville",
+    error: "The metro burning and burn-plan guidance returned a Cloudflare challenge (HTTP 403) on 2026-11-24.",
+  },
   {
     id: "or-odf-edit-view", state: "OR", scope: "part", stack: "ArcGIS FeatureServer", mode: "manual", cadence: null,
     sourceName: "Oregon Department of Forestry",

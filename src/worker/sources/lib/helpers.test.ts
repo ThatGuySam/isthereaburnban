@@ -10,7 +10,7 @@ import { decodeFeed, parseCsv, parseDotNetJsonDate, parseFeed, parseJson } from 
 import { blockAfterHeading, extractHtml, extractHtmlGrid, localClock, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, US_ZONES } from "./html";
 import { BlockedError, fetchSource, HttpError, USER_AGENT } from "./http";
 import { manualPdf } from "./pdf";
-import { parseSharePointItems, sharePointListItems, sharePointListUrl, sharePointRows } from "./sharepoint";
+import { parseSharePointItems, parseSharePointPage, sharePointListItems, sharePointListUrl, sharePointRows } from "./sharepoint";
 import { ninjaTablesUrl, parseNinjaRows, parseWpItems, parseWpPage, wpRestUrl } from "./wordpress";
 import { checkLink, htmlLinks } from "../../../../scripts/check-links";
 
@@ -307,6 +307,19 @@ test("SharePoint normalizes a rendered list and both public REST envelopes", () 
   expect(parseSharePointItems({ d: { results: rows } }).rows).toEqual(rows);
   expect(sharePointRows(parseHtml("<table><tr><td>County<td>Status<tr><td>Edmonson<td>Ban</table>"), ["status", "county"]))
     .toEqual([["Ban", "Edmonson"]]);
+});
+
+test("SharePoint page reads one named rich-text field and validates the editorial timestamp", () => {
+  const fileName = "Status.aspx";
+  const contentField = "Main_x0020_Content";
+  const row = { FileLeafRef: fileName, [contentField]: "<p>Reported bans</p>", Modified: "2026-11-20T23:41:51Z" };
+  const parse = (data) => parseSharePointPage(data, { fileName, contentField });
+  expect(parse({ d: { results: [row] } })).toEqual({ content: row[contentField], modified: "2026-11-20T23:41:51.000Z" });
+  expect(() => parse({ value: [row], "@odata.nextLink": "next" })).toThrow("Expected one SharePoint page");
+  expect(() => parse({ value: [{ ...row, FileLeafRef: "Other.aspx" }] })).toThrow("Expected one SharePoint page");
+  expect(() => parse({ value: [{ ...row, [contentField]: null }] })).toThrow("Missing SharePoint page content");
+  expect(() => parse({ value: [{ ...row, Modified: "2026-02-30T23:41:51Z" }] })).toThrow("Invalid SharePoint edit time");
+  expect(() => parse({ value: [{ ...row, Modified: "2026-11-20T23:41:51" }] })).toThrow("UTC edit time");
 });
 
 test("Feeds parse Wisconsin's real CSV and JSON plus Texas's UTF-16LE RSS", () => {

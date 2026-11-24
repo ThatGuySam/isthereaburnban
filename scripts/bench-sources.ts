@@ -20,6 +20,8 @@ import {
 import { coDenverAir, parseDenverAir } from "../src/worker/sources/co/denver-air";
 import { gaEpdNonSummer, parseEpdSeasonal } from "../src/worker/sources/ga/epd";
 import { parseGwinnett } from "../src/worker/sources/ga/gwinnett";
+import { kyForestryCountyBans, parseKentuckyCountyBans } from "../src/worker/sources/ky/county-bans";
+import { kySeasonal, parseKentuckySeasonal } from "../src/worker/sources/ky/seasonal";
 import { codedDomains, dataLastEditDate, findOperationalLayers } from "../src/worker/sources/lib/arcgis";
 import { webFormsPost } from "../src/worker/sources/lib/aspnet";
 import { activeRule, CALENDAR_RULES } from "../src/worker/sources/lib/calendar";
@@ -98,6 +100,11 @@ const parseAzAreaAFixture = async () => parseArizonaAreaA(await extractHtml(azSt
 const parseWaEcologyFixture = () => parseEcologyAir(waEcologyHtml, now);
 const parseWaPugetFixture = () => parsePugetSound(waPugetHtml, now);
 const parseWaKingFixture = async () => parseKingFireSafety(await extractHtml(waKingHtml), now);
+const kyList = utf8("ky/fixtures/county-burn-bans-2026-11-24.json");
+const kyStatute = raw("ky/fixtures/krs-149.400-2026-11-24.pdf");
+const kyCaptured = new Date("2026-11-24T07:31:07Z");
+const parseKyListFixture = () => parseKentuckyCountyBans(JSON.parse(kyList), kyCaptured);
+const parseKyStatuteFixture = () => parseKentuckySeasonal(new Response(kyStatute), kyCaptured);
 const coFixture = (name: string, ext: string) => utf8(`co/fixtures/${name}-2026-11-24.${ext}`);
 const coDouglasJson = coFixture("douglas-status", "json");
 const coElPasoJson = coFixture("el-paso-status", "json");
@@ -156,6 +163,8 @@ recordedInputs.push(
   { source: waKingFireSafety, rows: await parseWaKingFixture(), checked },
   ...await Promise.all(coJobs.map(async ([, source, parse]) => ({ source, rows: await parse(), checked }))),
   ...await Promise.all(orJobs.map(async ([, source, parse]) => ({ source, rows: await parse(), checked }))),
+  { source: kyForestryCountyBans, rows: await parseKyListFixture(), checked: kyCaptured.toISOString() },
+  { source: kySeasonal, rows: await parseKyStatuteFixture(), checked: kyCaptured.toISOString() },
 );
 
 const states = new Map<string, CountyStatus[]>();
@@ -214,6 +223,8 @@ const jobs: Array<[string, () => unknown]> = [
   ["WA King County fire safety", parseWaKingFixture],
   ...coJobs.map(([name, , parse]): [string, () => unknown] => [name, parse]),
   ...orJobs.map(([name, , parse]): [string, () => unknown] => [name, parse]),
+  ["KY Forestry SharePoint list", parseKyListFixture],
+  ["KY statute PDF and calendar", parseKyStatuteFixture],
   ["Merge and encode current sources", () => JSON.stringify(mergeSources(null, recordedInputs, now).snapshot)],
   ["Parse, merge, encode 51-area projection", () => JSON.stringify(mergeSources(null,
     fullInputs.map((input, index) => ({ ...input, rows: JSON.parse(serializedFull[index]) })), now).snapshot)],
