@@ -6,6 +6,8 @@ import { parse as parseLa } from "../adapters/la";
 import { parse as parseOk } from "../adapters/ok";
 import { akDnrPermitZones } from "./ak/permits";
 import { akDecWinterBurning, akDnrFireSeason } from "./ak/seasonal";
+import { alAdemOpenBurning, alJeffersonOpenBurning } from "./al/air-rules";
+import { alCahabaBurning } from "./al/cahaba";
 import { arFaulknerCountyOrders } from "./ar/faulkner";
 import { azAreaASummer } from "./az/area-a";
 import { azGrandCanyonFire } from "./az/grand-canyon";
@@ -142,6 +144,8 @@ export const SOURCES: readonly Source[] = [
   idSeasonal,
   akDnrPermitZones,
   akDnrFireSeason,
+  alJeffersonOpenBurning,
+  alAdemOpenBurning,
   arFaulknerCountyOrders,
   akDecWinterBurning,
   utFfslFireOrders,
@@ -192,6 +196,14 @@ export const SOURCES: readonly Source[] = [
   ksAprilBurning,
   ksFranklinPermits,
   ksDickinsonDistricts,
+  alCahabaBurning,
+  {
+    id: "al-forestry-orders", state: "AL", scope: "state", stack: "ASP.NET WebForms / HTML and WordPress notices",
+    mode: "manual", cadence: null, sourceName: "Alabama Forestry Commission",
+    sourceUrl: "https://www.forestry.alabama.gov/Pages/Fire/BurnRestrictions.aspx",
+    officialUrl: "https://www.forestry.alabama.gov/Pages/Fire/BurnRestrictions.aspx",
+    error: "Forestry publishes definitions and individual notices. Call 800-392-5679 about current wildfire alerts, emergency orders and prescribed-burning permits.",
+  },
   {
     id: "ks-kdhe-flint-hills", state: "KS", scope: "county", stack: "CivicPlus / HTML and PDF",
     mode: "manual", cadence: null, sourceName: "Kansas Department of Health and Environment",

@@ -1,7 +1,7 @@
 import type { CountyStatus } from "../../../shared/types";
 import { atLocalTime, localClock, localDayWindow, shiftDay, US_ZONES } from "./dates";
 
-// Inventory: Alaska burn permits and winter air rules, AZ Area A, Idaho and Utah closed fire seasons, NY DEC Open Burning, GA EPD Summer Open Burning Ban, KY fire hazard seasons, OH DNR Open Burning Regulations,
+// Inventory: Alabama and Jefferson County open burning, Alaska burn permits and winter air rules, AZ Area A, Idaho and Utah closed fire seasons, NY DEC Open Burning, GA EPD Summer Open Burning Ban, KY fire hazard seasons, OH DNR Open Burning Regulations,
 // PA state forest fires, VA DOF 4 PM Burning Law, WV Forestry Fire Burning Guidelines, MD DNR Burning Guidance,
 // ME and VT open-burning permits, DE open burning, and MA residential brush burning.
 export type CalendarRule = {
@@ -127,6 +127,10 @@ const MA_BRUSH = {
   scopeNote: "Residential brush, cane, driftwood and forestry debris under 310 CMR 7.07(3)(e)",
 } satisfies Pick<CalendarRule, "state" | "zone" | "status" | "scope" | "officialUrl" | "scopeNote">;
 
+const AL_ADEM_URL = "https://admincode.legislature.state.al.us/api/rule/335-3-3-.01";
+const AL_JEFFERSON_URL = "https://www.jcdh.org/SitePages/Programs-Services/EnvironmentalHealth/Air-RadiationProtectionDivision/OpenBurning.aspx";
+const AL_JEFFERSON_COUNTIES = new Set(["jefferson"]);
+
 export const CALENDAR_RULES: Record<string, CalendarRule> = {
   AK: {
     state: "AK", zone: US_ZONES.Alaska, status: "restricted", scope: "part",
@@ -141,6 +145,34 @@ export const CALENDAR_RULES: Record<string, CalendarRule> = {
     officialUrl: "https://dec.alaska.gov/air/burnwise/open-burn-prohibition",
     label: "Winter open-burning prohibition", seasons: [["11-01", "03-31"]],
     note: "Alaska DEC prohibits open burning in this designated area from November 1 through March 31. Check DEC’s boundary maps and any separate local rules or air-quality alerts.",
+  },
+  AL_ADEM: {
+    state: "AL", zone: US_ZONES.Central, status: "restricted", scope: "state",
+    officialUrl: AL_ADEM_URL, scopeNote: "Land clearing, maintenance and other burns covered by ADEM rule 335-3-3-.01(2)",
+    label: "Alabama air-quality rules limit land-clearing burns",
+    note: "The state allows covered land-clearing and similar burns only under conditions for materials, location, weather and supervision. Start covered burns from 8 a.m. to 3 p.m. and stop adding fuel at 3 p.m. Ask the local authority about additional limits and Alabama Forestry about current orders and permits.",
+  },
+  AL_ADEM_SUMMER: {
+    state: "AL", zone: US_ZONES.Central, status: "restricted", scope: "county",
+    officialUrl: AL_ADEM_URL, scopeNote: "Land clearing, maintenance and other burns covered by ADEM rule 335-3-3-.01(2)",
+    label: "Summer land-clearing burn restriction", seasons: [["05-01", "10-31"]],
+    counties: new Set(["baldwin", "dekalb", "etowah", "jefferson", "lawrence", "madison", "mobile",
+      "montgomery", "morgan", "russell", "shelby", "talladega"]),
+    note: "From May 1 through October 31, the state suspends permission for burning under its land-clearing rule in this county. Check ADEM and the local authority for separate rules on agriculture, cooking and recreational fires.",
+  },
+  AL_JEFFERSON: {
+    state: "AL", zone: US_ZONES.Central, status: "restricted", scope: "county",
+    officialUrl: AL_JEFFERSON_URL, scopeNote: "Covered open burning under Jefferson County Board of Health Chapter 5",
+    label: "Jefferson County open-burning authorization required", seasons: [["11-01", "03-31"]],
+    counties: AL_JEFFERSON_COUNTIES,
+    note: "Jefferson County requires written authorization for vegetation disposal and certain other burns from November through March. Other fires can require advance notice or qualify for an exception, including certain cooking fires. Call the health department at 205-930-1276 and check local fire rules.",
+  },
+  AL_JEFFERSON_SUMMER: {
+    state: "AL", zone: US_ZONES.Central, status: "restricted", scope: "county",
+    officialUrl: AL_JEFFERSON_URL, scopeNote: "Covered open burning under Jefferson County Board of Health Chapter 5",
+    label: "Jefferson County seasonal open-burning restriction", seasons: [["04-01", "10-31"]],
+    counties: AL_JEFFERSON_COUNTIES,
+    note: "Jefferson County generally prohibits open burning from April through October and does not authorize vegetation disposal in those months. Chapter 5 has exceptions, including qualifying cooking fires and some fires with notice or special approval. Call the health department at 205-930-1276 for the rule that applies to your burn.",
   },
   AZ: {
     state: "AZ", zone: US_ZONES.Arizona, status: "restricted", scope: "part",

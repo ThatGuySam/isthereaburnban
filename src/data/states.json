@@ -2,10 +2,28 @@
   {
     "abbr": "AL",
     "name": "Alabama",
-    "coverage": "directory",
-    "publisher": "Alabama Forestry Commission",
+    "coverage": "restrictions",
+    "publisher": "Alabama Department of Environmental Management, Alabama Forestry Commission and local authorities",
     "officialUrl": "https://www.forestry.alabama.gov/Pages/Fire/BurnRestrictions.aspx",
-    "notes": "The Forestry Commission issues Fire Alerts and the Governor can issue statewide No Burn Orders. Seasonal air-quality rules and local exceptions also apply."
+    "extraUrls": [
+      {
+        "label": "State air-quality open-burning rules",
+        "url": "https://adem.alabama.gov/air/open-burning"
+      },
+      {
+        "label": "State wildfire orders and prescribed-burn permit law",
+        "url": "https://alison.legislature.state.al.us/files/pdf/SearchableInstruments/2026RS/HB267-enr.pdf"
+      },
+      {
+        "label": "Jefferson County open-burning rules",
+        "url": "https://www.jcdh.org/SitePages/Programs-Services/EnvironmentalHealth/Air-RadiationProtectionDivision/OpenBurning.aspx"
+      },
+      {
+        "label": "Cahaba Valley Fire District burn status and permits",
+        "url": "https://cahabavalleyfire.org/open-burning/"
+      }
+    ],
+    "notes": "Alabama limits land-clearing fires statewide. Twelve counties have tighter rules from May through October, and Jefferson County has separate rules. The State Forester can issue wildfire alerts, and the Forestry Commission can declare wildfire emergencies with the Governor’s approval. For current orders and prescribed-burn permits, call Forestry at 800-392-5679 and check with your local fire authority."
   },
   {
     "abbr": "AK",

@@ -36,6 +36,8 @@ import { ilCrawfordCountyOrders, parseCrawfordCountyOrders } from "../src/worker
 import { illinoisGuidanceSources, parseIllinoisGuidance } from "../src/worker/sources/il/guidance";
 import { ksDickinsonDistricts, parseDickinsonDistricts } from "../src/worker/sources/ks/dickinson";
 import { ksAprilBurning, ksFranklinPermits, ksOpenBurning, parseFranklinPermits, parseKansasApril, parseKansasOpenBurning } from "../src/worker/sources/ks/open-burning";
+import { alAdemOpenBurning, alJeffersonOpenBurning, parseAdemOpenBurning, parseJeffersonOpenBurning } from "../src/worker/sources/al/air-rules";
+import { alCahabaBurning, parseCahabaBurning } from "../src/worker/sources/al/cahaba";
 import { kyForestryCountyBans, parseKentuckyCountyBans } from "../src/worker/sources/ky/county-bans";
 import { kySeasonal, parseKentuckySeasonal } from "../src/worker/sources/ky/seasonal";
 import { arcgisRows, codedDomains, dataLastEditDate, findOperationalLayers } from "../src/worker/sources/lib/arcgis";
@@ -182,6 +184,12 @@ const parseKsDistricts = () => parseDickinsonDistricts(JSON.parse(ksDistrictLaye
 const parseKsState = () => parseKansasOpenBurning(ksStateHtml, ksCaptured);
 const parseKsApril = (at = ksCaptured) => parseKansasApril(ksAprilHtml, at);
 const parseKsFranklin = () => parseFranklinPermits(ksFranklinHtml, ksCaptured);
+const alCaptured = new Date("2026-11-24T16:03:46Z");
+const alCahabaHtml = utf8("al/fixtures/cahaba-valley-2026-11-24.html");
+const alJeffersonHtml = utf8("al/fixtures/jefferson-health-2026-11-24.html");
+const parseAlAdem = (at = alCaptured) => parseAdemOpenBurning(alCahabaHtml, at);
+const parseAlJefferson = () => parseJeffersonOpenBurning(alJeffersonHtml, alCaptured);
+const parseAlCahaba = () => parseCahabaBurning(alCahabaHtml, alCaptured, "Tue, 24 Nov 2026 16:03:45 GMT");
 const parseNwsLive = () => parseNwsAlerts(JSON.parse(nwsLive), nwsCaptured);
 const parseNwsArchive = () => parseNwsAlerts(JSON.parse(nwsArchive), new Date("2026-11-18T20:00Z"), { archive: true });
 const nyDecHtml = utf8("ny/fixtures/dec-open-burning-2026-11-24.html");
@@ -429,6 +437,9 @@ recordedInputs.push(
   { source: ksOpenBurning, rows: await parseKsState(), checked: ksCaptured.toISOString() },
   { source: ksAprilBurning, rows: await parseKsApril(), checked: ksCaptured.toISOString() },
   { source: ksFranklinPermits, rows: await parseKsFranklin(), checked: ksCaptured.toISOString() },
+  { source: alJeffersonOpenBurning, rows: await parseAlJefferson(), checked: alCaptured.toISOString() },
+  { source: alAdemOpenBurning, rows: await parseAlAdem(), checked: alCaptured.toISOString() },
+  { source: alCahabaBurning, rows: await parseAlCahaba(), checked: alCaptured.toISOString() },
   { source: ohSeasonal, rows: await parseOhFixture(), checked },
   { source: gaEpdNonSummer, rows: await parseGaNonSummerFixture(), checked },
   { source: azPimaWildfire, rows: await parseAzPimaFixture(), checked },
@@ -509,6 +520,9 @@ const jobs: Array<[string, () => unknown]> = [
   ["KS state open-burning rules and calendar", parseKsState],
   ["KS April open-burning rules and calendar", () => parseKsApril(new Date("2027-04-01T05:00:00Z"))],
   ["KS Franklin County burn permits", parseKsFranklin],
+  ["AL state air rule and summer calendar", () => parseAlAdem(new Date("2027-07-14T16:03:46Z"))],
+  ["AL Jefferson County burning calendar", parseAlJefferson],
+  ["AL Cahaba Valley district status", parseAlCahaba],
   ["CivicPlus News Flash", () => civicPlusNotices(parseHtml(placer, { links: true }), "https://www.placer.ca.gov/")],
   ["ASP.NET WebForms", () => webFormsPost(michigan, "https://www2.dnr.state.mi.us/burnpermits/", "ctl00$ContentPlaceHolder1$CntyName")],
   ["SharePoint list", () => sharePointListItems(parseHtml(kentucky), /current burn bans/i)],
