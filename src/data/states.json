@@ -813,8 +813,34 @@
     "abbr": "WY",
     "name": "Wyoming",
     "coverage": "restrictions",
-    "publisher": "Wyoming State Forestry Division",
+    "publisher": "Wyoming State Forestry Division and Wyoming Office of State Lands and Investments",
     "officialUrl": "https://sites.google.com/wyo.gov/forestry-division/fire-management/fire-restrictions",
-    "notes": "Wyoming county commissioners enact fire restrictions, and State Forestry maps them. Federal land managers set their own."
+    "extraUrls": [
+      {
+        "label": "County fire warden contacts",
+        "url": "https://sites.google.com/wyo.gov/forestry-division/fire-management/county-fire-wardens"
+      },
+      {
+        "label": "State trust land recreation rules",
+        "url": "https://lands.wyo.gov/resources/recreation"
+      },
+      {
+        "label": "State land and lease map",
+        "url": "https://lands.wyo.gov/resources/land-and-lease-map-viewer"
+      },
+      {
+        "label": "Wyoming air-quality and burn permit rules",
+        "url": "https://deq.wyoming.gov/aqd/smoke-management-and-open-burning/"
+      },
+      {
+        "label": "BLM Wyoming fire restrictions",
+        "url": "https://www.blm.gov/programs/fire/regional-info/wyoming/fire-restrictions"
+      },
+      {
+        "label": "Rocky Mountain interagency fire restrictions map",
+        "url": "https://nifc.maps.arcgis.com/apps/dashboards/407bde860acc492bb53c972275bfbd33"
+      }
+    ],
+    "notes": "County commissioners issue orders for specific areas, and State Forestry maps the orders it receives. Check the latest order with the county fire warden. Open fires are limited year-round on state trust lands. Towns, fire districts, tribal authorities and federal land managers may have their own rules. Wyoming DEQ has separate air-quality and burn permit requirements."
   }
 ]

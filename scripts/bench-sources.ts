@@ -58,6 +58,8 @@ import { parseEcologyAir, waEcologyAir } from "../src/worker/sources/wa/ecology-
 import { parseKingFireSafety, waKingFireSafety } from "../src/worker/sources/wa/king-fire-safety";
 import { parsePugetSound, waPugetSoundAir } from "../src/worker/sources/wa/puget-sound";
 import { parseWisconsinPermits, wiPermits } from "../src/worker/sources/wi/permits";
+import { parseWyomingCountyOrders, wyCountyOrders } from "../src/worker/sources/wy/county-orders";
+import { parseWyomingStateLands, wyStateLands } from "../src/worker/sources/wy/state-lands";
 
 const sourceUrl = new URL("../src/worker/sources/", import.meta.url);
 const from = (path: string) => readFileSync(new URL(path, sourceUrl));
@@ -154,6 +156,12 @@ const parseMtDeq = () => parseDeqFall(JSON.parse(mtDeq), mtCaptured);
 const parseMtDnrc = () => parseDnrcRestrictions(JSON.parse(mtDnrcLayer), JSON.parse(mtDnrcOrders), mtCaptured);
 const parseMtGallatin = () => parseGallatin(mtGallatin, new Date("2026-11-20T19:00:00Z"));
 const parseMtMissoula = async () => parseMissoulaSeasons(await extractHtml(mtMissoula), mtCaptured);
+const wyCaptured = new Date("2026-11-24T09:41:20Z");
+const wyCountyLayer = utf8("wy/fixtures/county-layer-2026-11-24.json");
+const wyCounties = utf8("wy/fixtures/county-restrictions-2026-11-24.json");
+const wyLands = utf8("wy/fixtures/state-lands-rule-2026-11-24.json");
+const parseWyCountyFixture = () => parseWyomingCountyOrders(JSON.parse(wyCountyLayer), JSON.parse(wyCounties), wyCaptured);
+const parseWyLandFixture = () => parseWyomingStateLands(JSON.parse(wyLands), wyCaptured);
 const akPermitLayer = utf8("ak/fixtures/permit-layer-2026-11-24.json");
 const akPermitZones = utf8("ak/fixtures/permit-zones-2026-11-24.json");
 const akFireSeason = utf8("ak/fixtures/as-41-15-050-2026-11-24.html");
@@ -236,6 +244,8 @@ recordedInputs.push(
   { source: mtDeqFall, rows: parseMtDeq(), checked: mtCaptured.toISOString() },
   { source: mtDnrcRestrictions, rows: parseMtDnrc(), checked: mtCaptured.toISOString() },
   { source: mtMissoulaSeasons, rows: await parseMtMissoula(), checked: mtCaptured.toISOString() },
+  { source: wyCountyOrders, rows: parseWyCountyFixture(), checked: wyCaptured.toISOString() },
+  { source: wyStateLands, rows: parseWyLandFixture(), checked: wyCaptured.toISOString() },
   { source: nwsFireWeather, rows: [], fireWeather: parseNwsLive(), checked: nwsCaptured.toISOString() },
 );
 
@@ -302,6 +312,8 @@ const jobs: Array<[string, () => unknown]> = [
   ["ID IDL stage zones", parseIdlFixture],
   ["ID Kootenai district air forecast", parseIdForecastFixture],
   ["ID closed fire season and calendar", parseIdStatuteFixture],
+  ["WY State Forestry county orders", parseWyCountyFixture],
+  ["WY state trust lands rule", parseWyLandFixture],
   ["UT FFSL fire order polygons", parseUtOrders],
   ["UT closed fire season and calendar", parseUtStatute],
   ["MT DEQ fall open-burning decisions", parseMtDeq],

@@ -2,7 +2,7 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { syncfusionGridRows, webFormsPost } from "./aspnet";
-import { arcgisDateOnly, arcgisEditWindow, arcgisLocalDate, arcgisRows, codedDomains, dataLastEditDate, findOperationalLayers, queryArcgis } from "./arcgis";
+import { arcgisDateOnly, arcgisDistinctUrl, arcgisEditWindow, arcgisLocalDate, arcgisRows, codedDomains, dataLastEditDate, findOperationalLayers, queryArcgis } from "./arcgis";
 import { activeRule, calendarDayWindows, CALENDAR_RULES } from "./calendar";
 import { civicPlusAlertDetails, civicPlusNotices, civicPlusUrl } from "./civicplus";
 import { localDayWindow, parseWeekdayDate, reportWindow, weekdayOnOrAfter } from "./dates";
@@ -73,6 +73,15 @@ test("ArcGIS DateOnly fields accept only valid ISO calendar dates", () => {
   for (const value of ["2026-02-29", "11/24/2026", "2026-11-24T00:00:00Z", " 2026-11-24", 1795478400000, null]) {
     expect(arcgisDateOnly(value)).toBeNull();
   }
+});
+
+test("ArcGIS distinct queries request only unique attribute combinations", () => {
+  const layer = "https://example.gov/arcgis/rest/services/Lands/FeatureServer/0";
+  const url = new URL(arcgisDistinctUrl(layer + "/", ["Owner", "Status"], "State = 'WY'"));
+  expect(url.origin + url.pathname).toBe(layer + "/query");
+  expect(Object.fromEntries(url.searchParams)).toEqual({
+    where: "State = 'WY'", outFields: "Owner,Status", returnGeometry: "false", f: "json", returnDistinctValues: "true",
+  });
 });
 
 test("legacy .NET JSON dates preserve the UTC instant regardless of the optional offset", () => {

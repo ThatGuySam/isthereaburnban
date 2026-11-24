@@ -153,6 +153,13 @@ export const CALENDAR_RULES: Record<string, CalendarRule> = {
     label: "Daytime fire-season burning restriction", seasons: [["03-01", "05-31"], ["10-01", "12-31"]], hours: [420, 1020],
     note: "West Virginia restricts outdoor burning from 7 a.m. to 5 p.m. during March–May and October–December. See the state rules for small fires, snow cover and commercial permits.",
   },
+  WY_STATE_LANDS: {
+    state: "WY", zone: US_ZONES.Mountain, status: "restricted", scope: "part",
+    scopeNote: "Wyoming state trust lands",
+    officialUrl: "https://lands.wyo.gov/resources/recreation",
+    label: "Year-round state trust land fire restriction",
+    note: "Wyoming limits open fires, campfires and charcoal grills on state trust lands year-round. W.S. § 36-2-107 allows exceptions for areas designated by the Board of Land Commissioners and activities authorized by a valid board lease, authorization or permit.",
+  },
   MD: {
     state: "MD", zone: US_ZONES.Eastern, status: "restricted", scope: "part", scopeNote: "Woodland and areas within 200 feet, outside incorporated towns",
     officialUrl: "https://dnr.maryland.gov/forests/Pages/fire/prevention-burning-guidance.aspx",

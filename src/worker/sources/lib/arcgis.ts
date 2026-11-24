@@ -14,6 +14,11 @@ export function arcgisUrl(layer: string, fields: string[], extra: Record<string,
   return `${layer.replace(/\/$/, "")}/query?${q}`;
 }
 
+/** Query unique attribute combinations without transferring the underlying features. */
+export function arcgisDistinctUrl(layer: string, fields: string[], where = "1=1"): string {
+  return arcgisUrl(layer, fields, { where, returnDistinctValues: "true" });
+}
+
 function isRecord(value: unknown): value is Attributes {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }

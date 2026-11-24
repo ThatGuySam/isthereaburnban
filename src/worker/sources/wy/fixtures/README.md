@@ -1,0 +1,17 @@
+# Wyoming source captures
+
+The JSON captures from November 24, 2026 preserve the publisher's fields, codes and values.
+
+| Fixture | Capture time (UTC) | Exact request |
+| --- | --- | --- |
+| `county-layer-2026-11-24.json` | 09:37:34 | [State Forestry layer metadata](https://services1.arcgis.com/i5xRZLABP6oUOcld/arcgis/rest/services/Updated_fire_restrictions_2021_Read_Only/FeatureServer/0?f=json) |
+| `county-restrictions-2026-11-24.json` | 09:39:42 | [County attributes](https://services1.arcgis.com/i5xRZLABP6oUOcld/arcgis/rest/services/Updated_fire_restrictions_2021_Read_Only/FeatureServer/0/query?where=1%3D1&outFields=OBJECTID_1%2CCOUNTYNAME%2CRestriction%2CRestriction_Link%2CLink%2CEditDate&returnGeometry=false&f=json) |
+| `state-lands-rule-2026-11-24.json` | 09:41:20 | [Distinct state land rules](https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WY_State_Lands_Fire_Restrictions_View/FeatureServer/0/query?where=1%3D1&outFields=LandownerK%2CLandownerC%2Cstate%2Crestriction_status%2Crestriction_order&returnGeometry=false&f=json&returnDistinctValues=true) |
+
+State Forestry's Google Sites page embeds web map `a48549f01049467e89320d1bab4e9dff`. Its operational layer returned 24 features with 23 named counties, an unnamed polygon, five stage flags, 18 `None` flags and one blank restriction. The layer's last data edit was November 4. The five positive records had edits from March 26 through July 7, and the map carries no issue or rescission dates. `OBJECTID_1` is the layer's unique object ID. `Link` is the order link shown in the popup. Some records instead put a URL or free text in `Restriction_Link`. [Forestry map](https://sites.google.com/wyo.gov/forestry-division/fire-management/fire-restrictions) · [Web map configuration](https://wsfd.maps.arcgis.com/sharing/rest/content/items/a48549f01049467e89320d1bab4e9dff/data?f=json)
+
+The state land layer's distinct query returned one year-round rule, and a separate query for Stage 1 or Stage 2 returned zero features. The rule matches W.S. § 36-2-107(b)(iv). Subsection (d) gives exceptions for activities covered by a valid Board lease, authorization or permit. [Wyoming Legislature, Title 36](https://wyoleg.gov/statutes/compress/title36.pdf) · [State trust land recreation guidance](https://lands.wyo.gov/resources/recreation)
+
+The November 24 county mapping uses [Census TIGERweb county polygons](https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1/query?where=STATE%3D%2756%27&outFields=NAME%2CGEOID&f=json&outSR=4326&geometryPrecision=6). For each polygon, POST to the state land layer's `/query` with the polygon as `geometry`, `geometryType=esriGeometryPolygon`, `inSR=4326`, `spatialRel=esriSpatialRelContains`, `returnCountOnly=true`, `f=json` and `where=LandownerK='State' AND restriction_status='Year Round'`. All 23 counties contained positive counts, from 26 features in Teton to 706 in Fremont. These counts establish geographic overlap. Use the land and lease map to identify specific parcels. [Land and lease map](https://lands.wyo.gov/resources/land-and-lease-map-viewer)
+
+The same spatial check against OSLI's newer State Surface Ownership layer used `where=SurfaceOwnership='Y' AND IsActive=1 AND FundCode='CS'`. The code `CS` means Common School trust land. This independently found trust parcels in all 23 counties, with the lowest count of 53 in Teton. [OSLI ownership layer](https://gis2.statelands.wyo.gov/arcgis/rest/services/oslisde/MapViewerService3/MapServer/52?f=json)

@@ -42,6 +42,8 @@ import { waEcologyAir } from "./wa/ecology-air";
 import { waKingFireSafety } from "./wa/king-fire-safety";
 import { waPugetSoundAir } from "./wa/puget-sound";
 import { wiPermits } from "./wi/permits";
+import { wyCountyOrders } from "./wy/county-orders";
+import { wyStateLands } from "./wy/state-lands";
 
 const ARCGIS_PARSERS = new Map([
   ["fl", parseFl], ["ia", parseIa], ["in", parseIn], ["la", parseLa], ["ok", parseOk],
@@ -109,6 +111,8 @@ export const SOURCES: readonly Source[] = [
   mtDnrcRestrictions,
   mtGallatinOpenBurning,
   mtMissoulaSeasons,
+  wyCountyOrders,
+  wyStateLands,
   {
     id: "ut-blm-campfire-orders", state: "UT", scope: "part", stack: "Drupal / PDF orders", mode: "manual", cadence: null,
     sourceName: "Bureau of Land Management Utah",
