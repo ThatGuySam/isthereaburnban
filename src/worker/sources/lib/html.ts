@@ -241,6 +241,19 @@ export function blockAfterHeading(blocks: Block[], pattern: RegExp, { requireUni
   return blocks.slice(start + 1, end < 0 ? undefined : end);
 }
 
+/** Read a numbered section in legacy rulebooks that mark their headings as paragraphs. */
+export function numberedRuleSection({ blocks }: HtmlParts, section: string): string[] {
+  if (!/^\d+(?:\.\d+)+$/.test(section)) throw new Error("Invalid rule section number");
+  const chapter = section.slice(0, section.lastIndexOf(".")).replaceAll(".", "\\.");
+  const heading = new RegExp(`^${chapter}\\.\\d+\\s+[A-Z][A-Z0-9 ;()/–-]+:`);
+  const paragraphs = blocks.filter(({ tag }) => tag === "p").map(({ text }) => text);
+  const matches = (text: string) => text.startsWith(section + " ") && heading.test(text);
+  const start = paragraphs.findIndex(matches);
+  if (start < 0 || paragraphs.findLastIndex(matches) !== start) return [];
+  const end = paragraphs.findIndex((text, index) => index > start && heading.test(text));
+  return end > start ? paragraphs.slice(start, end) : [];
+}
+
 /** Plain text for publisher-provided HTML fragments such as REST titles and notice bodies. */
 export function htmlText(html: string): string {
   const visible = html.replace(/<!--[\s\S]*?-->|<(script|style|template|noscript)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "");

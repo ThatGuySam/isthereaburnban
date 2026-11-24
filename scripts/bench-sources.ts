@@ -55,6 +55,9 @@ import { ncAirHours, parseNcAirHours } from "../src/worker/sources/nc/air-hours"
 import { applyNcOrders, ncForestOrders, parseNcNewsroom, parseNcOrder } from "../src/worker/sources/nc/forest-orders";
 import { ncPermits, parseNcPermits } from "../src/worker/sources/nc/permits";
 import { njRestrictions, parseNjRestrictions } from "../src/worker/sources/nj/restrictions";
+import { nmAngelFirePermits, parseAngelFirePermits } from "../src/worker/sources/nm/angel-fire";
+import { nmBernalilloOpenBurning, nmOpenBurning, parseNmOpenBurning } from "../src/worker/sources/nm/open-burning";
+import { nmStateParks, parseNmStateParks } from "../src/worker/sources/nm/state-parks";
 import { nvTmfpdPileBurning, parseTmfpdPileBurning } from "../src/worker/sources/nv/tmfpd";
 import { nvUsfsSpringMountains, parseSpringMountainsOrder } from "../src/worker/sources/nv/usfs";
 import { nwsFireWeather, parseNwsAlerts } from "../src/worker/sources/nws/alerts";
@@ -115,6 +118,15 @@ const parseVtFpr = async () => parseFprSituation(await extractHtml(vtSituation, 
 });
 const parseVtFranklin = async () => parseFranklinBurning(await extractHtml(vtFranklin), vtCaptured);
 const parseVtPermits = async () => parseVermontPermits(await extractHtml(vtStatute), vtCaptured);
+const nmCaptured = new Date("2026-11-24T14:00:00Z");
+const nmParksHtml = utf8("nm/fixtures/state-parks-2026-11-24.html");
+const nmAngelHtml = utf8("nm/fixtures/angel-fire-2026-11-24.html");
+const nmStateCode = raw("nm/fixtures/open-burning-nmac-2026-11-24.html");
+const nmBernalilloCode = raw("nm/fixtures/bernalillo-open-burning-nmac-2026-11-24.html");
+const parseNmParksFixture = () => parseNmStateParks(nmParksHtml, nmCaptured);
+const parseNmAngelFixture = () => parseAngelFirePermits(nmAngelHtml, nmCaptured);
+const parseNmStateCodeFixture = () => parseNmOpenBurning(nmStateCode, "state", nmCaptured);
+const parseNmBernalilloCodeFixture = () => parseNmOpenBurning(nmBernalilloCode, "bernalillo", nmCaptured);
 const parseNwsLive = () => parseNwsAlerts(JSON.parse(nwsLive), nwsCaptured);
 const parseNwsArchive = () => parseNwsAlerts(JSON.parse(nwsArchive), new Date("2026-11-18T20:00Z"), { archive: true });
 const nyDecHtml = utf8("ny/fixtures/dec-open-burning-2026-11-24.html");
@@ -345,6 +357,10 @@ recordedInputs.push(
   { source: vtFprRestrictions, rows: await parseVtFpr(), checked: vtCaptured.toISOString() },
   { source: vtFranklinBurning, rows: await parseVtFranklin(), checked: vtCaptured.toISOString() },
   { source: vtOpenBurningPermits, rows: await parseVtPermits(), checked: vtCaptured.toISOString() },
+  { source: nmStateParks, rows: await parseNmParksFixture(), checked: nmCaptured.toISOString() },
+  { source: nmAngelFirePermits, rows: await parseNmAngelFixture(), checked: nmCaptured.toISOString() },
+  { source: nmOpenBurning, rows: await parseNmStateCodeFixture(), checked: nmCaptured.toISOString() },
+  { source: nmBernalilloOpenBurning, rows: await parseNmBernalilloCodeFixture(), checked: nmCaptured.toISOString() },
   { source: ohSeasonal, rows: await parseOhFixture(), checked },
   { source: gaEpdNonSummer, rows: await parseGaNonSummerFixture(), checked },
   { source: azPimaWildfire, rows: await parseAzPimaFixture(), checked },
@@ -472,6 +488,10 @@ const jobs: Array<[string, () => unknown]> = [
   ["VT FPR Drupal situation page", parseVtFpr],
   ["VT Franklin Google Sites notice", parseVtFranklin],
   ["VT Legislature open-burning statute and calendar", parseVtPermits],
+  ["NM State Parks restrictions listing", parseNmParksFixture],
+  ["NM Angel Fire CivicPlus permit notice", parseNmAngelFixture],
+  ["NM state open-burning code and calendar", parseNmStateCodeFixture],
+  ["NM Bernalillo open-burning code and calendar", parseNmBernalilloCodeFixture],
   ["NV Spring Mountains Drupal order table", parseNvForestFixture],
   ["UT FFSL fire order polygons", parseUtOrders],
   ["UT closed fire season and calendar", parseUtStatute],

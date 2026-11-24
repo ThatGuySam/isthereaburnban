@@ -569,9 +569,39 @@
     "abbr": "NM",
     "name": "New Mexico",
     "coverage": "restrictions",
-    "publisher": "New Mexico Forestry Division",
+    "publisher": "New Mexico Forestry, State Parks, state and local air-quality agencies, and Angel Fire Fire Department",
     "officialUrl": "https://www.emnrd.nm.gov/sfd/find-current-fire-restrictions/",
-    "notes": "Counties, State Forestry, tribes and federal land managers issue fire restrictions for their own land in New Mexico."
+    "notes": "State Forestry, local fire authorities, tribes, and federal land managers can issue restrictions in their own jurisdictions. State air-quality rules limit vegetation burning outside Bernalillo County and tribal lands. Albuquerque–Bernalillo has separate open-burning rules. Park and village reports apply only in the named places. Check the fire authority and land manager for your location before burning.",
+    "extraUrls": [
+      {
+        "label": "State park restrictions",
+        "url": "https://wwwapps.emnrd.nm.gov/SPD/ParksReportingPublicDisplay/Restriction/Index"
+      },
+      {
+        "label": "State open-burning and smoke management rules",
+        "url": "https://www.env.nm.gov/air-quality/burn-smoke-summaries/"
+      },
+      {
+        "label": "Albuquerque–Bernalillo daily air-quality update",
+        "url": "https://www.cabq.gov/airquality/todays-status"
+      },
+      {
+        "label": "Angel Fire current restrictions",
+        "url": "https://www.angelfirenm.gov/182/Current-Fire-Restrictions"
+      },
+      {
+        "label": "Sandoval County burn permits",
+        "url": "https://www.sandovalcountynm.gov/fire/open-burning-info/"
+      },
+      {
+        "label": "Santa Fe County burn permits",
+        "url": "https://www.santafecountynm.gov/fire/burn-permit"
+      },
+      {
+        "label": "Federal, state and tribal land-manager contacts",
+        "url": "https://nmfireinfo.com/fire-restrictions/"
+      }
+    ]
   },
   {
     "abbr": "NY",

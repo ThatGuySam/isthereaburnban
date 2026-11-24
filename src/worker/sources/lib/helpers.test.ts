@@ -4,10 +4,10 @@ import { readFileSync } from "node:fs";
 import { syncfusionGridRows, webFormsPost } from "./aspnet";
 import { arcgisDateOnly, arcgisDistinctUrl, arcgisEditWindow, arcgisLocalDate, arcgisRows, arcgisTimestampOffset, codedDomains, dataLastEditDate, findOperationalLayers, queryArcgis } from "./arcgis";
 import { activeRule, calendarDayWindows, calendarStatusRows, CALENDAR_RULES } from "./calendar";
-import { civicPlusAlertDetails, civicPlusNotices, civicPlusUrl } from "./civicplus";
+import { civicPlusAlertDetails, civicPlusNotices, civicPlusPageParagraphs, civicPlusUrl } from "./civicplus";
 import { localDayWindow, parseLocalIsoTimestamp, parseWeekdayDate, reportWindow, weekdayOnOrAfter } from "./dates";
 import { decodeFeed, parseCsv, parseDotNetJsonDate, parseFeed, parseJson } from "./feeds";
-import { blockAfterHeading, extractHtml, extractHtmlGrid, localClock, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, US_ZONES } from "./html";
+import { blockAfterHeading, extractHtml, extractHtmlGrid, localClock, numberedRuleSection, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, US_ZONES } from "./html";
 import { BlockedError, fetchSource, HttpError, pacedSourceReader, pacedTextReader, USER_AGENT } from "./http";
 import { manualPdf } from "./pdf";
 import { parseSharePointItems, parseSharePointPage, sharePointListItems, sharePointListUrl, sharePointRows } from "./sharepoint";
@@ -44,6 +44,23 @@ test("HTML status grids extract only selected rows and keep cell data", async ()
     { text: "One & Two", className: "cell" }, { text: "On", className: "cell active" },
     { text: "Order", className: "cell", href: "/order?p=1&n=2" },
   ]]);
+});
+
+test("legacy number headings isolate a complete, unique rule section", async () => {
+  const first = "<p><b>20.2.60.2&nbsp; SCOPE:</b> Town jurisdiction.</p><p>One clause.</p>";
+  const next = "<p><b>20.2.60.3 PROVISIONS; EXCEPTIONS:</b></p><p>Different rule.</p>";
+  const parts = await extractHtml(first + next);
+  expect(numberedRuleSection(parts, "20.2.60.2")).toEqual(["20.2.60.2 SCOPE: Town jurisdiction.", "One clause."]);
+  expect(numberedRuleSection(parts, "20.2.60.3")).toEqual([]);
+  expect(numberedRuleSection(await extractHtml(first + first + next), "20.2.60.2")).toEqual([]);
+});
+
+test("classic CivicPlus page paragraphs exclude sidebars and require the expected title", async () => {
+  const widget = (text) => `<div class="pageContent"><div class="widgetText"><div class="textContent"><p>${text}</p></div></div></div>`;
+  const markup = '<div id="moduleContent"><div id="page"><h1 id="versionHeadLine">Fire Rules</h1>' +
+    widget("Applies in town.") + '</div><aside>' + widget("Unrelated.") + '</aside></div>';
+  expect(await civicPlusPageParagraphs(markup, "Fire Rules")).toEqual(["Applies in town."]);
+  await expect(civicPlusPageParagraphs(markup, "Other Rules")).rejects.toThrow("CivicPlus content page");
 });
 
 test("HTML table cells separate adjacent paragraphs without splitting inline text", async () => {

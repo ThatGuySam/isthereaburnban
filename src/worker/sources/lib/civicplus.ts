@@ -7,6 +7,21 @@ export function civicPlusUrl(site: string, channel: "alerts" | "news" | "mobile"
   return new URL({ alerts: "/AlertCenter.aspx", news: "/CivicAlerts.aspx", mobile: "/m/newsflash" }[channel], site).href;
 }
 
+/** Read the text widgets in a classic CivicPlus content page, excluding menus and sidebars. */
+export async function civicPlusPageParagraphs(input: Response | string, title: string): Promise<string[]> {
+  const page = "#moduleContent #page";
+  const rows = await extractHtmlGrid(input, {
+    row: page,
+    cell: `${page} #versionHeadLine, ${page} .pageContent .widgetText .textContent > p`,
+  });
+  const [heading, ...body] = rows[0] ?? [];
+  const paragraphs = body.map(({ text }) => text).filter(Boolean);
+  if (rows.length !== 1 || heading?.text !== title || !paragraphs.length) {
+    throw new Error(`CivicPlus content page: expected ${title} and its text widgets`);
+  }
+  return paragraphs;
+}
+
 /** Read the visible details of a CivicPlus emergency alert widget below its unique title. */
 export function civicPlusAlertDetails(parts: HtmlParts, heading: RegExp): string[] {
   const title = new RegExp(heading.source, heading.flags.replace(/[gy]/g, ""));

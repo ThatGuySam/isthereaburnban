@@ -37,6 +37,9 @@ import { ncForestOrders } from "./nc/forest-orders";
 import { ncPermits } from "./nc/permits";
 import { ndDesRestrictions } from "./nd/restrictions";
 import { njRestrictions } from "./nj/restrictions";
+import { nmAngelFirePermits } from "./nm/angel-fire";
+import { nmBernalilloOpenBurning, nmOpenBurning } from "./nm/open-burning";
+import { nmStateParks } from "./nm/state-parks";
 import { nvTmfpdPileBurning } from "./nv/tmfpd";
 import { nvUsfsSpringMountains } from "./nv/usfs";
 import { nwsFireWeather } from "./nws/alerts";
@@ -161,6 +164,24 @@ export const SOURCES: readonly Source[] = [
   vtFprRestrictions,
   vtFranklinBurning,
   vtOpenBurningPermits,
+  nmStateParks,
+  nmAngelFirePermits,
+  nmOpenBurning,
+  nmBernalilloOpenBurning,
+  {
+    id: "nm-swcg-fire-restrictions", state: "NM", scope: "part", stack: "WordPress / ArcGIS Dashboard and WebMap",
+    mode: "manual", cadence: null, sourceName: "New Mexico Forestry Division and Southwest Coordinating Group",
+    sourceUrl: "https://nifc.maps.arcgis.com/apps/dashboards/aa9ff369dd414b74b69b696b40a1d057",
+    officialUrl: "https://www.emnrd.nm.gov/sfd/find-current-fire-restrictions/",
+    error: "Forestry rows retain undated notes and some federal map stages have been rescinded. Confirm the order and any lift with the agency, tribe or local fire authority.",
+  },
+  {
+    id: "nm-bernalillo-daily-air", state: "NM", scope: "part", stack: "Plone / HTML daily report",
+    mode: "manual", cadence: null, sourceName: "Albuquerque–Bernalillo County Air Quality Program",
+    sourceUrl: "https://www.cabq.gov/airquality/todays-status",
+    officialUrl: "https://www.cabq.gov/airquality/burn-no-burn/burn-restrictions",
+    error: "The latest page can carry a prior day's wood-burning decision. Check the date or call 505-768-2876 for the current air-quality decision.",
+  },
   {
     id: "md-dnr-emergency-orders", state: "MD", scope: "state", stack: "WordPress / REST search", mode: "manual", cadence: null,
     sourceName: "Maryland Department of Natural Resources",
