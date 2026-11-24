@@ -1,0 +1,74 @@
+---
+import Base from "../../layouts/Base.astro";
+import { states } from "../../components/site-data";
+import { STATE_BY_ABBR } from "../../shared/states-fips";
+
+// stateFips -> {abbr, coverage}, embedded so the map needs no extra request to shade untracked states.
+const coverage = Object.fromEntries(
+  states.filter((s) => STATE_BY_ABBR[s.abbr]).map((s) => [STATE_BY_ABBR[s.abbr].fips, { abbr: s.abbr, coverage: s.coverage }]),
+);
+---
+<Base title="Burn ban map · Is There a Burn Ban?" description="Map of current county burn bans and restrictions across the US, from official state sources." path="/map/">
+  <main id="content" class="map-page">
+    <header class="map-bar">
+      <h1><a href="/">Is There a Burn Ban?</a> <span>Map</span></h1>
+      <div class="map-actions">
+        <button type="button" class="map-btn" data-pin-toggle aria-pressed="false">Drop a pin</button>
+        <a class="map-btn" href="/us/">Browse by state</a>
+      </div>
+    </header>
+    <div class="map-wrap">
+      <div id="map" data-coverage={JSON.stringify(coverage)} role="application" aria-label="County burn ban map. Use Browse by state for a list."></div>
+      <p class="map-loading" data-map-loading>Loading map…</p>
+      <ul class="legend" aria-label="Legend">
+        <li><span style="background:#f34f49"></span>Burn ban</li>
+        <li><span style="background:#f5a623"></span>Restrictions</li>
+        <li><span style="background:#2a9d70"></span>No ban reported</li>
+        <li><span style="background:#8fa3ad"></span>Can't confirm</li>
+        <li><span style="background:#e4e4e4"></span>Not tracked — check official source</li>
+      </ul>
+      <aside class="map-panel hero" data-map-panel hidden aria-live="polite">
+        <button type="button" class="map-close" data-panel-close aria-label="Close">✕</button>
+        <div data-status-slot></div>
+        <div class="chips">
+          <button type="button" class="chip" data-alert-open>Alert me</button>
+        </div>
+      </aside>
+    </div>
+  </main>
+</Base>
+
+<style is:global>
+  .map-page { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+  .map-bar { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; justify-content: space-between; padding: 0.6rem 1rem; border-bottom: 1px solid var(--line); }
+  .map-bar h1 { font-size: 1.1rem; font-weight: 800; margin: 0; }
+  .map-bar h1 a { color: inherit; text-decoration: none; }
+  .map-bar h1 span { color: var(--muted); font-weight: 600; }
+  .map-actions { display: flex; gap: 0.5rem; }
+  .map-btn { font: inherit; font-weight: 700; font-size: 0.9rem; padding: 0.4rem 0.9rem; border-radius: 999px; border: 2px solid #1a1a1a; background: #fff; color: #1a1a1a; cursor: pointer; text-decoration: none; }
+  .map-btn[aria-pressed="true"] { background: #1a1a1a; color: #fff; }
+  .map-wrap { position: relative; flex: 1; min-height: 20rem; }
+  #map { position: absolute; inset: 0; background: #f7f7f5; }
+  #map.pin-mode { cursor: crosshair; }
+  .map-loading { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; font-weight: 700; pointer-events: none; }
+  .legend { position: absolute; left: 0.75rem; bottom: 0.75rem; z-index: 500; list-style: none; margin: 0; padding: 0.5rem 0.75rem; background: rgba(255,255,255,0.94); border-radius: 10px; font-size: 0.8rem; font-weight: 600; box-shadow: 0 2px 10px rgba(0,0,0,0.15); }
+  .legend li { display: flex; align-items: center; gap: 0.4rem; }
+  .legend span { width: 0.9rem; height: 0.9rem; border-radius: 3px; border: 1px solid rgba(0,0,0,0.25); }
+  .map-panel { position: absolute; z-index: 600; right: 0.75rem; top: 0.75rem; width: min(22rem, calc(100% - 1.5rem)); min-height: 0; padding: 1.25rem 1rem 1rem; border-radius: 14px; box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+  .map-panel[hidden] { display: none; }
+  .map-panel .status-word { font-size: 3.5rem; }
+  .map-panel .status-sentence { font-size: 1.05rem; margin-top: 0.5rem; }
+  .map-panel .chips { margin-top: 0.75rem; }
+  .map-close { position: absolute; top: 0.4rem; right: 0.4rem; font: inherit; background: rgba(0,0,0,0.2); color: inherit; border: 0; border-radius: 999px; width: 2rem; height: 2rem; cursor: pointer; }
+  @media (max-width: 640px) {
+    .map-panel { top: auto; bottom: 0.75rem; right: 0.75rem; }
+    .legend { bottom: auto; top: 0.75rem; }
+  }
+</style>
+
+<script>
+  // Leaflet + TopoJSON load only on this page, after first paint.
+  const start = () => import("../../client/map").then((m) => m.initMap());
+  if ("requestIdleCallback" in window) requestIdleCallback(start, { timeout: 1500 });
+  else setTimeout(start, 50);
+</script>

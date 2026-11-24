@@ -30,7 +30,7 @@ async function getJson<T>(url: string): Promise<T> {
   return (await res.json()) as T;
 }
 
-export function refreshRelativeTimes(root: ParentNode = document): void {
+export function refreshRelativeTimes(root: { querySelectorAll: Document["querySelectorAll"] } = document): void {
   root.querySelectorAll<HTMLTimeElement>("time[data-relative]").forEach((t) => {
     const text = relativeTime(t.dateTime);
     if (text) t.textContent = text;
@@ -110,7 +110,8 @@ export function initHero(): void {
       paint(r, note);
       if (opts.remember) saveLast(r);
     } catch {
-      if (slot.querySelector('[data-status="checking"]')) paintMessage("Not sure", "We couldn't reach our status service. Try again in a minute.");
+      if (params.here) paintMessage("Where?", "We couldn't tell where you are. Enter a ZIP below.");
+      else if (slot.querySelector('[data-status="checking"]')) paintMessage("Not sure", "We couldn't reach our status service. Try again in a minute.");
       else say("Lookup failed. Try again in a minute.");
     }
   }

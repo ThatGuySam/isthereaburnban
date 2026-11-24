@@ -1,0 +1,103 @@
+---
+import Base from "../../layouts/Base.astro";
+import { SITE, states, statePath } from "../../components/site-data";
+
+const live = states.filter((s) => s.coverage === "live");
+const restrictions = states.filter((s) => s.coverage === "restrictions");
+const mcpConfig = JSON.stringify({ mcpServers: { "burn-ban": { type: "http", url: `${SITE}/mcp` } } }, null, 2);
+const sample = JSON.stringify(
+  {
+    query: { zip: "74103" },
+    ambiguous: false,
+    approximate: false,
+    results: [
+      {
+        fips: "40143",
+        state: "OK",
+        county: "Tulsa County",
+        status: "none",
+        label: "None",
+        since: null,
+        expires: null,
+        sourceUpdated: null,
+        checked: "2026-11-23T19:07:00Z",
+        sourceName: "Oklahoma Forestry Services",
+        sourceUrl: "https://services3.arcgis.com/…/FeatureServer/0",
+        officialUrl: "https://experience.arcgis.com/experience/8bdc59b2a54a4383a9a2996fb9407580/",
+        url: "/us/ok/tulsa-county/",
+      },
+    ],
+    disclaimer: "Informational only — confirm with the official source.",
+  },
+  null,
+  2,
+);
+---
+<Base title="Developers · Is There a Burn Ban?" description="Free, keyless JSON API and MCP endpoint for US county burn ban status." path="/developers/" alerts={false}>
+  <main id="content" class="page">
+    <h1>Developers</h1>
+    <p>
+      A free, keyless JSON API for county burn ban status. Data comes from official state sources and is
+      refreshed about every hour. Please cache responses for a few minutes and link to the official source
+      when you show a status.
+    </p>
+    <p>
+      Machine-readable: <a href="/openapi.json">/openapi.json</a> · <a href="/llms.txt">/llms.txt</a>
+    </p>
+
+    <h2>Status values</h2>
+    <ul>
+      <li><code>ban</code>: the official source reports an active burn ban.</li>
+      <li><code>restricted</code>: partial or activity-specific limits (for example an ozone alert or permits required). See <code>label</code>.</li>
+      <li><code>none</code>: the source covers this county and reports no ban.</li>
+      <li><code>unknown</code>: we can't confirm (no feed, a stale feed, or a feed that only lists bans). Never treat this as "no ban".</li>
+    </ul>
+
+    <h2>Look up a place</h2>
+    <pre><code>curl "{SITE}/api/v1/status?zip=74103"
+curl "{SITE}/api/v1/status?lat=36.154&amp;lon=-95.993"
+curl "{SITE}/api/v1/status?fips=40143"</code></pre>
+    <p>
+      A ZIP can touch more than one county. When it does, <code>ambiguous</code> is <code>true</code> and
+      <code>results</code> lists every county. <code>approximate</code> means the ZIP wasn't in Census data and we
+      used the nearest one.
+    </p>
+    <pre><code>{sample}</code></pre>
+
+    <h2>All active bans</h2>
+    <pre><code>curl "{SITE}/api/v1/bans"
+curl "{SITE}/api/v1/bans?state=TX"</code></pre>
+    <p>Returns counties with <code>ban</code> or <code>restricted</code> status, plus the health of each source.</p>
+
+    <h2>Coverage</h2>
+    <pre><code>curl "{SITE}/api/v1/coverage"</code></pre>
+    <p>Lists every state with its coverage level, publisher and official link, plus source health.</p>
+
+    <h2>MCP (for AI assistants)</h2>
+    <p>
+      A stateless MCP server (streamable HTTP) is at <code>{SITE}/mcp</code>. It exposes the same lookups as the
+      API. No auth is needed.
+    </p>
+    <p><strong>Claude</strong>: Settings → Connectors → Add custom connector, and paste <code>{SITE}/mcp</code>. For Claude Code:</p>
+    <pre><code>claude mcp add --transport http burn-ban {SITE}/mcp</code></pre>
+    <p><strong>ChatGPT</strong>: Settings → Apps &amp; Connectors → Create (developer mode), with the MCP server URL <code>{SITE}/mcp</code> and no authentication.</p>
+    <p>Other clients that take a JSON config:</p>
+    <pre><code>{mcpConfig}</code></pre>
+
+    <h2>States with live data</h2>
+    <ul class="inline-list">
+      {live.map((s) => <li><a href={statePath(s.abbr)}>{s.name}</a></li>)}
+    </ul>
+    <p>
+      States with restriction feeds (labeled, not county bans): {restrictions.map((s) => s.abbr).join(", ")}.
+      Every other state has an official link only. See <a href="/us/">full coverage</a>.
+    </p>
+
+    <h2>Terms</h2>
+    <p>
+      Informational only. Burn bans are set by state and local officials; confirm with the official source
+      before you burn. Some sources restrict commercial reuse (for example Texas). Check the source's terms
+      before you redistribute.
+    </p>
+  </main>
+</Base>

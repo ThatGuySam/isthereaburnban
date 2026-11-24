@@ -20,7 +20,7 @@ function isStandalone(): boolean {
 
 async function postJson(url: string, body: unknown): Promise<any> {
   const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-  const data = await res.json().catch(() => ({}));
+  const data = (await res.json().catch(() => ({}))) as { error?: string };
   if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
   return data;
 }
@@ -73,7 +73,7 @@ export function initAlerts(): void {
       if (permission !== "granted") throw new Error("Notifications are blocked for this site. Allow them in browser settings.");
       const reg = await navigator.serviceWorker.register("/sw.js");
       await navigator.serviceWorker.ready;
-      const { publicKey } = await fetch("/api/v1/push/key").then((r) => r.json());
+      const { publicKey } = (await fetch("/api/v1/push/key").then((r) => r.json())) as { publicKey?: string };
       if (!publicKey) throw new Error("Notifications aren't switched on yet. Try email for now.");
       const subscription =
         (await reg.pushManager.getSubscription()) ??

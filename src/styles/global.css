@@ -135,7 +135,8 @@ a {
 .status-meta,
 .status-note {
   background: rgba(0, 0, 0, 0.22);
-  border-radius: 999px;
+  border-radius: 14px;
+  max-width: 40rem;
   padding: 0.3rem 0.9rem;
 }
 .hero[data-status="restricted"] .status-meta,

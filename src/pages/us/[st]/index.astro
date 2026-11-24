@@ -72,7 +72,7 @@ const jsonLd = [
         el.innerHTML = "";
         const strong = document.createElement("strong");
         strong.textContent = parts.join(", ") + ".";
-        el.append(strong);
+        el.appendChild(strong);
       })
       .catch(() => {
         el.textContent = "Live counts are unavailable right now.";
