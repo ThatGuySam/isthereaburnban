@@ -130,7 +130,7 @@ export function renderStatusHtml(cs: CountyStatus, opts: RenderOptions = {}): st
   if (meta.length) lines.push(`<p class="status-meta">${meta.join('<span aria-hidden="true"> · </span>')}</p>`);
   if (opts.note) lines.push(`<p class="status-note">${escapeHtml(opts.note)}</p>`);
   if (cs.note) lines.push(`<p class="status-note">${escapeHtml(cs.note)}</p>`);
-  if (opts.link) lines.push(`<p class="status-more"><a href="${escapeHtml(opts.link)}">More about ${escapeHtml(cs.county)}<span aria-hidden="true"> →</span></a></p>`);
+  if (opts.link) lines.push(`<p class="status-more"><a href="${escapeHtml(opts.link)}">More about ${escapeHtml(cs.county)}</a></p>`);
 
   return `<div class="status" data-status="${theme.status}" data-fips="${escapeHtml(cs.fips)}" data-place="${escapeHtml(placeName(cs))}">${lines.join("")}</div>`;
 }
