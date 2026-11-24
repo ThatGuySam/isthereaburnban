@@ -103,6 +103,13 @@ export type StateDirectoryEntry = {
   notes: string; // one or two plain sentences on who issues bans there and at what level
 };
 
+/** A revision-pinned map of known county answers. An omitted FIPS is unknown. */
+export type MapStatus = {
+  revision: string;
+  expiresAt: number; // UTC epoch milliseconds
+  counties: Partial<Record<string, Exclude<BanStatus, "unknown">>>;
+};
+
 export type LookupResult = {
   query: { zip?: string; lat?: number; lon?: number; fips?: string; city?: string; state?: string };
   /** set for city= lookups: the matched incorporated place and its page (or its county page when it has none) */

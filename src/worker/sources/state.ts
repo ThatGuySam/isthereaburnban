@@ -257,8 +257,8 @@ export function applyChecks(snapshot: SnapshotData, heads: Map<string, SourceHea
   applySourceChecks(snapshot.sources, heads);
   const clock = now.getTime();
   for (const row of Object.values(snapshot.counties)) {
-    if (!row.sourceId) continue;
-    applyCountyCheck(row, heads.get(row.sourceId), snapshot.sourceVersions?.[row.sourceId], clock);
+    applyCountyCheck(row, row.sourceId ? heads.get(row.sourceId) : undefined,
+      row.sourceId ? snapshot.sourceVersions?.[row.sourceId] : undefined, clock);
   }
 }
 
@@ -269,7 +269,7 @@ export function applyCountyCheck(row: CountyStatus, head: SourceHead | undefined
     row.label = "Source decision expired";
     row.note = undefined;
     row.since = row.expires = null;
-  } else if (clock - Date.parse(row.checked) > STALE_MS && row.status !== "unknown") {
+  } else if (clock - Date.parse(row.checked) >= STALE_MS && row.status !== "unknown") {
     row.status = "unknown";
     row.label = "Source unavailable. Our last good data is over 48 hours old";
     row.note = undefined;

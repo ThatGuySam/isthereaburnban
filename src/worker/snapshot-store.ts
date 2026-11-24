@@ -47,6 +47,28 @@ export async function loadState(env: Env, index: SnapshotIndex, state: string): 
   return shard;
 }
 
+/** Bulk reads keep the map within the connection limit, including D1-only state revisions. */
+export async function loadMapStates(env: Env, index: SnapshotIndex, states: string[]): Promise<StateSnapshot[]> {
+  const cachedKeys = states.filter((st) => index.states[st]?.cached).map(stateKey);
+  const cached = cachedKeys.length ? await env.KV.get<StateSnapshot>(cachedKeys, "json").catch(() => null) : null;
+  const shards: StateSnapshot[] = [];
+  const missing: Record<string, string> = {};
+  for (const st of states) {
+    const ref = index.states[st];
+    if (!ref) continue;
+    const hit = cached?.get(stateKey(st));
+    if (hit?.revision === ref.revision) shards.push(hit);
+    else missing[st] = ref.revision;
+  }
+  if (!Object.keys(missing).length) return shards;
+  const { results } = await env.DB.prepare(`SELECT snapshot FROM snapshot_state AS shard
+    JOIN json_each(?) AS ref ON shard.state = ref.key AND shard.revision = ref.value`)
+    .bind(JSON.stringify(missing)).all<{ snapshot: string }>();
+  // During catalog lag a retained state revision can be temporarily unavailable.
+  // Leave those counties unknown until the next map refresh.
+  return shards.concat(results.map(({ snapshot }) => JSON.parse(snapshot)));
+}
+
 export async function loadActive(env: Env, index: SnapshotIndex, format: BanFormat): Promise<ActiveProjection> {
   const raw = await env.KV.get(format === "pretty" ? PRETTY_ACTIVE_KEY : ACTIVE_KEY, "text");
   const projection = raw ? decodeActive(raw) : null;

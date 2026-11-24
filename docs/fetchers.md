@@ -67,7 +67,7 @@ Each state job reuses the existing merge rules and journals its shard, transitio
 | Binding | Published data and readers |
 | --- | --- |
 | `KV` | `snapshot:v2:<ST>` holds a state shard. County and city pages, status API and MCP lookups, and state sitemaps use the relevant shard. Border ZIPs can use more than one. |
-| `KV` | `snapshot:v2:index` is the small catalog for coverage, the sitemap index, and revision checks for all shards. `snapshot:v2:active` serves the national bans API, map and fire-weather API. `snapshot:v2:active:pretty` holds the same active county text in the wire format used by MCP. Date, health and weather changes are checked at read time. |
+| `KV` | `snapshot:v2:index` is the small catalog for coverage, the sitemap index, and revision checks for all shards. `snapshot:v2:active` serves the national bans and fire-weather APIs. The map endpoint reads revision-pinned state shards in batches and returns only per-FIPS statuses and a short expiry. `snapshot:v2:active:pretty` holds the same active county text in the wire format used by MCP. Date, health and weather changes are checked at read time. |
 | `DB` | Stores source heads and normalized payloads, the resumable publication cursor, and the last two revisions of each state. A reader can fetch the exact revision from D1 if KV has a miss or returns another revision. Ready shards beyond the hourly KV budget also read from D1. |
 | `SOURCE_QUEUE` | Carries source polls, the merge coordinator and publication continuations. Keep the consumer at one concurrent invocation. |
 

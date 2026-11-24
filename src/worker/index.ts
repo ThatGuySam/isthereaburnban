@@ -88,6 +88,11 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
       if (p.get("format") === "text") return text(result.results.map(resultSentence).join("\n") + `\n${DISCLAIMER}\n`);
       return json(result, 200, here ? "private, max-age=300" : undefined);
     }
+    if (path === "/api/v1/map-status") {
+      const map = await snapshots.mapStatus();
+      const maxAge = Math.max(0, Math.floor((map.expiresAt - Date.now()) / 1000));
+      return json(map, 200, `public, max-age=${maxAge}, must-revalidate`);
+    }
     if (path === "/api/v1/bans") return jsonResponse((await snapshots.bans(p.get("state") ?? undefined)).body.join(""));
     if (path === "/api/v1/fire-weather") return json(activeFireWeather(await snapshots.weather(), p.get("state") ?? undefined));
     if (path === "/api/v1/coverage") return json(coverage(await snapshots.coverage()));

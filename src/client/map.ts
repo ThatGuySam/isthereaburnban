@@ -12,14 +12,12 @@ import { feature } from "topojson-client";
 import type { Topology, GeometryCollection } from "topojson-specification";
 import type { Feature, FeatureCollection, Geometry, Position } from "geojson";
 import { STATE_BY_FIPS } from "../shared/states-fips";
-import type { CountyStatus, SourceHealth } from "../shared/types";
+import type { MapStatus } from "../shared/types";
 import { COUNTY_CLOSED, bindSheetTriggers, locate, lookupStatus, showCounty, type ResolvedDetail, type Result } from "./place";
 
-type Coverage = Record<string, { abbr: string; coverage: "live" | "restrictions" | "directory" }>;
-type Bans = { generated: string; counties: CountyStatus[]; sources: SourceHealth[] };
 type County = Feature<Geometry, { n: string }> & { id: number };
 
-const COLOR = { ban: "#f34f49", restricted: "#f5a623", none: "#2a9d70", unknown: "#8fa3ad", untracked: "#e4e4e4" };
+const COLOR = { ban: "#f34f49", restricted: "#f5a623", none: "#2a9d70", unknown: "#8fa3ad" };
 const LONG_PRESS_MS = 500;
 const TAP_SLOP = 10;
 /** A rebuilt map that loses its context again this soon is left alone, so a GPU that keeps dropping it can't loop. */
@@ -30,7 +28,6 @@ const fipsOf = (id: number) => String(id).padStart(5, "0");
 export async function initMap(): Promise<void> {
   const host = document.getElementById("map")!;
   const app = host.closest<HTMLElement>(".map-app")!;
-  const coverage = JSON.parse(host.dataset.coverage || "{}") as Coverage;
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
   const ms = (n: number) => (reduceMotion.matches ? 0 : n);
   bindSheetTriggers();
@@ -38,10 +35,10 @@ export async function initMap(): Promise<void> {
   // Three small GeoJSON sources: one worker tiles them all, and each extra worker re-parses ~550 KB of JS.
   setWorkerCount(1);
 
-  // Colors arrive after first paint: the map draws gray first and never waits on the API.
-  const bansPromise = fetch("/api/v1/bans")
-    .then((r) => (r.ok ? (r.json() as Promise<Bans>) : null))
-    .catch(() => null);
+  // Colors arrive after first paint: the map draws unknown first and never waits on the API.
+  let projection: MapStatus | null = null;
+  let refreshing = false;
+  let refreshTimer: ReturnType<typeof setTimeout>;
   const topo = (await fetch("/data/map.topo.json").then((r) => r.json())) as Topology;
   const fc = feature(topo, topo.objects.counties as GeometryCollection) as FeatureCollection<Geometry, { n: string }>;
   const byId = new Map<number, County>();
@@ -61,7 +58,7 @@ export async function initMap(): Promise<void> {
     },
     layers: [
       { id: "bg", type: "background", paint: { "background-color": "#f7f7f5" } },
-      { id: "fill", type: "fill", source: "counties", paint: { "fill-color": ["coalesce", ["feature-state", "c"], COLOR.untracked] } },
+      { id: "fill", type: "fill", source: "counties", paint: { "fill-color": ["coalesce", ["feature-state", "c"], COLOR.unknown] } },
       {
         id: "county-lines",
         type: "line",
@@ -200,29 +197,51 @@ export async function initMap(): Promise<void> {
 
   /** Re-applies everything kept in feature-state. Runs on first load and after every rebuild or restore. */
   function restoreState() {
-    void bansPromise.then(paint);
+    paint();
     if (selected !== null) map.setFeatureState({ source: "counties", id: selected }, { sel: true });
   }
 
   // ---------- colors ----------
 
-  function paint(bans: Bans | null) {
-    const byFips = new Map((bans?.counties ?? []).map((c) => [c.fips, c]));
-    // Green only where a healthy source vouches for negatives ("full" mode). Positive-only or failing = can't confirm.
-    const healthy = new Set((bans?.sources ?? []).filter((s) => s.ok && s.mode === "full").map((s) => s.state.toUpperCase()));
+  function paint() {
+    if (!map?.getSource("counties")) return;
+    const statuses = projection && projection.expiresAt > Date.now() ? projection.counties : undefined;
     for (const id of byId.keys()) {
-      const fips = fipsOf(id);
-      const hit = byFips.get(fips);
-      let c: string = COLOR.untracked;
-      if (hit) c = hit.status === "ban" ? COLOR.ban : hit.status === "restricted" ? COLOR.restricted : COLOR.unknown;
-      else {
-        const st = coverage[fips.slice(0, 2)];
-        if (st?.coverage === "live") c = healthy.has(st.abbr) ? COLOR.none : COLOR.unknown;
-      }
-      if (c !== COLOR.untracked) map.setFeatureState({ source: "counties", id }, { c });
+      const status = statuses?.[fipsOf(id)] ?? "unknown";
+      map.setFeatureState({ source: "counties", id }, { c: COLOR[status] ?? COLOR.unknown });
     }
-    document.documentElement.dataset.mapColored = "";
+    if (!refreshing) document.documentElement.dataset.mapColored = "";
   }
+
+  async function refreshColors() {
+    if (refreshing || document.visibilityState !== "visible") return;
+    clearTimeout(refreshTimer);
+    if (projection && projection.expiresAt > Date.now()) {
+      refreshTimer = setTimeout(refreshColors, projection.expiresAt - Date.now());
+      return;
+    }
+    refreshing = true;
+    projection = null;
+    paint();
+    try {
+      const response = await fetch("/api/v1/map-status", { signal: AbortSignal.timeout(10_000) });
+      if (response.ok) {
+        const current: MapStatus = await response.json();
+        if (current.expiresAt > Date.now()) projection = current;
+      }
+    } catch {
+      // A failed or expired projection leaves all counties unconfirmed.
+    } finally {
+      refreshing = false;
+      paint();
+      refreshTimer = setTimeout(refreshColors, projection ? Math.max(0, projection.expiresAt - Date.now()) : 30_000);
+    }
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") void refreshColors();
+  });
+  addEventListener("pageshow", (e) => { if (e.persisted) void refreshColors(); });
 
   // ---------- selection + county card ----------
 
@@ -482,6 +501,7 @@ export async function initMap(): Promise<void> {
   });
 
   build();
+  void refreshColors();
   map.once("idle", () => {
     document.documentElement.dataset.mapReady = "";
   });
