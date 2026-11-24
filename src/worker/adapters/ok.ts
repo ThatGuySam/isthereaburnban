@@ -6,7 +6,7 @@ const meta = {
   state: "OK",
   sourceName: "Oklahoma Forestry Services",
   sourceUrl: arcgisUrl(LAYER, ["county_nam", "Burn_Ban_Status", "EditDate"]),
-  officialUrl: "https://forestry.ok.gov/burn-ban-info",
+  officialUrl: "https://experience.arcgis.com/experience/8bdc59b2a54a4383a9a2996fb9407580/",
 };
 
 export function classify(raw: string): { status: BanStatus; label: string } {
