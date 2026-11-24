@@ -3,7 +3,7 @@ import { extractHtml, htmlText } from "./html";
 
 // Inventory: WordPress, including the Faulkner REST search and Mississippi's Ninja Tables JSON.
 // Use the REST query only when the site exposes the relevant content there.
-export function wpRestUrl(site: string, kind: "posts" | "pages" | "search" | `pages/${number}`, query: Record<string, string> = {}): string {
+export function wpRestUrl(site: string, kind: "posts" | "pages" | "search" | `${"pages" | "posts"}/${number}`, query: Record<string, string> = {}): string {
   return wpRestEndpoint(site, `wp/v2/${kind}`, query);
 }
 
@@ -33,7 +33,7 @@ export function parseWpPage(data: unknown, expected: PageIdentity) {
   return { html: page.data.content.rendered, modified: stamp.endsWith("Z") ? stamp : `${stamp}Z` };
 }
 
-/** Extract the published page's blocks and reject updates dated after this check. */
+/** Extract a published page or post's blocks and reject updates dated after this check. */
 export async function parseWpPageBlocks(data: unknown, expected: PageIdentity, now: Date) {
   const { html, modified } = parseWpPage(data, expected);
   if (Date.parse(modified) > now.getTime()) throw new Error(`Future WordPress page update: ${expected.url}`);

@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { gunzipSync } from "node:zlib";
 import { nationalFixture, snapshotBenchmarks, timings } from "./snapshot-benchmark";
 import { SOURCES } from "../src/worker/sources/registry";
 import type { CountyStatus } from "../src/shared/types";
@@ -42,6 +43,8 @@ import { BlockedError, fetchSource } from "../src/worker/sources/lib/http";
 import { manualPdf } from "../src/worker/sources/lib/pdf";
 import { sharePointListItems } from "../src/worker/sources/lib/sharepoint";
 import { parseNinjaRows, parseWpItems } from "../src/worker/sources/lib/wordpress";
+import { maAirAdvisories, parseMassDepAdvisories } from "../src/worker/sources/ma/air-advisories";
+import { maOpenBurning, parseMaOpenBurning } from "../src/worker/sources/ma/open-burning";
 import { mergeSources, type SourceInput } from "../src/worker/sources/merge";
 import { mdSummerAir, parseMdSummerAir } from "../src/worker/sources/md/summer-air";
 import { mdDnrWoodland, parseMdWoodland } from "../src/worker/sources/md/woodland";
@@ -136,6 +139,11 @@ const deActionDay = utf8("de/fixtures/airnow-2026-07-16.dat");
 const parseDeGuidance = () => parseDeOpenBurning(JSON.parse(deGuidance), deCaptured);
 const parseDeCurrentAir = () => parseDeActionDays(deAirNow, deCaptured);
 const parseDeArchivedAir = () => parseDeActionDays(deActionDay, new Date("2026-07-17T15:00:00Z"));
+const maCaptured = new Date("2026-11-24T14:38:39Z");
+const maGuidance = utf8("ma/fixtures/woburn-open-burning-2026-11-24.json");
+const parseMaGuidance = (at = maCaptured) => parseMaOpenBurning(JSON.parse(maGuidance), at);
+const maAdvisories = gunzipSync(from("ma/fixtures/massdep-open-burning-2026-11-24.xml.gz")).toString("utf8");
+const parseMaAdvisories = (at: Date) => parseMassDepAdvisories(maAdvisories, at);
 const parseNwsLive = () => parseNwsAlerts(JSON.parse(nwsLive), nwsCaptured);
 const parseNwsArchive = () => parseNwsAlerts(JSON.parse(nwsArchive), new Date("2026-11-18T20:00Z"), { archive: true });
 const nyDecHtml = utf8("ny/fixtures/dec-open-burning-2026-11-24.html");
@@ -372,6 +380,8 @@ recordedInputs.push(
   { source: nmBernalilloOpenBurning, rows: await parseNmBernalilloCodeFixture(), checked: nmCaptured.toISOString() },
   { source: deOpenBurning, rows: await parseDeGuidance(), checked: deCaptured.toISOString() },
   { source: deActionDays, rows: parseDeCurrentAir(), checked: deCaptured.toISOString() },
+  { source: maAirAdvisories, rows: await parseMaAdvisories(maCaptured), checked: maCaptured.toISOString() },
+  { source: maOpenBurning, rows: await parseMaGuidance(), checked: maCaptured.toISOString() },
   { source: ohSeasonal, rows: await parseOhFixture(), checked },
   { source: gaEpdNonSummer, rows: await parseGaNonSummerFixture(), checked },
   { source: azPimaWildfire, rows: await parseAzPimaFixture(), checked },
@@ -441,6 +451,8 @@ const jobs: Array<[string, () => unknown]> = [
   })],
   ["HTML extract", () => blockAfterHeading(parseHtml(pfirsHtml).blocks, /prescribed burn/i)],
   ["WordPress REST and Ninja", () => [parseWpItems(JSON.parse(faulkner)), parseNinjaRows(JSON.parse(ms))]],
+  ["MA residential brush guidance and calendar", () => parseMaGuidance(new Date("2027-04-15T14:00:00Z"))],
+  ["MA MassDEP same-day advisory RSS", () => parseMaAdvisories(new Date("2026-02-18T15:00:00Z"))],
   ["CivicPlus News Flash", () => civicPlusNotices(parseHtml(placer, { links: true }), "https://www.placer.ca.gov/")],
   ["ASP.NET WebForms", () => webFormsPost(michigan, "https://www2.dnr.state.mi.us/burnpermits/", "ctl00$ContentPlaceHolder1$CntyName")],
   ["SharePoint list", () => sharePointListItems(parseHtml(kentucky), /current burn bans/i)],

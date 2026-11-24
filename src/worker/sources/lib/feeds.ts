@@ -1,7 +1,7 @@
 import { decodeEntities, cleanText } from "./html";
 
 // Inventory: Wisconsin DNR JSON/CSV, TX XML RSS, Iowa State Fire Marshal RSS/Atom,
-// Maine class-day JSON, fiResponse and other public JSON. Feed shape never establishes jurisdiction.
+// Maine class-day JSON, Mailchimp campaign RSS, fiResponse and other public JSON.
 export function parseJson<T>(text: string, accepts: (value: unknown) => value is T): T {
   const value: unknown = JSON.parse(text.replace(/^\ufeff/, ""));
   if (!accepts(value)) throw new Error("Unexpected JSON feed shape");
@@ -64,8 +64,14 @@ function feedField(xml: string, pattern: string): string {
 }
 
 /** Narrow RSS/Atom reader for notice feeds. Treat content as untrusted text and validate dates downstream. */
-export function parseFeed(xml: string): FeedEntry[] {
-  if (!/<(?:rss|feed|rdf:RDF)\b/i.test(xml) || /<!DOCTYPE/i.test(xml)) throw new Error("Expected RSS or Atom");
+export function parseFeed(xml: string, { includeText }: {
+  /** Limit body decoding to selected entries, for feeds with large embedded articles. */
+  includeText?: (entry: Omit<FeedEntry, "text">) => boolean;
+} = {}): FeedEntry[] {
+  const declarations = /<!(?:\[CDATA\[[\s\S]*?\]\]>|(DOCTYPE)\b)/gi;
+  if (!/<(?:rss|feed|rdf:RDF)\b/i.test(xml) || xml.matchAll(declarations).some((match) => match[1])) {
+    throw new Error("Expected RSS or Atom");
+  }
   return Array.from(xml.matchAll(/<(item|entry)\b[^>]*>([\s\S]*?)<\/\1>/gi), ([, kind, body]) => {
     const alternate = Array.from(body.matchAll(/<link\b([^>]+)>/gi), ([, attrs]) => attrs)
       .find((attrs) => /\bhref\s*=/i.test(attrs) && (!/\brel\s*=/i.test(attrs) || /\brel\s*=\s*["']alternate["']/i.test(attrs)));
@@ -74,12 +80,13 @@ export function parseFeed(xml: string): FeedEntry[] {
       : feedField(body, "link");
     const stamp = feedField(body, "pubDate|published|updated|dc:date");
     const time = Date.parse(stamp);
-    return {
+    const entry = {
       id: feedField(body, "guid|id") || url,
       title: feedField(body, "title"),
       url,
       published: Number.isFinite(time) ? new Date(time).toISOString() : null,
-      text: feedField(body, "description|summary|content:encoded|content"),
     };
+    const text = !includeText || includeText(entry) ? feedField(body, "description|summary|content:encoded|content") : "";
+    return { ...entry, text };
   });
 }

@@ -24,6 +24,8 @@ import { kyForestryCountyBans } from "./ky/county-bans";
 import { kySeasonal } from "./ky/seasonal";
 import type { ArcgisResponse } from "./lib/arcgis";
 import { fetchSource } from "./lib/http";
+import { maAirAdvisories } from "./ma/air-advisories";
+import { maOpenBurning } from "./ma/open-burning";
 import { mdSummerAir } from "./md/summer-air";
 import { mdDnrWoodland } from "./md/woodland";
 import { miPermits } from "./mi/permits";
@@ -172,6 +174,15 @@ export const SOURCES: readonly Source[] = [
   nmBernalilloOpenBurning,
   deOpenBurning,
   deActionDays,
+  maAirAdvisories,
+  maOpenBurning,
+  {
+    id: "ma-mass-gov-open-burning", state: "MA", scope: "state", stack: "Drupal / HTML",
+    mode: "manual", cadence: null, sourceName: "Massachusetts Department of Fire Services and MassDEP",
+    sourceUrl: "https://www.mass.gov/info-details/open-burning-safety",
+    officialUrl: "https://www.mass.gov/info-details/open-burning-safety",
+    error: "The Mass.gov guidance returned HTTP 403 during verification. Check with the local fire department for current permits and orders, and with MassDEP for air-quality closures.",
+  },
   {
     id: "de-fire-marshal-orders", state: "DE", scope: "state", stack: "WordPress / REST news search",
     mode: "manual", cadence: null, sourceName: "Delaware State Fire Marshal",

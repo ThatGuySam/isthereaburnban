@@ -473,6 +473,7 @@ test("WordPress validates a published page and keeps its rendered structure", as
   const page = { id: 12, link: url, status: "publish", modified_gmt: "2026-02-03T19:25:00",
     content: { rendered: "<h2>Current</h2><p>Stage 1</p>", protected: false } };
   expect(new URL(wpRestUrl("https://county.gov", "pages/12")).pathname).toBe("/wp-json/wp/v2/pages/12");
+  expect(new URL(wpRestUrl("https://county.gov", "posts/12")).pathname).toBe("/wp-json/wp/v2/posts/12");
   expect(parseWpPage(page, expected)).toEqual({ html: page.content.rendered, modified: "2026-02-03T19:25:00Z" });
   expect(await parseWpPageBlocks(page, expected, new Date("2026-02-03T19:25:00Z"))).toEqual({
     blocks: [{ tag: "h2", text: "Current" }, { tag: "p", text: "Stage 1" }],
@@ -572,6 +573,13 @@ test("Feeds parse Wisconsin's real CSV and JSON plus Texas's UTF-16LE RSS", () =
   expect(rss[0].text).toContain("ARCHER");
   expect(parseFeed('<feed><entry><id>1</id><title>Burn &amp; Smoke</title><link rel="alternate" href="https://county.gov/order"/><updated>2026-11-23T02:00Z</updated></entry></feed>')[0])
     .toMatchObject({ id: "1", title: "Burn & Smoke", url: "https://county.gov/order", published: "2026-11-23T02:00:00.000Z" });
+});
+
+test("RSS permits HTML doctypes inside CDATA while rejecting XML doctypes", () => {
+  const feed = '<rss><channel><item><title>Public advisory</title><description><![CDATA[<!DOCTYPE html><p>Notice</p>]]></description></item></channel></rss>';
+  expect(parseFeed(feed)[0].text).toBe("<!DOCTYPE html><p>Notice</p>");
+  expect(parseFeed(feed, { includeText: () => false })[0].text).toBe("");
+  expect(() => parseFeed("<!DOCTYPE rss>" + feed)).toThrow("Expected RSS or Atom");
 });
 
 test("Manual PDF records the signed Faulkner order's hash and Last-Modified", async () => {

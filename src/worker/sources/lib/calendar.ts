@@ -2,7 +2,8 @@ import type { CountyStatus } from "../../../shared/types";
 import { atLocalTime, localClock, localDayWindow, shiftDay, US_ZONES } from "./dates";
 
 // Inventory: Alaska burn permits and winter air rules, AZ Area A, Idaho and Utah closed fire seasons, NY DEC Open Burning, GA EPD Summer Open Burning Ban, KY fire hazard seasons, OH DNR Open Burning Regulations,
-// PA state forest fires, VA DOF 4 PM Burning Law, WV Forestry Fire Burning Guidelines, MD DNR Burning Guidance, VT open-burning permits, and DE open burning.
+// PA state forest fires, VA DOF 4 PM Burning Law, WV Forestry Fire Burning Guidelines, MD DNR Burning Guidance,
+// VT open-burning permits, DE open burning, and MA residential brush burning.
 export type CalendarRule = {
   state: string;
   officialUrl: string;
@@ -120,6 +121,12 @@ const GA_COUNTIES = new Set((
   "Bartow,Catoosa,Chattooga,Cherokee,Cobb,Dawson,Floyd,Forsyth,Gordon,Haralson,Lumpkin,Paulding,Pickens,Polk,Walker"
 ).toLowerCase().split(","));
 
+const MA_BRUSH = {
+  state: "MA", zone: US_ZONES.Eastern, status: "restricted", scope: "state",
+  officialUrl: "https://www.sec.state.ma.us/reg_pub/pdf/300/310007b.pdf#page=29",
+  scopeNote: "Residential brush, cane, driftwood and forestry debris under 310 CMR 7.07(3)(e)",
+} satisfies Pick<CalendarRule, "state" | "zone" | "status" | "scope" | "officialUrl" | "scopeNote">;
+
 export const CALENDAR_RULES: Record<string, CalendarRule> = {
   AK: {
     state: "AK", zone: US_ZONES.Alaska, status: "restricted", scope: "part",
@@ -194,6 +201,25 @@ export const CALENDAR_RULES: Record<string, CalendarRule> = {
     officialUrl: "https://eec.ky.gov/natural-resources/forestry/wildland-fire-management/pages/outdoor-burning-laws.aspx",
     label: "Seasonal daytime burning restriction", seasons: [["02-15", "04-30"], ["10-01", "12-15"]], hours: [360, 1080],
     note: "Kentucky limits burning materials that can spread fire from 6 a.m. to 6 p.m. local time during February 15 through April 30 and October 1 through December 15. The law makes exceptions for snow-covered ground and certain activities. Check local orders and air-quality rules before burning.",
+  },
+  MA_BRUSH_OFF_SEASON: {
+    ...MA_BRUSH, label: "Residential brush-burning season closed", seasons: [["05-02", "01-14"]],
+    note: "Massachusetts limits residential brush and forestry debris burning to January 15 through May 1. Cooking, qualifying agricultural burns and other activities have separate rules. Ask your local fire department about current orders.",
+  },
+  MA_BRUSH_OUTSIDE_HOURS: {
+    ...MA_BRUSH, label: "Outside residential brush-burning hours", seasons: [["01-15", "05-01"]],
+    hours: [16 * 60, 10 * 60],
+    note: "Where residential brush burning is allowed, the state limits it to 10 a.m. to 4 p.m. Eastern. Check with your local fire department for permits and any stricter rules.",
+  },
+  MA_BRUSH_PERMITS: {
+    ...MA_BRUSH, label: "Residential brush-burning permit required", seasons: [["01-15", "05-01"]],
+    hours: [10 * 60, 16 * 60],
+    note: "Get a permit from your local fire department before burning. MassDEP can suspend burning because of air quality, and local fire officials can withhold or revoke permits. Some municipalities prohibit residential brush burning year-round.",
+  },
+  MA_BRUSH_MUNICIPAL: {
+    ...MA_BRUSH, scope: "part", scopeNote: "Municipalities named in 310 CMR 7.07(3)(e)",
+    label: "Year-round residential brush-burning prohibition",
+    note: "Massachusetts prohibits residential brush, cane, driftwood and forestry debris burning in this municipality year-round. Cooking and qualifying agricultural burns have separate rules. Check with the local fire department.",
   },
   NC_HIGH_HAZARD: {
     state: "NC", zone: US_ZONES.Eastern, status: "restricted", scope: "part",

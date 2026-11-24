@@ -386,10 +386,17 @@
   {
     "abbr": "MA",
     "name": "Massachusetts",
-    "coverage": "directory",
-    "publisher": "Massachusetts Department of Fire Services",
+    "coverage": "restrictions",
+    "publisher": "Massachusetts Department of Environmental Protection",
     "officialUrl": "https://www.mass.gov/info-details/open-burning-safety",
-    "notes": "Massachusetts allows open burning only in season and only where the local fire department permits it each day."
+    "extraUrls": [
+      { "label": "State open-burning regulation (310 CMR 7.07)", "url": "https://www.sec.state.ma.us/reg_pub/pdf/300/310007b.pdf#page=29" },
+      { "label": "Massachusetts city and town websites", "url": "https://www.mass.gov/lists/massachusetts-city-and-town-websites" },
+      { "label": "MassDEP no-burn advisories", "url": "https://us2.campaign-archive.com/home/?u=9e5b5851d32503d96e163675f&id=9cd9c675f8" },
+      { "label": "MassDEP air-quality forecast", "url": "https://eeaonline.eea.state.ma.us/dep/massair/web/#/pollution/map/forecast" },
+      { "label": "Massachusetts state park alerts", "url": "https://www.mass.gov/info-details/dcr-park-alerts" }
+    ],
+    "notes": "Residential brush and forestry debris burning is limited to 10 a.m. to 4 p.m. from January 15 through May 1. It is prohibited year-round in 22 cities and towns. Check with your local fire department for a permit and current restrictions. MassDEP can also stop burning because of air quality. Cooking and qualifying agricultural burns have separate rules."
   },
   {
     "abbr": "MI",
