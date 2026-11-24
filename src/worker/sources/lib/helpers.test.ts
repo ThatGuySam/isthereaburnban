@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { syncfusionGridRows, webFormsPost } from "./aspnet";
 import { arcgisDateOnly, arcgisDistinctUrl, arcgisEditWindow, arcgisLocalDate, arcgisRows, arcgisTimestampOffset, codedDomains, dataLastEditDate, findOperationalLayers, queryArcgis } from "./arcgis";
 import { activeRule, calendarDayWindows, calendarStatusRows, CALENDAR_RULES } from "./calendar";
-import { civicPlusAlertDetails, civicPlusNotices, civicPlusPageParagraphs, civicPlusUrl } from "./civicplus";
+import { civicPlusAlertDetails, civicPlusNotices, civicPlusPageParagraphs, civicPlusPageText, civicPlusUrl } from "./civicplus";
 import { localDayWindow, parseLocalIsoTimestamp, parseWeekdayDate, reportWindow, weekdayOnOrAfter } from "./dates";
 import { decodeFeed, parseCsv, parseDotNetJsonDate, parseFeed, parseJson } from "./feeds";
 import { blockAfterHeading, extractHtml, extractHtmlGrid, localClock, numberedRuleSection, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, US_ZONES } from "./html";
@@ -61,6 +61,18 @@ test("classic CivicPlus page paragraphs exclude sidebars and require the expecte
     widget("Applies in town.") + '</div><aside>' + widget("Unrelated.") + '</aside></div>';
   expect(await civicPlusPageParagraphs(markup, "Fire Rules")).toEqual(["Applies in town."]);
   await expect(civicPlusPageParagraphs(markup, "Other Rules")).rejects.toThrow("CivicPlus content page");
+});
+
+test("CivicPlus rich-text widgets preserve headings and list order inside the published page", async () => {
+  const markup = `<div id="moduleContent"><div id="page"><h1 id="versionHeadLine">Fire Rules</h1>
+    <div class="pageContent"><nav><ul><li>Menu</li></ul></nav>
+    <div class="widget editor"><div class="fr-view"><h2>Ordinance</h2>
+    <p>Applies on <strong>public land</strong>.</p><h3>Conditions</h3>
+    <ul><li>One &amp; two</li><li>Three</li></ul></div></div></div></div></div>`;
+  expect(await civicPlusPageParagraphs(markup, "Fire Rules")).toEqual(["Applies on public land."]);
+  expect(await civicPlusPageText(markup, "Fire Rules", ["h2", "h3", "p", "li"])).toEqual([
+    "Ordinance", "Applies on public land.", "Conditions", "One & two", "Three",
+  ]);
 });
 
 test("HTML table cells separate adjacent paragraphs without splitting inline text", async () => {

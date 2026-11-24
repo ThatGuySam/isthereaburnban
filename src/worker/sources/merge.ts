@@ -151,9 +151,11 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
     }
     const { row, confirmed } = result;
     const before = prev?.counties[fips];
+    const isRecurring = recurring.has(row.sourceId ?? "");
+    const newBan = row.status === "ban" && !isRecurring;
     if (!before) {
       changed[fips] = row.since ?? row.sourceUpdated ?? at;
-    } else if (before.status !== row.status && (recurring.has(row.sourceId ?? "") || recurring.has(before.sourceId ?? ""))) {
+    } else if (before.status !== row.status && !newBan && (isRecurring || recurring.has(before.sourceId ?? ""))) {
       // A scheduled calendar window opened or closed: not news, no alert, no lastmod churn.
     } else if (before.status !== row.status) {
       changed[fips] = at;

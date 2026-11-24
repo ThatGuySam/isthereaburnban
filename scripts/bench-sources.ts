@@ -32,6 +32,8 @@ import { parseGwinnett } from "../src/worker/sources/ga/gwinnett";
 import { idIdlStages, parseIdlStages } from "../src/worker/sources/id/idl-stages";
 import { idKootenaiAir, parseKootenaiAir } from "../src/worker/sources/id/kootenai-air";
 import { idSeasonal, parseIdahoSeasonal } from "../src/worker/sources/id/seasonal";
+import { ilCrawfordCountyOrders, parseCrawfordCountyOrders } from "../src/worker/sources/il/crawford";
+import { illinoisGuidanceSources, parseIllinoisGuidance } from "../src/worker/sources/il/guidance";
 import { kyForestryCountyBans, parseKentuckyCountyBans } from "../src/worker/sources/ky/county-bans";
 import { kySeasonal, parseKentuckySeasonal } from "../src/worker/sources/ky/seasonal";
 import { arcgisRows, codedDomains, dataLastEditDate, findOperationalLayers } from "../src/worker/sources/lib/arcgis";
@@ -155,6 +157,19 @@ const parseMeStatute = () => parseMaineOpenBurning(meStatute, meCaptured);
 const ctCaptured = new Date("2026-11-24T15:15:32Z");
 const ctReport = utf8("ct/fixtures/fire-danger-2026-11-24.html");
 const parseCtFireDangerFixture = () => parseCtFireDanger(ctReport, ctCaptured);
+const ilCaptured = new Date("2026-11-24T15:37:59Z");
+const ilCrawford = utf8("il/fixtures/wtye-crawford-2026-11-24.json");
+const parseIlCrawford = (at = ilCaptured) => parseCrawfordCountyOrders(JSON.parse(ilCrawford), at);
+const ilJobs = ([
+  ["IL EPA open-burning FAQ and calendar", "state", "epa-faq"],
+  ["IL Cook County permits", "cook", "cook-permit"],
+  ["IL Kane County burning rules", "kane", "kane-rules"],
+  ["IL Lake County yard waste and calendar", "lake", "lake-rules"],
+  ["IL Naperville burning rules", "naperville", "naperville-rules"],
+] as const).map(([name, jurisdiction, file]) => {
+  const html = utf8(`il/fixtures/${file}-2026-11-24.html`);
+  return [name, illinoisGuidanceSources[jurisdiction], (at = ilCaptured) => parseIllinoisGuidance(html, jurisdiction, at)] as const;
+});
 const parseNwsLive = () => parseNwsAlerts(JSON.parse(nwsLive), nwsCaptured);
 const parseNwsArchive = () => parseNwsAlerts(JSON.parse(nwsArchive), new Date("2026-11-18T20:00Z"), { archive: true });
 const nyDecHtml = utf8("ny/fixtures/dec-open-burning-2026-11-24.html");
@@ -396,6 +411,8 @@ recordedInputs.push(
   { source: meTownPermitHolds, rows: parseMeClasses(), checked: meCaptured.toISOString() },
   { source: meOpenBurningPermits, rows: await parseMeStatute(), checked: meCaptured.toISOString() },
   { source: ctDeepFireDanger, rows: await parseCtFireDangerFixture(), checked: ctCaptured.toISOString() },
+  { source: ilCrawfordCountyOrders, rows: parseIlCrawford(now), checked },
+  ...await Promise.all(ilJobs.map(async ([, source, parse]) => ({ source, rows: await parse(now), checked }))),
   { source: ohSeasonal, rows: await parseOhFixture(), checked },
   { source: gaEpdNonSummer, rows: await parseGaNonSummerFixture(), checked },
   { source: azPimaWildfire, rows: await parseAzPimaFixture(), checked },
@@ -470,6 +487,8 @@ const jobs: Array<[string, () => unknown]> = [
   ["ME fire danger and town permit rules", parseMeClasses],
   ["ME open-burning statute and calendar", parseMeStatute],
   ["CT DEEP daily fire danger", parseCtFireDangerFixture],
+  ["IL Crawford County orders via WTYE", parseIlCrawford],
+  ...ilJobs.map(([name, , parse]): [string, () => unknown] => [name, parse]),
   ["CivicPlus News Flash", () => civicPlusNotices(parseHtml(placer, { links: true }), "https://www.placer.ca.gov/")],
   ["ASP.NET WebForms", () => webFormsPost(michigan, "https://www2.dnr.state.mi.us/burnpermits/", "ctl00$ContentPlaceHolder1$CntyName")],
   ["SharePoint list", () => sharePointListItems(parseHtml(kentucky), /current burn bans/i)],

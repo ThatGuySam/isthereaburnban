@@ -21,6 +21,8 @@ import { gaGwinnett } from "./ga/gwinnett";
 import { idIdlStages } from "./id/idl-stages";
 import { idKootenaiAir } from "./id/kootenai-air";
 import { idSeasonal } from "./id/seasonal";
+import { ilCrawfordCountyOrders } from "./il/crawford";
+import { illinoisGuidanceSources } from "./il/guidance";
 import { kyForestryCountyBans } from "./ky/county-bans";
 import { kySeasonal } from "./ky/seasonal";
 import type { ArcgisResponse } from "./lib/arcgis";
@@ -182,6 +184,22 @@ export const SOURCES: readonly Source[] = [
   meOpenBurningPermits,
   maOpenBurning,
   ctDeepFireDanger,
+  ...Object.values(illinoisGuidanceSources),
+  ilCrawfordCountyOrders,
+  {
+    id: "il-mchenry-open-burning", state: "IL", scope: "part", stack: "Granicus / Vision HTML",
+    mode: "manual", cadence: null, sourceName: "McHenry County Department of Health",
+    sourceUrl: "https://www.mchenrycountyil.gov/departments/health-department/environmental-health/public-health-nuisance/open-burning-of-landscape-waste",
+    officialUrl: "https://www.mchenrycountyil.gov/departments/health-department/environmental-health/public-health-nuisance/open-burning-of-landscape-waste",
+    error: "Direct requests returned Akamai HTTP 403. Ask the county or your fire district about the landscape-waste ordinance and emergency orders.",
+  },
+  {
+    id: "il-hamilton-ema-orders", state: "IL", scope: "county", stack: "Facebook / individual notice",
+    mode: "manual", cadence: null, sourceName: "Hamilton County Emergency Management Agency",
+    sourceUrl: "https://www.facebook.com/hamiltoncoema/",
+    officialUrl: "https://www.hamiltoncountyil.gov/departments/emergency-management",
+    error: "The September 7 order was posted on Facebook. Ask the county EMA to verify its current status.",
+  },
   {
     id: "ma-mass-gov-open-burning", state: "MA", scope: "state", stack: "Drupal / HTML",
     mode: "manual", cadence: null, sourceName: "Massachusetts Department of Fire Services and MassDEP",

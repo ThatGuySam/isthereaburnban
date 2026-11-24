@@ -7,19 +7,31 @@ export function civicPlusUrl(site: string, channel: "alerts" | "news" | "mobile"
   return new URL({ alerts: "/AlertCenter.aspx", news: "/CivicAlerts.aspx", mobile: "/m/newsflash" }[channel], site).href;
 }
 
-/** Read the text widgets in a classic CivicPlus content page, excluding menus and sidebars. */
-export async function civicPlusPageParagraphs(input: Response | string, title: string): Promise<string[]> {
+type PageBlock = "h2" | "h3" | "p" | "li";
+
+/** Read selected blocks from CivicPlus text and rich-text widgets, excluding navigation and sidebars. */
+export async function civicPlusPageText(
+  input: Response | string, title: string, blocks: readonly PageBlock[] = ["p"],
+): Promise<string[]> {
   const page = "#moduleContent #page";
+  const widgets = [`${page} .pageContent .widgetText .textContent`, `${page} .pageContent .widget.editor .fr-view`];
+  const content = widgets.flatMap((widget) => blocks.flatMap((block) => block === "li"
+    ? [`${widget} > ul > li`, `${widget} > ol > li`]
+    : [`${widget} > ${block}`]));
   const rows = await extractHtmlGrid(input, {
     row: page,
-    cell: `${page} #versionHeadLine, ${page} .pageContent .widgetText .textContent > p`,
+    cell: [`${page} #versionHeadLine`, ...content].join(", "),
   });
   const [heading, ...body] = rows[0] ?? [];
-  const paragraphs = body.map(({ text }) => text).filter(Boolean);
-  if (rows.length !== 1 || heading?.text !== title || !paragraphs.length) {
+  const text = body.map((block) => block.text).filter(Boolean);
+  if (rows.length !== 1 || heading?.text !== title || !text.length) {
     throw new Error(`CivicPlus content page: expected ${title} and its text widgets`);
   }
-  return paragraphs;
+  return text;
+}
+
+export function civicPlusPageParagraphs(input: Response | string, title: string): Promise<string[]> {
+  return civicPlusPageText(input, title);
 }
 
 /** Read the visible details of a CivicPlus emergency alert widget below its unique title. */

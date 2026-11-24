@@ -286,10 +286,48 @@
   {
     "abbr": "IL",
     "name": "Illinois",
-    "coverage": "directory",
-    "publisher": "Illinois EPA",
+    "coverage": "restrictions",
+    "publisher": "Illinois EPA and local authorities",
     "officialUrl": "https://epa.illinois.gov/topics/forms/air-permits/open-burning.html",
-    "notes": "Illinois has state open-burning rules, and towns and fire districts issue their own restrictions. There is no statewide list of bans."
+    "extraUrls": [
+      {
+        "label": "Illinois EPA open-burning rules",
+        "url": "https://epa.illinois.gov/topics/air-quality/open-burning/faq.html"
+      },
+      {
+        "label": "Cook County burn permits",
+        "url": "https://www.cookcountyil.gov/service/open-burning-permit"
+      },
+      {
+        "label": "Kane County ZIP-code rules",
+        "url": "https://health.kanecountyil.gov/Pages/Burning-Regulations.aspx"
+      },
+      {
+        "label": "Unincorporated Lake County burning rules",
+        "url": "https://www.lakecountyil.gov/4438/Open-Burning-Restrictions"
+      },
+      {
+        "label": "Naperville burn permits",
+        "url": "https://www.naperville.il.us/471/Open-Burning-Permits"
+      },
+      {
+        "label": "Bartlett Fire Protection District burning rules",
+        "url": "https://bartlettilfd.gov/235/Open-Burning-Regulations"
+      },
+      {
+        "label": "Crawford County Sheriff's Office",
+        "url": "https://crawfordcounty.illinois.gov/department/sheriff/"
+      },
+      {
+        "label": "Illinois local emergency management contacts",
+        "url": "https://ready.illinois.gov/content/dam/soi/en/web/iemaohs/contacts/documents/localemadirectory.pdf"
+      },
+      {
+        "label": "Shawnee National Forest alerts",
+        "url": "https://www.fs.usda.gov/r09/shawnee/alerts"
+      }
+    ],
+    "notes": "Illinois limits open burning by material, purpose and location. Cities and counties have their own rules, and fire protection districts can issue temporary bans. We report standing rules and Crawford County orders when verified. Check your local fire department or land manager for current rules at your burn site."
   },
   {
     "abbr": "IN",
