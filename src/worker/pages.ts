@@ -2,9 +2,10 @@
 import countiesData from "../data/counties.json";
 import cityStates from "../data/places-states.json";
 import { cityRulesUrl } from "../shared/city-rules";
-import { answerMeta, escapeHtml, heroStyle, localDate, placeStatus, renderCityHtml, renderStatusHtml, renderStatusLine, statusTheme } from "../shared/render";
+import { answerMeta, escapeHtml, heroStyle, placeStatus, renderCityHtml, renderStatusHtml, statusTheme } from "../shared/render";
 import { STATES, STATE_BY_ABBR } from "../shared/states-fips";
 import type { CountyStatus, SnapshotData } from "../shared/types";
+import { countyPath } from "./counties";
 import { statusFor } from "./lookup";
 import type { Env } from "./env";
 import type { SnapshotReader } from "./snapshot";
@@ -17,8 +18,8 @@ const BY_PATH = new Map(COUNTIES.map((c) => [`${c.state.toLowerCase()}/${c.slug}
 
 const PAGE_CACHE = "public, max-age=300";
 
-function countyStatus(snapshot: SnapshotData, c: County): CountyStatus {
-  return statusFor(snapshot, c.fips);
+function countyStatus(snapshot: SnapshotData, c: County): CountyStatus & { url: string } {
+  return { ...statusFor(snapshot, c.fips), url: countyPath(c.fips) };
 }
 
 /** Collects a text node across chunks and replaces it once complete. */
@@ -47,7 +48,7 @@ class JsonLdDateModified {
 const COUNTY_BY_FIPS = new Map(COUNTIES.map((c) => [c.fips, c]));
 
 /** Answer for the page's counties, read from <html data-answer-fips> before the head streams by. */
-type PageAnswer = { list: CountyStatus[]; city: string | null; changed?: string; meta: { title: string; description: string } | null };
+type PageAnswer = { list: ReturnType<typeof countyStatus>[]; city: string | null; changed?: string; meta: { title: string; description: string } | null };
 
 function pageAnswer(snapshot: SnapshotData, question: string, fipsAttr: string, city: string | null): PageAnswer | null {
   const list = fipsAttr
@@ -138,27 +139,7 @@ export async function handlePage(request: Request, env: Env, snapshots: Snapshot
           el.setInnerContent(renderCityHtml(answer.list, answer.city, cityRulesUrl(url.pathname), now), { html: true });
           return;
         }
-        const note = el.getAttribute("data-note") ?? undefined;
-        el.setInnerContent(renderStatusHtml(countyStatus(snapshot, c), { relativeTimeBase: now, note }), { html: true });
-      },
-    })
-    .on("[data-status-line]", {
-      element(el) {
-        const c = COUNTY_BY_FIPS.get(el.getAttribute("data-fips") ?? "");
-        if (c && snapshot) el.setInnerContent(renderStatusLine(countyStatus(snapshot, c)), { html: true });
-      },
-    })
-    .on("[data-status-changed]", {
-      element(el) {
-        if (!answer) return;
-        const first = answer.list[0];
-        const parts: string[] = [];
-        // Absolute dates in the HTML, for readers and agents that never run the relative-time script.
-        if (first.sourceUrl && first.checked) parts.push(`Checked <time datetime="${escapeHtml(first.checked)}">${escapeHtml(localDate(first.checked, first.state))}</time>.`);
-        if (answer.changed) parts.push(`Status last changed <time datetime="${escapeHtml(answer.changed)}">${escapeHtml(localDate(answer.changed, first.state))}</time>.`);
-        if (!parts.length) return;
-        el.removeAttribute("hidden");
-        el.setInnerContent(parts.join(" "), { html: true });
+        el.setInnerContent(renderStatusHtml(countyStatus(snapshot, c), { relativeTimeBase: now }), { html: true });
       },
     });
 

@@ -1,6 +1,6 @@
 // Status wording, colors and hero markup. Pure functions shared by the Worker (HTMLRewriter
 // injection) and the browser (client-side lookups), so every surface says the same thing.
-import type { BanStatus, CountyStatus, FireWeatherAlert, LookupResult, PlaceStatus, StateDirectoryEntry } from "./types";
+import type { BanStatus, CountyStatus, FireWeatherAlert, LookupResult, PlaceStatus, ScopedOrder, StateDirectoryEntry } from "./types";
 
 export type HeroStatus = PlaceStatus | "checking";
 
@@ -116,10 +116,6 @@ export type RenderOptions = {
   /** epoch ms used for "checked N min ago" (defaults to now) */
   relativeTimeBase?: number;
   lastKnown?: boolean;
-  /** link to the county page ("More about Tulsa County") */
-  link?: string;
-  /** extra quiet line under the sentence, e.g. "Closest match for 74199" */
-  note?: string;
 };
 
 function timeTag(iso: string, text: string): string {
@@ -131,18 +127,13 @@ export function renderStatusHtml(cs: CountyStatus, opts: RenderOptions = {}): st
   const theme = statusTheme(opts.lastKnown ? "unknown" : cs.status);
   const base = opts.relativeTimeBase ?? Date.now();
   const official = cs.officialUrl
-    ? `<a class="official" href="${escapeHtml(cs.officialUrl)}" target="_blank" rel="noopener">Official source<span class="sr-only"> (${escapeHtml(cs.sourceName || "official site")}, opens in new tab)</span></a>`
+    ? `<a class="official" href="${escapeHtml(cs.officialUrl)}" target="_blank" rel="noopener">${cs.sourceUrl ? "Official source" : "Official directory"}<span class="sr-only"> (${escapeHtml(cs.sourceName || "official site")}, opens in new tab)</span></a>`
     : "";
 
   const meta: string[] = [];
   if (official) meta.push(official);
   // A county with no feed (sourceUrl empty) was never "checked"; don't imply it was.
   if (cs.checked && cs.sourceUrl) meta.push(`<span>checked ${timeTag(cs.checked, relativeTime(cs.checked, base))}</span>`);
-  if ((cs.status === "ban" || cs.status === "restricted") && cs.since) {
-    meta.push(`<span>since <time datetime="${escapeHtml(cs.since)}">${escapeHtml(shortDate(cs.since))}</time></span>`);
-  }
-  if (cs.expires) meta.push(`<span>until <time datetime="${escapeHtml(cs.expires)}">${escapeHtml(shortDate(cs.expires))}</time></span>`);
-  const weather = renderAlertLineHtml(cs, base);
 
   const sentence = opts.lastKnown ? `Last known on ${shortDate(cs.checked)} · ${statusSentence(cs)}` : statusSentence(cs);
   const lines: string[] = [
@@ -150,10 +141,6 @@ export function renderStatusHtml(cs: CountyStatus, opts: RenderOptions = {}): st
     `<p class="status-sentence">${escapeHtml(sentence)}</p>`,
   ];
   if (meta.length) lines.push(`<p class="status-meta">${meta.join('<span aria-hidden="true"> · </span>')}</p>`);
-  if (weather) lines.push(weather);
-  if (opts.note) lines.push(`<p class="status-note">${escapeHtml(opts.note)}</p>`);
-  if (cs.note) lines.push(`<p class="status-note">${escapeHtml(cs.note)}</p>`);
-  if (opts.link) lines.push(`<p class="status-more"><a href="${escapeHtml(opts.link)}">More about ${escapeHtml(cs.county)}</a></p>`);
 
   return `<div class="status" data-status="${theme.status}" data-fips="${escapeHtml(cs.fips)}" data-place="${escapeHtml(placeName(cs))}">${lines.join("")}</div>`;
 }
@@ -171,12 +158,12 @@ export function currentAlerts(cs: Pick<CountyStatus, "alerts">, now: number = Da
   });
 }
 
-/** "8 PM" on the county's clock, or "Tue 8 PM" when that's not today there. */
+/** Display the zone explicitly because some states span more than one. */
 export function alertUntil(iso: string, state: string, now: number = Date.now()): string {
   const t = new Date(iso);
   if (Number.isNaN(t.getTime())) return "";
   const timeZone = stateTimeZone(state);
-  const time = t.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone }).replace(":00", "");
+  const time = t.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone, timeZoneName: "short" }).replace(":00", "");
   const day = (d: Date) => d.toLocaleDateString("en-US", { timeZone });
   return day(t) === day(new Date(now)) ? time : `${t.toLocaleDateString("en-US", { weekday: "short", timeZone })} ${time}`;
 }
@@ -214,7 +201,7 @@ export function renderCheckingHtml(place?: string): string {
   return `<div class="status" data-status="checking"><p class="status-word status-word--long">Checking…</p><p class="status-sentence">${escapeHtml(sentence)}</p></div>`;
 }
 
-/** A county we have no live status for: "Not sure" plus the state's official link. Never "none". */
+/** A county with no confirmed report can still link to an official directory. */
 export function unknownStatus(
   county: { fips: string; state: string; name: string },
   entry: Pick<StateDirectoryEntry, "publisher" | "officialUrl"> | undefined,
@@ -254,14 +241,6 @@ export function stateTimeZone(state: string): string {
   return "America/New_York";
 }
 
-/** "Nov 23, 2026" on the state's calendar. */
-export function localDate(iso: string | null | undefined, state: string): string {
-  if (!iso) return "";
-  const t = Date.parse(iso);
-  if (Number.isNaN(t)) return "";
-  return new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: stateTimeZone(state) });
-}
-
 export function placeStatus(list: Pick<CountyStatus, "status">[]): PlaceStatus {
   const first = list[0]?.status;
   return first === undefined ? "unknown" : list.every((c) => c.status === first) ? first : "depends";
@@ -274,7 +253,7 @@ export function locationConfirmation(result: LookupResult): string {
 
 export const DEPENDS_SENTENCE = "Depends on your county";
 
-export function renderCityHtml(list: CountyStatus[], city: string, localRulesUrl?: string, now = Date.now()): string {
+export function renderCityHtml(list: (CountyStatus & { url?: string })[], city: string, localRulesUrl?: string, now = Date.now()): string {
   if (!list.length) return renderCheckingHtml(city);
   const local = localRulesUrl
     ? `<p class="status-meta"><a href="${escapeHtml(localRulesUrl)}" target="_blank" rel="noopener">City fire rules</a></p>` : "";
@@ -287,7 +266,8 @@ export function renderCityHtml(list: CountyStatus[], city: string, localRulesUrl
     const official = row.officialUrl
       ? `<a href="${escapeHtml(row.officialUrl)}" target="_blank" rel="noopener">${row.sourceUrl ? "Official source" : "Official directory"}</a>` : "";
     const checked = row.sourceUrl && row.checked ? `<span>checked ${timeTag(row.checked, relativeTime(row.checked, now))}</span>` : "";
-    const meta = [official, checked].filter(Boolean).join('<span aria-hidden="true"> · </span>');
+    const details = row.url ? `<a href="${escapeHtml(row.url)}">County details</a>` : "";
+    const meta = [official, checked, details].filter(Boolean).join('<span aria-hidden="true"> · </span>');
     return `<li><strong>${escapeHtml(statusTheme(row.status).word)}</strong> · ${escapeHtml(statusSentence(row))}.${meta ? ` <span class="status-meta">${meta}</span>` : ""}</li>`;
   }).join("");
   return `<div class="status" data-status="${status}">
@@ -313,8 +293,46 @@ export function answerMeta(question: string, list: CountyStatus[], cityName?: st
   };
 }
 
-/** One-line status for lists ("Nope: There is no burn ban active for Wagoner County, OK."). */
-export function renderStatusLine(cs: CountyStatus): string {
-  const theme = statusTheme(cs.status);
-  return `<strong class="status-dot status-dot--${theme.status}">${escapeHtml(theme.word)}</strong> ${escapeHtml(statusSentence(cs))}.`;
+type ReportDates = Pick<CountyStatus, "since" | "expires" | "checked" | "sourceUpdated" |
+  "lastAttemptedAt" | "firstSeenAt" | "statusChangedAt" | "validFrom" | "validUntil">;
+
+function renderReportDates(report: ReportDates): string {
+  const dates = [
+    ["Effective", report.since], ["Through", report.expires],
+    ["Publisher report date", report.sourceUpdated],
+    ["First recorded", report.firstSeenAt], ["Published status changed", report.statusChangedAt],
+    ["Last successful check", report.checked],
+    ["Latest check attempt", report.lastAttemptedAt !== report.checked ? report.lastAttemptedAt : null],
+    ["Decision starts", report.validFrom !== report.since ? report.validFrom : null],
+    ["Decision valid until", report.validUntil],
+  ];
+  const items = dates.map(([label, value]) => {
+    if (!value) return "";
+    const day = shortDate(value);
+    if (!day) return "";
+    const stamp = value.includes("T") ? `${day} at ${new Date(value).toISOString().slice(11, 16)} UTC` : day;
+    return `<div><dt>${escapeHtml(label)}</dt><dd><time datetime="${escapeHtml(value)}">${escapeHtml(stamp)}</time></dd></div>`;
+  }).join("");
+  return items ? `<dl class="report-dates">${items}</dl>` : "";
+}
+
+function renderOrder(order: ScopedOrder): string {
+  const source = order.officialUrl ? `<a href="${escapeHtml(order.officialUrl)}" target="_blank" rel="noopener">${escapeHtml(order.sourceName)}</a>` : escapeHtml(order.sourceName);
+  return `<li><strong>${escapeHtml(order.label)}</strong><p>${escapeHtml(order.scopeNote)}</p>
+    ${order.note ? `<p>${escapeHtml(order.note)}</p>` : ""}<p>${source}</p>${renderReportDates(order)}</li>`;
+}
+
+export function renderReportDetailsHtml(row: CountyStatus, now = Date.now()): string {
+  const broader = row.countywide;
+  const countywide = broader ? `<p>${escapeHtml(statusSentence({ ...row, ...broader, scope: "county", scopeNote: undefined }))}.
+    ${broader.officialUrl ? `<a href="${escapeHtml(broader.officialUrl)}" target="_blank" rel="noopener">County reporting source</a>` : ""}</p>` : "";
+  const orders = row.orders?.filter((order) => order.status === "ban" || order.status === "restricted");
+  return `<div class="report-details">
+    ${row.scopeNote ? `<p>${escapeHtml(row.scopeNote)}</p>` : ""}
+    ${row.note ? `<p>${escapeHtml(row.note)}</p>` : ""}
+    ${countywide}
+    ${renderReportDates(row)}
+    ${orders?.length ? `<h3>Reported orders and rules</h3><ul class="report-orders">${orders.map(renderOrder).join("")}</ul>` : ""}
+    ${renderAlertLineHtml(row, now)}
+  </div>`;
 }

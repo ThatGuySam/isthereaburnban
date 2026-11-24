@@ -1,6 +1,6 @@
 // @ts-nocheck -- bun test types are not installed; this file runs under `bun test`, not the Worker build.
 import { describe, expect, test } from "bun:test";
-import { alertText, currentAlerts, renderAlertLineHtml, renderStatusHtml } from "./render";
+import { alertText, currentAlerts, renderAlertLineHtml, renderReportDetailsHtml, renderStatusHtml } from "./render";
 
 // 2026-11-24 12:00 CST
 const NOW = Date.parse("2026-11-24T18:00:00Z");
@@ -21,14 +21,14 @@ const tulsa = {
 
 describe("NWS fire-weather line", () => {
   test("uses ends before expires, on the county's clock", () => {
-    expect(alertText(redFlag, "OK", NOW)).toBe("Red Flag Warning until 8 PM");
+    expect(alertText(redFlag, "OK", NOW)).toBe("Red Flag Warning until 8 PM CST");
     // Same instant reads an hour earlier in Mountain time.
-    expect(alertText(redFlag, "CO", NOW)).toBe("Red Flag Warning until 7 PM");
+    expect(alertText(redFlag, "CO", NOW)).toBe("Red Flag Warning until 7 PM MST");
   });
 
   test("names the weekday when it ends on another local day", () => {
     const later = { ...redFlag, ends: "2026-11-26T02:00:00Z" };
-    expect(alertText(later, "OK", NOW)).toBe("Red Flag Warning until Wed 8 PM");
+    expect(alertText(later, "OK", NOW)).toBe("Red Flag Warning until Wed 8 PM CST");
   });
 
   test("drops ended alerts and duplicate events", () => {
@@ -37,19 +37,34 @@ describe("NWS fire-weather line", () => {
     expect(renderAlertLineHtml({ state: "OK", alerts: [ended] }, NOW)).toBe("");
   });
 
-  test("hero markup puts one linked text-style line under the official-source line", () => {
+  test("details show one linked weather alert with an explicit time zone", () => {
     const html = renderStatusHtml({ ...tulsa, alerts: [redFlag] }, { relativeTimeBase: NOW });
-    const meta = html.indexOf('class="status-meta"');
-    const alert = html.indexOf('class="status-alert"');
-    expect(meta).toBeGreaterThan(-1);
-    expect(alert).toBeGreaterThan(meta);
-    expect(html).toContain("⚠︎");
-    expect(html).toContain(`href="${redFlag.url}"`);
-    expect(html).toContain("Red Flag Warning until 8 PM");
-    expect(html.match(/status-alert/g)).toHaveLength(1);
+    expect(html).toContain('class="status-meta"');
+    expect(html).not.toContain('class="status-alert"');
+    expect(renderReportDetailsHtml({ ...tulsa, alerts: [redFlag] }, NOW)).toContain("Red Flag Warning until 8 PM CST");
+    const detail = renderReportDetailsHtml({ ...tulsa, alerts: [redFlag] }, NOW);
+    expect(detail).toContain("⚠︎");
+    expect(detail).toContain(`href="${redFlag.url}"`);
+    expect(detail.match(/status-alert/g)).toHaveLength(1);
   });
 
   test("no alerts, no line", () => {
     expect(renderStatusHtml(tulsa, { relativeTimeBase: NOW })).not.toContain("status-alert");
   });
+});
+
+test("the headline keeps the scoped answer and source while details carry dates and exemptions", () => {
+  const report = { ...tulsa, status: "restricted", scope: "part", scopeNote: "Tulsa Fire District",
+    label: "Burn ban in Tulsa Fire District", note: "Exemptions apply to covered permits.",
+    since: "2026-11-20", firstSeenAt: "2026-11-21T17:00:00Z", statusChangedAt: "2026-11-22T17:00:00Z",
+    sourceUpdated: "2026-11-23T20:00:00Z" };
+  const hero = renderStatusHtml(report, { relativeTimeBase: NOW });
+  expect(hero).toContain("Burn ban in Tulsa Fire District");
+  expect(hero).toContain("checked");
+  expect(hero).not.toContain("Exemptions apply");
+  expect(hero).not.toContain("Nov 20, 2026");
+  const detail = renderReportDetailsHtml(report, NOW);
+  for (const item of ["Effective", "First recorded", "Published status changed", "Publisher report date", "Exemptions apply"]) {
+    expect(detail).toContain(item);
+  }
 });

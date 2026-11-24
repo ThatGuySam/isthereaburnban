@@ -159,15 +159,13 @@ html:has(.hero[data-mode="home"]) {
 
 /* The quiet line: official source, checked time. Tone-on-tone (--meta), 4.5:1 on every status. */
 .status-meta,
-.status-alert,
-.status-note {
+.status-alert {
   margin: 0.85rem auto 0;
   max-width: 40rem;
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--meta);
 }
-.status-note,
 .status-alert {
   margin-top: 0.25rem;
 }
@@ -179,16 +177,6 @@ html:has(.hero[data-mode="home"]) {
   color: inherit;
   text-decoration-thickness: 1px;
   text-underline-offset: 0.2em;
-}
-
-/* Map panel only: link to the county page. */
-.status-more {
-  margin: 0.5rem 0 0;
-  font-size: 0.95rem;
-  font-weight: 700;
-}
-.status-more a {
-  color: var(--meta) !important;
 }
 
 /* First visit: one primary action and one quiet one. */
@@ -976,10 +964,6 @@ body[data-filtering] [data-unfiltered] {
 }
 .vs-county .status-meta,
 .vs-county .status-alert,
-.vs-county .status-note {
-  margin: 0.55rem 0 0;
-  font-size: 0.85rem;
-}
 .vs-actions {
   display: flex;
   gap: 0.5rem;
@@ -1086,4 +1070,30 @@ body[data-filtering] [data-unfiltered] {
 }
 .dev li + li {
   margin-top: 0.4rem;
+}
+
+.report-details {
+  text-align: left;
+}
+.report-dates {
+  font-size: 0.9rem;
+  margin-block: 1rem;
+}
+.report-dates div + div {
+  margin-top: 0.4rem;
+}
+.report-dates dt {
+  font-weight: 700;
+}
+.report-dates dd {
+  margin: 0;
+}
+.report-orders {
+  padding-left: 1.2rem;
+}
+.report-orders li + li {
+  margin-top: 1rem;
+}
+.report-orders p {
+  margin-block: 0.3rem;
 }

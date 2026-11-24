@@ -85,7 +85,7 @@ export function locate(): Promise<{ lat: string; lon: string }> {
 
 // ---------- events ----------
 
-export type SheetName = "location" | "alert" | "menu";
+export type SheetName = "location" | "details" | "alert" | "menu";
 export type OpenDetail = {
   sheet: SheetName;
   fips?: string;

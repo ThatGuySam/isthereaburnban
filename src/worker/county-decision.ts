@@ -28,7 +28,7 @@ export function countyDecision(row: CountyStatus, now: number): CountyStatus {
   if (!selected || (row.status === "restricted" && row.scope !== "part" && selected.status !== "ban")) return row;
 
   const { status, scopeNote, label, sourceUrl, ...order } = selected;
-  const scopedLabel = status === "ban" ? `Burn ban in ${scopeNote}` : label;
+  const scopedLabel = status === "ban" ? `Burn ban in ${scopeNote.replace(/^within /i, "")}` : label;
   if (row.scope === "part" && row.status === "restricted" && row.sourceId === order.sourceId &&
     row.scopeNote === scopeNote && status !== "ban") return row;
   const countywide = row.countywide ?? (row.scope !== "part" && !row.standing && row.sourceUrl ? {

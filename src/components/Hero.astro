@@ -10,10 +10,9 @@ interface Props {
   place?: string;
   /** county page path, for the menu's links */
   url?: string;
-  /** quiet line under the answer, e.g. "Tulsa is in Tulsa County." (the Worker keeps it when it injects status) */
-  note?: string;
+  multiCounty?: boolean;
 }
-const { mode, fips, place, url, note } = Astro.props;
+const { mode, fips, place, url, multiCounty = false } = Astro.props;
 const home = mode === "home";
 // Keep this markup in sync with src/worker/pages.ts, which rewrites [data-hero] and [data-status-slot].
 const ask = renderAskHtml();
@@ -29,7 +28,7 @@ const ask = renderAskHtml();
 >
   <div class="hero-inner">
     {home && <h1 class="sr-only">Is there a burn ban near you?</h1>}
-    <div data-status-slot data-fips={fips} data-note={note} aria-live="polite" set:html={home ? ask : renderCheckingHtml(place)} />
+    <div data-status-slot data-fips={fips} aria-live="polite" set:html={home ? ask : renderCheckingHtml(place)} />
     {home && (
       <div class="hero-ask">
         <button type="button" class="hero-cta" data-locate>
@@ -41,10 +40,11 @@ const ask = renderAskHtml();
     )}
     <p class="hero-links">
       <button type="button" class="hero-link" data-sheet="location">Change location</button>
-      <button type="button" class="hero-link" data-sheet="alert" data-fips={fips} data-place={place}>
+      {!multiCounty && <button type="button" class="hero-link" data-sheet="details" data-fips={fips} data-place={place}>Details</button>}
+      {!multiCounty && <button type="button" class="hero-link" data-sheet="alert" data-fips={fips} data-place={place}>
         <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 3a6 6 0 0 0-6 6v3.5L4.5 16h15L18 12.5V9a6 6 0 0 0-6-6Zm-2 15a2 2 0 0 0 4 0h-4Z" fill="currentColor" /></svg>
         Alert me
-      </button>
+      </button>}
     </p>
   </div>
   <button type="button" class="hero-mark" data-sheet="menu" data-fips={fips} data-place={place} data-url={url} aria-label="Menu">

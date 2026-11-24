@@ -76,7 +76,7 @@ const jsonLd = [
   apiHref={apiHref}
   sheets
 >
-  <Hero mode="county" fips={primary.fips} place={`${primary.name}, ${p.state}`} url={countyPath(primary)} />
+  <Hero mode="county" fips={primary.fips} place={`${primary.name}, ${p.state}`} url={countyPath(primary)} multiCounty={others.length > 0} />
 
   <div class="page">
     <nav class="crumbs" aria-label="Breadcrumb">
@@ -88,7 +88,6 @@ const jsonLd = [
       </ol>
     </nav>
     <h1>{title}</h1>
-    <p data-status-changed hidden></p>
 
     <section>
       <h2>City or county?</h2>
@@ -111,7 +110,6 @@ const jsonLd = [
           {counties.map((c) => (
             <li>
               <a href={countyPath(c)}>{c.name}</a>
-              <span data-status-line data-fips={c.fips}>Checking…</span>
             </li>
           ))}
         </ul>

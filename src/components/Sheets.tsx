@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Drawer } from "vaul";
 import type { LookupResult } from "../shared/types";
-import { locationConfirmation, renderStatusHtml, statusTheme } from "../shared/render";
+import { locationConfirmation, renderReportDetailsHtml, renderStatusHtml, statusSentence, statusTheme } from "../shared/render";
 import {
   COUNTY_CLOSED,
   emitResolved,
@@ -77,6 +77,7 @@ export default function Sheets() {
           {detail.sheet === "alert" && (
             <AlertSheet key={detail.fips} detail={detail} pickPlace={() => setDetail({ sheet: "location" })} />
           )}
+          {detail.sheet === "details" && <DetailsSheet key={detail.fips} detail={detail} />}
           {detail.sheet === "menu" && <MenuSheet detail={detail} />}
         </Drawer.Content>
       </Drawer.Portal>
@@ -141,7 +142,10 @@ function CountySheet() {
           <Drawer.Title className="vs-place">{r ? `${r.county}, ${r.state}` : detail?.place}</Drawer.Title>
           <div className="vs-county" aria-live="polite">
             {detail?.state === "ready" && r ? (
-              <div dangerouslySetInnerHTML={{ __html: renderStatusHtml(r) }} />
+              <>
+                <div dangerouslySetInnerHTML={{ __html: renderStatusHtml(r) }} />
+                <div dangerouslySetInnerHTML={{ __html: renderReportDetailsHtml(r) }} />
+              </>
             ) : (
               <p className="status-sentence">{detail?.state === "error" ? detail.message : `Checking ${detail?.place ?? ""}…`}</p>
             )}
@@ -166,6 +170,34 @@ function CountySheet() {
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>
+  );
+}
+
+function DetailsSheet({ detail }: { detail: OpenDetail }) {
+  const [result, setResult] = useState<Result>();
+  const [message, setMessage] = useState(detail.fips ? "Checking…" : "Choose a county to see its report.");
+  useEffect(() => {
+    if (!detail.fips) return;
+    let open = true;
+    void lookupStatus({ fips: detail.fips }).then(({ results }) => {
+      if (!open) return;
+      if (results[0]) setResult(results[0]);
+      else setMessage("No county report available.");
+    }).catch(() => { if (open) setMessage("Couldn't load the county report."); });
+    return () => { open = false; };
+  }, [detail.fips]);
+
+  return (
+    <div className="vs-body">
+      <Drawer.Title className="vs-title">{detail.place ?? "County report"}</Drawer.Title>
+      {result ? <>
+        <p className="vs-sub">{statusSentence(result)}.</p>
+        {result.officialUrl && <p><a href={result.officialUrl} target="_blank" rel="noopener">
+          {result.sourceUrl ? result.sourceName : "Official directory"}
+        </a></p>}
+        <div dangerouslySetInnerHTML={{ __html: renderReportDetailsHtml(result) }} />
+      </> : <p className="vs-msg" aria-live="polite">{message}</p>}
+    </div>
   );
 }
 
