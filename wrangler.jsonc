@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "isthereaburnban-preview",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/api/*", "/mcp", "/mcp/*", "/us/*", "/sitemap.xml", "/sitemaps/*"]
+  },
+  "triggers": { "crons": ["7 * * * *"] },
+  "kv_namespaces": [{ "binding": "KV", "id": "0e241f78e10a4066aafc2d3a41e8588c" }],
+  "d1_databases": [{ "binding": "DB", "database_name": "isthereaburnban", "database_id": "983734fc-8fbd-4a3b-a92c-0821e9c30248", "migrations_dir": "migrations" }],
+  "vars": { "SITE_URL": "https://isthereaburnban-preview.workers.dev", "VAPID_PUBLIC_KEY": "", "VAPID_SUBJECT": "mailto:alerts@isthereaburnban.com" },
+  "observability": { "enabled": true }
+}
