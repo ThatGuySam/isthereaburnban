@@ -9,85 +9,191 @@ const coverage = Object.fromEntries(
   states.filter((s) => STATE_BY_ABBR[s.abbr]).map((s) => [STATE_BY_ABBR[s.abbr].fips, { abbr: s.abbr, coverage: s.coverage }]),
 );
 ---
-<Base title="Burn ban map · Is There a Burn Ban?" description="Map of current county burn bans and restrictions across the US, from official state sources." path="/map/" sheets footer={false}>
-  <main id="content" class="map-page">
-    <header class="map-bar">
-      <h1><a href="/" aria-label="Is There a Burn Ban? Home"><Mark /><span class="map-site">Is There a Burn Ban?</span></a> <span class="map-label">Map</span></h1>
-      <div class="map-actions">
-        <button type="button" class="map-btn" data-pin-toggle aria-pressed="false">Drop a pin</button>
-        <a class="map-btn" href="/us/"><span class="map-btn-long">Browse by state</span><span class="map-btn-short">States</span></a>
-      </div>
+<Base title="Burn ban map · Is There a Burn Ban?" description="Map of current county burn bans and restrictions across the US, from official state sources." path="/map/" sheets footer={false} themeColor="#f7f7f5">
+  <link slot="head" rel="preload" href="/data/map.topo.json" as="fetch" crossorigin="anonymous" />
+  <main id="content" class="map-app" data-resolves-place>
+    <a class="map-skip" href="/us/">Browse states instead</a>
+    <div id="map" data-coverage={JSON.stringify(coverage)} role="region" aria-label="County burn ban map. Tap a county for its status. For a list, use Browse states instead."></div>
+    <p class="map-loading" data-map-loading>Loading map…</p>
+
+    <header class="map-head">
+      <h1 class="map-chip map-surface">
+        <a href="/" aria-label="Is There a Burn Ban? Home"><Mark /></a>
+        <span>Map</span>
+      </h1>
     </header>
-    <div class="map-wrap">
-      <div id="map" data-coverage={JSON.stringify(coverage)} role="application" aria-label="County burn ban map. Use Browse by state for a list."></div>
-      <p class="map-loading" data-map-loading>Loading map…</p>
-      <details class="legend" data-legend>
-        <summary>Legend</summary>
-        <ul aria-label="Legend">
-          <li><span style="background:#f34f49"></span>Burn ban</li>
-          <li><span style="background:#f5a623"></span>Restrictions</li>
-          <li><span style="background:#2a9d70"></span>No ban reported</li>
-          <li><span style="background:#8fa3ad"></span>Can't confirm</li>
-          <li><span style="background:#e4e4e4"></span>Not tracked</li>
-        </ul>
-      </details>
-      <aside class="map-panel hero" data-map-panel hidden aria-live="polite">
-        <button type="button" class="map-close" data-panel-close aria-label="Close">
-          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" /></svg>
-        </button>
-        <div data-status-slot></div>
-        <p class="hero-links">
-          <button type="button" class="hero-link" data-sheet="alert">Alert me</button>
-        </p>
-      </aside>
+
+    <div class="map-legend map-surface" id="map-legend" data-legend inert>
+      <ul aria-label="Legend">
+        <li><span style="background:#f34f49"></span>Burn ban</li>
+        <li><span style="background:#f5a623"></span>Restrictions</li>
+        <li><span style="background:#2a9d70"></span>No ban reported</li>
+        <li><span style="background:#8fa3ad"></span>Can't confirm</li>
+        <li><span style="background:#e4e4e4"></span>Not tracked</li>
+      </ul>
+      <p class="map-hint">Tap a county. Press and hold to drop a pin.</p>
+      <p class="map-fine"><a href="/us/">Browse states</a> · Boundaries: US Census</p>
     </div>
+
+    <nav class="map-controls" aria-label="Map controls">
+      <button type="button" class="map-pill map-surface" data-sheet="location">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="2.25" /><path d="m15 15 5 5" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" /></svg>
+        <span>Search</span>
+      </button>
+      <div class="map-cluster">
+        <button type="button" class="map-fab map-surface" data-legend-toggle aria-expanded="false" aria-controls="map-legend" aria-label="Legend">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3 2.5 8 12 13l9.5-5L12 3Z" fill="currentColor" /><path d="m4 12.2 8 4.3 8-4.3M4 16.2l8 4.3 8-4.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" /></svg>
+        </button>
+        <button type="button" class="map-fab map-surface" data-locate aria-label="Show my county">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M21 3 3 10.5l7.5 3 3 7.5L21 3Z" fill="currentColor" /></svg>
+        </button>
+        <button type="button" class="map-fab map-surface" data-zoom="out" aria-label="Zoom out">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" /></svg>
+        </button>
+        <button type="button" class="map-fab map-surface" data-zoom="in" aria-label="Zoom in">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M5 12h14M12 5v14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" /></svg>
+        </button>
+      </div>
+    </nav>
   </main>
 </Base>
 
 <style is:global>
-  .map-page { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
-  .map-bar { display: flex; flex-wrap: nowrap; gap: 0.75rem; align-items: center; justify-content: space-between; padding-block: max(0.5rem, env(safe-area-inset-top)) 0.5rem; padding-inline: max(1rem, env(safe-area-inset-left)) max(1rem, env(safe-area-inset-right)); border-bottom: 1px solid var(--line); }
-  .map-bar h1 { font-size: 1.05rem; font-weight: 800; margin: 0; white-space: nowrap; overflow: clip; text-overflow: ellipsis; min-width: 0; }
-  .map-bar h1 { display: flex; align-items: center; gap: 0.4rem; }
-  .map-bar h1 a { color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; min-height: 2.75rem; }
-  .map-bar h1 .mark-svg { color: #f34f49; width: 1.4rem; height: 1.4rem; flex: none; }
-  .map-label { color: var(--muted); font-weight: 600; }
-  .map-btn-short { display: none; }
-  .map-actions { display: flex; gap: 0.4rem; flex: none; }
-  .map-btn { font: inherit; font-weight: 700; font-size: 0.85rem; min-height: 2.25rem; padding: 0.3rem 0.8rem; border-radius: 999px; border: 2px solid #1a1a1a; background: #fff; color: #1a1a1a; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; }
-  .map-btn[aria-pressed="true"] { background: #1a1a1a; color: #fff; }
-  .map-wrap { position: relative; flex: 1; min-height: 20rem; }
-  #map { position: absolute; inset: 0; background: #f7f7f5; }
-  #map.pin-mode { cursor: crosshair; }
-  .map-loading { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; font-weight: 700; pointer-events: none; }
-  /* Bottom-left: zoom is top-left, attribution bottom-right. Lifted above the attribution row. */
-  .legend { position: absolute; left: max(0.75rem, env(safe-area-inset-left)); bottom: max(1.75rem, env(safe-area-inset-bottom)); z-index: 500; margin: 0; padding: 0.4rem 0.75rem; background: rgb(255 255 255 / 0.95); border-radius: 10px; font-size: 0.8rem; font-weight: 600; box-shadow: 0 2px 10px rgb(0 0 0 / 0.15); max-width: calc(100% - 1.5rem); }
-  .legend summary { cursor: pointer; font-weight: 700; min-height: 1.75rem; display: flex; align-items: center; gap: 0.35rem; }
-  .legend ul { list-style: none; margin: 0.25rem 0 0.15rem; padding: 0; }
-  .legend li { display: flex; align-items: center; gap: 0.4rem; }
-  .legend li span { width: 0.9rem; height: 0.9rem; border-radius: 3px; border: 1px solid rgb(0 0 0 / 0.25); flex: none; }
-  .map-panel { position: absolute; z-index: 600; right: 0.75rem; top: 0.75rem; width: min(22rem, calc(100% - 1.5rem)); min-height: 0; padding: 1.25rem 1rem 0.5rem; border-radius: 14px; box-shadow: 0 8px 30px rgb(0 0 0 / 0.3); }
-  .map-panel[hidden] { display: none; }
-  .map-panel .status-word { font-size: 3.5rem; }
-  .map-panel .status-sentence { font-size: 1.05rem; margin-top: 0.5rem; }
-  .map-panel .hero-links { margin-top: 0.25rem; }
-  .map-close { position: absolute; top: 0.5rem; right: 0.5rem; display: grid; place-items: center; background: rgb(0 0 0 / 0.2); color: inherit; border: 0; border-radius: 999px; width: 2.25rem; height: 2.25rem; cursor: pointer; }
-  @media (max-width: 640px) {
-    .map-btn-long, .map-site { display: none; }
-    .map-btn-short { display: inline; }
-    .map-label { color: var(--ink); font-weight: 800; }
-    .map-panel { top: auto; left: 0.75rem; right: 0.75rem; width: auto; bottom: max(1.75rem, env(safe-area-inset-bottom)); }
-    /* The panel takes the bottom of the map; the legend steps aside while it is open. */
-    .map-wrap:has(.map-panel:not([hidden])) .legend { display: none; }
+  /* The map is a full-screen app: the document never scrolls, rubber-bands or pull-to-refreshes. */
+  html:has(.map-app),
+  html:has(.map-app) body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    background: #f7f7f5;
+  }
+  .map-app {
+    --edge: 12px;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    position: fixed;
+    inset: 0;
+    overflow: clip;
+    background: #f7f7f5;
+    /* Pinch never zooms the page here, and no double-tap zoom on the chrome. */
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #map {
+    position: absolute;
+    inset: 0;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    opacity: 0;
+    transition: opacity 0.4s var(--ease-out);
+  }
+  #map[data-ready] { opacity: 1; }
+  #map:focus-visible, #map canvas:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; box-shadow: none; }
+
+  /* Minimal MapLibre base styles (instead of its 70 KB stylesheet). */
+  .maplibregl-map { position: absolute; inset: 0; overflow: hidden; }
+  .maplibregl-canvas { position: absolute; left: 0; top: 0; }
+  .maplibregl-canvas-container.maplibregl-interactive { cursor: grab; }
+  .maplibregl-canvas-container.maplibregl-interactive:active { cursor: grabbing; }
+  .maplibregl-map[data-hover] .maplibregl-canvas-container.maplibregl-interactive { cursor: pointer; }
+  .maplibregl-marker { position: absolute; top: 0; left: 0; will-change: transform; }
+
+  .map-loading { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; font-weight: 700; color: var(--muted); pointer-events: none; }
+
+  .map-skip { position: absolute; z-index: 20; top: var(--edge); left: 50%; translate: -50% -200%; padding: 0.6rem 1rem; border-radius: 999px; background: #1a1a1a; color: #fff; font-weight: 700; }
+  .map-skip:focus { translate: -50% 0; }
+
+  /* Floating chrome: small translucent surfaces over the map. */
+  .map-surface {
+    background: rgb(255 255 255 / 0.88);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid rgb(0 0 0 / 0.08);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.08), 0 6px 20px rgb(0 0 0 / 0.1);
+    color: var(--ink);
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    .map-surface { background: #fff; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  }
+
+  .map-head { position: absolute; z-index: 5; top: max(var(--edge), env(safe-area-inset-top)); left: max(var(--edge), env(safe-area-inset-left)); }
+  .map-chip { display: flex; align-items: center; gap: 0.3rem; height: 44px; margin: 0; padding: 0 1rem 0 0.25rem; border-radius: 999px; font-size: 1.05rem; font-weight: 800; }
+  .map-chip a { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 999px; color: #f34f49; }
+  .map-chip .mark-svg { width: 1.5rem; height: 1.5rem; }
+
+  .map-controls {
+    position: absolute; z-index: 5;
+    left: max(var(--edge), env(safe-area-inset-left));
+    right: max(var(--edge), env(safe-area-inset-right));
+    bottom: max(var(--edge), env(safe-area-inset-bottom));
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 8px;
+    pointer-events: none;
+  }
+  .map-controls > * { pointer-events: auto; }
+  .map-cluster { display: flex; gap: 8px; }
+  .map-fab, .map-pill {
+    font: inherit; font-weight: 700; font-size: 0.95rem;
+    height: 44px; border-radius: 999px; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .map-fab { width: 44px; padding: 0; }
+  .map-pill { padding: 0 1.1rem 0 0.9rem; min-width: 0; }
+  .map-fab[aria-expanded="true"] { background: #1a1a1a; color: #fff; }
+  .map-fab[aria-busy="true"] svg { animation: map-pulse 1s ease-in-out infinite; }
+  @keyframes map-pulse { 50% { opacity: 0.3; } }
+
+  .map-legend {
+    position: absolute; z-index: 6;
+    right: max(var(--edge), env(safe-area-inset-right));
+    bottom: calc(max(var(--edge), env(safe-area-inset-bottom)) + 44px + 8px);
+    max-width: calc(100% - 2 * var(--edge));
+    margin: 0; padding: 0.7rem 0.95rem; border-radius: 18px;
+    font-size: 0.85rem; font-weight: 600;
+    /* grows from the legend button */
+    transform-origin: calc(100% - 178px) 100%;
+    opacity: 0; transform: translateY(6px) scale(0.97); visibility: hidden;
+    transition: opacity 0.18s var(--ease-out), transform 0.18s var(--ease-out), visibility 0s linear 0.18s;
+  }
+  .map-legend.is-open { opacity: 1; transform: none; visibility: visible; transition-delay: 0s; }
+  .map-legend ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.15rem; }
+  .map-legend li { display: flex; align-items: center; gap: 0.5rem; }
+  .map-legend li span { width: 0.95rem; height: 0.95rem; border-radius: 4px; border: 1px solid rgb(0 0 0 / 0.2); flex: none; }
+  .map-hint { margin: 0.5rem 0 0; color: var(--muted); }
+  .map-fine { margin: 0.25rem 0 0; color: var(--muted); font-size: 0.78rem; }
+
+  /* The county card owns the bottom while it is open; the controls step aside. */
+  .map-controls { transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out); }
+  .map-app[data-card="open"] .map-controls { opacity: 0; transform: translateY(12px); }
+  .map-app[data-card="open"] .map-controls > * { pointer-events: none; }
+
+  .map-pin { width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 4px solid #1a1a1a; box-shadow: 0 2px 8px rgb(0 0 0 / 0.35); }
+
+  @media (hover: hover) and (pointer: fine) {
+    .map-fab:hover, .map-pill:hover { background: #fff; }
+    .map-fab[aria-expanded="true"]:hover { background: #333; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .map-fab, .map-pill { transition: transform 0.12s var(--ease-out), background-color 0.16s ease; }
+    .map-fab:active, .map-pill:active { transform: scale(0.95); }
+  }
+  @media (min-width: 48rem) {
+    .map-app { --edge: 16px; }
   }
 </style>
 
 <script>
-  // Legend starts open where there's room for it, collapsed on phones.
-  const legend = document.querySelector<HTMLDetailsElement>("[data-legend]");
-  if (legend && matchMedia("(min-width: 641px)").matches) legend.open = true;
-  // Leaflet + TopoJSON load only on this page, after first paint.
-  const start = () => import("../../client/map").then((m) => m.initMap());
-  if ("requestIdleCallback" in window) requestIdleCallback(start, { timeout: 1500 });
-  else setTimeout(start, 50);
+  import { bindSheetTriggers } from "../../client/place";
+  bindSheetTriggers();
+  // Legend starts open where there's room (before the map fits the country around it).
+  if (matchMedia("(min-width: 48rem)").matches) {
+    document.querySelector("[data-legend]")?.classList.add("is-open");
+    document.querySelector("[data-legend]")?.removeAttribute("inert");
+    document.querySelector("[data-legend-toggle]")?.setAttribute("aria-expanded", "true");
+  }
+  // iOS Safari: a pinch that starts on the chrome would zoom the page. The map handles its own pinch.
+  document.addEventListener("gesturestart", (e) => e.preventDefault(), { passive: false });
+  // MapLibre + geometry load only on this page. The map is the page, so start right away.
+  void import("../../client/map").then((m) => m.initMap());
 </script>

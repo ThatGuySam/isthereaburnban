@@ -2,8 +2,13 @@
 // Pages open it with openSheet() (src/client/place.ts) or any [data-sheet] element.
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Drawer } from "vaul";
+import { renderStatusHtml, stateTimeZone, statusTheme } from "../shared/render";
 import {
+  COUNTY_CLOSED,
   emitResolved,
+  openSheet,
+  takePendingCounty,
+  type CountyDetail,
   locate,
   lookupStatus,
   readPlace,
@@ -37,7 +42,18 @@ export default function Sheets() {
 
   const close = () => setOpen(false);
 
+  // Radix leaves body `pointer-events: none` behind when the county card (non-modal) opens while this
+  // modal sheet is closing (Search on /map/ hands its county to the card). Clear it once we're closed.
+  useEffect(() => {
+    if (open) return;
+    const t = setTimeout(() => {
+      if (document.body.style.pointerEvents === "none") document.body.style.pointerEvents = "";
+    }, 600);
+    return () => clearTimeout(t);
+  }, [open]);
+
   return (
+    <>
     <Drawer.Root open={open} onOpenChange={setOpen} autoFocus>
       <Drawer.Portal>
         <Drawer.Overlay className="vs-overlay" />
@@ -65,6 +81,137 @@ export default function Sheets() {
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>
+    <CountySheet />
+    </>
+  );
+}
+
+// ---------- County card (map page) ----------
+
+/**
+ * A detached Vaul card for the county tapped on /map/. Non-modal: no overlay, the map keeps
+ * panning and zooming behind it, and tapping another county swaps the contents in place.
+ */
+function CountySheet() {
+  const [detail, setDetail] = useState<CountyDetail | null>(null);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const apply = (d: CountyDetail | null) => {
+      if (d) setDetail(d);
+      setOpen(Boolean(d));
+    };
+    const onCounty = (e: Event) => {
+      takePendingCounty();
+      apply((e as CustomEvent<CountyDetail | null>).detail);
+    };
+    document.addEventListener("itabb:county", onCounty);
+    const pending = takePendingCounty();
+    if (pending !== undefined) apply(pending);
+    return () => document.removeEventListener("itabb:county", onCounty);
+  }, []);
+
+  const onOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next) document.dispatchEvent(new CustomEvent(COUNTY_CLOSED));
+  };
+
+  const r = detail?.result;
+  const status = detail?.state === "ready" && r ? r.status : "checking";
+  const theme = statusTheme(status);
+  // An object, not heroStyle()'s string: Radix merges style props by spreading them.
+  const vars = { "--bg": theme.color, "--fg": theme.text, "--meta": theme.meta } as Record<string, string>;
+  return (
+    <Drawer.Root open={open} onOpenChange={onOpenChange} modal={false} noBodyStyles>
+      <Drawer.Portal>
+        <Drawer.Content
+          className="vs vs--detached"
+          data-status={status}
+          style={vars}
+          aria-describedby={undefined}
+          // The map handles taps outside: another county swaps the card, empty map closes it.
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          <Drawer.Handle className="vs-handle" />
+          <button type="button" className="vs-close" onClick={() => onOpenChange(false)} aria-label="Close">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" />
+            </svg>
+          </button>
+          <Drawer.Title className="vs-place">{r ? `${r.county}, ${r.state}` : detail?.place}</Drawer.Title>
+          <div className="vs-county" aria-live="polite">
+            {detail?.state === "ready" && r ? (
+              <div dangerouslySetInnerHTML={{ __html: renderStatusHtml(r) }} />
+            ) : (
+              <p className="status-sentence">{detail?.state === "error" ? detail.message : `Checking ${detail?.place ?? ""}…`}</p>
+            )}
+          </div>
+          {detail?.state === "ready" && r && <AlertLines result={r} />}
+          {detail?.state === "ready" && r && (
+            <div className="vs-actions" data-vaul-no-drag>
+              {r.url && (
+                <a className="vs-btn vs-btn--on" href={r.url}>
+                  Open county page
+                </a>
+              )}
+              <button
+                type="button"
+                className="vs-btn vs-btn--ghost"
+                onClick={() => openSheet({ sheet: "alert", fips: r.fips, place: `${r.county}, ${r.state}` })}
+              >
+                <BellIcon />
+                Alert me
+              </button>
+            </div>
+          )}
+        </Drawer.Content>
+      </Drawer.Portal>
+    </Drawer.Root>
+  );
+}
+
+/** NWS fire-weather alert, as returned by /api/v1/status (optional field). Times are UTC ISO or null. */
+type FireAlert = { event: string; headline?: string | null; onset?: string | null; expires?: string | null; ends?: string | null; url?: string | null };
+
+/** "8 PM", or "Tue 8 PM" when it ends on another day, on the county's clock. */
+function untilText(iso: string, state: string): string {
+  const t = new Date(iso);
+  const timeZone = stateTimeZone(state);
+  const time = t.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone }).replace(":00", "");
+  const day = (d: Date) => d.toLocaleDateString("en-US", { timeZone });
+  return day(t) === day(new Date()) ? time : `${t.toLocaleDateString("en-US", { weekday: "short", timeZone })} ${time}`;
+}
+
+/** Active fire-weather alerts as quiet lines: weather is a signal, not a ban, so it never changes the status. */
+function AlertLines({ result }: { result: Result }) {
+  const now = Date.now();
+  const alerts = ((result as Result & { alerts?: FireAlert[] }).alerts ?? []).filter((a) => {
+    const end = a.ends ?? a.expires;
+    return a.event && (!end || Date.parse(end) > now);
+  });
+  if (!alerts.length) return null;
+  return (
+    <ul className="vs-alerts" role="list">
+      {alerts.map((a, i) => {
+        const end = a.ends ?? a.expires;
+        const text = end ? `${a.event} until ${untilText(end, result.state)}` : a.event;
+        return (
+          <li key={i}>
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+              <path d="M12 3 2 20h20L12 3Zm0 6v5m0 3v.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            {a.url ? (
+              <a href={a.url} target="_blank" rel="noopener">
+                {text}
+                <span className="sr-only"> (National Weather Service, opens in new tab)</span>
+              </a>
+            ) : (
+              <span>{text}</span>
+            )}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -77,7 +224,8 @@ function LocationSheet({ detail, done }: { detail: OpenDetail; done: () => void 
   const hasPlace = Boolean(readPlace()?.fips);
 
   function choose(result: Result, extra: Omit<ResolvedDetail, "result"> = {}) {
-    if (document.querySelector("[data-hero]")) {
+    // Pages that take the result in place (the home hero, the map) listen for itabb:resolved.
+    if (document.querySelector("[data-hero], [data-resolves-place]")) {
       emitResolved({ result, ...extra });
       done();
     } else if (result.url) {
