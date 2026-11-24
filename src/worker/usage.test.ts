@@ -52,3 +52,12 @@ describe("usage counts", () => {
     expect(points[0].blobs[5]).toBe("404");
   });
 });
+
+test("analytics bucket unrecognized MCP method and tool values", () => {
+  const points = [];
+  const env = { USAGE: { writeDataPoint: (p) => points.push(p) } };
+  const req = new Request("https://x.test/mcp", { method: "POST" });
+  recordUsage(env, req, new Response(null, { status: 400 }), { method: "account@example.test", tool: "40143" });
+  recordUsage(env, req, new Response(null, { status: 400 }), { method: "tools/call", tool: "my address" });
+  expect(points.map((p) => p.blobs.slice(2, 4))).toEqual([["other", ""], ["tools/call", "other"]]);
+});

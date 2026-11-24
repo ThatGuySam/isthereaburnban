@@ -73,7 +73,7 @@ const jsonLd = [
     <h1>{title}</h1>
     {state && (
       <section>
-        <h2>Official source</h2>
+        <h2>Official directory</h2>
         <p>
           <a href={state.officialUrl} target="_blank" rel="noopener">{state.publisher}</a>
           {" "}<span class={`badge badge--${state.coverage}`}>{COVERAGE_LABEL[state.coverage]}</span>
@@ -90,7 +90,7 @@ const jsonLd = [
       <h2>Who issues burn bans in {stateName}</h2>
       <p>{state?.notes ?? "Burn bans are set by state and local authorities. Check with your county emergency manager or fire department."}</p>
       {state?.coverage !== "live" && (
-        <p class="callout">We don't have a live county feed for {stateName} yet, so this page can't confirm whether {c.name} has a ban. Use the official source above.</p>
+        <p class="callout">Sources for {stateName} cover selected areas and activities. Check the local authority for your burn site.</p>
       )}
     </section>
 

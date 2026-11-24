@@ -402,7 +402,7 @@ function AlertSheet({ detail, pickPlace }: { detail: OpenDetail; pickPlace: () =
     setEmailMsg("Signing you up…");
     try {
       const res = await postJson<{ emailEnabled?: boolean }>("/api/v1/email/subscribe", { email, fips: [fips] });
-      setEmailMsg(res.emailEnabled === false ? "You're on the list. Email alerts start soon." : "Check your inbox to confirm.");
+      setEmailMsg(res.emailEnabled === false ? "Your signup is pending. Email delivery is unavailable." : "Check your inbox to confirm.");
       form.reset();
     } catch (err) {
       setEmailMsg(err instanceof Error ? `Couldn't sign up: ${err.message}` : "Couldn't sign up.");
@@ -412,7 +412,7 @@ function AlertSheet({ detail, pickPlace }: { detail: OpenDetail; pickPlace: () =
   return (
     <div className="vs-body">
       <Drawer.Title className="vs-title">Alerts for {place}</Drawer.Title>
-      <p className="vs-sub">Only when the burn ban status changes.</p>
+      <p className="vs-sub">Alerts for eligible changes we detect in this county.</p>
 
       {mode === "ready" && (
         <>

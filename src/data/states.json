@@ -131,7 +131,7 @@
         "url": "https://ssl.arb.ca.gov/pfirs/cb3/cb3.php"
       }
     ],
-    "notes": "CARB reports agricultural and prescribed burn decisions by air basin. CAL FIRE handles residential permits by unit, and local agencies give final authorization."
+    "notes": "CARB publishes air-basin decisions for agricultural and prescribed burns. Check residential permits and local restrictions for your activity with the fire or air district."
   },
   {
     "abbr": "CO",
@@ -211,7 +211,7 @@
         "url": "https://ctparks.com/camping"
       }
     ],
-    "notes": "Town officials issue residential brush-burning permits and can impose local limits. When DEEP rates fire danger High or above, brush burning within 100 feet of woodland or grassland is restricted. Check the daily fire danger report for local differences and ask your town or land manager about current rules at your burn site."
+    "notes": "Check the dated DEEP fire-danger report and local permit conditions. High fire danger can restrict burning near woodland, brush or adjacent dry grass. Confirm the rule with your town fire authority or land manager."
   },
   {
     "abbr": "DE",
@@ -255,7 +255,7 @@
         "url": "https://ffsfm.maps.arcgis.com/apps/dashboards/1f6572c92f8d41ec860f461ea433819b"
       }
     ],
-    "notes": "Florida counties enact burn bans and the Florida Forest Service reports them on a statewide map. Fireworks bans and yard-debris rules are tracked separately."
+    "notes": "The Florida Forest Service maps county bans and lifts reported voluntarily. Check county and fire district rules and separate statewide or regional orders. Some counties also prohibit yard debris burning."
   },
   {
     "abbr": "GA",
@@ -391,7 +391,7 @@
         "url": "https://www.fs.usda.gov/r09/shawnee/alerts"
       }
     ],
-    "notes": "Illinois limits open burning by material, purpose and location. Cities and counties have their own rules, and fire protection districts can issue temporary bans. We report standing rules and Crawford County orders when verified. Check your local fire department or land manager for current rules at your burn site."
+    "notes": "Illinois limits open burning by material, purpose and location. Cities, counties and fire protection districts can issue separate orders. See coverage for checks on the standing rules and Crawford County orders listed here."
   },
   {
     "abbr": "IN",
@@ -405,7 +405,7 @@
         "url": "https://www.in.gov/dhs/fire-and-building-safety/issuing-burn-bans/"
       }
     ],
-    "notes": "Indiana counties issue burn bans and report them to the Department of Homeland Security. Fire chiefs, cities and towns can add their own restrictions."
+    "notes": "Indiana DHS maps countywide and local bans reported to it. Check the local issuer for the area covered and IDEM for standing air-quality rules, including residential burning restrictions in Clark, Floyd, Lake and Porter."
   },
   {
     "abbr": "IA",
@@ -419,7 +419,7 @@
         "url": "https://iowa.maps.arcgis.com/apps/dashboards/c22956334fd8435080ed851f549c5263"
       }
     ],
-    "notes": "The State Fire Marshal issues burn bans for counties at the request of local fire chiefs. We can only confirm active bans; a county not on the list may still have local rules."
+    "notes": "The State Fire Marshal can issue area-specific proclamations at the request of a fire chief, city council or county board. We show listed active proclamations. Other county statuses stay unconfirmed."
   },
   {
     "abbr": "KS",
@@ -493,7 +493,7 @@
         "url": "https://www.lasfm.org/fire-emergency-services/"
       }
     ],
-    "notes": "Parishes and the state can issue burn bans in Louisiana, and LDAF maps them by parish. Cities and the State Fire Marshal may have exceptions."
+    "notes": "Parishes and municipalities can issue burn bans for all or part of their jurisdiction. The State Fire Marshal can issue separate orders. The LDAF map shows parish reports."
   },
   {
     "abbr": "ME",
@@ -596,7 +596,7 @@
     "coverage": "live",
     "publisher": "Mississippi Forestry Commission",
     "officialUrl": "https://www.mfc.ms.gov/burning-info/burn-bans/",
-    "notes": "Mississippi county boards request burn bans and the Forestry Commission approves them. Each ban has an end date and may have exemptions."
+    "notes": "County boards request burn bans and the Mississippi Forestry Commission approves them. The table lists start dates, end dates and exemptions when available and readable."
   },
   {
     "abbr": "MO",
@@ -762,7 +762,7 @@
         "url": "https://www.fs.usda.gov/r09/whitemountain/alerts"
       }
     ],
-    "notes": "New Hampshire generally requires a permit for open burning. Town forest fire wardens issue permits and can confirm local rules and suspensions. The state can suspend permits or issue emergency orders. We track the standing state permit rule and the Forest Service campfire order along Town Hall Road in part of Carroll County."
+    "notes": "Town forest fire wardens issue open-burning permits and can confirm local rules and suspensions. See coverage for the latest checks on state permit law and the U.S. Forest Service order for part of Carroll County."
   },
   {
     "abbr": "NJ",
@@ -826,7 +826,7 @@
     "coverage": "restrictions",
     "publisher": "New York State Department of Environmental Conservation and NYC 311",
     "officialUrl": "https://dec.ny.gov/environmental-protection/air-quality/open-burning",
-    "notes": "New York bans residential brush burning March 16 through May 14. Outside that window, DEC requires a written permit for eligible brush burning in designated Fire Towns. NYC has separate rules for open fires and outdoor barbecues. The Governor can issue temporary state or regional bans, and local governments and land managers can set stricter rules. Check the authority for your location before burning.",
+    "notes": "New York prohibits residential brush burning March 16 through May 14. Eligible small-town burning has material and size limits, and designated Fire Towns may require permits. NYC and other local authorities can set additional rules.",
     "extraUrls": [
       {
         "label": "DEC wildfire advisories and burn-ban announcements",
@@ -952,7 +952,7 @@
         "url": "https://ag.ok.gov/burn-ban-faq/"
       }
     ],
-    "notes": "Oklahoma county commissioners issue county burn bans, and the Governor can issue a burn ban for many counties at once. Oklahoma Forestry Services maps both."
+    "notes": "Oklahoma Forestry Services maps reported county resolutions and governor orders. Check the issuing order and any local, tribal or land-manager rules that apply."
   },
   {
     "abbr": "OR",
@@ -994,7 +994,7 @@
         "url": "https://www.blm.gov/programs/fire/regional-info/oregon-washington/fire-restrictions"
       }
     ],
-    "notes": "We track Oregon Department of Forestry restrictions on land it protects, Lane County air-quality advisories, and the Willamette Valley backyard burning bulletin for special control areas north of Lane County. Cities, counties, fire districts, Tribes and federal land managers can have their own rules. Check your location and type of burning before lighting a fire."
+    "notes": "Sources include Oregon Department of Forestry rules on land it protects, Lane County air-quality advisories and the Willamette Valley backyard burning bulletin. See coverage for their latest checks. Local, tribal and federal rules can apply separately."
   },
   {
     "abbr": "PA",
@@ -1073,7 +1073,7 @@
       { "label": "Fall River County Emergency Management", "url": "https://fallrivercountysd.gov/emergency-management/" },
       { "label": "Pennington County burning regulations", "url": "https://www.pennco.org/law_public_safety/fire/burn_regulations.php" }
     ],
-    "notes": "County commissions, local authorities and the state fire marshal can restrict open burning. We check pile-burning conditions for private land in the Black Hills Forest Fire Protection District and fire restrictions for lands managed by BLM. Ask your county, city, tribe or land manager about current rules for the burn site."
+    "notes": "Check your local fire authority and the state or BLM land manager for current rules before using the state permit portal. Selected reports cover private land in the Black Hills and BLM lands."
   },
   {
     "abbr": "TN",
@@ -1107,7 +1107,7 @@
         "url": "https://www.shelbytnhealth.com/176/Open-Burning-Land-Clearing-Contractors"
       }
     ],
-    "notes": "We track temporary holds on state burn permits and the October 15 through May 15 permit season. The Agriculture Commissioner can issue bans in consultation with the State Forester and county mayors, and the Governor can issue regional or statewide bans. Check with your local fire authority for rules and orders that apply to your address."
+    "notes": "Covered burns can require state permits from October 15 through May 15. Check today’s permit holds and local rules. See coverage for the last successful checks on the state sources."
   },
   {
     "abbr": "TX",
@@ -1115,7 +1115,7 @@
     "coverage": "live",
     "publisher": "Texas A&M Forest Service",
     "officialUrl": "https://tfsweb.tamu.edu/wildfire-and-other-disasters/burn-bans-and-information/",
-    "notes": "Texas county judges and commissioners courts issue burn bans and report them to the Texas A&M Forest Service, which updates its list daily."
+    "notes": "Texas A&M Forest Service republishes county orders it receives. County orders generally apply to unincorporated areas. Confirm timing, area and any discrepancies with the issuing county."
   },
   {
     "abbr": "UT",

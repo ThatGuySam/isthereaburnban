@@ -61,9 +61,9 @@ export async function subscribeEmail(env: Env, body: unknown): Promise<{ ok: boo
       env,
       email,
       "Confirm your burn ban alerts",
-      `Someone (hopefully you) asked for burn ban alerts for: ${countyNames(fips)}.\n\n` +
+      `A request was made for burn ban alerts for ${countyNames(fips)}.\n\n` +
         `Confirm: ${base}/api/v1/email/confirm?token=${token}\n\n` +
-        `If this wasn't you, ignore this email and nothing will be sent.\n`,
+        `If you did not request these alerts, you can ignore this email.\n`,
     );
   }
   return { ok: true, pending: true, emailEnabled };

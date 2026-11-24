@@ -119,14 +119,14 @@ const jsonLd = [
 
     {state && (
       <section>
-        <h2>Official source</h2>
+        <h2>Official directory</h2>
         <p>
           <a href={state.officialUrl} target="_blank" rel="noopener">{state.publisher}</a>
           {" "}<span class={`badge badge--${state.coverage}`}>{COVERAGE_LABEL[state.coverage]}</span>
         </p>
         <p>{state.notes}</p>
         {state.coverage !== "live" && (
-          <p class="callout">We don't have a live county feed for {stateName} yet, so this page can't confirm whether {p.name} has a ban. Use the official source above.</p>
+          <p class="callout">Sources for {stateName} cover selected areas and activities. Check the city fire authority for your address.</p>
         )}
       </section>
     )}
