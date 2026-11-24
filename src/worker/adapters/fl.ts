@@ -11,19 +11,23 @@ const meta = {
 
 /** Seen values (2026-11-23): "No Burn Ban", "Yard Debris". Yard Debris = county prohibits yard-debris burning only. */
 export function classify(raw: string): { status: BanStatus; label: string } {
-  const v = raw.toLowerCase();
-  if (v === "no burn ban" || v === "no") return { status: "none", label: "No burn ban" };
-  if (v.includes("yard")) return { status: "restricted", label: "Yard debris burning banned" };
-  if (v.includes("burn ban") || v === "yes") return { status: "ban", label: raw === "yes" ? "County burn ban" : raw };
-  return { status: "unknown", label: raw || "Not reported" };
+  switch (raw.toLowerCase()) {
+    case "no burn ban": return { status: "none", label: "No county burn ban reported" };
+    case "burn ban": return { status: "ban", label: "County burn ban" };
+    case "yard debris": return { status: "restricted", label: "Yard debris burning prohibited" };
+    default: return { status: "unknown", label: raw || "Not reported" };
+  }
 }
 
 export function parse(json: ArcgisResponse, checked: string): CountyStatus[] {
   const rows = arcgisRows(json).map((a) => {
     const fireworks = str(a.Fireworks_Ban).toUpperCase() === "YES";
+    const decision = classify(str(a.Burn_Ban));
     return {
       county: countyByName("FL", str(a.NAME)),
-      ...classify(str(a.Burn_Ban)),
+      ...decision,
+      standing: decision.status === "restricted" ? true as const : undefined,
+      scopeNote: decision.status === "restricted" ? "Yard debris burning" : undefined,
       sourceUpdated: msToIso(a.DateUpdated),
       note: fireworks ? "This county also has a fireworks ban." : undefined,
     };

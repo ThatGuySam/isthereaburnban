@@ -247,7 +247,7 @@ export function parseNdRestrictions(json: unknown, fireDanger: unknown, now: Dat
       const end = declaration.end && declaration.end < warning.end ? declaration.end : warning.end;
       rows.push({
         ...base, officialUrl, label: "Burning restrictions during a Red Flag Warning", note: details(warnedActivities),
-        since: declaration.start > warning.start ? declaration.start : warning.start,
+        since: null,
         expires: end, validUntil: report.validUntil < end ? report.validUntil : end,
       });
     }

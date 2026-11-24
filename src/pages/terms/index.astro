@@ -20,14 +20,13 @@ import { CONTACT_EMAIL, POLICY_UPDATED } from "../../components/site-data";
     <h2 id="informational">Informational only</h2>
     <ul>
       <li>
-        Burn bans are set by state, county, city, tribal and federal officials. We are not one of them. We read their public
-        feeds and pages and summarize what they say.
+        State, county, city, tribal and federal authorities set burn bans. We summarize reports, orders and standing rules from the sources we check.
       </li>
       <li>
-        <strong>Always confirm with the official source before you burn.</strong> Every status links to it. Cities, fire
-        districts and land managers can have stricter rules than the county.
+        <strong>Always confirm with the official source before you burn.</strong> Where available we link the report or order.
+        An unconfirmed county can link to an official directory. Cities, fire districts and land managers can have separate rules.
       </li>
-      <li>"Not sure" (<code>unknown</code>) never means burning is allowed. It means we can't confirm the status.</li>
+      <li>"Unsure" (<code>unknown</code>) means the status is unconfirmed.</li>
       <li>
         Sources can be late, wrong or offline, and we can make mistakes copying them. Alerts can be delayed or not arrive.
         Don't rely on this site or its alerts as your only check.
@@ -43,23 +42,21 @@ import { CONTACT_EMAIL, POLICY_UPDATED } from "../../components/site-data";
     <h2 id="data">Using the data</h2>
     <ul>
       <li>
-        Statuses are facts summarized from public agencies. When you show one, name the source and link the official page
-        we give you (<code>officialUrl</code>).
+        When you share a report, name the publisher and include the source or directory link in <code>officialUrl</code>.
       </li>
       <li>
-        Some publishers limit reuse. For example, Texas A&amp;M Forest Service data is for noncommercial use with
-        attribution. Check each source's terms before you republish in bulk. See <a href="/data/">the dataset page</a>.
+        Verify the original publisher's terms before republishing source records. See <a href="/data/">the dataset page</a>.
       </li>
       <li>
-        The API and MCP server need no key. Please cache responses for a few minutes and keep request rates reasonable. We
+        The API and MCP server need no key. Follow the response's cache headers and keep request rates reasonable. We
         may limit or block traffic that degrades the service, and endpoints can change.
       </li>
     </ul>
 
     <h2 id="alerts">Alerts</h2>
     <p>
-      Email alerts are double opt-in and every email has an unsubscribe link. You can turn push alerts off at any time. See
-      <a href="/privacy/">privacy</a> for what we store.
+      Email alerts require confirmation and apply to eligible changes we detect. Alert emails include an unsubscribe link for their subscription.
+      You can manage push permissions in your browser. See <a href="/privacy/">privacy</a> for what we store.
     </p>
 
     <h2 id="changes">Changes and contact</h2>

@@ -11,7 +11,8 @@
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "404-page",
-    "run_worker_first": ["/api/*", "/ops", "/ops/*", "/mcp", "/mcp/*", "/us/*", "/sitemap.xml", "/sitemaps/*"]
+    "run_worker_first": ["/api/*", "/ops", "/ops/*", "/mcp", "/mcp/*", "/us/*", "/sitemap.xml", "/sitemaps/*",
+      "/llms.txt", "/openapi.json", "/developers", "/developers/", "/data", "/data/"]
   },
   "triggers": { "crons": ["7 * * * *", "17 17 * * *"] },
   "queues": {

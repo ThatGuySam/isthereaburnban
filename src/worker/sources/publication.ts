@@ -15,7 +15,7 @@ import type { Source } from "./types";
 // Leave room for retries, a refresh straddling midnight, and operational writes.
 export const MAX_CACHED_STATES = 32;
 // Bump when the same material revisions need a different state projection.
-const MERGE_VERSION = 2;
+const MERGE_VERSION = 4;
 
 type StateJob = { state: string; signature: string; cache: boolean };
 type RunRow = { id: string; slot: number; generated: string; plan: string; cursor: number };
@@ -128,8 +128,10 @@ export function buildCatalog(run: Pick<Run, "id" | "generated">, states: Publish
   const index: SnapshotIndex = { version: 2, revision: run.id, generated: run.generated,
     states: {}, sources: [], sourceVersions, orderChecks: {} };
   const health = new Map<string, SourceHealth>();
+  let allDatesTracked = true;
   for (const { state, revision, summary, cached } of states) {
-    const { signature, lastChanged, sources: local, sourceVersions: versions }: StateSummary = JSON.parse(summary);
+    const { signature, reportDates, lastChanged, sources: local, sourceVersions: versions }: StateSummary = JSON.parse(summary);
+    allDatesTracked &&= reportDates === true;
     index.states[state] = { revision, signature, lastChanged, cached: Boolean(cached) };
     Object.assign(sourceVersions, versions);
     for (const item of local) {
@@ -138,11 +140,14 @@ export function buildCatalog(run: Pick<Run, "id" | "generated">, states: Publish
       else health.set(item.id, item);
     }
   }
+  if (allDatesTracked) index.reportDates = true;
   index.sources = sources.flatMap(({ id }) => {
     const row = health.get(id);
     if (!row) return [];
     const head = heads.get(id);
     row.checked = head?.checked ?? run.generated;
+    row.lastAttemptedAt = head?.checked ?? null;
+    row.lastSuccessfulAt = head?.lastGood ?? null;
     if (head) {
       row.ok = !head.error;
       row.error = head.error;

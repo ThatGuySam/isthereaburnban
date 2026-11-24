@@ -1,5 +1,6 @@
 // Type-ahead for the state list (/us/) and the county list on each state page.
 // The lists are real links in the HTML; this only hides rows that don't match and adds county hits.
+import type { CountyStatus, SourceHealth } from "../shared/types";
 import { countySlug } from "../shared/slug";
 import { locate, lookupStatus } from "./place";
 
@@ -225,7 +226,7 @@ function initLocate(say: (t: string) => void) {
 
 // ---------- /us/{st}/ ----------
 
-type BanRow = { fips: string; county: string; status: string };
+type BanRow = Pick<CountyStatus, "fips" | "county" | "status" | "label" | "scopedBan">;
 
 export function initCountyFinder(): void {
   const list = document.querySelector<HTMLElement>("[data-county-list]");
@@ -261,13 +262,20 @@ function loadBans(list: HTMLElement) {
     box.replaceWith(p);
   };
   fetch(`/api/v1/bans?state=${count.dataset.state}`)
-    .then((r) => (r.ok ? (r.json() as Promise<{ counties: BanRow[] }>) : Promise.reject()))
+    .then((r) => (r.ok ? (r.json() as Promise<{ counties: BanRow[]; unknownCount?: number; sources: SourceHealth[] }>) : Promise.reject()))
     .then((d) => {
       const bans = d.counties.filter((c) => c.status === "ban");
       const restricted = d.counties.filter((c) => c.status === "restricted");
-      const parts = [`${plural(bans.length, "county", "counties")} under a burn ban right now`];
-      if (restricted.length) parts.push(`${restricted.length} with restrictions`);
-      const sentence = parts.join(", ") + ".";
+      const totals = [
+        bans.length && `${plural(bans.length, "county", "counties")} with a reported ban`,
+        restricted.length && `${plural(restricted.length, "county", "counties")} with reported restrictions`,
+      ].filter(Boolean);
+      const qualifiers = [];
+      if (d.unknownCount) qualifiers.push(`${plural(d.unknownCount, "county", "counties")} unconfirmed.`);
+      const failed = d.sources.filter((source) => source.mode !== "manual" && source.lastAttemptedAt && !source.ok).length;
+      if (failed) qualifiers.push(`${plural(failed, "source check", "source checks")} failed.`);
+      const headline = totals.length ? totals.join(" · ") + "." : "No active reports in our sources.";
+      const sentence = [headline, ...qualifiers].join(" ");
 
       const rows = new Map([...list.querySelectorAll<HTMLElement>("[data-fips]")].map((li) => [li.dataset.fips!, li]));
       const top: HTMLElement[] = [];
@@ -276,7 +284,8 @@ function loadBans(list: HTMLElement) {
         if (!li) continue;
         const tag = document.createElement("span");
         tag.className = `tag tag--${c.status}`;
-        tag.textContent = c.status === "ban" ? "Burn ban" : "Restricted";
+        tag.textContent = c.status === "ban" ? "Burn ban" : c.scopedBan ? "Local burn ban" : "Restricted";
+        tag.title = c.label;
         li.querySelector("a")?.appendChild(tag);
         const copy = li.cloneNode(true) as HTMLElement;
         copy.removeAttribute("data-row");
@@ -294,5 +303,5 @@ function loadBans(list: HTMLElement) {
       // A short list is worth showing outright; a long one stays one tap away (every row is also tagged below).
       box.open = top.length <= 8;
     })
-    .catch(() => flatten("Live counts are unavailable right now.", false));
+    .catch(() => flatten("Published report counts are unavailable.", false));
 }

@@ -21,7 +21,7 @@ const groups = useIndex
   ? [...new Set(list.map((c) => c.name[0].toUpperCase()))].map((letter) => ({ letter, list: list.filter((c) => c.name[0].toUpperCase() === letter) }))
   : [{ letter: "", list }];
 const title = `Burn bans in ${s.name}`;
-const description = `Who issues burn bans in ${s.name}, the official source, and current status for all ${list.length} ${unit}.`;
+const description = `Available burn-ban reports, county pages and reporting agencies for ${s.name}.`;
 const jsonLd = [
   {
     "@context": "https://schema.org",
@@ -51,15 +51,16 @@ const jsonLd = [
       </div>
     </div>
 
-    {s.coverage === "live" && (
+    {s.coverage !== "directory" && (
       <details class="banned" data-banned>
-        <summary><span data-ban-count data-state={s.abbr} aria-live="polite"><strong>Checking current bans…</strong></span></summary>
+        <summary><span data-ban-count data-state={s.abbr} aria-live="polite"><strong>Checking published reports…</strong></span></summary>
         <ul class="rows rows--places rows--cols" role="list"></ul>
       </details>
     )}
-    {s.coverage !== "live" && (
-      <p class="callout">We can't confirm county burn bans in {s.name} yet. Check the <a href={s.officialUrl} target="_blank" rel="noopener">{s.publisher}</a> first.</p>
+    {s.coverage === "restrictions" && (
+      <p class="callout">Sources cover selected areas and activities. Check the county report and the authority for your burn site.</p>
     )}
+    {s.abbr === "IA" && <p class="callout">Iowa's feed lists active proclamations. Other county statuses stay unconfirmed.</p>}
 
     <h2 id="places">All {list.length} {unit}</h2>
     {useFilter && (

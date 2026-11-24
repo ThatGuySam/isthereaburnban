@@ -9,15 +9,15 @@ const groups = [...new Set(states.map((s) => s.name[0]))].map((letter) => ({
   list: states.filter((s) => s.name[0] === letter),
 }));
 const live = states.filter((s) => s.coverage === "live");
-const TAG: Record<string, string | null> = { live: "Live", restrictions: "Restrictions", directory: null };
+const TAG: Record<string, string | null> = { live: "County feed", restrictions: "Selected reports", directory: null };
 const counts = (["live", "restrictions", "directory"] as const).map((k) => ({ k, n: states.filter((s) => s.coverage === k).length }));
 const blurb = {
-  live: "We read an official county-level burn ban feed and update about every hour.",
-  restrictions: "We link permit, fire-danger or land-manager restriction data. These aren't county burn bans, so we say \"Not sure\" rather than \"Nope\".",
-  directory: "No machine-readable feed yet. We link the official source.",
+  live: "We check a statewide county-reporting feed. What it can confirm depends on its scope. Iowa publishes active proclamations only.",
+  restrictions: "We check selected county orders, permits, fire danger or land-manager restrictions. Unreported areas may have unconfirmed status.",
+  directory: "We provide links to the official agencies.",
 };
 ---
-<Base title="Burn bans by state · Is There a Burn Ban?" description="Find your state, county or city: live county burn ban status where an official feed exists, and the official source for every state." path="/us/">
+<Base title="Burn bans by state · Is There a Burn Ban?" description="Find county and city reports, selected restrictions and official sources by state." path="/us/">
   <main id="content" class="page browse">
     <nav class="crumbs" aria-label="Breadcrumb">
       <ol>
@@ -41,7 +41,7 @@ const blurb = {
     </div>
 
     <p class="live-now" data-unfiltered>
-      <span class="tag tag--live">Live</span> county status in{" "}
+      <span class="tag tag--live">County feeds</span> in{" "}
       {live.map((s, i) => <>{i > 0 && (i === live.length - 1 ? " and " : ", ")}<a href={statePath(s.abbr)}>{s.name}</a></>)}.
     </p>
 
@@ -85,7 +85,7 @@ const blurb = {
     <details class="key" data-unfiltered>
       <summary>What the labels mean</summary>
       <dl>
-        {counts.map(({ k, n }) => (
+        {counts.filter(({ n }) => n > 0).map(({ k, n }) => (
           <>
             <dt>{TAG[k] ? <span class={`tag tag--${k}`}>{TAG[k]}</span> : <span class="tag tag--none">No label</span>} {COVERAGE_LABEL[k]} ({n} {n === 1 ? "state" : "states"})</dt>
             <dd>{blurb[k]}</dd>

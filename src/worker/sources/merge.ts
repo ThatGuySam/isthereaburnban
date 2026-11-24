@@ -1,12 +1,12 @@
 import type { CountyStatus, FireWeatherReport, ScopedOrder, Snapshot, SnapshotData, SourceHealth } from "../../shared/types";
+import { activeStatus, countyDecision, isScopedBan, STALE_MS } from "../county-decision";
+export { STALE_MS } from "../county-decision";
 import type { Transition } from "../notification-message";
 import type { Source } from "./types";
 
-export const STALE_MS = 48 * 60 * 60 * 1000;
-
 export type SourceInput = {
   source: Pick<Source, "id" | "state" | "mode" | "product"> & Partial<Pick<Source, "scope" | "officialUrl" | "recurring">>;
-  rows: (Omit<CountyStatus, "checked"> & { checked?: string })[];
+  rows: (Omit<CountyStatus, "checked"> & Partial<Pick<CountyStatus, "checked">>)[];
   fireWeather?: FireWeatherReport[];
   lastGood?: string;
   checked: string;
@@ -16,9 +16,10 @@ export type SourceInput = {
 };
 
 const RANK = { unknown: 0, none: 1, restricted: 2, ban: 3 };
-const active = (row: CountyStatus) => row.status === "ban" || row.status === "restricted";
+const active = (row: CountyStatus) => activeStatus(row.status);
 
-type Candidate = { row: CountyStatus; confirmed: boolean };
+type CheckedCounty = CountyStatus & { checked: string };
+type Candidate = { row: CheckedCounty; confirmed: boolean };
 type CountyCandidates = Candidate | Candidate[];
 function better(current: Candidate | undefined, candidate: Candidate) {
   if (!current) return candidate;
@@ -28,14 +29,14 @@ function better(current: Candidate | undefined, candidate: Candidate) {
   return candidate.row.scope === "county" && current.row.scope === "state" ? candidate : current;
 }
 
-function order(row: CountyStatus): ScopedOrder {
-  const { status, label, note, since, expires, sourceId, sourceName, sourceUpdated, officialUrl, checked, validFrom, validUntil } = row;
-  return { status, label, note, since, expires, sourceId, sourceName, sourceUpdated, officialUrl, checked, validFrom, validUntil,
+function order(row: CheckedCounty): ScopedOrder {
+  const { status, label, note, since, expires, sourceId, sourceName, sourceUpdated, sourceUrl, officialUrl, checked, validFrom, validUntil, standing, scopedBan } = row;
+  return { status, label, note, since, expires, sourceId, sourceName, sourceUpdated, sourceUrl, officialUrl, checked, validFrom, validUntil, standing, scopedBan,
     scope: row.scope ?? "county", scopeNote: row.scopeNote ?? row.label };
 }
 
 function summarize(group: CountyCandidates, now: number): Candidate | undefined {
-  if (!Array.isArray(group) && group.row.scope !== "part") {
+  if (!Array.isArray(group) && group.row.scope !== "part" && !group.row.standing) {
     const row = group.row;
     if ((row.validFrom && Date.parse(row.validFrom) > now) || (row.validUntil && Date.parse(row.validUntil) <= now)) return;
     return group;
@@ -50,7 +51,7 @@ function summarize(group: CountyCandidates, now: number): Candidate | undefined 
     const { row } = entry;
     if (row.validUntil && Date.parse(row.validUntil) <= now) continue;
     const future = row.validFrom && Date.parse(row.validFrom) > now;
-    if (row.scope === "part") {
+    if (row.scope === "part" || row.standing) {
       orders.push(order(row));
       if (row.status !== "unknown") {
         const text = `${row.label} (${row.scopeNote ?? row.sourceName})`;
@@ -64,6 +65,7 @@ function summarize(group: CountyCandidates, now: number): Candidate | undefined 
   if (!selected) return;
   const row = selected.row;
   if (row.scope === "part") {
+    row.scopedBan = selected !== upcoming && isScopedBan(row) ? true : undefined;
     row.status = selected !== upcoming && active(row) ? "restricted" : "unknown";
     if (row.status === "unknown") row.label = "Countywide status unconfirmed";
     else if (row.scopeNote && !row.label.includes(row.scopeNote)) row.label += ` (${row.scopeNote})`;
@@ -93,6 +95,8 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
     if (version) sourceVersions[source.id] = version;
     const mapped = new Set<string>();
     const bans = new Set<string>();
+    const health = { checked, lastAttemptedAt: source.mode === "manual" ? null : checked,
+      lastSuccessfulAt: lastGood ?? (error ? null : checked), ok: !error, error };
     const defaultChecked = lastGood ?? checked;
     const defaultStale = clock - Date.parse(defaultChecked) > staleMs;
     if (source.product === "fire-weather") {
@@ -102,14 +106,15 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
         mapped.add(fips);
       }
       sources.push({ id: source.id, state: source.state, mode: source.mode, product: source.product,
-        officialUrl: source.officialUrl, checked, ok: !error, error, counties: mapped.size, bans: 0 });
+        officialUrl: source.officialUrl, ...health, counties: mapped.size, bans: 0 });
       continue;
     }
     for (const value of rows) {
       const seen = lastGood ?? value.checked ?? defaultChecked;
       const stale = seen === defaultChecked ? defaultStale : clock - Date.parse(seen) > staleMs;
-      const row: CountyStatus = { ...value, checked: seen, scope: value.scope ?? source.scope, sourceId: source.id };
+      const row: CheckedCounty = { ...value, checked: seen, scope: value.scope ?? source.scope, sourceId: source.id };
       if (stale) {
+        row.since = null;
         row.status = "unknown";
         row.label = `Source unavailable. Our last good data is over ${staleMs / 3_600_000} hours old`;
         row.note = undefined;
@@ -126,7 +131,7 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
       else groups.set(row.fips, group ? [group, entry] : entry);
     }
     sources.push({ id: source.id, state: source.state, mode: source.mode, scope: source.scope,
-      officialUrl: source.officialUrl, checked, ok: !error, error, counties: mapped.size, bans: bans.size });
+      officialUrl: source.officialUrl, ...health, counties: mapped.size, bans: bans.size });
   }
 
   // A verified standing rule can run until local midnight after a warning ends.
@@ -150,23 +155,33 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
       continue;
     }
     const { row, confirmed } = result;
-    const before = prev?.counties[fips];
-    const isRecurring = recurring.has(row.sourceId ?? "");
-    const newBan = row.status === "ban" && !isRecurring;
+    const previous = prev?.counties[fips];
+    row.firstSeenAt = previous?.firstSeenAt ?? at;
+    row.statusChangedAt = previous?.statusChangedAt ?? null;
+    const before = previous && countyDecision(previous, Date.parse(prev.generated));
+    const decision = countyDecision(row, clock);
+    const decisionSource = Array.isArray(group) ? group.find((entry) =>
+      entry.row.sourceId === decision.sourceId && entry.row.scopeNote === decision.scopeNote) : group;
+    const isRecurring = recurring.has(decision.sourceId ?? "");
+    const newScopedBan = before && before.status !== "ban" && isScopedBan(decision) &&
+      (!isScopedBan(before) || before.sourceId !== decision.sourceId || before.scopeNote !== decision.scopeNote ||
+        before.officialUrl !== decision.officialUrl || before.since !== decision.since);
+    const newBan = (decision.status === "ban" || newScopedBan) && !isRecurring;
+    const statusChanged = before && before.status !== decision.status;
+    if (statusChanged) row.statusChangedAt = at;
     if (!before) {
-      changed[fips] = row.since ?? row.sourceUpdated ?? at;
-    } else if (before.status !== row.status && !newBan && (isRecurring || recurring.has(before.sourceId ?? ""))) {
-      // A scheduled calendar window opened or closed: not news, no alert, no lastmod churn.
-    } else if (before.status !== row.status) {
       changed[fips] = at;
-      const retainedAuthority = !before.sourceId || before.sourceId === row.sourceId ||
+    } else if ((statusChanged || newScopedBan) && !newBan && (isRecurring || recurring.has(before.sourceId ?? ""))) {
+      // A scheduled calendar window opened or closed: not news, no alert, no lastmod churn.
+    } else if (statusChanged || newScopedBan) {
+      changed[fips] = at;
+      const retainedAuthority = !before.sourceId || before.sourceId === decision.sourceId ||
         (Array.isArray(group) && group.some((candidate) => candidate.confirmed && candidate.row.sourceId === before.sourceId));
-      const lostAuthority = !retainedAuthority || (before.scope !== "part" && row.scope === "part");
-      if (confirmed && !lostAuthority && row.status !== "unknown") {
-        transitions.push({ fips, oldStatus: before.status, newStatus: row.status, at });
+      const lostAuthority = !newScopedBan && (!retainedAuthority || (before.status === "ban" && decision.scope === "part"));
+      if ((decisionSource?.confirmed ?? confirmed) && !lostAuthority && decision.status !== "unknown") {
+        transitions.push({ fips, oldStatus: before.status, newStatus: decision.status, at });
       }
     }
-    if (!row.since) row.since = before?.status === row.status && before.since ? before.since : changed[fips] ?? at;
     counties[fips] = row;
   }
 

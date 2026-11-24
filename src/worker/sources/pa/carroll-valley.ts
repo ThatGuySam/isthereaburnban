@@ -45,7 +45,7 @@ export async function parseCarrollValley(input: Response | string, now: Date): P
     scope: META.scope, scopeNote: "Carroll Valley Borough, outdoor open burning",
     label: "Carroll Valley outdoor open-burning ban",
     note: "Carroll Valley Borough announced an outdoor open-burning ban due to drought. The borough says it will remain in effect until further notice. Check the borough's latest notice before burning.",
-    checked: now.toISOString(), sourceUpdated: null, since: latest.posted, expires: null, validUntil,
+    checked: now.toISOString(), sourceUpdated: latest.updated, since: null, expires: null, validUntil,
     sourceName: META.sourceName, sourceUrl: META.sourceUrl, officialUrl: META.officialUrl,
   }];
 }

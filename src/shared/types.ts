@@ -4,8 +4,8 @@
 /**
  * ban          - source reports an active burn ban for this county
  * restricted   - partial / activity-specific / permit restrictions (e.g. ozone alert, permits required)
- * none         - source covers this county and reports no ban (only from a fresh, complete feed)
- * unknown      - no feed for this state, feed failed, stale, or field is null. NEVER show "Nope" for this.
+ * none         - feed reports no temporary order within its defined reporting scope
+ * unknown      - county status is unconfirmed. NEVER show "Nope" for this.
  */
 export type BanStatus = "ban" | "restricted" | "none" | "unknown";
 
@@ -24,26 +24,36 @@ export type CountyStatus = {
   state: string; // "OK"
   county: string; // "Tulsa County"
   status: BanStatus;
-  label: string; // human label from the source, e.g. "County Burn Ban", "Governor's Burn Ban"
-  since: string | null; // ISO date the ban started (source), or when we first saw this status
+  label: string; // normalized human-readable description
+  since: string | null; // issuer-provided effective date or timestamp
+  firstSeenAt?: string | null; // when we first recorded a report for this county
+  statusChangedAt?: string | null; // when we last observed a change to the published answer
   expires: string | null; // ISO date if the source gives one (MS)
   sourceUpdated: string | null; // ISO, source's own update/edit time if exposed
-  checked: string; // ISO time our cron last fetched this source successfully
+  checked: string | null; // last successful source check, if known
+  lastAttemptedAt?: string; // latest attempt for this report's source, when available
+  sourceCheckFailed?: true; // a failed latest attempt can coexist with an earlier report
   sourceName: string; // "Oklahoma Forestry Services"
-  sourceUrl: string; // machine endpoint we read
-  officialUrl: string; // human official page to link ("Read the official order/map")
+  sourceUrl: string; // retrieved publication, when available
+  officialUrl: string; // issuing order, agency report, or official directory
   note?: string; // scope caveat, e.g. "County bans cover unincorporated areas"
   scope?: "county" | "part" | "state";
   scopeNote?: string;
+  standing?: true; // ongoing, activity-specific rule
+  scopedBan?: true; // explicit ban in part of the county
   sourceId?: string;
   validFrom?: string; // start instant for a dated or scheduled decision
   validUntil?: string; // instant after which short-lived decisions are unconfirmed
+  /** Broader report when a scoped order supplies the headline. */
+  countywide?: Pick<CountyStatus, "status" | "label" | "checked" | "sourceId" | "sourceName" | "sourceUpdated" | "officialUrl">;
   orders?: ScopedOrder[];
   alerts?: FireWeatherAlert[];
 };
 
 export type ScopedOrder = Pick<CountyStatus, "status" | "label" | "note" | "since" | "expires" |
-  "sourceId" | "sourceName" | "sourceUpdated" | "officialUrl" | "checked" | "validFrom" | "validUntil"> & {
+  "sourceId" | "sourceName" | "sourceUpdated" | "officialUrl" | "validFrom" | "validUntil" | "standing" | "scopedBan"> & {
+  sourceUrl?: string;
+  checked: string;
   scope: "part" | "county" | "state";
   scopeNote: string;
 };
@@ -61,11 +71,13 @@ export type SourceHealth = {
   id: string; // "ok", "tx", ...
   state: string;
   ok: boolean;
-  checked: string; // ISO
+  checked: string; // compatibility alias for the source check time
+  lastAttemptedAt?: string | null;
+  lastSuccessfulAt?: string | null;
   error?: string;
   counties: number; // distinct counties with a mapped report
   bans: number;
-  /** "full" = negatives are trustworthy; "positive-only" = absence means unknown, not none */
+  /** Full feeds can supply explicit negatives within their scope. Positive-only omissions stay unknown. */
   mode: "full" | "positive-only" | "manual";
   scope?: CountyStatus["scope"];
   officialUrl?: string;
@@ -100,14 +112,27 @@ export type StateDirectoryEntry = {
   notes: string; // one or two plain sentences on who issues bans there and at what level
 };
 
+/** A revision-pinned map of known county answers. An omitted FIPS is unknown. */
+export type MapStatus = {
+  revision: string;
+  expiresAt: number; // UTC epoch milliseconds
+  counties: Partial<Record<string, Exclude<BanStatus, "unknown">>>;
+};
+
+export type PlaceStatus = BanStatus | "depends";
+
 export type LookupResult = {
-  query: { zip?: string; lat?: number; lon?: number; fips?: string; city?: string; state?: string };
+  answer: PlaceStatus;
+  generated: string | null; // publication time, if we looked up county status
+  query: { zip?: string; lat?: number; lon?: number; fips?: string; city?: string; state?: string; here?: true };
   /** set for city= lookups: the matched incorporated place and its page (or its county page when it has none) */
-  place?: { name: string; state: string; url: string; counties: string[] };
+  place?: { name: string; state: string; url: string; counties: string[]; localRulesUrl?: string };
   /** true if a ZIP touches more than one county; UI should ask the user to pick */
   ambiguous: boolean;
-  /** true if the ZIP was not in Census ZCTA data and we used the nearest ZIP */
+  /** An approximate result contains county candidates pending confirmation. */
   approximate: boolean;
+  matchedZip?: string;
+  approximationReason?: string;
   results: (CountyStatus & { url: string })[]; // url = canonical county page path, e.g. /us/ok/tulsa-county/
   disclaimer: string;
 };

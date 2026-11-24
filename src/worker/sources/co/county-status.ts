@@ -142,7 +142,7 @@ export function parseArapahoeFire({ blocks, tables }: HtmlParts, now: Date): Cou
     label: stage ? `Stage ${stage} fire restrictions` : "No current Arapahoe County Sheriff burn ban",
     note: stage ? "The sheriff lists fire restrictions for the unincorporated area. Check the current order for exceptions."
       : "The sheriff lifted the county's ban. Fire districts and municipalities can have separate orders, and permits may still be required.",
-    sourceUpdated: null, since: effective,
+    sourceUpdated: null, since: stage ? effective : null,
   });
 }
 

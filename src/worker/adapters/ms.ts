@@ -39,7 +39,7 @@ export function parse(data: MsRow[], checked: string, today = centralDate(new Da
   }
   const rows = countiesInState("MS").map((c) => {
     const b = bans.get(c.fips);
-    if (!b) return { county: c, status: "none" as const, label: "No burn ban" };
+    if (!b) return { county: c, status: "none" as const, label: "No county burn ban listed" };
     const ex = b.exemptions && !/^no exemptions?$/i.test(b.exemptions) ? `Exemptions: ${b.exemptions} (see the official page for what each number covers).` : "No exemptions listed.";
     return {
       county: c,

@@ -2,7 +2,8 @@
 // Pages open it with openSheet() (src/client/place.ts) or any [data-sheet] element.
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Drawer } from "vaul";
-import { renderStatusHtml, statusTheme } from "../shared/render";
+import type { LookupResult } from "../shared/types";
+import { locationConfirmation, renderReportDetailsHtml, renderStatusHtml, statusSentence, statusTheme } from "../shared/render";
 import {
   COUNTY_CLOSED,
   emitResolved,
@@ -14,7 +15,6 @@ import {
   readPlace,
   takePendingSheet,
   type OpenDetail,
-  type ResolvedDetail,
   type Result,
 } from "../client/place";
 
@@ -77,6 +77,7 @@ export default function Sheets() {
           {detail.sheet === "alert" && (
             <AlertSheet key={detail.fips} detail={detail} pickPlace={() => setDetail({ sheet: "location" })} />
           )}
+          {detail.sheet === "details" && <DetailsSheet key={detail.fips} detail={detail} />}
           {detail.sheet === "menu" && <MenuSheet detail={detail} />}
         </Drawer.Content>
       </Drawer.Portal>
@@ -141,7 +142,10 @@ function CountySheet() {
           <Drawer.Title className="vs-place">{r ? `${r.county}, ${r.state}` : detail?.place}</Drawer.Title>
           <div className="vs-county" aria-live="polite">
             {detail?.state === "ready" && r ? (
-              <div dangerouslySetInnerHTML={{ __html: renderStatusHtml(r) }} />
+              <>
+                <div dangerouslySetInnerHTML={{ __html: renderStatusHtml(r) }} />
+                <div dangerouslySetInnerHTML={{ __html: renderReportDetailsHtml(r) }} />
+              </>
             ) : (
               <p className="status-sentence">{detail?.state === "error" ? detail.message : `Checking ${detail?.place ?? ""}…`}</p>
             )}
@@ -169,18 +173,46 @@ function CountySheet() {
   );
 }
 
+function DetailsSheet({ detail }: { detail: OpenDetail }) {
+  const [result, setResult] = useState<Result>();
+  const [message, setMessage] = useState(detail.fips ? "Checking…" : "Choose a county to see its report.");
+  useEffect(() => {
+    if (!detail.fips) return;
+    let open = true;
+    void lookupStatus({ fips: detail.fips }).then(({ results }) => {
+      if (!open) return;
+      if (results[0]) setResult(results[0]);
+      else setMessage("No county report available.");
+    }).catch(() => { if (open) setMessage("Couldn't load the county report."); });
+    return () => { open = false; };
+  }, [detail.fips]);
+
+  return (
+    <div className="vs-body">
+      <Drawer.Title className="vs-title">{detail.place ?? "County report"}</Drawer.Title>
+      {result ? <>
+        <p className="vs-sub">{statusSentence(result)}.</p>
+        {result.officialUrl && <p><a href={result.officialUrl} target="_blank" rel="noopener">
+          {result.sourceUrl ? result.sourceName : "Official directory"}
+        </a></p>}
+        <div dangerouslySetInnerHTML={{ __html: renderReportDetailsHtml(result) }} />
+      </> : <p className="vs-msg" aria-live="polite">{message}</p>}
+    </div>
+  );
+}
+
 // ---------- Location ----------
 
 function LocationSheet({ detail, done }: { detail: OpenDetail; done: () => void }) {
   const [msg, setMsg] = useState(detail.message ?? "");
   const [busy, setBusy] = useState(false);
-  const [choices, setChoices] = useState<{ zip: string; results: Result[] } | null>(null);
+  const [choices, setChoices] = useState<LookupResult | null>(null);
   const hasPlace = Boolean(readPlace()?.fips);
 
-  function choose(result: Result, extra: Omit<ResolvedDetail, "result"> = {}) {
+  function choose(result: Result) {
     // Pages that take the result in place (the home hero, the map) listen for itabb:resolved.
     if (document.querySelector("[data-hero], [data-resolves-place]")) {
-      emitResolved({ result, ...extra });
+      emitResolved({ result });
       done();
     } else if (result.url) {
       location.href = result.url;
@@ -193,8 +225,8 @@ function LocationSheet({ detail, done }: { detail: OpenDetail; done: () => void 
     try {
       const res = await lookupStatus({ zip });
       if (!res.results?.length) return setMsg("We couldn't find that ZIP. Try another.");
-      if (res.ambiguous && res.results.length > 1) return setChoices({ zip, results: res.results });
-      choose(res.results[0], { zip, note: res.approximate ? `Closest match for ZIP ${zip}` : undefined });
+      if (res.approximate || res.ambiguous) return setChoices(res);
+      choose(res.results[0]);
     } catch {
       setMsg("Lookup failed. Try again in a minute.");
     } finally {
@@ -216,7 +248,7 @@ function LocationSheet({ detail, done }: { detail: OpenDetail; done: () => void 
       const r = res.results?.[0];
       if (!r) return setMsg("We couldn't find a US county there. Try a ZIP.");
       setMsg("");
-      choose(r, { lat: Number(lat), lon: Number(lon) });
+      choose(r);
     } catch (err) {
       setMsg(err instanceof GeolocationPositionError || (err as Error)?.message === "unsupported" ? "Location is off. Enter a ZIP instead." : "Lookup failed. Try again in a minute.");
     } finally {
@@ -231,20 +263,39 @@ function LocationSheet({ detail, done }: { detail: OpenDetail; done: () => void 
     else setMsg("Enter a 5-digit ZIP.");
   }
 
+  async function chooseCounty(candidate: Result) {
+    if (!choices?.approximate) return choose(candidate);
+    setBusy(true);
+    setMsg("");
+    try {
+      const { results } = await lookupStatus({ fips: candidate.fips });
+      if (!results[0]) throw new Error("missing county");
+      choose(results[0]);
+    } catch {
+      setMsg("Couldn't load that county's report. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (choices) {
     return (
       <div className="vs-body">
-        <Drawer.Title className="vs-title">Which county?</Drawer.Title>
-        <p className="vs-sub">ZIP {choices.zip} touches {choices.results.length} counties.</p>
+        <Drawer.Title className="vs-title">{choices.approximate ? "Confirm your county" : "Which county?"}</Drawer.Title>
+        <p className="vs-sub">{choices.approximate
+          ? locationConfirmation(choices)
+          : `Our Census ZIP area for ${choices.query.zip} overlaps ${choices.results.length} counties.`}</p>
+        <p className="vs-msg" aria-live="polite">{msg}</p>
         <ul className="vs-list" role="list">
           {choices.results.map((r) => (
             <li key={r.fips}>
-              <button type="button" onClick={() => choose(r, { zip: choices.zip })}>
+              <button type="button" onClick={() => void chooseCounty(r)} disabled={busy}>
                 {r.county}, {r.state}
               </button>
             </li>
           ))}
         </ul>
+        <button type="button" className="vs-btn vs-btn--quiet" disabled={busy} onClick={() => { setChoices(null); setMsg(""); }}>Try another ZIP</button>
       </div>
     );
   }
@@ -351,7 +402,7 @@ function AlertSheet({ detail, pickPlace }: { detail: OpenDetail; pickPlace: () =
     setEmailMsg("Signing you up…");
     try {
       const res = await postJson<{ emailEnabled?: boolean }>("/api/v1/email/subscribe", { email, fips: [fips] });
-      setEmailMsg(res.emailEnabled === false ? "You're on the list. Email alerts start soon." : "Check your inbox to confirm.");
+      setEmailMsg(res.emailEnabled === false ? "Your signup is pending. Email delivery is unavailable." : "Check your inbox to confirm.");
       form.reset();
     } catch (err) {
       setEmailMsg(err instanceof Error ? `Couldn't sign up: ${err.message}` : "Couldn't sign up.");
@@ -361,7 +412,7 @@ function AlertSheet({ detail, pickPlace }: { detail: OpenDetail; pickPlace: () =
   return (
     <div className="vs-body">
       <Drawer.Title className="vs-title">Alerts for {place}</Drawer.Title>
-      <p className="vs-sub">Only when the burn ban status changes.</p>
+      <p className="vs-sub">Alerts for eligible changes we detect in this county.</p>
 
       {mode === "ready" && (
         <>

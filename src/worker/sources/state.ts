@@ -1,3 +1,4 @@
+import { withReportDates } from "../report-dates";
 import type { CountyStatus, FireWeatherReport, SnapshotData } from "../../shared/types";
 import { COUNTY_BY_FIPS } from "../counties";
 import type { Env } from "../env";
@@ -48,7 +49,7 @@ function normalize(source: ActiveSource, result: Exclude<SourceResult, { notModi
   if (!rows.length && source.mode === "full") throw new Error("Full source returned no rows");
   const ordered = rows.map((row) => {
     const { fips, state, county, label, since, expires, sourceUpdated, sourceName, sourceUrl, officialUrl, note,
-      scopeNote, validFrom, validUntil } = row;
+      scopeNote, validFrom, validUntil, standing, scopedBan } = row;
     const scope = source.scope === "part" ? source.scope : row.scope ?? source.scope;
     if (state !== source.state || COUNTY_BY_FIPS.get(fips)?.state !== source.state || !BY_VALIDITY.has(row.status) ||
       (validFrom && !Number.isFinite(Date.parse(validFrom))) || (validUntil && !Number.isFinite(Date.parse(validUntil))) ||
@@ -58,7 +59,7 @@ function normalize(source: ActiveSource, result: Exclude<SourceResult, { notModi
     const status = row.status === "none" && source.mode === "positive-only" && scope !== "part" ? "unknown" : row.status;
     return { fips, state, county, status, label: status === row.status ? label : "Countywide status unconfirmed",
       since, expires, sourceUpdated, sourceName, sourceUrl, officialUrl, note,
-      scope, scopeNote, sourceId: source.id, validFrom, validUntil };
+      scope, scopeNote, sourceId: source.id, validFrom, validUntil, standing, scopedBan };
   });
   const boundaries = [...new Set(ordered.flatMap(({ validFrom, validUntil }) =>
     [validFrom, validUntil].filter((value): value is string => Boolean(value))))].sort();
@@ -177,8 +178,8 @@ function fallback(source: Source, prev: SnapshotData | null): CountyStatus[] {
     if (county.state !== source.state) continue;
     const ownOrders = county.orders?.filter((order) => order.sourceId === source.id) ?? [];
     const selected = county.sourceId ? county.sourceId === source.id : source.id === source.state.toLowerCase();
-    if (selected && (county.scope !== "part" || !ownOrders.length)) {
-      rows.push({ ...county, orders: undefined });
+    if (selected && ((county.scope !== "part" && !county.standing) || !ownOrders.length)) {
+      rows.push({ ...withReportDates(county), orders: undefined });
     }
     for (const order of ownOrders) {
       rows.push({ ...county, ...order, sourceUrl: source.sourceUrl, orders: undefined });
@@ -247,7 +248,8 @@ export function applySourceChecks(sources: SnapshotData["sources"], heads: Map<s
   for (const source of sources) {
     const head = heads.get(source.id);
     if (!head) continue;
-    source.checked = head.checked;
+    source.checked = source.lastAttemptedAt = head.checked;
+    source.lastSuccessfulAt = head.lastGood ?? null;
     source.ok = !head.error;
     source.error = head.error;
   }
@@ -257,8 +259,8 @@ export function applyChecks(snapshot: SnapshotData, heads: Map<string, SourceHea
   applySourceChecks(snapshot.sources, heads);
   const clock = now.getTime();
   for (const row of Object.values(snapshot.counties)) {
-    if (!row.sourceId) continue;
-    applyCountyCheck(row, heads.get(row.sourceId), snapshot.sourceVersions?.[row.sourceId], clock);
+    applyCountyCheck(row, row.sourceId ? heads.get(row.sourceId) : undefined,
+      row.sourceId ? snapshot.sourceVersions?.[row.sourceId] : undefined, clock);
   }
 }
 
@@ -269,7 +271,7 @@ export function applyCountyCheck(row: CountyStatus, head: SourceHead | undefined
     row.label = "Source decision expired";
     row.note = undefined;
     row.since = row.expires = null;
-  } else if (clock - Date.parse(row.checked) > STALE_MS && row.status !== "unknown") {
+  } else if ((!row.checked || clock - Date.parse(row.checked) >= STALE_MS) && row.status !== "unknown") {
     row.status = "unknown";
     row.label = "Source unavailable. Our last good data is over 48 hours old";
     row.note = undefined;

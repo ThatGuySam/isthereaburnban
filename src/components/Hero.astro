@@ -1,5 +1,6 @@
 ---
-import { heroStyle, renderCheckingHtml } from "../shared/render";
+import { heroStyle, renderAskHtml, renderCheckingHtml } from "../shared/render";
+import { PLACE_KEY } from "../client/place";
 import Mark from "./Mark.astro";
 
 interface Props {
@@ -9,13 +10,12 @@ interface Props {
   place?: string;
   /** county page path, for the menu's links */
   url?: string;
-  /** quiet line under the answer, e.g. "Tulsa is in Tulsa County." (the Worker keeps it when it injects status) */
-  note?: string;
+  multiCounty?: boolean;
 }
-const { mode, fips, place, url, note } = Astro.props;
+const { mode, fips, place, url, multiCounty = false } = Astro.props;
 const home = mode === "home";
 // Keep this markup in sync with src/worker/pages.ts, which rewrites [data-hero] and [data-status-slot].
-const ask = `<div class="status" data-status="checking"><p class="status-word status-word--long">Where?</p><p class="status-sentence">Is there a burn ban near you?</p></div>`;
+const ask = renderAskHtml();
 ---
 <main
   id="content"
@@ -28,7 +28,7 @@ const ask = `<div class="status" data-status="checking"><p class="status-word st
 >
   <div class="hero-inner">
     {home && <h1 class="sr-only">Is there a burn ban near you?</h1>}
-    <div data-status-slot data-fips={fips} data-note={note} aria-live="polite" set:html={home ? ask : renderCheckingHtml(place)} />
+    <div data-status-slot data-fips={fips} aria-live="polite" set:html={home ? ask : renderCheckingHtml(place)} />
     {home && (
       <div class="hero-ask">
         <button type="button" class="hero-cta" data-locate>
@@ -40,10 +40,11 @@ const ask = `<div class="status" data-status="checking"><p class="status-word st
     )}
     <p class="hero-links">
       <button type="button" class="hero-link" data-sheet="location">Change location</button>
-      <button type="button" class="hero-link" data-sheet="alert" data-fips={fips} data-place={place}>
+      {!multiCounty && <button type="button" class="hero-link" data-sheet="details" data-fips={fips} data-place={place}>Details</button>}
+      {!multiCounty && <button type="button" class="hero-link" data-sheet="alert" data-fips={fips} data-place={place}>
         <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 3a6 6 0 0 0-6 6v3.5L4.5 16h15L18 12.5V9a6 6 0 0 0-6-6Zm-2 15a2 2 0 0 0 4 0h-4Z" fill="currentColor" /></svg>
         Alert me
-      </button>
+      </button>}
     </p>
   </div>
   <button type="button" class="hero-mark" data-sheet="menu" data-fips={fips} data-place={place} data-url={url} aria-label="Menu">
@@ -52,17 +53,16 @@ const ask = `<div class="status" data-status="checking"><p class="status-word st
 </main>
 
 {home && (
-  <script is:inline>
-    // Paint the remembered place before anything else loads (no flash of the question).
+  <script is:inline define:vars={{ placeKey: PLACE_KEY, checking: renderCheckingHtml(), checkingStyle: heroStyle("checking") }}>
     try {
-      var p = JSON.parse(localStorage.getItem("itabb:place") || "null");
-      if (p && p.html && p.style) {
+      var stored = JSON.parse(localStorage.getItem(placeKey) || localStorage.getItem("itabb:last") || "null");
+      var query = new URLSearchParams(location.search);
+      if (/^\d{5}$/.test(stored?.fips || "") || query.has("zip") || query.has("fips") || (query.has("lat") && query.has("lon"))) {
         var h = document.querySelector("[data-hero]");
-        h.dataset.state = "answer";
-        h.dataset.status = p.status;
-        h.style.cssText = p.style;
-        h.querySelector("[data-status-slot]").innerHTML = p.html;
-        document.documentElement.style.backgroundColor = getComputedStyle(h).getPropertyValue("--bg");
+        h.dataset.state = "checking";
+        h.dataset.status = "checking";
+        h.style.cssText = checkingStyle;
+        h.querySelector("[data-status-slot]").innerHTML = checking;
       }
     } catch (e) {}
   </script>

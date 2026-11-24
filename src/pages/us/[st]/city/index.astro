@@ -14,7 +14,7 @@ const groups = useIndex
   ? [...new Set(list.map((p) => p.name[0].toUpperCase()))].map((letter) => ({ letter, list: list.filter((p) => p.name[0].toUpperCase() === letter) }))
   : [{ letter: "", list }];
 const title = `Burn bans by city in ${s.name}`;
-const description = `Burn ban status for ${list.length} cities and towns in ${s.name}, each with its county, the official source and when the status last changed.`;
+const description = `Available county burn-ban reports for ${list.length} cities and towns in ${s.name}.`;
 const jsonLd = [
   {
     "@context": "https://schema.org",
@@ -39,8 +39,8 @@ const jsonLd = [
     </nav>
     <h1>{title}</h1>
     <p>
-      Cities and towns with at least 5,000 people, plus every county seat. A city page shows its county's burn ban
-      status and explains where the city's own rules may differ. Smaller towns: use <a href={statePath(s.abbr)}>your county</a>.
+      This directory includes mapped cities and towns with at least 5,000 residents and many county seats.
+      Some county-equivalent cities and smaller places use a <a href={statePath(s.abbr)}>county page</a>. City pages show county reports and identify when local rules may apply.
     </p>
 
     <form class="finder" data-finder role="search" action={stateCitiesPath(s.abbr)}>

@@ -6,6 +6,8 @@ import preact from "@astrojs/preact";
 export default defineConfig({
   site: "https://isthereaburnban.com",
   output: "static",
+  cacheDir: "./.astro/cache",
+  vite: { cacheDir: "./.astro/vite" },
   trailingSlash: "always",
   build: { format: "directory" },
   integrations: [preact({ compat: true })],

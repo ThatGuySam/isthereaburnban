@@ -1,7 +1,8 @@
 import { activeFireWeather, coverage } from "./api";
 import { confirmEmail, subscribeEmail, unsubscribeEmail } from "./email";
 import type { Env } from "./env";
-import { DISCLAIMER, lookup, LookupError, resultSentence, statusFor } from "./lookup";
+import { DISCLAIMER, lookup, LookupError, lookupText, statusFor } from "./lookup";
+import { serveMachineDocs } from "./machine-docs";
 import { handleMcp } from "./mcp";
 import { handleOps } from "./ops";
 import { CANARY_CRON, runCanary } from "./notify";
@@ -28,8 +29,8 @@ function jsonResponse(body: string, status = 200, cache = "public, max-age=300")
   });
 }
 
-function text(body: string, status = 200): Response {
-  return new Response(body, { status, headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=300", ...CORS } });
+function text(body: string, status = 200, cache = "public, max-age=300"): Response {
+  return new Response(body, { status, headers: { "content-type": "text/plain; charset=utf-8", "cache-control": cache, ...CORS } });
 }
 
 function error(message: string, status = 400): Response {
@@ -61,12 +62,12 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
     if (path === "/api/v1/push/key") return env.VAPID_PUBLIC_KEY ? json({ publicKey: env.VAPID_PUBLIC_KEY }) : error("push is not configured", 503);
     if (path === "/api/v1/email/confirm") {
       return (await confirmEmail(env, p.get("token") ?? ""))
-        ? page("You're subscribed", "We'll email you when the burn ban status changes for the counties you picked.")
+        ? page("You're subscribed", "Your subscription is active for eligible changes in the counties you picked.")
         : page("Link not valid", "This confirmation link is invalid or was already unsubscribed.", 404);
     }
     if (path === "/api/v1/email/unsubscribe") {
       return (await unsubscribeEmail(env, p.get("token") ?? ""))
-        ? page("Unsubscribed", "You won't get any more burn ban emails from us.")
+        ? page("Unsubscribed", "The subscription for this link is now disabled. Messages already queued may still arrive.")
         : page("Link not valid", "This unsubscribe link is invalid.", 404);
     }
 
@@ -76,7 +77,7 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
       const cf = request.cf as { latitude?: string; longitude?: string } | undefined;
       if (here && !(cf?.latitude && cf?.longitude)) return error("could not locate this request; try zip= instead", 422);
       const q = here
-        ? { lat: Number(cf!.latitude), lon: Number(cf!.longitude) }
+        ? { lat: Number(cf!.latitude), lon: Number(cf!.longitude), here: true as const }
         : {
             zip: p.get("zip") ?? undefined,
             fips: p.get("fips") ?? undefined,
@@ -85,14 +86,23 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
             lon: p.has("lon") ? Number(p.get("lon")) : undefined,
           };
       const result = await lookup(env, snapshots, q);
-      if (p.get("format") === "text") return text(result.results.map(resultSentence).join("\n") + `\n${DISCLAIMER}\n`);
-      return json(result, 200, here ? "private, max-age=300" : undefined);
+      const cache = here || q.lat !== undefined || q.lon !== undefined ? "private, no-store" : undefined;
+      if (p.get("format") === "text") return text(lookupText(result) + `\n${DISCLAIMER}\n`, 200, cache);
+      return json(result, 200, cache);
+    }
+    if (path === "/api/v1/map-status") {
+      const map = await snapshots.mapStatus();
+      const maxAge = Math.max(0, Math.floor((map.expiresAt - Date.now()) / 1000));
+      return json(map, 200, `public, max-age=${maxAge}, must-revalidate`);
     }
     if (path === "/api/v1/bans") return jsonResponse((await snapshots.bans(p.get("state") ?? undefined)).body.join(""));
     if (path === "/api/v1/fire-weather") return json(activeFireWeather(await snapshots.weather(), p.get("state") ?? undefined));
     if (path === "/api/v1/coverage") return json(coverage(await snapshots.coverage()));
     const m = path.match(/^\/api\/v1\/counties\/(\d{5})$/);
-    if (m) return json({ ...statusFor(await snapshots.county(m[1]), m[1]), disclaimer: DISCLAIMER });
+    if (m) {
+      const snapshot = await snapshots.county(m[1]);
+      return json({ ...statusFor(snapshot, m[1]), generated: snapshot.generated, disclaimer: DISCLAIMER });
+    }
   }
 
   if (method === "POST") {
@@ -113,6 +123,8 @@ async function route(request: Request, env: Env, ctx: ExecutionContext, mcp?: Mc
   if (path === "/ops" || path.startsWith("/ops/")) return handleOps(request, env, url);
   try {
     if (path.startsWith("/api/")) return await api(request, env, url);
+    const docs = await serveMachineDocs(request, env, url);
+    if (docs) return docs;
     if (path === "/mcp" || path.startsWith("/mcp/")) return await handleMcp(request, env, ctx, mcp);
     if (path.startsWith("/us/")) return await handlePage(request, env, snapshotReader(env));
     if (path === "/sitemap.xml" || path.startsWith("/sitemaps/")) return await handleSitemap(request, env, snapshotReader(env));

@@ -1,30 +1,30 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Is There a Burn Ban? API",
+    "title": "Is There a Burn Ban? Read API",
     "version": "1.1.0",
-    "description": "County burn status and National Weather Service fire-weather alerts, refreshed hourly. Informational only. Confirm restrictions with the official authority before burning.",
-    "termsOfService": "https://isthereaburnban.com/terms/",
+    "description": "Published county burn-ban reports, standing restrictions and selected National Weather Service fire-weather signals. An hourly job schedules due sources. Coverage and cadence vary by publisher. Informational only. Confirm restrictions with the official authority before burning.",
+    "termsOfService": "https://site.example/terms/",
     "contact": {
       "name": "Is There a Burn Ban?",
-      "url": "https://isthereaburnban.com/developers/",
+      "url": "https://site.example/developers/",
       "email": "hello@isthereaburnban.com"
     },
     "license": {
-      "name": "Facts summarized from public agencies; attribute and link each source. See terms.",
-      "url": "https://isthereaburnban.com/terms/"
+      "name": "Attribute and link each source. Verify publisher terms before republishing source records.",
+      "url": "https://site.example/terms/"
     }
   },
   "servers": [
     {
-      "url": "https://isthereaburnban.com"
+      "url": "https://site.example"
     }
   ],
   "paths": {
     "/api/v1/status": {
       "get": {
         "operationId": "getStatus",
-        "summary": "Burn ban status for a ZIP, coordinates, county FIPS, city and state, or the caller's IP location",
+        "summary": "Published burn reports by ZIP, coordinates, FIPS or incorporated place",
         "parameters": [
           {
             "name": "zip",
@@ -33,7 +33,8 @@
               "type": "string",
               "pattern": "^\\d{5}$"
             },
-            "example": "74103"
+            "example": "74103",
+            "description": "Five-digit US ZIP. Census 2020 ZIP areas determine mapped county overlaps. An absent ZIP may have a same-prefix substitute selected by numeric distance."
           },
           {
             "name": "lat",
@@ -41,7 +42,8 @@
             "schema": {
               "type": "number"
             },
-            "example": 36.154
+            "example": 36.154,
+            "description": "Latitude. Coordinates sent to the Census geocoder are rounded to three decimals."
           },
           {
             "name": "lon",
@@ -49,7 +51,8 @@
             "schema": {
               "type": "number"
             },
-            "example": -95.993
+            "example": -95.993,
+            "description": "Longitude. Coordinates sent to the Census geocoder are rounded to three decimals."
           },
           {
             "name": "fips",
@@ -68,7 +71,7 @@
               "maxLength": 80
             },
             "example": "Tulsa",
-            "description": "Incorporated city, town or village name. Pass state too; a name used in several states returns 400. Small towns without a page resolve to their county."
+            "description": "Incorporated city, town or village name, or a disambiguating page slug. Include the state for names shared across states."
           },
           {
             "name": "state",
@@ -89,7 +92,7 @@
                 "1"
               ]
             },
-            "description": "Use the request's approximate IP location"
+            "description": "Request an approximate county match using the caller’s IP location."
           },
           {
             "name": "format",
@@ -101,12 +104,12 @@
                 "text"
               ]
             },
-            "description": "text returns one plain sentence per county"
+            "description": "text returns a plain county report for each result or a request to confirm an approximate location."
           }
         ],
         "responses": {
           "200": {
-            "description": "One result per county",
+            "description": "County report or location candidates",
             "content": {
               "application/json": {
                 "schema": {
@@ -131,7 +134,27 @@
             }
           },
           "404": {
-            "description": "Bad input",
+            "description": "Location or county could not be matched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "IP location unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Census geocoder unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -140,13 +163,14 @@
               }
             }
           }
-        }
+        },
+        "description": "County reports can differ across a place. Approximate ZIP and IP lookups provide candidates for confirmation. Coordinate results use 2020 Census county boundaries. Location estimates and coordinate responses are private and no-store."
       }
     },
     "/api/v1/bans": {
       "get": {
         "operationId": "listBans",
-        "summary": "Counties with an active ban or restriction",
+        "summary": "Published active burn bans and restrictions",
         "parameters": [
           {
             "name": "state",
@@ -188,13 +212,19 @@
                       "examples": [
                         "Informational only. Always confirm with the official source before burning."
                       ]
+                    },
+                    "unknownCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "Number of counties with unconfirmed status when a state is requested."
                     }
                   }
                 }
               }
             }
           }
-        }
+        },
+        "description": "Published county summaries with a ban or restriction, including scoped orders. The list reflects available evidence."
       }
     },
     "/api/v1/coverage": {
@@ -241,7 +271,7 @@
     "/api/v1/counties/{fips}": {
       "get": {
         "operationId": "getCounty",
-        "summary": "Status for one county",
+        "summary": "Published report for one county",
         "parameters": [
           {
             "name": "fips",
@@ -272,6 +302,11 @@
                           "examples": [
                             "Informational only. Always confirm with the official source before burning."
                           ]
+                        },
+                        "generated": {
+                          "type": "string",
+                          "description": "Publication timestamp for this county answer.",
+                          "format": "date-time"
                         }
                       }
                     }
@@ -296,8 +331,8 @@
     "/api/v1/fire-weather": {
       "get": {
         "operationId": "listFireWeather",
-        "summary": "Current National Weather Service fire-weather alerts by county",
-        "description": "Weather signals can apply to part of a county. An issued warning or watch may have a future onset. Omitted counties have no current alert in the last published feed.",
+        "summary": "Published National Weather Service fire-weather signals by county",
+        "description": "Selected NWS alerts that mapped to a county. Alerts may cover part of the county or have a future onset. Check the source health and alert boundaries.",
         "parameters": [
           {
             "name": "state",
@@ -370,6 +405,58 @@
                     },
                     "disclaimer": {
                       "type": "string"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Present when no published signal matches the query."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/map-status": {
+      "get": {
+        "operationId": "getMapStatus",
+        "summary": "Compact map of county reports",
+        "description": "Known county statuses from the same publication reader as county lookups. Omitted counties and expired responses are unconfirmed.",
+        "responses": {
+          "200": {
+            "description": "Revision-pinned map with expiry",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "revision",
+                    "expiresAt",
+                    "counties"
+                  ],
+                  "properties": {
+                    "revision": {
+                      "type": "string",
+                      "description": "Pinned publication revision."
+                    },
+                    "expiresAt": {
+                      "type": "integer",
+                      "description": "Exclusive UTC epoch-millisecond cutoff for displaying this projection."
+                    },
+                    "counties": {
+                      "type": "object",
+                      "propertyNames": {
+                        "pattern": "^\\d{5}$"
+                      },
+                      "additionalProperties": {
+                        "type": "string",
+                        "enum": [
+                          "ban",
+                          "restricted",
+                          "none"
+                        ]
+                      }
                     }
                   }
                 }
@@ -390,7 +477,7 @@
           "none",
           "unknown"
         ],
-        "description": "none = the official source covers this county and reports no ban. unknown = no feed, failed, stale, or not reported; never treat as permission to burn."
+        "description": "ban means a reported burn ban. restricted means a local, activity-specific or permit restriction. none means no applicable temporary county order was reported within the checked feed coverage. unknown means the status is unconfirmed because evidence is missing, unreported, expired or unavailable."
       },
       "CountyStatus": {
         "type": "object",
@@ -433,7 +520,7 @@
           },
           "label": {
             "type": "string",
-            "description": "Human label from the source",
+            "description": "Normalized human-readable report label.",
             "examples": [
               "County Burn Ban"
             ]
@@ -443,89 +530,165 @@
               "string",
               "null"
             ],
-            "description": "When the ban started (source), or when we first saw this status"
+            "description": "Effective date or ISO timestamp provided by the publisher. Null when unavailable."
           },
           "expires": {
             "type": [
               "string",
               "null"
             ],
-            "description": "Expiry date when the source gives one"
+            "description": "End date or timestamp supplied by the publisher. A date-only end follows the publisher’s local calendar and inclusive or exclusive convention. See validUntil for the read cutoff when known."
           },
           "sourceUpdated": {
             "type": [
               "string",
               "null"
             ],
-            "format": "date-time"
+            "description": "Publisher report or edit date, in ISO date or timestamp form."
           },
           "checked": {
-            "type": "string",
-            "format": "date-time",
-            "description": "When we last fetched this source successfully"
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Last successful source check for the report. Null for a directory fallback or an unavailable check time.",
+            "format": "date-time"
           },
           "sourceName": {
-            "type": "string"
+            "type": "string",
+            "description": "Publisher or issuing authority associated with this report."
           },
           "sourceUrl": {
             "type": "string",
-            "description": "Machine endpoint we read"
+            "description": "Retrieved publication or machine endpoint. Empty for a directory fallback."
           },
           "officialUrl": {
             "type": "string",
-            "format": "uri",
-            "description": "Official human page to confirm with"
+            "description": "Issuing order, agency report or official directory link. Empty if unavailable."
           },
           "note": {
-            "type": "string"
+            "type": "string",
+            "description": "Scope, applicable activity, exemptions or other context when known."
           },
           "alerts": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/FireWeatherAlert"
             },
-            "description": "Current NWS fire-weather signals that can cover part of the county. A verified local rule can independently trigger a scoped restriction."
+            "description": "Selected published NWS fire-weather signals. Check onset and alert boundaries. A verified local rule may separately trigger scoped restrictions."
           },
           "orders": {
             "type": "array",
-            "description": "Scoped orders and legal restrictions. A weather-triggered order links to the rule that authorizes it.",
+            "description": "Scoped, standing and weather-triggered orders or rules attached to this county report. Check each order’s applicability and timing.",
             "items": {
-              "type": "object",
-              "properties": {
-                "status": {
-                  "$ref": "#/components/schemas/BanStatus"
-                },
-                "label": {
-                  "type": "string"
-                },
-                "scope": {
-                  "type": "string",
-                  "enum": [
-                    "part",
-                    "county",
-                    "state"
-                  ]
-                },
-                "scopeNote": {
-                  "type": "string"
-                },
-                "note": {
-                  "type": "string"
-                },
-                "officialUrl": {
-                  "type": "string",
-                  "format": "uri"
-                },
-                "validFrom": {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                "validUntil": {
-                  "type": "string",
-                  "format": "date-time"
-                }
+              "$ref": "#/components/schemas/ScopedOrder"
+            }
+          },
+          "firstSeenAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "First time this service recorded a report for this county under current observation tracking.",
+            "format": "date-time"
+          },
+          "statusChangedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Time this service last observed the published county status change.",
+            "format": "date-time"
+          },
+          "lastAttemptedAt": {
+            "type": "string",
+            "description": "Latest source attempt if known. It can differ from the last successful check.",
+            "format": "date-time"
+          },
+          "sourceCheckFailed": {
+            "type": "boolean",
+            "const": true,
+            "description": "Present when the latest attempt for this report failed."
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "county",
+              "part",
+              "state"
+            ],
+            "description": "Reported geographic authority or area. Read scopeNote for narrower applicability."
+          },
+          "scopeNote": {
+            "type": "string",
+            "description": "Applicable area or activity, as reported or verified."
+          },
+          "standing": {
+            "type": "boolean",
+            "const": true,
+            "description": "Ongoing, activity-specific rule."
+          },
+          "sourceId": {
+            "type": "string",
+            "description": "Stable ID for the source in the coverage response."
+          },
+          "validFrom": {
+            "type": "string",
+            "description": "UTC instant when a dated or scheduled decision begins to apply.",
+            "format": "date-time"
+          },
+          "validUntil": {
+            "type": "string",
+            "description": "Exclusive UTC cutoff for the report’s validity or freshness window, when known.",
+            "format": "date-time"
+          },
+          "countywide": {
+            "type": "object",
+            "description": "Separate broader report when a scoped or activity-specific rule supplies the headline.",
+            "properties": {
+              "status": {
+                "$ref": "#/components/schemas/BanStatus"
+              },
+              "label": {
+                "type": "string",
+                "description": "Normalized human-readable report label.",
+                "examples": [
+                  "County Burn Ban"
+                ]
+              },
+              "checked": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Last successful source check for the report. Null for a directory fallback or an unavailable check time.",
+                "format": "date-time"
+              },
+              "sourceId": {
+                "type": "string",
+                "description": "Stable ID for the source in the coverage response."
+              },
+              "sourceName": {
+                "type": "string",
+                "description": "Publisher or issuing authority associated with this report."
+              },
+              "sourceUpdated": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Publisher report or edit date, in ISO date or timestamp form."
+              },
+              "officialUrl": {
+                "type": "string",
+                "description": "Issuing order, agency report or official directory link. Empty if unavailable."
               }
             }
+          },
+          "scopedBan": {
+            "type": "boolean",
+            "const": true,
+            "description": "An explicit burn ban applies within the stated part of the county."
           }
         }
       },
@@ -549,11 +712,13 @@
             "description": "Two-letter state code, or US for a national source"
           },
           "ok": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Latest source check succeeded when a check exists."
           },
           "checked": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "Compatibility timestamp. Use lastAttemptedAt and lastSuccessfulAt to distinguish attempts from successful checks."
           },
           "error": {
             "type": "string"
@@ -571,14 +736,80 @@
               "positive-only",
               "manual"
             ],
-            "description": "positive-only: absence of a ban means unknown, not none"
+            "description": "full means the feed supplies explicit county status within its reporting scope, which can be voluntary. positive-only means omissions are unconfirmed. manual is a reference without automated status."
           },
           "product": {
             "type": "string",
             "enum": [
               "fire-weather"
             ],
-            "description": "Signal source with nationwide fire-weather coverage"
+            "description": "Selected NWS fire-weather signal source."
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "county",
+              "part",
+              "state"
+            ],
+            "description": "Reported geographic authority or area. Read scopeNote for narrower applicability."
+          },
+          "officialUrl": {
+            "type": "string",
+            "description": "Issuing order, agency report or official directory link. Empty if unavailable."
+          },
+          "sourceName": {
+            "type": "string",
+            "description": "Publisher or issuing authority associated with this report."
+          },
+          "sourceUrl": {
+            "type": "string",
+            "description": "Retrieved publication or machine endpoint. Empty for a directory fallback."
+          },
+          "lastAttemptedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Latest automated check attempt, if known.",
+            "format": "date-time"
+          },
+          "lastSuccessfulAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Latest successful automated check, if known.",
+            "format": "date-time"
+          },
+          "cadence": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Configured poll cadence from the coverage endpoint. Null for a manual source.",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "hourly",
+                  "daily"
+                ]
+              },
+              "zone": {
+                "type": "string",
+                "description": "IANA time zone for daily polls."
+              },
+              "hours": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 23
+                },
+                "description": "Scheduled local hours for daily polls."
+              }
+            }
           }
         }
       },
@@ -597,7 +828,8 @@
               "live",
               "restrictions",
               "directory"
-            ]
+            ],
+            "description": "Configured directory tier. live is a county-reporting feed, restrictions is selected automated reports, directory is manual references."
           },
           "publisher": {
             "type": "string"
@@ -647,16 +879,20 @@
               },
               "state": {
                 "type": "string"
+              },
+              "here": {
+                "type": "boolean",
+                "const": true
               }
             }
           },
           "ambiguous": {
             "type": "boolean",
-            "description": "The ZIP or city touches more than one county"
+            "description": "The selected place or ZIP area maps to multiple county candidates."
           },
           "approximate": {
             "type": "boolean",
-            "description": "The ZIP wasn't in Census data; the nearest ZIP was used"
+            "description": "Location requires confirmation after a numeric ZIP substitute or an IP estimate. Candidate statuses are unknown until confirmed."
           },
           "results": {
             "type": "array",
@@ -677,7 +913,8 @@
                   }
                 }
               ]
-            }
+            },
+            "description": "ZIP counties are ordered by Census 2020 land overlap. Incorporated places use county population overlap where available, with a representative-point fallback."
           },
           "disclaimer": {
             "type": "string",
@@ -687,7 +924,7 @@
           },
           "place": {
             "type": "object",
-            "description": "Set for city lookups: the matched place, its page (or its county page) and every county it touches, largest population share first",
+            "description": "Matched Census incorporated place, its supported county FIPS, and a city or county page. Same-state name matches normally select the most populous place. Use a disambiguating page slug when available.",
             "properties": {
               "name": {
                 "type": "string"
@@ -704,10 +941,51 @@
                 "items": {
                   "type": "string"
                 }
+              },
+              "localRulesUrl": {
+                "type": "string",
+                "description": "Known municipal burning guidance or fire authority."
               }
             }
+          },
+          "answer": {
+            "type": "string",
+            "enum": [
+              "ban",
+              "restricted",
+              "none",
+              "unknown",
+              "depends"
+            ],
+            "description": "Place-level answer. depends means mapped counties disagree. Approximate locations have an unknown answer until the county is confirmed."
+          },
+          "generated": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "County publication time. Null when the answer only offers unconfirmed location candidates.",
+            "format": "date-time"
+          },
+          "matchedZip": {
+            "type": "string",
+            "pattern": "^\\d{5}$",
+            "description": "Mapped Census ZIP-area ID for a ZIP lookup. Compare it with the requested ZIP."
+          },
+          "approximationReason": {
+            "type": "string",
+            "description": "Reason the ZIP was substituted or the location was estimated."
           }
-        }
+        },
+        "required": [
+          "query",
+          "answer",
+          "generated",
+          "ambiguous",
+          "approximate",
+          "results",
+          "disclaimer"
+        ]
       },
       "Error": {
         "type": "object",
@@ -781,11 +1059,120 @@
             "description": "NWS issuing office"
           }
         }
+      },
+      "ScopedOrder": {
+        "type": "object",
+        "required": [
+          "status",
+          "label",
+          "scope",
+          "scopeNote",
+          "since",
+          "expires",
+          "checked",
+          "sourceName",
+          "sourceUpdated",
+          "officialUrl"
+        ],
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/BanStatus"
+          },
+          "label": {
+            "type": "string",
+            "description": "Normalized human-readable report label.",
+            "examples": [
+              "County Burn Ban"
+            ]
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "county",
+              "part",
+              "state"
+            ],
+            "description": "Reported geographic authority or area. Read scopeNote for narrower applicability."
+          },
+          "scopeNote": {
+            "type": "string",
+            "description": "Applicable area or activity, as reported or verified."
+          },
+          "standing": {
+            "type": "boolean",
+            "const": true,
+            "description": "Ongoing, activity-specific rule."
+          },
+          "note": {
+            "type": "string",
+            "description": "Scope, applicable activity, exemptions or other context when known."
+          },
+          "since": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Effective date or ISO timestamp provided by the publisher. Null when unavailable."
+          },
+          "expires": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "End date or timestamp supplied by the publisher. A date-only end follows the publisher’s local calendar and inclusive or exclusive convention. See validUntil for the read cutoff when known."
+          },
+          "checked": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Last successful source check for the report. Null for a directory fallback or an unavailable check time.",
+            "format": "date-time"
+          },
+          "sourceId": {
+            "type": "string",
+            "description": "Stable ID for the source in the coverage response."
+          },
+          "sourceName": {
+            "type": "string",
+            "description": "Publisher or issuing authority associated with this report."
+          },
+          "sourceUrl": {
+            "type": "string",
+            "description": "Retrieved publication or machine endpoint. Empty for a directory fallback."
+          },
+          "sourceUpdated": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Publisher report or edit date, in ISO date or timestamp form."
+          },
+          "officialUrl": {
+            "type": "string",
+            "description": "Issuing order, agency report or official directory link. Empty if unavailable."
+          },
+          "validFrom": {
+            "type": "string",
+            "description": "UTC instant when a dated or scheduled decision begins to apply.",
+            "format": "date-time"
+          },
+          "validUntil": {
+            "type": "string",
+            "description": "Exclusive UTC cutoff for the report’s validity or freshness window, when known.",
+            "format": "date-time"
+          },
+          "scopedBan": {
+            "type": "boolean",
+            "const": true,
+            "description": "An explicit burn ban applies within the stated part of the county."
+          }
+        }
       }
     }
   },
   "externalDocs": {
     "description": "Dataset description, sources and attribution",
-    "url": "https://isthereaburnban.com/data/"
+    "url": "https://site.example/data/"
   }
 }

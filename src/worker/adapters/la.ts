@@ -11,11 +11,11 @@ const meta = {
 
 /** Seen values: "Burn Ban", "none", null. */
 export function classify(raw: string): { status: BanStatus; label: string } {
-  const v = raw.toLowerCase();
-  if (v === "none" || v === "no burn ban") return { status: "none", label: "No burn ban" };
-  if (v.includes("ban")) return { status: "ban", label: "Parish burn ban" };
-  if (v.includes("restrict")) return { status: "restricted", label: raw };
-  return { status: "unknown", label: raw || "Not reported" };
+  switch (raw.toLowerCase()) {
+    case "none": return { status: "none", label: "No parish burn ban reported" };
+    case "burn ban": return { status: "ban", label: "Parish burn ban" };
+    default: return { status: "unknown", label: raw || "Not reported" };
+  }
 }
 
 export function parse(json: ArcgisResponse, checked: string): CountyStatus[] {

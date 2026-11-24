@@ -2,16 +2,16 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "com.isthereaburnban/burn-ban",
   "title": "Is There a Burn Ban?",
-  "description": "US county burn ban status from official state sources, by ZIP, city, coordinates or county FIPS.",
+  "description": "US county burn-ban reports, standing restrictions and selected NWS fire-weather signals.",
   "version": "1.1.0",
-  "websiteUrl": "https://isthereaburnban.com/developers/",
+  "websiteUrl": "https://isthereaburnban-preview.samcarlton.workers.dev/developers/",
   "repository": {
     "url": "https://github.com/ThatGuySam/isthereaburnban",
     "source": "github"
   },
   "icons": [
     {
-      "src": "https://isthereaburnban.com/icons/icon-512.png",
+      "src": "https://isthereaburnban-preview.samcarlton.workers.dev/icons/icon-512.png",
       "mimeType": "image/png",
       "sizes": [
         "512x512"
@@ -21,7 +21,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://isthereaburnban.com/mcp"
+      "url": "https://isthereaburnban-preview.samcarlton.workers.dev/mcp"
     }
   ]
 }

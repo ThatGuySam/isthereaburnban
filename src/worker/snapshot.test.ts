@@ -2,9 +2,12 @@
 import { describe, expect, test } from "bun:test";
 import type { CountyStatus } from "../shared/types";
 import type { Adapter } from "./adapters/common";
-import { buildSnapshot } from "./snapshot";
-import { buildResult, resultSentence, statusFor } from "./lookup";
+import { alertNotices, buildSnapshot } from "./snapshot";
+import { buildResult, coordsToFips, DISCLAIMER, resultSentence, statusFor } from "./lookup";
 import { activeBans } from "./api";
+import { formatNationalBans } from "./active-bans";
+import { decodeActive, encodeActive, encodeState } from "./snapshot-v2";
+import { renderStatusHtml } from "../shared/render";
 
 const adapter = (id: string, state: string): Adapter => ({ id, state, mode: "full", sourceName: id, sourceUrl: "x", officialUrl: "y", fetch: async () => [] });
 const row = (fips: string, status: CountyStatus["status"], checked: string, extra: Partial<CountyStatus> = {}): CountyStatus => ({
@@ -21,7 +24,7 @@ describe("buildSnapshot", () => {
 
   test("first import seeds changed and emits no transitions", () => {
     expect(first.transitions).toEqual([]);
-    expect(first.snapshot.changed["40143"]).toBe("2026-11-20T00:00:00.000Z");
+    expect(first.snapshot.changed["40143"]).toBe(t0.toISOString());
     expect(first.snapshot.changed["40001"]).toBe(t0.toISOString());
     expect(first.snapshot.sources[0]).toMatchObject({ id: "ok", ok: true, counties: 2, bans: 1 });
   });
@@ -57,7 +60,7 @@ describe("lookup", () => {
   test("missing county is unknown, never none", () => {
     const s = statusFor(snap, "06037");
     expect(s.status).toBe("unknown");
-    expect(s.label).toBe("We don't track this state yet");
+    expect(s.label).toBe("No confirmed county report");
     expect(s.officialUrl).toContain("fire.ca.gov");
   });
 
@@ -69,7 +72,7 @@ describe("lookup", () => {
   });
 
   test("text sentence", () => {
-    expect(resultSentence(snap.counties["40143"])).toBe("Yes: Tulsa County, OK has a burn ban (County Burn Ban). Source: OFS, checked 2026-11-23T19:07Z. Official: y");
+    expect(resultSentence(snap.counties["40143"])).toBe("Yes: Burn ban reported for Tulsa County, OK. Source: OFS, checked 2026-11-23T19:07Z. First recorded 2026-11-23T19:07:31.000Z. Official source: y");
   });
 
   test("activeBans filters by state", () => {
@@ -99,4 +102,136 @@ test("official links come from current adapter code, not the stored snapshot", (
   } };
   _wcl(snap);
   expect(snap.counties["40143"].officialUrl).toBe("https://experience.arcgis.com/experience/8bdc59b2a54a4383a9a2996fb9407580/");
+});
+
+test("a district ban overrides a county-level negative in public answers and alert decisions", () => {
+  const t0 = new Date("2026-11-24T10:00:00Z");
+  const t1 = new Date("2026-11-24T11:00:00Z");
+  const expires = "2026-11-24T12:00:00.000Z";
+  const county = row("40143", "none", t0.toISOString(), { county: "Tulsa County", scope: "county" });
+  const first = buildSnapshot(null, A, [ok([county])], t0);
+  const district = row("40143", "ban", t1.toISOString(), { county: "Tulsa County", label: "Burn ban",
+    scope: "part", scopeNote: "Example Fire District", sourceName: "Example Fire District", validUntil: expires });
+  const next = buildSnapshot(first.snapshot, [...A, adapter("district", "OK")], [ok([county]), ok([district])], t1);
+  const answer = statusFor(_wcl(next.snapshot), county.fips, t1.getTime());
+  expect(answer).toMatchObject({ status: "restricted", scope: "part", scopeNote: "Example Fire District",
+    countywide: { status: "none" }, orders: [{ status: "ban", scopeNote: "Example Fire District" }] });
+  expect(resultSentence(answer)).toContain("Burn ban in Example Fire District");
+  expect(renderStatusHtml(answer)).toContain("Burn ban in Example Fire District");
+  expect(alertNotices(next.transitions, next.snapshot)[0].body).toContain("Burn ban in Example Fire District");
+  expect(activeBans(next.snapshot, "OK", t1.getTime()).counties[0]).toMatchObject({ status: "restricted", scope: "part" });
+  expect(next.transitions).toEqual([{ fips: county.fips, oldStatus: "none", newStatus: "restricted", at: t1.toISOString() }]);
+  expect(statusFor(next.snapshot, county.fips, Date.parse(expires)).status).toBe("none");
+
+  const index = { ...next.snapshot, revision: "fixture", version: 2, states: {}, orderChecks: {} };
+  const encoded = encodeState({ ...index, state: "OK" }, "signature");
+  for (const format of ["compact", "pretty"]) {
+    const projection = decodeActive(encodeActive(index.revision, [{ ...encoded, active: format === "pretty" ? encoded.pretty : encoded.active }]));
+    const bans = (now: Date) => {
+      const { body } = formatNationalBans(projection, index, new Map(), now, format);
+      return JSON.parse(format === "pretty" ? JSON.parse(body.join("")) : body.join("")).counties;
+    };
+    const { lastAttemptedAt: _attempt, ...expected } = answer;
+    expect(bans(t1)).toEqual([JSON.parse(JSON.stringify(expected))]);
+    expect(bans(new Date(expires))).toEqual([]);
+  }
+});
+
+test("standing activity rules are reported separately from the temporary county feed", () => {
+  const now = new Date("2026-11-24T11:00:00Z");
+  const checked = now.toISOString();
+  const county = row("40143", "none", checked, { scope: "county" });
+  const standing = row("40143", "restricted", checked, { scope: "county", standing: true,
+    label: "Residential yard debris burning prohibited", scopeNote: "Residential properties", sourceName: "Local authority" });
+  const { snapshot } = buildSnapshot(null, [...A, adapter("standing", "OK")], [ok([county]), ok([standing])], now);
+  expect(statusFor(snapshot, county.fips, now.getTime())).toMatchObject({
+    status: "restricted", scope: "county", standing: true, sourceName: "Local authority",
+    countywide: { status: "none" },
+    orders: [{ standing: true, scopeNote: "Residential properties" }],
+  });
+});
+
+test("approximate ZIP lookup asks for confirmation and withholds definitive answers on every wire format", async () => {
+  const { default: worker } = await import("./index");
+  const generated = new Date().toISOString();
+  const env = {
+    SITE_URL: "https://burn.example",
+    ASSETS: { fetch: async () => Response.json({ "74103": ["40143"] }) },
+    DB: { prepare: () => ({ first: async () => null }) },
+    KV: { get: async () => ({ version: 1, counties: { "40143": row("40143", "ban", generated) }, generated, changed: {}, sources: [] }) },
+  };
+  const context = { waitUntil() {}, passThroughOnException() {} };
+  const get = (path) => worker.fetch(new Request(`https://burn.example${path}`), env, context);
+  const json = await (await get("/api/v1/status?zip=74100")).json();
+  expect(json).toMatchObject({ approximate: true, answer: "unknown", matchedZip: "74103", approximationReason: expect.stringContaining("by number") });
+  expect(json.results).toMatchObject([{ fips: "40143", status: "unknown" }]);
+  const text = await (await get("/api/v1/status?zip=74100&format=text")).text();
+  for (const item of ["74100", "74103", "by number", "Confirm your county", "Tulsa County"]) expect(text).toContain(item);
+  expect(text).not.toMatch(/Yes:|Nope:/);
+
+  const mcp = await worker.fetch(new Request("https://burn.example/mcp", {
+    method: "POST", headers: { "content-type": "application/json", accept: "application/json, text/event-stream", host: "burn.example" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call",
+      params: { name: "check_burn_ban", arguments: { zip: "74100" } } }),
+  }), env, context);
+  const payload = await mcp.text();
+  const data = payload.split("\n").find((line) => line.startsWith("data: "));
+  const [summary, detail] = JSON.parse(data ? data.slice(6) : payload).result.content;
+  expect(summary.text).toBe(text.split(DISCLAIMER)[0].trim());
+  expect(JSON.parse(detail.text)).toEqual(json);
+});
+
+test("coordinates use the Census vintage with Hartford County FIPS", async () => {
+  const realFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async (input) => {
+      const p = new URL(input).searchParams;
+      expect(p.get("x")).toBe("-72.674");
+      expect(p.get("y")).toBe("41.764");
+      const fips = p.get("vintage") === "Census2020_Current" ? "09003" : "09110";
+      return Response.json({ result: { geographies: { Counties: [{ GEOID: fips }] } } });
+    };
+    expect(await coordsToFips(41.764, -72.674)).toEqual(["09003"]);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test("effective dates, public observations and latest checks stay distinct", () => {
+  const t0 = new Date("2026-11-24T10:00:00Z");
+  const t1 = new Date("2026-11-24T11:00:00Z");
+  const t2 = new Date("2026-11-24T12:00:00Z");
+  const cleared = row("40143", "none", t0.toISOString(), { sourceUpdated: "2026-11-23T18:00:00Z" });
+  const initial = buildSnapshot(null, A, [ok([cleared])], t0).snapshot;
+  expect(initial.counties["40143"]).toMatchObject({ since: null, firstSeenAt: t0.toISOString(), statusChangedAt: null });
+  const ban = row("40143", "ban", t1.toISOString(), { since: "2026-11-24T10:30:00Z", sourceUpdated: "2026-11-24T10:40:00Z" });
+  const next = buildSnapshot(initial, A, [ok([ban])], t1).snapshot;
+  const updated = buildSnapshot(next, A, [ok([{ ...ban, checked: t2.toISOString() }])], t2).snapshot;
+  expect(updated.counties["40143"]).toMatchObject({ since: ban.since, firstSeenAt: t0.toISOString(),
+    statusChangedAt: t1.toISOString(), sourceUpdated: ban.sourceUpdated, checked: t2.toISOString() });
+  expect(statusFor(updated, "40109")).toMatchObject({ since: null, checked: null, firstSeenAt: null, statusChangedAt: null });
+});
+
+test("legacy snapshots do not expose guessed effective dates", () => {
+  const now = new Date();
+  const old = row("40143", "ban", now.toISOString(), { since: "2026-11-23T18:00:00Z", sourceUpdated: "2026-11-23T18:00:00Z" });
+  const snapshot = { generated: now.toISOString(), changed: {}, sources: [], counties: { [old.fips]: old } };
+  expect(statusFor(snapshot, old.fips)).toMatchObject({ since: null, firstSeenAt: null, statusChangedAt: null });
+});
+
+test("a scoped emergency ban can trigger an alert when a standing rule already makes the county restricted", () => {
+  const t0 = new Date("2026-11-24T10:00:00Z");
+  const t1 = new Date("2026-11-24T11:00:00Z");
+  const t2 = new Date("2026-11-24T12:00:00Z");
+  const checked = t0.toISOString();
+  const county = row("40143", "none", checked, { scope: "county" });
+  const standing = row("40143", "restricted", checked, { scope: "county", standing: true, scopeNote: "Residential properties" });
+  const district = row("40143", "ban", t1.toISOString(), { scope: "part", scopeNote: "Example Fire District" });
+  const adapters = [...A, adapter("standing", "OK"), adapter("district", "OK")];
+  const baseline = buildSnapshot(null, adapters, [ok([county]), ok([standing]), ok([])], t0);
+  const next = buildSnapshot(baseline.snapshot, adapters, [ok([county]), ok([standing]), ok([district])], t1);
+  expect(next.transitions).toHaveLength(1);
+  expect(alertNotices(next.transitions, next.snapshot)[0].title).toBe("Burn ban in Example Fire District");
+  const nextCheck = buildSnapshot(next.snapshot, adapters, [ok([county]), ok([standing]), ok([district])], t2);
+  expect(nextCheck.transitions).toEqual([]);
 });

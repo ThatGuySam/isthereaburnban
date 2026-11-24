@@ -1,15 +1,18 @@
-import type { CountyStatus, Snapshot, SnapshotData } from "../shared/types";
+import type { CountyStatus, MapStatus, Snapshot, SnapshotData } from "../shared/types";
 import type { Adapter } from "./adapters";
 import { formatNationalBans, projectWeather, type BanFormat } from "./active-bans";
+import { countyDecision } from "./county-decision";
 import { activeBans } from "./api";
 import { SNAPSHOT_KEY, type Env } from "./env";
 import { withFireWeather } from "./fire-weather";
+import { projectMapStatus } from "./map-status";
 import { countyState } from "./lookup";
 import { CHANNELS } from "./notification-audience";
 import { transitionNotice, type Transition } from "./notification-message";
 import { notify } from "./notify";
+import { withReportDates } from "./report-dates";
 import { withPublishedChecks } from "./published-checks";
-import { loadActive, loadIndex, loadState } from "./snapshot-store";
+import { loadActive, loadIndex, loadMapStates, loadState } from "./snapshot-store";
 import { lastChangedByState, type ActiveProjection, type SnapshotIndex, type StateSnapshot } from "./snapshot-v2";
 import { withCurrentLinks } from "./source-links";
 import { mergeSources } from "./sources/merge";
@@ -36,7 +39,7 @@ export function buildSnapshot(
     if (result.status === "fulfilled") return { source, rows: result.value, checked: now.toISOString() };
     const rows = Object.values(prev?.counties ?? {}).filter((row) =>
       row.sourceId ? row.sourceId === source.id : row.state === source.state);
-    return { source, rows, checked: now.toISOString(), error: errorText(result.reason) };
+    return { source, rows: rows.map(withReportDates), checked: now.toISOString(), error: errorText(result.reason) };
   }), now);
 }
 
@@ -67,7 +70,10 @@ export function transitionInsert(db: D1Database, transitions: Transition[]) {
 export function alertNotices(transitions: Transition[], snapshot: SnapshotData) {
   return transitions
     .filter((t) => t.oldStatus === "ban" || t.newStatus === "ban" || t.oldStatus === "restricted" || t.newStatus === "restricted")
-    .map((transition) => transitionNotice(transition, snapshot.counties[transition.fips]));
+    .map((transition) => {
+      const row = snapshot.counties[transition.fips];
+      return transitionNotice(transition, row && countyDecision(row, Date.parse(snapshot.generated)));
+    });
 }
 
 export async function refresh(env: Env, adapters?: Adapter[], scheduledTime?: number): Promise<Snapshot> {
@@ -122,7 +128,8 @@ type ReadCache = {
   index?: Memo<SnapshotIndex>;
   heads?: Memo<Map<string, SourceHead>>;
   active: Partial<Record<BanFormat, Memo<ActiveProjection>>>;
-  states: Map<string, Memo<{ shard: StateSnapshot; checked: boolean }>>;
+  map?: MapStatus;
+  states: Map<string, Memo<StateSnapshot> & { heads?: Map<string, SourceHead> }>;
 };
 const readCache = new WeakMap<KVNamespace, ReadCache>();
 const keep = <T>(value: T): Memo<T> => ({ value, until: Date.now() + MEMO_MS });
@@ -163,29 +170,45 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
     return projection;
   };
 
+  function countyView<T extends SnapshotData>(snapshot: T, heads: Map<string, SourceHead>, now: Date): T {
+    const counties: SnapshotData["counties"] = {};
+    for (const row of Object.values(snapshot.counties)) counties[row.fips] = { ...row };
+    const view = { ...snapshot, counties, sources: snapshot.sources.map((source) => ({ ...source })) };
+    withCurrentLinks(view);
+    applyChecks(view, heads, now);
+    return view;
+  }
+
+  function stateView(shard: StateSnapshot, idx: SnapshotIndex, heads: Map<string, SourceHead> | undefined, now: Date, weather: boolean): SnapshotData {
+    const view = { ...shard, generated: idx.generated };
+    const published = heads ? withPublishedChecks(countyView(view, heads, now), idx.orderChecks) : view;
+    return weather ? withFireWeather(published, now.getTime(), idx.weatherChecked) : published;
+  }
+
   async function state(st: string, { checks = true, weather = true } = {}): Promise<SnapshotData> {
     const idx = await catalog();
     if (!idx) {
       const snapshot = await old();
-      return weather ? withFireWeather(snapshot) : snapshot;
+      const view = checks ? countyView(snapshot, new Map(), new Date()) : snapshot;
+      return weather ? withFireWeather(view) : view;
     }
     let entry = memo.states.get(st);
-    if (!entry || !reusable(entry) || entry.value.shard.revision !== idx.states[st]?.revision) {
+    if (!entry || !reusable(entry) || entry.value.revision !== idx.states[st]?.revision) {
       const shard = await loadState(env, idx, st);
       if (!shard) return { generated: idx.generated, counties: {}, changed: {}, sources: [] };
-      entry = keep({ shard, checked: false });
+      entry = keep(shard);
       memo.states.set(st, entry);
     }
-    const { shard } = entry.value;
-    if (checks && !entry.value.checked) {
-      const heads = await publicHeads(env, shard.sources.filter((source) => source.mode !== "manual").map(({ id }) => id));
-      withCurrentLinks(shard);
-      applyChecks(shard, heads, new Date());
-      entry.value.checked = true;
+    const shard = entry.value;
+    let heads: Map<string, SourceHead> | undefined;
+    if (checks) {
+      if (memo.heads && reusable(memo.heads)) heads = memo.heads.value;
+      else {
+        heads = entry.heads ??= await publicHeads(env,
+          shard.sources.filter((source) => source.mode !== "manual").map(({ id }) => id));
+      }
     }
-    const view = { ...shard, generated: idx.generated };
-    const published = checks ? withPublishedChecks(view, idx.orderChecks) : view;
-    return weather ? withFireWeather(published, Date.now(), idx.weatherChecked) : published;
+    return stateView(shard, idx, heads, new Date(), weather);
   }
 
   return {
@@ -196,6 +219,36 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
     async forCounties(fips: string[]) {
       const states = [...new Set(fips.map(countyState))];
       return new Map(await Promise.all(states.map(async (st) => [st, await state(st)] as const)));
+    },
+    async mapStatus() {
+      const idx = await catalog();
+      if (!idx) {
+        const snapshot = await state("");
+        return projectMapStatus(snapshot.generated, [snapshot], Date.now());
+      }
+      if (!fresh && memo.map?.revision === idx.revision && Date.now() < memo.map.expiresAt) return memo.map;
+      const headsPromise = allHeads();
+      const states = Object.keys(idx.states);
+      const shards: StateSnapshot[] = [];
+      const missing: string[] = [];
+      for (const st of states) {
+        const hit = memo.states.get(st);
+        if (hit && reusable(hit) && hit.value.revision === idx.states[st]?.revision) shards.push(hit.value);
+        else missing.push(st);
+      }
+      // D1 rows each fit under 2 MB; the KV bulk response cap is 25 MB.
+      for (let start = 0; start < missing.length; start += 10) {
+        for (const shard of await loadMapStates(env, idx, missing.slice(start, start + 10))) {
+          memo.states.set(shard.state, keep(shard));
+          shards.push(shard);
+        }
+      }
+      const heads = await headsPromise;
+      const now = new Date();
+      const map = projectMapStatus(idx.revision, shards.map((shard) => stateView(shard, idx, heads, now, true)), now.getTime());
+      map.expiresAt = Math.min(map.expiresAt, memo.heads?.until ?? Infinity);
+      if (shards.length === states.length) memo.map = map;
+      return map;
     },
     async coverage() {
       const idx = await catalog();
@@ -208,7 +261,7 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
       const idx = await catalog();
       const st = stateQuery?.trim().toUpperCase();
       if (!idx || st) {
-        const snapshot = idx && st ? await state(st) : withFireWeather(await old());
+        const snapshot = await state(st ?? "");
         if (idx && st) {
           const sources = idx.sources.filter((source) => source.state === st).map((source) => ({ ...source }));
           applySourceChecks(sources, await publicHeads(env, sources.filter((s) => s.mode !== "manual").map(({ id }) => id)));

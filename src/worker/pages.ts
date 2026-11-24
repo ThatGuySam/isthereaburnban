@@ -1,10 +1,12 @@
 // Server side of the static pages: inject live status into prerendered county pages, and build sitemaps.
 import countiesData from "../data/counties.json";
 import cityStates from "../data/places-states.json";
-import statesData from "../data/states.json";
-import { answerMeta, escapeHtml, heroStyle, localDate, renderStatusHtml, renderStatusLine, statusTheme, unknownStatus } from "../shared/render";
+import { cityRulesUrl } from "../shared/city-rules";
+import { answerMeta, escapeHtml, heroStyle, placeStatus, renderCityHtml, renderStatusHtml, statusTheme } from "../shared/render";
 import { STATES, STATE_BY_ABBR } from "../shared/states-fips";
-import type { CountyStatus, SnapshotData, StateDirectoryEntry } from "../shared/types";
+import type { CountyStatus, SnapshotData } from "../shared/types";
+import { countyPath } from "./counties";
+import { statusFor } from "./lookup";
 import type { Env } from "./env";
 import type { SnapshotReader } from "./snapshot";
 import { latest } from "./snapshot-v2";
@@ -12,13 +14,12 @@ import { latest } from "./snapshot-v2";
 type County = { fips: string; state: string; stateFips: string; name: string; slug: string };
 
 const COUNTIES = countiesData as County[];
-const STATE_DIR = new Map((statesData as StateDirectoryEntry[]).map((s) => [s.abbr, s]));
 const BY_PATH = new Map(COUNTIES.map((c) => [`${c.state.toLowerCase()}/${c.slug}`, c]));
 
 const PAGE_CACHE = "public, max-age=300";
 
-function countyStatus(snapshot: SnapshotData, c: County): CountyStatus {
-  return snapshot.counties[c.fips] ?? unknownStatus(c, STATE_DIR.get(c.state), snapshot.generated);
+function countyStatus(snapshot: SnapshotData, c: County): CountyStatus & { url: string } {
+  return { ...statusFor(snapshot, c.fips), url: countyPath(c.fips) };
 }
 
 /** Collects a text node across chunks and replaces it once complete. */
@@ -47,7 +48,7 @@ class JsonLdDateModified {
 const COUNTY_BY_FIPS = new Map(COUNTIES.map((c) => [c.fips, c]));
 
 /** Answer for the page's counties, read from <html data-answer-fips> before the head streams by. */
-type PageAnswer = { list: CountyStatus[]; changed?: string; meta: { title: string; description: string } | null };
+type PageAnswer = { list: ReturnType<typeof countyStatus>[]; city: string | null; changed?: string; meta: { title: string; description: string } | null };
 
 function pageAnswer(snapshot: SnapshotData, question: string, fipsAttr: string, city: string | null): PageAnswer | null {
   const list = fipsAttr
@@ -56,8 +57,8 @@ function pageAnswer(snapshot: SnapshotData, question: string, fipsAttr: string, 
     .filter((c): c is County => Boolean(c))
     .map((c) => countyStatus(snapshot, c));
   if (!list.length) return null;
-  const changed = latest(list.map((c) => snapshot.changed?.[c.fips]));
-  return { list, changed, meta: answerMeta(question, list, city ?? undefined) };
+  const changed = latest(list.map((c) => c.statusChangedAt ?? undefined));
+  return { list, city, changed, meta: answerMeta(question, list, city ?? undefined) };
 }
 
 /** `Link` header pointing agents at the JSON for this page. */
@@ -112,7 +113,7 @@ export async function handlePage(request: Request, env: Env, snapshots: Snapshot
     .on('meta[property="og:description"]', setMeta((a) => a.meta?.description))
     .on('meta[name="theme-color"]', {
       element(el) {
-        if (answer) el.setAttribute("content", statusTheme(answer.list[0].status).color);
+        if (answer) el.setAttribute("content", statusTheme(placeStatus(answer.list)).color);
       },
     })
     .on('script[data-ld="WebPage"]', {
@@ -125,35 +126,20 @@ export async function handlePage(request: Request, env: Env, snapshots: Snapshot
     .on("[data-hero]", {
       element(el) {
         if (!answer) return;
-        el.setAttribute("data-status", answer.list[0].status);
-        el.setAttribute("style", heroStyle(answer.list[0].status));
+        const status = placeStatus(answer.list);
+        el.setAttribute("data-status", status);
+        el.setAttribute("style", heroStyle(status));
       },
     })
     .on("[data-status-slot]", {
       element(el) {
         const c = COUNTY_BY_FIPS.get(el.getAttribute("data-fips") ?? "");
         if (!c || !snapshot) return;
-        const note = el.getAttribute("data-note") ?? undefined;
-        el.setInnerContent(renderStatusHtml(countyStatus(snapshot, c), { relativeTimeBase: now, note }), { html: true });
-      },
-    })
-    .on("[data-status-line]", {
-      element(el) {
-        const c = COUNTY_BY_FIPS.get(el.getAttribute("data-fips") ?? "");
-        if (c && snapshot) el.setInnerContent(renderStatusLine(countyStatus(snapshot, c)), { html: true });
-      },
-    })
-    .on("[data-status-changed]", {
-      element(el) {
-        if (!answer) return;
-        const first = answer.list[0];
-        const parts: string[] = [];
-        // Absolute dates in the HTML, for readers and agents that never run the relative-time script.
-        if (first.sourceUrl && first.checked) parts.push(`Checked <time datetime="${escapeHtml(first.checked)}">${escapeHtml(localDate(first.checked, first.state))}</time>.`);
-        if (answer.changed) parts.push(`Status last changed <time datetime="${escapeHtml(answer.changed)}">${escapeHtml(localDate(answer.changed, first.state))}</time>.`);
-        if (!parts.length) return;
-        el.removeAttribute("hidden");
-        el.setInnerContent(parts.join(" "), { html: true });
+        if (answer?.city) {
+          el.setInnerContent(renderCityHtml(answer.list, answer.city, cityRulesUrl(url.pathname), now), { html: true });
+          return;
+        }
+        el.setInnerContent(renderStatusHtml(countyStatus(snapshot, c), { relativeTimeBase: now }), { html: true });
       },
     });
 

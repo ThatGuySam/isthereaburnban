@@ -31,7 +31,7 @@ Set `state` and `fixture_url` for the publisher you are adding. The link checker
 
 Give each town, city, fire or air district, tribal authority, or land manager a `scope: "part"` row with a precise `scopeNote`. Multiple part rows can share a county FIPS. The merge preserves those rows in `orders` and references them in `note`. A county or statewide answer supplies the main status. With local evidence alone, a ban or active restriction produces a scoped `restricted` summary. A local permissive day leaves countywide status `unknown`. A statewide or countywide source can also report `restricted` for limits on specific activities.
 
-`checked` records the last successful check. Use `sourceUpdated` for a publisher timestamp and `since` or `expires` for dates actually supplied by the issuer. Optional `validFrom` and `validUntil` UTC instants guard short-lived decisions. Dated upcoming local reports can appear in notes before activation. A failure keeps the last verified rows through the freshness window. Stale data become unknown and missing evidence gives no permission to burn.
+`checked` records the last successful check. Use `sourceUpdated` for a publisher timestamp, `since` for an effective date supplied by the publisher, and `expires` for a stated end. The merge records its own observations in `firstSeenAt` and `statusChangedAt`. Optional `validFrom` and `validUntil` UTC instants guard short-lived decisions. Dated upcoming local reports can appear in notes before activation. A failure keeps the last verified rows through the freshness window. Stale data become unknown and missing evidence gives no permission to burn.
 
 ### Stack groups
 
@@ -67,7 +67,7 @@ Each state job reuses the existing merge rules and journals its shard, transitio
 | Binding | Published data and readers |
 | --- | --- |
 | `KV` | `snapshot:v2:<ST>` holds a state shard. County and city pages, status API and MCP lookups, and state sitemaps use the relevant shard. Border ZIPs can use more than one. |
-| `KV` | `snapshot:v2:index` is the small catalog for coverage, the sitemap index, and revision checks for all shards. `snapshot:v2:active` serves the national bans API, map and fire-weather API. `snapshot:v2:active:pretty` holds the same active county text in the wire format used by MCP. Date, health and weather changes are checked at read time. |
+| `KV` | `snapshot:v2:index` is the small catalog for coverage, the sitemap index, and revision checks for all shards. `snapshot:v2:active` serves the national bans and fire-weather APIs. The map endpoint reads revision-pinned state shards in batches and returns only per-FIPS statuses and a short expiry. `snapshot:v2:active:pretty` holds the same active county text in the wire format used by MCP. Date, health and weather changes are checked at read time. |
 | `DB` | Stores source heads and normalized payloads, the resumable publication cursor, and the last two revisions of each state. A reader can fetch the exact revision from D1 if KV has a miss or returns another revision. Ready shards beyond the hourly KV budget also read from D1. |
 | `SOURCE_QUEUE` | Carries source polls, the merge coordinator and publication continuations. Keep the consumer at one concurrent invocation. |
 

@@ -1,9 +1,11 @@
 import type { CountyStatus, SnapshotData } from "../shared/types";
+import { countyDecision, isScopedBan } from "./county-decision";
 import { COUNTY_BY_FIPS } from "./counties";
 import { withFireWeather } from "./fire-weather";
 import { DISCLAIMER } from "./lookup";
 import { publishedOrders, withPublishedChecks } from "./published-checks";
 import type { ActiveProjection, SnapshotIndex } from "./snapshot-v2";
+import { withReportDates } from "./report-dates";
 import { withCurrentLinks } from "./source-links";
 import { STALE_MS } from "./sources/merge";
 import { applyChecks, applyCountyCheck, type SourceHead } from "./sources/state";
@@ -37,15 +39,15 @@ function prepareCounty(row: CountyStatus, format: BanFormat, bodies: string[]): 
   return entry;
 }
 
-const active = (row: CountyStatus | undefined) => row?.status === "ban" || row?.status === "restricted";
+const active = (row: Pick<CountyStatus, "status"> | undefined) => row?.status === "ban" || row?.status === "restricted";
 
 /** Serialize each state's county bodies once. Requests still evaluate freshness and weather against their own clock. */
 export function prepareBanEntries(snapshot: SnapshotData) {
   const selected: SnapshotData["counties"] = {};
   const names = new Map<string, string>();
   for (const row of Object.values(snapshot.counties)) {
-    if (active(row) || snapshot.fireWeather?.[row.fips]) {
-      selected[row.fips] = { ...row };
+    if (active(row) || row.orders?.some(active) || snapshot.fireWeather?.[row.fips]) {
+      selected[row.fips] = { ...withReportDates(row) };
       names.set(row.fips, row.county);
     }
   }
@@ -61,7 +63,8 @@ export function prepareBanEntries(snapshot: SnapshotData) {
   const ordered = [...names].sort((a, b) => a[1].localeCompare(b[1]));
   for (const [fips] of ordered) {
     const row = selected[fips];
-    if (snapshot.fireWeather?.[fips]) {
+    if (!row?.checked || snapshot.fireWeather?.[fips] || (row.status !== "ban" && row.orders?.some((order) =>
+      isScopedBan(order) || (!active(row) && active(order))))) {
       compact.push([fips]);
       pretty.push([fips]);
       if (row) weatherCounties[fips] = row;
@@ -130,7 +133,8 @@ export function formatNationalBans(projection: ActiveProjection, index: Snapshot
   for (const [id, head] of heads) if (head.lastGood && head.hash === index.sourceVersions?.[id]) good.set(id, head);
   for (const entry of projection.bans) {
     if (entry.length === 1) {
-      const row = weather.counties[entry[0]];
+      const raw = weather.counties[entry[0]];
+      const row = raw && countyDecision(withReportDates(raw), clock);
       if (row && active(row)) allRows.push(encodeCounty(row, format));
       continue;
     }
@@ -138,25 +142,21 @@ export function formatNationalBans(projection: ActiveProjection, index: Snapshot
     const beforeStart = cursor;
     const beforeEnd = beforeStart + body[1];
     cursor = beforeEnd + (after?.[1][1] ?? 0);
-    if (!id) {
-      allRows.push(projection.raw.slice(beforeStart, beforeEnd));
-      continue;
-    }
     if (expires !== null && expires <= clock) continue;
-    const head = good.get(id);
+    const head = id ? good.get(id) : undefined;
     const stamp = head?.lastGood ?? checked;
     let checkedAt = parsedDates.get(stamp);
     if (checkedAt === undefined) parsedDates.set(stamp, checkedAt = Date.parse(stamp));
-    if (clock - checkedAt > STALE_MS) continue;
-    if (after && clock >= after[0]) {
+    if (clock - checkedAt >= STALE_MS) continue;
+    if (index.reportDates && after && clock >= after[0]) {
       const [offset, , orders] = after[1];
       allRows.push(patchChecks(projection.raw, beforeEnd, cursor, checked, stamp, offset, orders, index.orderChecks));
-    } else if (ordersExpire !== null && ordersExpire <= clock) {
+    } else if (!index.reportDates || (ordersExpire !== null && ordersExpire <= clock)) {
       const encoded = projection.raw.slice(beforeStart, beforeEnd);
       const row: CountyStatus = JSON.parse(format === "pretty" ? JSON.parse(`"${encoded}"`) : encoded);
-      applyCountyCheck(row, head, index.sourceVersions?.[id], clock);
+      applyCountyCheck(row, head, id ? index.sourceVersions?.[id] : undefined, clock);
       if (row.orders) row.orders = publishedOrders(row.orders, index.orderChecks);
-      allRows.push(encodeCounty(row, format));
+      if (active(row)) allRows.push(encodeCounty(withReportDates(row), format));
     } else allRows.push(patchChecks(projection.raw, beforeStart, beforeEnd, checked, stamp, body[0], body[2], index.orderChecks));
   }
   const { generated, sources } = weather;

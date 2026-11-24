@@ -29,9 +29,9 @@ export function statePath(abbr: string): string {
 }
 
 export const COVERAGE_LABEL: Record<StateDirectoryEntry["coverage"], string> = {
-  live: "Live county status",
-  restrictions: "Restrictions feed",
-  directory: "Official links only",
+  live: "County-reporting feed",
+  restrictions: "Selected reports",
+  directory: "Official directory",
 };
 
 // us-atlas (2017) still has Valdez-Cordova (02261); Census 2020 split it into 02063 and 02066.

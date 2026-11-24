@@ -33,11 +33,8 @@ const nearby = nearbyPlaces(p);
 const seatOf = (p.seatOf ?? []).map((f) => countyByFips[f]?.name).filter(Boolean);
 const kind = p.lsad === "city and borough" ? "city and borough" : p.lsad;
 const title = `Is there a burn ban in ${where}?`;
-const description = `Current burn ban status for ${p.name}, ${stateName} (${primary.name}), with the official source and when it last changed.`;
+const description = `Available county burn-ban reports and sources for ${p.name}, ${stateName}.`;
 const pop = new Intl.NumberFormat("en-US").format(p.pop < 10000 ? p.pop : Math.round(p.pop / 100) * 100);
-const note = others.length
-  ? `Most of ${p.name} is in ${primary.name}. Parts reach ${others.length === 1 ? "one other county" : `${others.length} other counties`}, listed below.`
-  : `${p.name} is in ${primary.name}.`;
 const apiCity = p.slug === countySlug(p.name) ? p.name : p.slug;
 const apiHref = `/api/v1/status?city=${encodeURIComponent(apiCity)}&state=${p.state}`;
 
@@ -79,7 +76,7 @@ const jsonLd = [
   apiHref={apiHref}
   sheets
 >
-  <Hero mode="county" fips={primary.fips} place={`${primary.name}, ${p.state}`} url={countyPath(primary)} note={note} />
+  <Hero mode="county" fips={primary.fips} place={`${primary.name}, ${p.state}`} url={countyPath(primary)} multiCounty={others.length > 0} />
 
   <div class="page">
     <nav class="crumbs" aria-label="Breadcrumb">
@@ -91,14 +88,12 @@ const jsonLd = [
       </ol>
     </nav>
     <h1>{title}</h1>
-    <p data-status-changed hidden></p>
 
     <section>
       <h2>City or county?</h2>
       <p>
-        The answer above is the burn ban status for {primary.name}{others.length ? ", where most of " + p.name + " is" : ""}.
-        County burn bans usually cover unincorporated areas. Inside {p.name} city limits, the city can set its own
-        burning rules, and they are often stricter. Before you burn, check the official source and the {p.name} fire department.
+        The answers above summarize county reports for {p.name}. County orders often apply to unincorporated areas.
+        Check the issuing order and the {p.name} fire department for rules at your address.
       </p>
       <p>
         {seatOf.includes(primary.name)
@@ -115,7 +110,6 @@ const jsonLd = [
           {counties.map((c) => (
             <li>
               <a href={countyPath(c)}>{c.name}</a>
-              <span data-status-line data-fips={c.fips}>Checking…</span>
             </li>
           ))}
         </ul>
@@ -125,14 +119,14 @@ const jsonLd = [
 
     {state && (
       <section>
-        <h2>Official source</h2>
+        <h2>Official directory</h2>
         <p>
           <a href={state.officialUrl} target="_blank" rel="noopener">{state.publisher}</a>
           {" "}<span class={`badge badge--${state.coverage}`}>{COVERAGE_LABEL[state.coverage]}</span>
         </p>
         <p>{state.notes}</p>
         {state.coverage !== "live" && (
-          <p class="callout">We don't have a live county feed for {stateName} yet, so this page can't confirm whether {p.name} has a ban. Use the official source above.</p>
+          <p class="callout">Sources for {stateName} cover selected areas and activities. Check the city fire authority for your address.</p>
         )}
       </section>
     )}

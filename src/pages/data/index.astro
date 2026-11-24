@@ -1,5 +1,6 @@
 ---
 import Base from "../../layouts/Base.astro";
+import { DOCS_ORIGIN } from "../../shared/site-origin";
 import { CONTACT_EMAIL, SITE, states, statePath } from "../../components/site-data";
 
 const live = states.filter((s) => s.coverage === "live");
@@ -9,11 +10,10 @@ const directory = states.filter((s) => s.coverage === "directory");
 const NAME = "US county burn ban status";
 // Keep this text and the visible "About this dataset" paragraphs saying the same thing (Google checks they match).
 const DESCRIPTION =
-  `Current burn ban status for every US county, summarized from official state and local sources and refreshed about every hour. ` +
-  `Each county is "ban", "restricted", "none" or "unknown", with the publisher's name, a link to the official page, and when we last checked it. ` +
-  `${live.length} states have live county burn ban feeds, ${restrictions.length} more have restriction, permit or land-manager feeds, ` +
-  `and the rest link to the official agency. National Weather Service fire-weather alerts (such as Red Flag Warnings) are attached by county. ` +
-  `"Unknown" never means burning is allowed. Informational only: confirm with the official source before burning.`;
+  `County burn-ban reports and restrictions from the sources we check. Coverage and schedule vary by publisher. ` +
+  `Source-backed records include the publisher, its link and our last successful check. Unconfirmed counties can link to an official directory. ` +
+  `${live.length} states have county-reporting feeds and ${restrictions.length} areas have selected restriction sources. ` +
+  `Selected National Weather Service fire-weather signals are associated with counties. Confirm the issuing authority before burning.`;
 
 const jsonLd = [
   {
@@ -22,7 +22,7 @@ const jsonLd = [
     name: NAME,
     description: DESCRIPTION,
     url: `${SITE}/data/`,
-    sameAs: `${SITE}/developers/`,
+    sameAs: `${DOCS_ORIGIN}/developers/`,
     keywords: ["burn ban", "fire restrictions", "outdoor burning", "red flag warning", "county", "United States"],
     creator: { "@type": "Organization", name: "Is There a Burn Ban?", url: `${SITE}/`, email: CONTACT_EMAIL },
     license: `${SITE}/terms/`,
@@ -31,16 +31,16 @@ const jsonLd = [
     spatialCoverage: { "@type": "Place", name: "United States", geo: { "@type": "GeoShape", box: "18.9 -179.2 71.4 -66.9" } },
     variableMeasured: ["burn ban status", "NWS fire-weather alerts"],
     distribution: [
-      { "@type": "DataDownload", name: "Active bans and restrictions (JSON API)", encodingFormat: "application/json", contentUrl: `${SITE}/api/v1/bans` },
-      { "@type": "DataDownload", name: "Coverage and source health (JSON API)", encodingFormat: "application/json", contentUrl: `${SITE}/api/v1/coverage` },
-      { "@type": "DataDownload", name: "API description (OpenAPI)", encodingFormat: "application/vnd.oai.openapi+json", contentUrl: `${SITE}/openapi.json` },
+      { "@type": "DataDownload", name: "Active bans and restrictions (JSON API)", encodingFormat: "application/json", contentUrl: `${DOCS_ORIGIN}/api/v1/bans` },
+      { "@type": "DataDownload", name: "Coverage and source health (JSON API)", encodingFormat: "application/json", contentUrl: `${DOCS_ORIGIN}/api/v1/coverage` },
+      { "@type": "DataDownload", name: "API description (OpenAPI)", encodingFormat: "application/vnd.oai.openapi+json", contentUrl: `${DOCS_ORIGIN}/openapi.json` },
     ],
   },
 ];
 ---
 <Base
   title="Burn ban dataset · Is There a Burn Ban?"
-  description="US county burn ban status from official state and local sources, refreshed hourly, with a free JSON API and per-source links."
+  description="Available US county burn-ban reports and restrictions, with a free read API, source links and check times."
   path="/data/"
   jsonLd={jsonLd}
 >
@@ -55,43 +55,39 @@ const jsonLd = [
 
     <h2 id="about">About this dataset</h2>
     <p>
-      Current burn ban status for every US county, summarized from official state and local sources and refreshed about
-      every hour. Each county is <code>ban</code>, <code>restricted</code>, <code>none</code> or <code>unknown</code>, with the
-      publisher's name, a link to the official page, and when we last checked it.
+      We publish county burn-ban reports and restrictions from the sources we check. A county answer can be
+      <code>ban</code>, <code>restricted</code>, <code>none</code> or <code>unknown</code>.
+      <code>None</code> means the feed reported no temporary county ban within its coverage. <code>Unknown</code> means the status is unconfirmed.
     </p>
     <p>
-      {live.length} states have live county burn ban feeds, {restrictions.length} more have restriction, permit or
-      land-manager feeds, and the rest link to the official agency. National Weather Service fire-weather alerts (such as
-      Red Flag Warnings) are attached by county.
+      {live.length} states have county-reporting feeds and {restrictions.length} areas have selected restriction sources.
+      Iowa reports listed active proclamations only. We associate selected National Weather Service fire-weather alerts with counties.
+      Check their coverage area, onset and source health. Some local rules apply during a Red Flag Warning.
     </p>
     <p>
-      "Unknown" never means burning is allowed. Informational only: confirm with the official source before burning.
-      We started collecting in November 2026 and publish the current status, not a historical archive.
+      This service is informational. Confirm with the issuing authority before burning. We started collecting reports in November 2026.
     </p>
 
     <h2 id="get">Get the data</h2>
     <ul>
-      <li><a href="/api/v1/bans"><code>/api/v1/bans</code></a> (JSON): every county with a ban or restriction now, with source health. Add <code>?state=TX</code> for one state.</li>
-      <li><a href="/api/v1/coverage"><code>/api/v1/coverage</code></a> (JSON): every state's coverage level, publisher, official link and source health.</li>
-      <li><code>/api/v1/status?zip=…</code>, <code>?fips=…</code>, <code>?city=…&amp;state=…</code> (JSON or text): one place, every county it touches.</li>
-      <li><a href="/openapi.json"><code>/openapi.json</code></a>: the full API description. Setup for AI agents and the MCP server is on <a href="/developers/">Connect your agent</a>.</li>
+      <li><a href="/api/v1/bans"><code>/api/v1/bans</code></a> lists published active reports, including scoped restrictions. Add <code>?state=TX</code> for one state.</li>
+      <li><a href="/api/v1/coverage"><code>/api/v1/coverage</code></a> lists configured sources, their checks and coverage.</li>
+      <li><code>/api/v1/status</code> returns reports for exact county or place matches, or county candidates to confirm if the match is approximate.</li>
+      <li><a href="/openapi.json"><code>/openapi.json</code></a> describes the read API. Find MCP setup on <a href="/developers/">Connect your agent</a>.</li>
     </ul>
-    <p>No key or account. Please cache for a few minutes.</p>
+    <p>No key or account required. Follow the response’s cache headers.</p>
 
     <h2 id="license">License and attribution</h2>
     <p>
-      Statuses are facts summarized from public agencies. Every record names its publisher (<code>sourceName</code>) and links
-      the official page (<code>officialUrl</code>). Keep both when you show a status. Use of this site and API is covered by our
-      <a href="/terms/">terms</a>.
+      We classify publisher reports, issuing orders and standing rules. Keep the publisher and <code>officialUrl</code> when you share a report.
+      For unconfirmed counties, that link may be a directory. See our <a href="/terms/">terms</a> for use of the site and API.
     </p>
     <p>
-      Some publishers restrict bulk redistribution or commercial use (for example Texas, Minnesota and New Jersey), so we offer
-      per-county lookups and links to each source instead of raw data dumps. Check a publisher's terms before you republish
-      its data in bulk.
+      Verify the original publisher's terms before republishing source records.
     </p>
 
     <h2 id="sources">Sources</h2>
-    <h3>Live county burn ban feeds</h3>
+    <h3>County-reporting feeds</h3>
     <ul>
       {live.map((s) => (
         <li><a href={statePath(s.abbr)}>{s.name}</a>: <a href={s.officialUrl} rel="noopener">{s.publisher}</a></li>
@@ -105,18 +101,17 @@ const jsonLd = [
     </ul>
     <h3>Fire weather</h3>
     <ul>
-      <li><a href="https://www.weather.gov/" rel="noopener">National Weather Service</a> active alerts (Red Flag Warnings and Fire Weather Watches), all states.</li>
+      <li><a href="https://www.weather.gov/" rel="noopener">National Weather Service</a> selected published alerts, including Red Flag Warnings and Fire Weather Watches.</li>
     </ul>
-    <p>
-      The other {directory.length} (including DC) link to their official agency only. See <a href="/us/">all states</a>.
-    </p>
+    {directory.length > 0 && <p>{directory.length} areas have official directory links. See <a href="/us/">all states</a>.</p>}
 
     <h2 id="updates">Update cadence</h2>
     <p>
-      We check each source about once an hour. Each record's <code>checked</code> time is our last successful read;
-      <code>sourceUpdated</code> is the publisher's own edit time when it gives one. If a feed fails or goes stale, its counties
-      turn <code>unknown</code> instead of keeping an old answer.
+      An hourly job schedules sources when they are due. A failed check can leave an earlier report visible through its freshness or validity window.
+      <code>checked</code> is our last successful source check and is null for a directory-only result. <code>generated</code> is the publication time.
+      <code>sourceUpdated</code> is a publisher timestamp when available. <code>since</code> is the effective date supplied by the publisher.
+      <code>firstSeenAt</code> and <code>statusChangedAt</code> are dates recorded by this service.
     </p>
-    <p>Corrections and questions: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.</p>
+    <p>Send corrections or questions to <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.</p>
   </main>
 </Base>

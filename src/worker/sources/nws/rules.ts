@@ -149,7 +149,7 @@ export function redFlagOrder(fips: string, alert: FireWeatherAlert, effective: s
   if (validUntil <= validFrom) return;
   return {
     ...details, sourceId: `nws-red-flag-${fips}`, status: "restricted",
-    since: validFrom, expires, validFrom, validUntil, sourceUpdated: null,
+    since: null, expires, validFrom, validUntil, sourceUpdated: null,
     ...(throughMidnight && end < expires ? { retainAfter: end } : {}),
   };
 }

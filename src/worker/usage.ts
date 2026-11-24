@@ -26,9 +26,12 @@ export function routeName(path: string): string {
   const p = path.replace(/\/+$/, "") || "/";
   if (p === "/mcp" || p.startsWith("/mcp/")) return "/mcp";
   if (/^\/api\/v1\/counties\/\d{5}$/.test(p)) return "/api/v1/counties/:fips";
-  if (/^\/api\/v1\/(status|bans|coverage|fire-weather|push\/(key|subscribe|unsubscribe)|email\/(subscribe|confirm|unsubscribe))$/.test(p)) return p;
+  if (/^\/api\/v1\/(status|bans|coverage|fire-weather|map-status|push\/(key|subscribe|unsubscribe)|email\/(subscribe|confirm|unsubscribe))$/.test(p)) return p;
   return "/api/other";
 }
+
+const COUNTED_MCP_METHODS = new Set(["initialize", "notifications/initialized", "ping", "tools/list", "tools/call"]);
+const COUNTED_MCP_TOOLS = new Set(["check_burn_ban", "list_active_bans", "coverage", "subscribe_email_alerts"]);
 
 export type McpCall = { method: string; tool: string };
 
@@ -58,9 +61,11 @@ export function recordUsage(env: Pick<Env, "USAGE">, request: Request, response:
   const surface = route === "/mcp" ? "mcp" : "api";
   const format = surface === "mcp" ? "mcp" : url.searchParams.get("format") === "text" ? "text" : "json";
   const country = (request.cf as { country?: string } | undefined)?.country ?? "";
+  const method = mcp?.method ? (COUNTED_MCP_METHODS.has(mcp.method) ? mcp.method : "other") : "";
+  const tool = method === "tools/call" && mcp?.tool ? (COUNTED_MCP_TOOLS.has(mcp.tool) ? mcp.tool : "other") : "";
   try {
     env.USAGE.writeDataPoint({
-      blobs: [surface, route, mcp?.method ?? "", mcp?.tool ?? "", format, String(response.status), country, classifyClient(request.headers.get("user-agent"))],
+      blobs: [surface, route, method, tool, format, String(response.status), country, classifyClient(request.headers.get("user-agent"))],
       doubles: [1],
       indexes: [surface],
     });

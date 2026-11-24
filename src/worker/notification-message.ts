@@ -1,4 +1,6 @@
+import { statusSentence } from "../shared/render";
 import type { BanStatus, CountyStatus } from "../shared/types";
+import { isScopedBan } from "./county-decision";
 import { countyPath, COUNTY_BY_FIPS } from "./counties";
 
 export type Transition = { fips: string; oldStatus: BanStatus; newStatus: BanStatus; at: string };
@@ -19,23 +21,24 @@ function countyLabel(fips: string): string {
 export function transitionNotice(t: Transition, county?: CountyStatus): Notice {
   const where = county ? `${county.county}, ${county.state}` : countyLabel(t.fips);
   const title =
-    t.newStatus === "ban" ? `Burn ban: ${where}`
+    county && isScopedBan(county) ? county.label
+    : t.newStatus === "ban" ? `Burn ban: ${where}`
     : t.newStatus === "restricted" ? `Burning restricted: ${where}`
     : t.oldStatus === "ban" ? `Burn ban lifted: ${where}`
     : `Burn status changed: ${where}`;
   const body = county
-    ? `${county.label}. Source: ${county.sourceName}. Check the official page before burning.`
+    ? `${statusSentence(county)}. Source: ${county.sourceName}. Check the official page before burning.`
     : "Check the official source before burning.";
   return { kind: "live", fips: t.fips, title, body, url: countyPath(t.fips) };
 }
 
 export function countyBulletin(county: CountyStatus): Notice {
-  const checked = new Date(county.checked).toISOString().slice(0, 16).replace("T", " ");
+  const checked = county.checked?.slice(0, 16).replace("T", " ");
   return {
     kind: "live",
     fips: county.fips,
     title: `Burn status update: ${county.county}, ${county.state}`,
-    body: `${county.label}. Source: ${county.sourceName}, checked ${checked} UTC. Check the official page before burning.`,
+    body: `${statusSentence(county)}. Source: ${county.sourceName}${checked ? `, checked ${checked} UTC` : ""}. Check the official page before burning.`,
     url: countyPath(county.fips),
   };
 }

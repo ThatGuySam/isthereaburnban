@@ -1,19 +1,12 @@
 ---
 import Base from "../../layouts/Base.astro";
 import Mark from "../../components/Mark.astro";
-import { states } from "../../components/site-data";
-import { STATE_BY_ABBR } from "../../shared/states-fips";
-
-// stateFips -> {abbr, coverage}, embedded so the map needs no extra request to shade untracked states.
-const coverage = Object.fromEntries(
-  states.filter((s) => STATE_BY_ABBR[s.abbr]).map((s) => [STATE_BY_ABBR[s.abbr].fips, { abbr: s.abbr, coverage: s.coverage }]),
-);
 ---
-<Base title="Burn ban map · Is There a Burn Ban?" description="Map of current county burn bans and restrictions across the US, from official state sources." path="/map/" sheets footer={false} themeColor="#f7f7f5">
+<Base title="Burn ban map · Is There a Burn Ban?" description="Map of available county burn-ban reports and restrictions. Select a county to see the rule, area and source." path="/map/" sheets footer={false} themeColor="#f7f7f5">
   <link slot="head" rel="preload" href="/data/map.topo.json" as="fetch" crossorigin="anonymous" />
   <main id="content" class="map-app" data-resolves-place>
     <a class="map-skip" href="/us/">Browse states instead</a>
-    <div id="map" data-coverage={JSON.stringify(coverage)} role="region" aria-label="County burn ban map. Tap a county for its status. For a list, use Browse states instead."></div>
+    <div id="map" role="region" aria-label="County burn ban map. Tap a county for its status. For a list, use Browse states instead."></div>
     <p class="map-loading" data-map-loading>Loading map…</p>
 
     <header class="map-head">
@@ -27,9 +20,8 @@ const coverage = Object.fromEntries(
       <ul aria-label="Legend">
         <li><span style="background:#f34f49"></span>Burn ban</li>
         <li><span style="background:#f5a623"></span>Restrictions</li>
-        <li><span style="background:#2a9d70"></span>No ban reported</li>
+        <li><span style="background:#2a9d70"></span>No county ban reported</li>
         <li><span style="background:#8fa3ad"></span>Can't confirm</li>
-        <li><span style="background:#e4e4e4"></span>Not tracked</li>
       </ul>
       <p class="map-hint">Tap a county. Press and hold to drop a pin.</p>
       <p class="map-fine"><a href="/us/">Browse states</a> · Boundaries: US Census</p>

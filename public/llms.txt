@@ -1,38 +1,38 @@
 # Is There a Burn Ban?
 
-> Answers one question for US counties: is there a burn ban right now? Data comes from official state feeds (forestry agencies, fire marshals, emergency management), refreshed hourly. Informational only. Always confirm with the official source before burning.
+> Look up county reports about temporary burn bans and standing restrictions. Each publisher has its own schedule and coverage. Confirm which area and activity the issuing order covers before you burn.
 
-See the coverage endpoint for each state's burn restriction sources. NWS fire-weather alerts cover counties nationally. A county with unconfirmed restrictions returns status "unknown" and a link to the official agency. Cities, fire districts, tribes and federal land managers can have stricter rules than the county.
+## Read API
 
-## API (GET, JSON, CORS open, no key)
+The JSON API needs no key. Use the result's `scope`, `scopeNote`, `orders`, check time and publisher when quoting a report. A failed check may leave an earlier report visible through its freshness or validity window.
 
-- [Status by ZIP](https://isthereaburnban.com/api/v1/status?zip=74103): one result per county the ZIP touches; `ambiguous` is true when there are several.
-- [Status by coordinates](https://isthereaburnban.com/api/v1/status?lat=36.154&lon=-95.993)
-- [Status by county FIPS](https://isthereaburnban.com/api/v1/status?fips=48453)
-- [Status by city](https://isthereaburnban.com/api/v1/status?city=Tulsa&state=OK): every county the city touches, plus a `place` object with its page.
-- [Plain-text answer](https://isthereaburnban.com/api/v1/status?zip=74103&format=text)
-- [One county](https://isthereaburnban.com/api/v1/counties/40143)
-- [All active bans](https://isthereaburnban.com/api/v1/bans) and [by state](https://isthereaburnban.com/api/v1/bans?state=TX)
-- [NWS fire-weather alerts by county](https://isthereaburnban.com/api/v1/fire-weather), optionally [filtered by state](https://isthereaburnban.com/api/v1/fire-weather?state=OK). Includes the national source's check time and health.
-- [Coverage and source health](https://isthereaburnban.com/api/v1/coverage)
-- [OpenAPI spec](https://isthereaburnban.com/openapi.json)
+- [Status by ZIP](https://site.example/api/v1/status?zip=74103) uses Census 2020 ZIP areas and orders counties by land overlap. If the ZIP is absent, `approximate`, `matchedZip` and `approximationReason` identify a numeric substitute with the same prefix. Confirm a county, then look it up by FIPS.
+- [Status by coordinates](https://site.example/api/v1/status?lat=36.154&lon=-95.993) uses rounded coordinates and the 2020 Census county boundaries. The opt-in `here=1` IP estimate returns candidates for confirmation.
+- [Status by county FIPS](https://site.example/api/v1/status?fips=48453)
+- [Status by city](https://site.example/api/v1/status?city=Tulsa&state=OK) uses mapped Census incorporated places. Results include a `place` object. When counties disagree, the place answer is `depends`. City fire rules may apply separately.
+- [Plain-text answer](https://site.example/api/v1/status?zip=74103&format=text)
+- [One county](https://site.example/api/v1/counties/40143)
+- [Published active reports](https://site.example/api/v1/bans) and [by state](https://site.example/api/v1/bans?state=TX) include scoped restrictions.
+- [Coverage and source health](https://site.example/api/v1/coverage) distinguishes full, positive-only and manual sources.
+- [Map statuses](https://site.example/api/v1/map-status) return a publication revision, expiry and known statuses keyed by FIPS. Missing counties are unknown.
+- [Published NWS fire-weather signals](https://site.example/api/v1/fire-weather), optionally [filtered by state](https://site.example/api/v1/fire-weather?state=OK). Check the alert's area, onset and source health. Some local rules apply during a Red Flag Warning.
+- [OpenAPI description for the read API](https://site.example/openapi.json)
 
-Status values: `ban`, `restricted` (partial or activity-specific limits), `none` (the official source covers this county and reports no ban), `unknown` (no feed, feed failed, or stale).
+`ban` is a reported ban. `restricted` covers targeted rules such as activity limits, local orders and permit requirements. `none` means the applicable feed reported no temporary county ban within its coverage. `unknown` means the status is unconfirmed. In positive-only feeds, omissions stay unknown.
 
-County, status, and MCP `check_burn_ban` results can include `alerts` entries with `event`, `headline`, `onset`, `expires`, `ends`, `url`, and `sender`. Timestamps are UTC. `expires` is the NWS message expiry and `ends` is the expected end of the weather event when supplied. Alerts can cover part of a county. Use `status` and `orders[].officialUrl` for legal restrictions and `alerts[].url` for weather. A verified rule can activate a scoped restriction during a Red Flag Warning.
+`checked` is the last successful source check, or null if unavailable. `generated` is the publication time. `since` is the publisher's effective date when known. `sourceUpdated` is the publisher's report time. `firstSeenAt` and `statusChangedAt` are observations by this service.
 
 ## MCP
 
-- Streamable HTTP endpoint: https://isthereaburnban.com/mcp (stateless, no auth). Tools: `check_burn_ban` ({zip} | {lat, lon} | {fips} | {city, state}), `list_active_bans` ({state?}), `coverage`, `subscribe_email_alerts` ({email, fips[]}; double opt-in, nothing is sent until the user confirms by email). Every tool has a `title` and annotations; `subscribe_email_alerts` is the only one that writes (`readOnlyHint: false`, not destructive).
-- Setup for Claude, ChatGPT, Cursor and VS Code: https://isthereaburnban.com/developers/
+- Streamable HTTP endpoint is https://site.example/mcp (stateless, no authentication).
+- `check_burn_ban` accepts ZIP, coordinates, county FIPS or city and state. Present location uncertainty and scope before giving an answer. Cite the issuing order when available.
+- `list_active_bans` lists published reports, optionally for one state. `coverage` reports source coverage and health.
+- `subscribe_email_alerts` is the only tool that writes. Use it when someone asks for alerts and provides their email. If email delivery is enabled, a confirmation email goes out first. After confirmation we attempt alerts for eligible changes we detect.
+- [Client setup and API examples](https://site.example/developers/)
 
-## Pages
+## Pages and data
 
-- County pages: https://isthereaburnban.com/us/{state}/{county-slug}/ (e.g. /us/ok/tulsa-county/)
-- City pages (places with 5,000+ people or a county seat): https://isthereaburnban.com/us/{state}/city/{city-slug}/ (e.g. /us/ok/city/tulsa/). County bans usually cover unincorporated areas; cities can have their own rules.
-
-## About the data
-
-- [Dataset description](https://isthereaburnban.com/data/): coverage, every source with its official link, update cadence, and attribution. Statuses are facts summarized from public agencies; name the source and link `officialUrl` when you show one. Some publishers restrict bulk redistribution, so use per-county lookups rather than mirroring.
-- [Terms](https://isthereaburnban.com/terms/): informational only, no warranty, confirm with the official source before burning.
-- [Privacy](https://isthereaburnban.com/privacy/): lookups are not stored; email alerts are double opt-in with unsubscribe.
+- County pages use https://site.example/us/{state}/{county-slug}/. [Tulsa County example](https://site.example/us/ok/tulsa-county/)
+- City pages use https://site.example/us/{state}/city/{city-slug}/. [Tulsa example](https://site.example/us/ok/city/tulsa/)
+- [Dataset and attribution](https://site.example/data/) explains report coverage. Cite the publisher and `officialUrl`, which may be a directory for unconfirmed counties. Verify publishers' terms before redistributing data.
+- [Terms](https://site.example/terms/) and [privacy](https://site.example/privacy/) describe data reuse, lookup caching, usage counts and subscriptions.

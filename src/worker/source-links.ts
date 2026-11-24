@@ -12,7 +12,7 @@ export function withCurrentLinks<T extends Pick<SnapshotData, "counties">>(snaps
     const source = row.sourceId && !adapters ? BY_ID.get(row.sourceId) : legacy.get(row.state);
     if (!source) continue;
     row.sourceName = source.sourceName;
-    row.sourceUrl = source.sourceUrl;
+    if (!row.sourceUrl || !row.sourceId) row.sourceUrl = source.sourceUrl;
     if (!source.keepRowLinks || !row.officialUrl) row.officialUrl = source.officialUrl;
   }
   return snapshot;

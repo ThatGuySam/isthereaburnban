@@ -4,7 +4,7 @@ import { CONTACT_EMAIL, POLICY_UPDATED } from "../../components/site-data";
 ---
 <Base
   title="Privacy · Is There a Burn Ban?"
-  description="What Is There a Burn Ban? collects (only what alerts need), what it never collects, and how to delete it."
+  description="How location lookups, browser storage, usage counts and alert subscriptions work."
   path="/privacy/"
 >
   <main id="content" class="page">
@@ -17,7 +17,7 @@ import { CONTACT_EMAIL, POLICY_UPDATED } from "../../components/site-data";
     <h1>Privacy</h1>
     <p class="muted">Updated {POLICY_UPDATED}.</p>
     <p>
-      You can check burn bans without an account. We only keep what we need to send the alerts you ask for.
+      You can check burn bans without an account. This page explains what the site, location lookup and alert services store.
       There are no ads, no tracking scripts and no cookies of our own, and we don't sell or rent anything about you.
     </p>
 
@@ -28,39 +28,41 @@ import { CONTACT_EMAIL, POLICY_UPDATED } from "../../components/site-data";
         position to four decimal places (about 10 meters) and sends it to our status lookup to find your county.
         A ZIP code you type is sent the same way.
       </li>
-      <li>We use that query to answer and then drop it. We don't save it to a database.</li>
       <li>
-        Your browser remembers the last place you picked (county name, and the ZIP or coordinates if you gave them) in
-        its own local storage, so the page can show it next time. It stays on your device. Clear this site's data in your
-        browser to remove it.
+        The county lookup sends coordinates rounded to three decimals to the US Census geocoder. Cloudflare can cache the county match
+        keyed by those rounded coordinates for up to 30 days.
       </li>
-      <li>The site doesn't guess your location from your IP address.</li>
+      <li>
+        Your browser remembers the chosen county and the last report separately in local storage. It checks again on your next visit
+        and may show a dated last-known report if the check fails. Clear this site's browser data to remove both.
+      </li>
+      <li>The home page asks for permission to use your location. API clients can request an approximate IP-based county match from Cloudflare.</li>
     </ul>
 
     <h2 id="email">Email alerts</h2>
     <ul>
       <li>
-        If you sign up, on the site or through an AI assistant using our tools, we store your email address and the
-        counties you picked.
+        If you sign up on the site or through an assistant, we store your address, the counties you picked, a subscription token
+        and confirmation and unsubscribe state.
       </li>
       <li>
-        It's double opt-in: we send one confirmation email, and nothing else until you click the link in it.
+        When email delivery is enabled, we send a confirmation email first. Alerts begin after you confirm.
       </li>
       <li>
-        Every alert has an unsubscribe link. Unsubscribing stops all email right away. We keep the address marked as
-        unsubscribed so the link keeps working. Email us and we'll delete it completely.
+        Alert emails include an unsubscribe link. It disables the subscription tied to that link. Messages already queued may still arrive.
+        Contact us to delete your signup data or remove all subscriptions for an address.
       </li>
-      <li>We send email through Resend, an email delivery service. It handles your address only to deliver our messages.</li>
+      <li>When enabled, Resend receives your email address and the message to handle delivery.</li>
     </ul>
 
     <h2 id="push">Push alerts</h2>
     <ul>
       <li>
-        If you turn on alerts in your browser, the browser gives us a push subscription: a web address at your browser
+        If you turn on alerts, your browser gives us a push subscription with a web address at your browser
         maker's push service (Google, Apple, Mozilla or Microsoft) plus encryption keys. We store that and the counties you
-        picked. It doesn't include your name or email.
+        picked. That registration is separate from email subscriptions.
       </li>
-      <li>Turning alerts off deletes it. We also delete it when the push service tells us it has expired.</li>
+      <li>Removing a push subscription through our unsubscribe endpoint removes that device registration and the counties attached to it. Push services can also expire subscriptions.</li>
     </ul>
 
     <h2 id="logs">Delivery records and usage counts</h2>
@@ -71,8 +73,7 @@ import { CONTACT_EMAIL, POLICY_UPDATED } from "../../components/site-data";
       </li>
       <li>
         We count requests to our API and MCP server: which endpoint or tool, the response status, the country, and a broad
-        client type (browser, bot, AI agent or script). We don't store IP addresses, full browser details, or what you
-        searched for.
+        client type (browser, bot, AI agent or script). Our structured counts exclude IP addresses, full browser details and query values.
       </li>
       <li>
         The site runs on Cloudflare. Like any web host, Cloudflare handles IP addresses to deliver pages and block abuse.
@@ -82,8 +83,7 @@ import { CONTACT_EMAIL, POLICY_UPDATED } from "../../components/site-data";
 
     <h2 id="sharing">Sharing</h2>
     <p>
-      We share data only with the services above, and only to run the site and send alerts. We don't sell data or share it
-      for advertising. We would disclose it only if the law required us to.
+      Cloudflare, the US Census geocoder, Resend and browser push providers handle the information described above to run lookups and deliver alerts. We may disclose information where required by law.
     </p>
 
     <h2 id="contact">Questions or deletion</h2>
