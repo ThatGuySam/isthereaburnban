@@ -1,0 +1,540 @@
+[
+  {
+    "abbr": "AL",
+    "name": "Alabama",
+    "coverage": "directory",
+    "publisher": "Alabama Forestry Commission",
+    "officialUrl": "https://www.forestry.alabama.gov/Pages/Fire/BurnRestrictions.aspx",
+    "notes": "The Forestry Commission issues Fire Alerts and the Governor can issue statewide No Burn Orders. Seasonal air-quality rules and local exceptions also apply."
+  },
+  {
+    "abbr": "AK",
+    "name": "Alaska",
+    "coverage": "restrictions",
+    "publisher": "Alaska DNR Division of Forestry",
+    "officialUrl": "https://dnr.alaska.gov/burn/fireareas",
+    "extraUrls": [
+      {
+        "label": "DEC fire restrictions directory",
+        "url": "https://dec.alaska.gov/air/anpms/alaska-fire-restrictions/"
+      }
+    ],
+    "notes": "The Division of Forestry sets burn-permit status by state permit zone. Local fire departments and federal land managers set their own rules."
+  },
+  {
+    "abbr": "AZ",
+    "name": "Arizona",
+    "coverage": "restrictions",
+    "publisher": "Arizona Department of Forestry and Fire Management",
+    "officialUrl": "https://dffm.az.gov/newsroom/fire-restrictions",
+    "extraUrls": [
+      {
+        "label": "Southwest interagency restrictions dashboard",
+        "url": "https://nifc.maps.arcgis.com/apps/dashboards/aa9ff369dd414b74b69b696b40a1d057"
+      }
+    ],
+    "notes": "DFFM, counties, tribes and federal land managers each issue staged fire restrictions for the land they manage."
+  },
+  {
+    "abbr": "AR",
+    "name": "Arkansas",
+    "coverage": "directory",
+    "publisher": "Arkansas Department of Agriculture, Forestry Division",
+    "officialUrl": "https://mip.agri.arkansas.gov/agtools/Forestry/Fire_Info",
+    "extraUrls": [
+      {
+        "label": "Arkansas.gov wildfire and burn ban info",
+        "url": "https://portal.arkansas.gov/service/wildfire-danger-burn-bans-prescribed-burns/"
+      }
+    ],
+    "notes": "County judges issue burn bans, and the Forestry Division collects them on a statewide map."
+  },
+  {
+    "abbr": "CA",
+    "name": "California",
+    "coverage": "restrictions",
+    "publisher": "CAL FIRE",
+    "officialUrl": "https://burnpermit.fire.ca.gov/current-burn-status/",
+    "extraUrls": [
+      {
+        "label": "CARB agricultural and prescribed burn decisions",
+        "url": "https://ssl.arb.ca.gov/pfirs/cb3/cb3.php"
+      }
+    ],
+    "notes": "CAL FIRE suspends burn permits by unit, and local air districts declare their own burn days. Cities and federal land managers can add rules."
+  },
+  {
+    "abbr": "CO",
+    "name": "Colorado",
+    "coverage": "restrictions",
+    "publisher": "Colorado State Forest Service",
+    "officialUrl": "https://csfs.colostate.edu/wildfire-mitigation/current-wildfire-information-fire-restrictions/",
+    "extraUrls": [
+      {
+        "label": "Rocky Mountain interagency restrictions map",
+        "url": "https://www.arcgis.com/home/item.html?id=407bde860acc492bb53c972275bfbd33"
+      }
+    ],
+    "notes": "County sheriffs, towns, fire districts and federal land managers issue fire restrictions in Colorado. The State Forest Service links to them."
+  },
+  {
+    "abbr": "CT",
+    "name": "Connecticut",
+    "coverage": "directory",
+    "publisher": "Connecticut DEEP",
+    "officialUrl": "https://portal.ct.gov/deep/air/open-burning/open-burning",
+    "extraUrls": [
+      {
+        "label": "DEEP fire danger and reporting",
+        "url": "https://portal.ct.gov/DEEP/Forestry/Forest-Fire/Fire-Danger-Weather-and-Reporting"
+      }
+    ],
+    "notes": "Town burning officials issue open-burning permits, and DEEP's daily fire danger rating can limit them."
+  },
+  {
+    "abbr": "DE",
+    "name": "Delaware",
+    "coverage": "directory",
+    "publisher": "Delaware DNREC",
+    "officialUrl": "https://dnrec.delaware.gov/air/open-burning/",
+    "notes": "Delaware bans open burning every year from May 1 to September 30. The State Fire Marshal can issue other bans when conditions are dangerous."
+  },
+  {
+    "abbr": "DC",
+    "name": "District of Columbia",
+    "coverage": "directory",
+    "publisher": "DC Department of Energy and Environment",
+    "officialUrl": "https://doee.dc.gov/sites/default/files/dc/sites/ddoe/publication/attachments/aqd.revch6_.pdf",
+    "notes": "District air rules limit open fires across DC. National parks in DC may have separate rules."
+  },
+  {
+    "abbr": "FL",
+    "name": "Florida",
+    "coverage": "live",
+    "publisher": "Florida Forest Service",
+    "officialUrl": "https://www.fdacs.gov/CurrentWildfireInfo",
+    "extraUrls": [
+      {
+        "label": "County burn ban dashboard",
+        "url": "https://ffsfm.maps.arcgis.com/apps/dashboards/1f6572c92f8d41ec860f461ea433819b"
+      }
+    ],
+    "notes": "Florida counties enact burn bans and the Florida Forest Service reports them on a statewide map. Fireworks bans and yard-debris rules are tracked separately."
+  },
+  {
+    "abbr": "GA",
+    "name": "Georgia",
+    "coverage": "directory",
+    "publisher": "Georgia Environmental Protection Division",
+    "officialUrl": "https://epd.georgia.gov/air-protection-branch/open-burning-rules-georgia/summer-open-burning-ban",
+    "extraUrls": [
+      {
+        "label": "Georgia Forestry Commission",
+        "url": "https://gatrees.org/"
+      }
+    ],
+    "notes": "Georgia EPD bans open burning in 54 counties every May 1 to September 30. The Georgia Forestry Commission can issue emergency bans."
+  },
+  {
+    "abbr": "HI",
+    "name": "Hawaii",
+    "coverage": "directory",
+    "publisher": "Hawaii Department of Health",
+    "officialUrl": "https://health.hawaii.gov/cab/open-burning-and-agricultural-burning-permits-in-hawaii/",
+    "notes": "State air rules require permits for most open burning. Counties can issue emergency fire orders."
+  },
+  {
+    "abbr": "ID",
+    "name": "Idaho",
+    "coverage": "restrictions",
+    "publisher": "Idaho Department of Lands",
+    "officialUrl": "https://www.idl.idaho.gov/fire-management/fire-restrictions-finder/",
+    "extraUrls": [
+      {
+        "label": "DEQ outdoor burn map",
+        "url": "https://www2.deq.idaho.gov/air/AQIPublic/Map/OutdoorBurn"
+      }
+    ],
+    "notes": "Fire restrictions in Idaho are set by interagency restriction areas and land owner. DEQ makes separate burn decisions by airshed."
+  },
+  {
+    "abbr": "IL",
+    "name": "Illinois",
+    "coverage": "directory",
+    "publisher": "Illinois EPA",
+    "officialUrl": "https://epa.illinois.gov/topics/forms/air-permits/open-burning.html",
+    "notes": "Illinois has state open-burning rules, and towns and fire districts issue their own restrictions. There is no statewide list of bans."
+  },
+  {
+    "abbr": "IN",
+    "name": "Indiana",
+    "coverage": "live",
+    "publisher": "Indiana Department of Homeland Security",
+    "officialUrl": "https://www.in.gov/dhs/burn-ban-map/",
+    "extraUrls": [
+      {
+        "label": "Who can issue burn bans",
+        "url": "https://www.in.gov/dhs/fire-and-building-safety/issuing-burn-bans/"
+      }
+    ],
+    "notes": "Indiana counties issue burn bans and report them to the Department of Homeland Security. Fire chiefs, cities and towns can add their own restrictions."
+  },
+  {
+    "abbr": "IA",
+    "name": "Iowa",
+    "coverage": "live",
+    "publisher": "Iowa State Fire Marshal",
+    "officialUrl": "https://dps.iowa.gov/divisions-iowa-department-public-safety/iowa-state-fire-marshal-division/state-fire-marshal-division-general-information",
+    "extraUrls": [
+      {
+        "label": "Active burn bans dashboard",
+        "url": "https://iowa.maps.arcgis.com/apps/dashboards/c22956334fd8435080ed851f549c5263"
+      }
+    ],
+    "notes": "The State Fire Marshal issues burn bans for counties at the request of local fire chiefs. We can only confirm active bans; a county not on the list may still have local rules."
+  },
+  {
+    "abbr": "KS",
+    "name": "Kansas",
+    "coverage": "directory",
+    "publisher": "Kansas Forest Service",
+    "officialUrl": "https://ksfire.org/burn-info/",
+    "extraUrls": [
+      {
+        "label": "KDHE Flint Hills smoke management",
+        "url": "https://www.kdhe.ks.gov/508/Flint-Hills-Smoke-Management-Plan-Develo"
+      }
+    ],
+    "notes": "Kansas counties and fire districts issue burn bans. The Flint Hills smoke plan limits some burning each April."
+  },
+  {
+    "abbr": "KY",
+    "name": "Kentucky",
+    "coverage": "directory",
+    "publisher": "Kentucky Division of Forestry",
+    "officialUrl": "https://eec.ky.gov/Natural-Resources/Forestry/wildland-fire-management/pages/county-burn-bans.aspx",
+    "notes": "Kentucky counties and cities issue burn bans, and the Division of Forestry lists the ones it is told about. Spring and fall fire season burning hours apply statewide."
+  },
+  {
+    "abbr": "LA",
+    "name": "Louisiana",
+    "coverage": "live",
+    "publisher": "Louisiana Department of Agriculture and Forestry",
+    "officialUrl": "https://www.ldaf.la.gov/land/fire/safety",
+    "extraUrls": [
+      {
+        "label": "Louisiana State Fire Marshal",
+        "url": "https://www.lasfm.org/fire-emergency-services/"
+      }
+    ],
+    "notes": "Parishes and the state can issue burn bans in Louisiana, and LDAF maps them by parish. Cities and the State Fire Marshal may have exceptions."
+  },
+  {
+    "abbr": "ME",
+    "name": "Maine",
+    "coverage": "directory",
+    "publisher": "Maine Forest Service",
+    "officialUrl": "https://apps1.web.maine.gov/burnpermit/public/index.html",
+    "notes": "Towns issue open-burn permits in Maine, based on daily fire danger. There is no statewide list of bans."
+  },
+  {
+    "abbr": "MD",
+    "name": "Maryland",
+    "coverage": "directory",
+    "publisher": "Maryland Department of Natural Resources",
+    "officialUrl": "https://dnr.maryland.gov/forests/Pages/fire/prevention-burning-guidance.aspx",
+    "notes": "Maryland DNR can issue statewide burn bans by emergency order. Counties and towns have their own rules."
+  },
+  {
+    "abbr": "MA",
+    "name": "Massachusetts",
+    "coverage": "directory",
+    "publisher": "Massachusetts Department of Fire Services",
+    "officialUrl": "https://www.mass.gov/info-details/open-burning-safety",
+    "notes": "Massachusetts allows open burning only in season and only where the local fire department permits it each day."
+  },
+  {
+    "abbr": "MI",
+    "name": "Michigan",
+    "coverage": "restrictions",
+    "publisher": "Michigan Department of Natural Resources",
+    "officialUrl": "https://www.michigan.gov/dnr/managing-resources/forestry/fire/burn-permit",
+    "extraUrls": [
+      {
+        "label": "Daily burn permit status",
+        "url": "https://www.dnr.state.mi.us/burnpermits/default.aspx"
+      }
+    ],
+    "notes": "The DNR posts daily debris-burning permit status by township in the northern Lower and Upper Peninsula. Local governments issue permits elsewhere."
+  },
+  {
+    "abbr": "MN",
+    "name": "Minnesota",
+    "coverage": "restrictions",
+    "publisher": "Minnesota Department of Natural Resources",
+    "officialUrl": "https://www.dnr.state.mn.us/forestry/fire/firerating_restrictions.html",
+    "notes": "The DNR sets burning restrictions and permit rules by county. Local ordinances can be stricter."
+  },
+  {
+    "abbr": "MS",
+    "name": "Mississippi",
+    "coverage": "live",
+    "publisher": "Mississippi Forestry Commission",
+    "officialUrl": "https://www.mfc.ms.gov/burning-info/burn-bans/",
+    "notes": "Mississippi county boards request burn bans and the Forestry Commission approves them. Each ban has an end date and may have exemptions."
+  },
+  {
+    "abbr": "MO",
+    "name": "Missouri",
+    "coverage": "directory",
+    "publisher": "Missouri Division of Fire Safety",
+    "officialUrl": "https://dfs.dps.mo.gov/programs/resources/county-burn-bans.php",
+    "notes": "Missouri counties, cities and fire protection districts issue burn bans. The state's list depends on what local officials report."
+  },
+  {
+    "abbr": "MT",
+    "name": "Montana",
+    "coverage": "restrictions",
+    "publisher": "Montana DNRC",
+    "officialUrl": "https://mt.gov/fire",
+    "extraUrls": [
+      {
+        "label": "DNRC fire restrictions dashboard",
+        "url": "https://www.arcgis.com/apps/dashboards/86668bab4c2248f09c1b70b546bff420"
+      }
+    ],
+    "notes": "Counties, the state, tribes and federal land managers each set fire restrictions for their own land in Montana."
+  },
+  {
+    "abbr": "NE",
+    "name": "Nebraska",
+    "coverage": "directory",
+    "publisher": "Nebraska State Fire Marshal",
+    "officialUrl": "https://sfm.nebraska.gov/fire-departments/burn-permits",
+    "notes": "Local fire chiefs issue open-burning permits in Nebraska. The state can suspend permits by executive order."
+  },
+  {
+    "abbr": "NV",
+    "name": "Nevada",
+    "coverage": "restrictions",
+    "publisher": "Nevada Fire Info",
+    "officialUrl": "https://www.nevadafireinfo.org/restrictions",
+    "extraUrls": [
+      {
+        "label": "BLM Nevada fire restrictions",
+        "url": "https://www.blm.gov/nevada-fire-information-and-fire-restrictions"
+      }
+    ],
+    "notes": "Federal and state land managers set fire restrictions by zone in Nevada. Local governments and air districts can add their own."
+  },
+  {
+    "abbr": "NH",
+    "name": "New Hampshire",
+    "coverage": "directory",
+    "publisher": "New Hampshire Division of Forests and Lands",
+    "officialUrl": "https://www.nhdfl.dncr.nh.gov/sites/g/files/ehbemt866/files/inline-documents/fire-law-brouchure.pdf",
+    "notes": "Town forest fire wardens issue burn permits in New Hampshire. The state can issue emergency bans."
+  },
+  {
+    "abbr": "NJ",
+    "name": "New Jersey",
+    "coverage": "directory",
+    "publisher": "New Jersey Forest Fire Service",
+    "officialUrl": "https://dep.nj.gov/parksandforests/wildfire/",
+    "notes": "The Forest Fire Service sets fire restriction stages by region or statewide. Towns can have their own rules."
+  },
+  {
+    "abbr": "NM",
+    "name": "New Mexico",
+    "coverage": "restrictions",
+    "publisher": "New Mexico Forestry Division",
+    "officialUrl": "https://www.emnrd.nm.gov/sfd/find-current-fire-restrictions/",
+    "notes": "Counties, State Forestry, tribes and federal land managers issue fire restrictions for their own land in New Mexico."
+  },
+  {
+    "abbr": "NY",
+    "name": "New York",
+    "coverage": "directory",
+    "publisher": "New York DEC",
+    "officialUrl": "https://dec.ny.gov/environmental-protection/air-quality/open-burning",
+    "notes": "New York bans brush burning statewide every March 16 to May 14. DEC can issue other temporary bans, and towns have their own rules."
+  },
+  {
+    "abbr": "NC",
+    "name": "North Carolina",
+    "coverage": "directory",
+    "publisher": "N.C. Forest Service",
+    "officialUrl": "https://www.ncagr.gov/divisions/nc-forest-service/open-burning-permits",
+    "notes": "The N.C. Forest Service issues burn bans by county through press releases. Towns and fire marshals can also restrict burning."
+  },
+  {
+    "abbr": "ND",
+    "name": "North Dakota",
+    "coverage": "restrictions",
+    "publisher": "North Dakota Department of Emergency Services",
+    "officialUrl": "https://www.des.nd.gov/response-section/burn-restrictions-wildland-fires",
+    "extraUrls": [
+      {
+        "label": "ND Response burn restriction map",
+        "url": "https://www.ndresponse.gov/burn-restrictions-fire-danger-maps"
+      }
+    ],
+    "notes": "North Dakota counties declare burn restrictions, often tied to daily fire danger. The state maps them."
+  },
+  {
+    "abbr": "OH",
+    "name": "Ohio",
+    "coverage": "directory",
+    "publisher": "Ohio State Fire Marshal",
+    "officialUrl": "https://com.ohio.gov/divisions-and-programs/state-fire-marshal/fire-prevention/fire-safety-guides/outdoor-burning-rules",
+    "notes": "Ohio bans most open burning outside towns from 6 a.m. to 6 p.m. in March, April, May, October and November. Towns and temporary orders add other rules."
+  },
+  {
+    "abbr": "OK",
+    "name": "Oklahoma",
+    "coverage": "live",
+    "publisher": "Oklahoma Forestry Services",
+    "officialUrl": "https://forestry.ok.gov/burn-ban-info",
+    "extraUrls": [
+      {
+        "label": "Burn ban map",
+        "url": "https://experience.arcgis.com/experience/8bdc59b2a54a4383a9a2996fb9407580/"
+      },
+      {
+        "label": "ODAFF burn ban FAQ",
+        "url": "https://ag.ok.gov/burn-ban-faq/"
+      }
+    ],
+    "notes": "Oklahoma county commissioners issue county burn bans, and the Governor can issue a burn ban for many counties at once. Oklahoma Forestry Services maps both."
+  },
+  {
+    "abbr": "OR",
+    "name": "Oregon",
+    "coverage": "restrictions",
+    "publisher": "Oregon Department of Forestry",
+    "officialUrl": "https://www.oregon.gov/odf/fire/Pages/restrictions.aspx",
+    "extraUrls": [
+      {
+        "label": "ODF public regulation map",
+        "url": "https://gisapps.odf.oregon.gov/firerestrictions/pfr.html"
+      }
+    ],
+    "notes": "ODF sets fire restrictions for the forest land it protects. DEQ, fire districts and federal land managers cover other areas."
+  },
+  {
+    "abbr": "PA",
+    "name": "Pennsylvania",
+    "coverage": "directory",
+    "publisher": "Pennsylvania DCNR",
+    "officialUrl": "https://www.pa.gov/agencies/dcnr/programs-and-services/community-outreach-and-development/wildfire/burn-bans",
+    "notes": "Pennsylvania counties issue burn bans, and DCNR publishes a county map. Towns and state forests have separate rules."
+  },
+  {
+    "abbr": "RI",
+    "name": "Rhode Island",
+    "coverage": "directory",
+    "publisher": "Rhode Island DEM",
+    "officialUrl": "https://dem.ri.gov/ri-wildfire-danger-status",
+    "notes": "Rhode Island DEM can ban fires on state land, and towns set their own rules."
+  },
+  {
+    "abbr": "SC",
+    "name": "South Carolina",
+    "coverage": "directory",
+    "publisher": "South Carolina Forestry Commission",
+    "officialUrl": "https://www.scfc.gov/protection/fire-burning/fire-resources/bans-alerts/",
+    "notes": "The State Forester or Governor can issue burn bans, which do not cover incorporated towns and cities. Local governments can add their own."
+  },
+  {
+    "abbr": "SD",
+    "name": "South Dakota",
+    "coverage": "directory",
+    "publisher": "South Dakota (county commissions)",
+    "officialUrl": "https://sdlegislature.gov/Statutes/34-29B-11.1",
+    "notes": "South Dakota county commissioners issue burn bans. There is no statewide list."
+  },
+  {
+    "abbr": "TN",
+    "name": "Tennessee",
+    "coverage": "directory",
+    "publisher": "Tennessee Division of Forestry",
+    "officialUrl": "https://www.tn.gov/tnwildlandfire/prevention/safe-debris-burning/burn-bans.html",
+    "notes": "Tennessee counties issue burn bans, and the Division of Forestry issues burn permits separately. Some towns issue their own permits."
+  },
+  {
+    "abbr": "TX",
+    "name": "Texas",
+    "coverage": "live",
+    "publisher": "Texas A&M Forest Service",
+    "officialUrl": "https://tfsweb.tamu.edu/wildfire-and-other-disasters/burn-bans-and-information/",
+    "notes": "Texas county judges and commissioners courts issue burn bans and report them to the Texas A&M Forest Service, which updates its list daily."
+  },
+  {
+    "abbr": "UT",
+    "name": "Utah",
+    "coverage": "restrictions",
+    "publisher": "Utah Division of Forestry, Fire and State Lands",
+    "officialUrl": "https://www.arcgis.com/home/item.html?id=fea8819d80ff44b2993821efc6c99b4e",
+    "extraUrls": [
+      {
+        "label": "Utah State Parks fire restrictions",
+        "url": "https://stateparks.utah.gov/resources/fire-restrictions/"
+      }
+    ],
+    "notes": "Utah fire restrictions are issued by order for state, county and federal land. Each order covers a specific area."
+  },
+  {
+    "abbr": "VT",
+    "name": "Vermont",
+    "coverage": "directory",
+    "publisher": "Vermont Department of Forests, Parks and Recreation",
+    "officialUrl": "https://fpr.vermont.gov/wildfire-situation",
+    "notes": "Town forest fire wardens issue burn permits in Vermont, and the state can issue broader orders."
+  },
+  {
+    "abbr": "VA",
+    "name": "Virginia",
+    "coverage": "directory",
+    "publisher": "Virginia Department of Forestry",
+    "officialUrl": "https://www.dof.virginia.gov/wildland-prescribed-fire/fire-laws/",
+    "notes": "Virginia bans most open burning before 4 p.m. from February 15 to April 30. Counties and independent cities can add their own bans."
+  },
+  {
+    "abbr": "WA",
+    "name": "Washington",
+    "coverage": "restrictions",
+    "publisher": "Washington DNR",
+    "officialUrl": "https://dnr.wa.gov/wildfire-resources/outdoor-burning/burn-restrictions",
+    "extraUrls": [
+      {
+        "label": "Ecology burn bans",
+        "url": "https://ecology.wa.gov/air-climate/air-quality/smoke-fire/burn-bans"
+      }
+    ],
+    "notes": "Washington DNR sets burn restrictions on the land it protects, and Ecology and local air agencies declare burn bans. Counties and fire districts have their own rules."
+  },
+  {
+    "abbr": "WV",
+    "name": "West Virginia",
+    "coverage": "directory",
+    "publisher": "West Virginia Division of Forestry",
+    "officialUrl": "https://wvforestry.com/fire-laws/",
+    "notes": "West Virginia limits outdoor burning hours statewide in spring and fall fire seasons. The Governor can issue emergency bans."
+  },
+  {
+    "abbr": "WI",
+    "name": "Wisconsin",
+    "coverage": "restrictions",
+    "publisher": "Wisconsin DNR",
+    "officialUrl": "https://apps.dnr.wi.gov/forestryapps/burnrestriction",
+    "notes": "Wisconsin DNR posts daily burn permit restrictions by county where it manages permits. Local rules are separate."
+  },
+  {
+    "abbr": "WY",
+    "name": "Wyoming",
+    "coverage": "restrictions",
+    "publisher": "Wyoming State Forestry Division",
+    "officialUrl": "https://sites.google.com/wyo.gov/forestry-division/fire-management/fire-restrictions",
+    "notes": "Wyoming county commissioners enact fire restrictions, and State Forestry maps them. Federal land managers set their own."
+  }
+]
