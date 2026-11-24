@@ -16,6 +16,8 @@
     "consumers": [{ "queue": "isthereaburnban-sources", "max_batch_size": 1, "max_concurrency": 1, "max_retries": 15 }]
   },
   "kv_namespaces": [{ "binding": "KV", "id": "0e241f78e10a4066aafc2d3a41e8588c" }],
+  // Aggregate API/MCP request counts (src/worker/usage.ts). The dataset is created on the first write after deploy.
+  "analytics_engine_datasets": [{ "binding": "USAGE", "dataset": "isthereaburnban_usage" }],
   "d1_databases": [{ "binding": "DB", "database_name": "isthereaburnban", "database_id": "983734fc-8fbd-4a3b-a92c-0821e9c30248", "migrations_dir": "migrations" }],
   "vars": { "SITE_URL": "https://isthereaburnban-preview.samcarlton.workers.dev", "VAPID_PUBLIC_KEY": "BB_XDPw17wAeTyhFMW6acFUhti2mZH1VXXA3uOggMHv2V_9x-92-vnhwmndL_Q_4M6YgOGuiB0ndUVYLTcRyxmo", "VAPID_SUBJECT": "mailto:alerts@isthereaburnban.com", "PUSH_CANARY_ENABLED": "false", "PUSH_CANARY_FIPS": "40143" },
   "observability": {

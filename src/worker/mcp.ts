@@ -27,14 +27,33 @@ export async function subscribeAlertsTool(env: Env, args: { email: string; fips:
   return { content: [{ type: "text" as const, text }] };
 }
 
-function createServer(env: Env) {
+/** Shown to clients in `initialize`. Version tracks server.json. */
+export const SERVER_INFO = {
+  name: "isthereaburnban",
+  title: "Is There a Burn Ban?",
+  version: "1.1.0",
+  description: "US county burn ban status from official state sources, plus NWS fire-weather alerts.",
+  websiteUrl: "https://isthereaburnban.com/developers/",
+  icons: [{ src: "https://isthereaburnban.com/icons/icon-512.png", mimeType: "image/png", sizes: ["512x512"] }],
+};
+
+export const SERVER_INSTRUCTIONS =
+  "Answers whether a US county has a burn ban right now, from official state and local sources, refreshed hourly. " +
+  "Start with check_burn_ban for a ZIP, city and state, coordinates or county FIPS. " +
+  "Status is ban, restricted, none or unknown; unknown never means burning is allowed. " +
+  "Always show the officialUrl so the person can confirm with the official source before burning. " +
+  "Only call subscribe_email_alerts when the person asks for alerts and gives their own email.";
+
+export function createServer(env: Env) {
   let snap: Promise<Snapshot> | undefined;
   const snapshot = () => (snap ??= getSnapshot(env));
-  const server = new McpServer({ name: "isthereaburnban", version: "1.0.0" });
+  const server = new McpServer(SERVER_INFO, { instructions: SERVER_INSTRUCTIONS });
 
   server.registerTool(
     "check_burn_ban",
     {
+      title: "Check burn ban",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       description:
         "Check whether a US county has an active burn ban. Give a 5-digit ZIP, or lat and lon, or a 5-digit county FIPS code, or a city or town with its state. Returns one result per county. Status is ban, restricted, none, or unknown. Unknown means the legal status is unconfirmed. County results may include NWS fire-weather alerts. Cite alerts[].url for the weather and officialUrl or orders[].officialUrl for applicable burn rules. County bans usually cover unincorporated areas and cities can have their own rules.",
       inputSchema: z.object({
@@ -59,6 +78,8 @@ function createServer(env: Env) {
   server.registerTool(
     "list_active_bans",
     {
+      title: "List active burn bans",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       description: "List counties with a reported active burn ban or burning restriction, optionally for one state (2-letter code). Use the coverage tool for source availability.",
       inputSchema: z.object({ state: z.string().length(2).optional().describe("2-letter state code, e.g. TX") }),
     },
@@ -71,6 +92,9 @@ function createServer(env: Env) {
   server.registerTool(
     "subscribe_email_alerts",
     {
+      title: "Subscribe to email alerts",
+      // Writes a pending signup and sends a confirmation email; repeating it never removes anything.
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
       description:
         "Sign a person up for email alerts when the burn ban status changes for one or more counties. Only call this when the user asks for alerts and gives their own email. It is double opt-in: we email a confirmation link and send nothing until they click it, so tell them to check their inbox. Get FIPS codes from check_burn_ban first.",
       inputSchema: z.object({
@@ -83,7 +107,11 @@ function createServer(env: Env) {
 
   server.registerTool(
     "coverage",
-    { description: "Which states have live burn ban data, which only have official links, and the health of each data source." },
+    {
+      title: "Data coverage",
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+      description: "Which states have live burn ban data, which only have official links, and the health of each data source.",
+    },
     async () => json(coverage(await snapshot())),
   );
 

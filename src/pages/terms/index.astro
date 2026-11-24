@@ -1,0 +1,70 @@
+---
+import Base from "../../layouts/Base.astro";
+import { CONTACT_EMAIL, POLICY_UPDATED } from "../../components/site-data";
+---
+<Base
+  title="Terms · Is There a Burn Ban?"
+  description="Is There a Burn Ban? summarizes official burn ban sources for information only. Always confirm with the official source before you burn."
+  path="/terms/"
+>
+  <main id="content" class="page">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <ol>
+        <li><a href="/">Home</a></li>
+        <li aria-current="page">Terms</li>
+      </ol>
+    </nav>
+    <h1>Terms</h1>
+    <p class="muted">Updated {POLICY_UPDATED}.</p>
+
+    <h2 id="informational">Informational only</h2>
+    <ul>
+      <li>
+        Burn bans are set by state, county, city, tribal and federal officials. We are not one of them. We read their public
+        feeds and pages and summarize what they say.
+      </li>
+      <li>
+        <strong>Always confirm with the official source before you burn.</strong> Every status links to it. Cities, fire
+        districts and land managers can have stricter rules than the county.
+      </li>
+      <li>"Not sure" (<code>unknown</code>) never means burning is allowed. It means we can't confirm the status.</li>
+      <li>
+        Sources can be late, wrong or offline, and we can make mistakes copying them. Alerts can be delayed or not arrive.
+        Don't rely on this site or its alerts as your only check.
+      </li>
+    </ul>
+
+    <h2 id="warranty">No warranty</h2>
+    <p>
+      The site, API, MCP server and alerts are free and provided "as is", without warranties of any kind. To the extent the
+      law allows, we aren't liable for losses from using them, including fines, fire damage or missed alerts.
+    </p>
+
+    <h2 id="data">Using the data</h2>
+    <ul>
+      <li>
+        Statuses are facts summarized from public agencies. When you show one, name the source and link the official page
+        we give you (<code>officialUrl</code>).
+      </li>
+      <li>
+        Some publishers limit reuse. For example, Texas A&amp;M Forest Service data is for noncommercial use with
+        attribution. Check each source's terms before you republish in bulk. See <a href="/data/">the dataset page</a>.
+      </li>
+      <li>
+        The API and MCP server need no key. Please cache responses for a few minutes and keep request rates reasonable. We
+        may limit or block traffic that degrades the service, and endpoints can change.
+      </li>
+    </ul>
+
+    <h2 id="alerts">Alerts</h2>
+    <p>
+      Email alerts are double opt-in and every email has an unsubscribe link. You can turn push alerts off at any time. See
+      <a href="/privacy/">privacy</a> for what we store.
+    </p>
+
+    <h2 id="changes">Changes and contact</h2>
+    <p>
+      We may update these terms; the date above shows the last change. Questions: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+    </p>
+  </main>
+</Base>

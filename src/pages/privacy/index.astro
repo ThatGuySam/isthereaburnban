@@ -1,0 +1,95 @@
+---
+import Base from "../../layouts/Base.astro";
+import { CONTACT_EMAIL, POLICY_UPDATED } from "../../components/site-data";
+---
+<Base
+  title="Privacy · Is There a Burn Ban?"
+  description="What Is There a Burn Ban? collects (only what alerts need), what it never collects, and how to delete it."
+  path="/privacy/"
+>
+  <main id="content" class="page">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <ol>
+        <li><a href="/">Home</a></li>
+        <li aria-current="page">Privacy</li>
+      </ol>
+    </nav>
+    <h1>Privacy</h1>
+    <p class="muted">Updated {POLICY_UPDATED}.</p>
+    <p>
+      You can check burn bans without an account. We only keep what we need to send the alerts you ask for.
+      There are no ads, no tracking scripts and no cookies of our own, and we don't sell or rent anything about you.
+    </p>
+
+    <h2 id="location">Your location</h2>
+    <ul>
+      <li>
+        When you tap <em>Use my location</em>, your browser asks you first. If you allow it, the page rounds the
+        position to four decimal places (about 10 meters) and sends it to our status lookup to find your county.
+        A ZIP code you type is sent the same way.
+      </li>
+      <li>We use that query to answer and then drop it. We don't save it to a database.</li>
+      <li>
+        Your browser remembers the last place you picked (county name, and the ZIP or coordinates if you gave them) in
+        its own local storage, so the page can show it next time. It stays on your device. Clear this site's data in your
+        browser to remove it.
+      </li>
+      <li>The site doesn't guess your location from your IP address.</li>
+    </ul>
+
+    <h2 id="email">Email alerts</h2>
+    <ul>
+      <li>
+        If you sign up, on the site or through an AI assistant using our tools, we store your email address and the
+        counties you picked.
+      </li>
+      <li>
+        It's double opt-in: we send one confirmation email, and nothing else until you click the link in it.
+      </li>
+      <li>
+        Every alert has an unsubscribe link. Unsubscribing stops all email right away. We keep the address marked as
+        unsubscribed so the link keeps working. Email us and we'll delete it completely.
+      </li>
+      <li>We send email through Resend, an email delivery service. It handles your address only to deliver our messages.</li>
+    </ul>
+
+    <h2 id="push">Push alerts</h2>
+    <ul>
+      <li>
+        If you turn on alerts in your browser, the browser gives us a push subscription: a web address at your browser
+        maker's push service (Google, Apple, Mozilla or Microsoft) plus encryption keys. We store that and the counties you
+        picked. It doesn't include your name or email.
+      </li>
+      <li>Turning alerts off deletes it. We also delete it when the push service tells us it has expired.</li>
+    </ul>
+
+    <h2 id="logs">Delivery records and usage counts</h2>
+    <ul>
+      <li>
+        For each alert we send, we log the county, the result and a masked target (for example the first letter of an email
+        address), so we can fix delivery problems.
+      </li>
+      <li>
+        We count requests to our API and MCP server: which endpoint or tool, the response status, the country, and a broad
+        client type (browser, bot, AI agent or script). We don't store IP addresses, full browser details, or what you
+        searched for.
+      </li>
+      <li>
+        The site runs on Cloudflare. Like any web host, Cloudflare handles IP addresses to deliver pages and block abuse.
+        We don't keep request logs with IP addresses ourselves.
+      </li>
+    </ul>
+
+    <h2 id="sharing">Sharing</h2>
+    <p>
+      We share data only with the services above, and only to run the site and send alerts. We don't sell data or share it
+      for advertising. We would disclose it only if the law required us to.
+    </p>
+
+    <h2 id="contact">Questions or deletion</h2>
+    <p>
+      Email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. We'll delete your email signup or answer questions about
+      your data. See also the <a href="/terms/">terms</a>.
+    </p>
+  </main>
+</Base>

@@ -1,0 +1,122 @@
+---
+import Base from "../../layouts/Base.astro";
+import { CONTACT_EMAIL, SITE, states, statePath } from "../../components/site-data";
+
+const live = states.filter((s) => s.coverage === "live");
+const restrictions = states.filter((s) => s.coverage === "restrictions");
+const directory = states.filter((s) => s.coverage === "directory");
+
+const NAME = "US county burn ban status";
+// Keep this text and the visible "About this dataset" paragraphs saying the same thing (Google checks they match).
+const DESCRIPTION =
+  `Current burn ban status for every US county, summarized from official state and local sources and refreshed about every hour. ` +
+  `Each county is "ban", "restricted", "none" or "unknown", with the publisher's name, a link to the official page, and when we last checked it. ` +
+  `${live.length} states have live county burn ban feeds, ${restrictions.length} more have restriction, permit or land-manager feeds, ` +
+  `and the rest link to the official agency. National Weather Service fire-weather alerts (such as Red Flag Warnings) are attached by county. ` +
+  `"Unknown" never means burning is allowed. Informational only: confirm with the official source before burning.`;
+
+const jsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Dataset",
+    name: NAME,
+    description: DESCRIPTION,
+    url: `${SITE}/data/`,
+    sameAs: `${SITE}/developers/`,
+    keywords: ["burn ban", "fire restrictions", "outdoor burning", "red flag warning", "county", "United States"],
+    creator: { "@type": "Organization", name: "Is There a Burn Ban?", url: `${SITE}/`, email: CONTACT_EMAIL },
+    license: `${SITE}/terms/`,
+    isAccessibleForFree: true,
+    temporalCoverage: "2026-11/..",
+    spatialCoverage: { "@type": "Place", name: "United States", geo: { "@type": "GeoShape", box: "18.9 -179.2 71.4 -66.9" } },
+    variableMeasured: ["burn ban status", "NWS fire-weather alerts"],
+    distribution: [
+      { "@type": "DataDownload", name: "Active bans and restrictions (JSON API)", encodingFormat: "application/json", contentUrl: `${SITE}/api/v1/bans` },
+      { "@type": "DataDownload", name: "Coverage and source health (JSON API)", encodingFormat: "application/json", contentUrl: `${SITE}/api/v1/coverage` },
+      { "@type": "DataDownload", name: "API description (OpenAPI)", encodingFormat: "application/vnd.oai.openapi+json", contentUrl: `${SITE}/openapi.json` },
+    ],
+  },
+];
+---
+<Base
+  title="Burn ban dataset · Is There a Burn Ban?"
+  description="US county burn ban status from official state and local sources, refreshed hourly, with a free JSON API and per-source links."
+  path="/data/"
+  jsonLd={jsonLd}
+>
+  <main id="content" class="page dev">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <ol>
+        <li><a href="/">Home</a></li>
+        <li aria-current="page">Data</li>
+      </ol>
+    </nav>
+    <h1>The burn ban dataset</h1>
+
+    <h2 id="about">About this dataset</h2>
+    <p>
+      Current burn ban status for every US county, summarized from official state and local sources and refreshed about
+      every hour. Each county is <code>ban</code>, <code>restricted</code>, <code>none</code> or <code>unknown</code>, with the
+      publisher's name, a link to the official page, and when we last checked it.
+    </p>
+    <p>
+      {live.length} states have live county burn ban feeds, {restrictions.length} more have restriction, permit or
+      land-manager feeds, and the rest link to the official agency. National Weather Service fire-weather alerts (such as
+      Red Flag Warnings) are attached by county.
+    </p>
+    <p>
+      "Unknown" never means burning is allowed. Informational only: confirm with the official source before burning.
+      We started collecting in November 2026 and publish the current status, not a historical archive.
+    </p>
+
+    <h2 id="get">Get the data</h2>
+    <ul>
+      <li><a href="/api/v1/bans"><code>/api/v1/bans</code></a> (JSON): every county with a ban or restriction now, with source health. Add <code>?state=TX</code> for one state.</li>
+      <li><a href="/api/v1/coverage"><code>/api/v1/coverage</code></a> (JSON): every state's coverage level, publisher, official link and source health.</li>
+      <li><code>/api/v1/status?zip=…</code>, <code>?fips=…</code>, <code>?city=…&amp;state=…</code> (JSON or text): one place, every county it touches.</li>
+      <li><a href="/openapi.json"><code>/openapi.json</code></a>: the full API description. Setup for AI agents and the MCP server is on <a href="/developers/">Connect your agent</a>.</li>
+    </ul>
+    <p>No key or account. Please cache for a few minutes.</p>
+
+    <h2 id="license">License and attribution</h2>
+    <p>
+      Statuses are facts summarized from public agencies. Every record names its publisher (<code>sourceName</code>) and links
+      the official page (<code>officialUrl</code>). Keep both when you show a status. Use of this site and API is covered by our
+      <a href="/terms/">terms</a>.
+    </p>
+    <p>
+      Some publishers restrict bulk redistribution or commercial use (for example Texas, Minnesota and New Jersey), so we offer
+      per-county lookups and links to each source instead of raw data dumps. Check a publisher's terms before you republish
+      its data in bulk.
+    </p>
+
+    <h2 id="sources">Sources</h2>
+    <h3>Live county burn ban feeds</h3>
+    <ul>
+      {live.map((s) => (
+        <li><a href={statePath(s.abbr)}>{s.name}</a>: <a href={s.officialUrl} rel="noopener">{s.publisher}</a></li>
+      ))}
+    </ul>
+    <h3>Restriction, permit and land-manager feeds</h3>
+    <ul>
+      {restrictions.map((s) => (
+        <li><a href={statePath(s.abbr)}>{s.name}</a>: <a href={s.officialUrl} rel="noopener">{s.publisher}</a></li>
+      ))}
+    </ul>
+    <h3>Fire weather</h3>
+    <ul>
+      <li><a href="https://www.weather.gov/" rel="noopener">National Weather Service</a> active alerts (Red Flag Warnings and Fire Weather Watches), all states.</li>
+    </ul>
+    <p>
+      The other {directory.length} (including DC) link to their official agency only. See <a href="/us/">all states</a>.
+    </p>
+
+    <h2 id="updates">Update cadence</h2>
+    <p>
+      We check each source about once an hour. Each record's <code>checked</code> time is our last successful read;
+      <code>sourceUpdated</code> is the publisher's own edit time when it gives one. If a feed fails or goes stale, its counties
+      turn <code>unknown</code> instead of keeping an old answer.
+    </p>
+    <p>Corrections and questions: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.</p>
+  </main>
+</Base>

@@ -81,6 +81,7 @@ const sample = JSON.stringify(
       <li><code>coverage</code>: which states have live data and how fresh each source is.</li>
       <li><code>subscribe_email_alerts</code>: signs you up for email when a county's status changes. You get a confirmation email and nothing is sent until you click it.</li>
     </ul>
+    <p>The first three only read. <code>subscribe_email_alerts</code> is the one tool that writes (it stores a pending signup), so clients may ask you before it runs.</p>
 
     <h2 id="alerts">Get an alert</h2>
     <p>MCP can't push messages to you by itself. Two ways to hear about a new ban:</p>
@@ -148,7 +149,9 @@ curl "{SITE}/api/v1/bans?state=TX"</code></pre>
     <p>
       Informational only. Burn bans are set by state and local officials; confirm with the official source
       before you burn. Some sources restrict commercial reuse (for example Texas). Check the source's terms
-      before you redistribute.
+      before you redistribute. Sources, cadence and attribution are on the <a href="/data/">dataset page</a>.
+      See the <a href="/terms/">terms</a> and <a href="/privacy/">privacy</a> pages; lookups aren't stored, and
+      <code>subscribe_email_alerts</code> stores only the email address and counties.
     </p>
   </main>
 </Base>

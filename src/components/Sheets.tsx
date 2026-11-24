@@ -2,7 +2,7 @@
 // Pages open it with openSheet() (src/client/place.ts) or any [data-sheet] element.
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Drawer } from "vaul";
-import { renderStatusHtml, stateTimeZone, statusTheme } from "../shared/render";
+import { renderStatusHtml, statusTheme } from "../shared/render";
 import {
   COUNTY_CLOSED,
   emitResolved,
@@ -146,7 +146,6 @@ function CountySheet() {
               <p className="status-sentence">{detail?.state === "error" ? detail.message : `Checking ${detail?.place ?? ""}…`}</p>
             )}
           </div>
-          {detail?.state === "ready" && r && <AlertLines result={r} />}
           {detail?.state === "ready" && r && (
             <div className="vs-actions" data-vaul-no-drag>
               {r.url && (
@@ -167,51 +166,6 @@ function CountySheet() {
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>
-  );
-}
-
-/** NWS fire-weather alert, as returned by /api/v1/status (optional field). Times are UTC ISO or null. */
-type FireAlert = { event: string; headline?: string | null; onset?: string | null; expires?: string | null; ends?: string | null; url?: string | null };
-
-/** "8 PM", or "Tue 8 PM" when it ends on another day, on the county's clock. */
-function untilText(iso: string, state: string): string {
-  const t = new Date(iso);
-  const timeZone = stateTimeZone(state);
-  const time = t.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone }).replace(":00", "");
-  const day = (d: Date) => d.toLocaleDateString("en-US", { timeZone });
-  return day(t) === day(new Date()) ? time : `${t.toLocaleDateString("en-US", { weekday: "short", timeZone })} ${time}`;
-}
-
-/** Active fire-weather alerts as quiet lines: weather is a signal, not a ban, so it never changes the status. */
-function AlertLines({ result }: { result: Result }) {
-  const now = Date.now();
-  const alerts = ((result as Result & { alerts?: FireAlert[] }).alerts ?? []).filter((a) => {
-    const end = a.ends ?? a.expires;
-    return a.event && (!end || Date.parse(end) > now);
-  });
-  if (!alerts.length) return null;
-  return (
-    <ul className="vs-alerts" role="list">
-      {alerts.map((a, i) => {
-        const end = a.ends ?? a.expires;
-        const text = end ? `${a.event} until ${untilText(end, result.state)}` : a.event;
-        return (
-          <li key={i}>
-            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
-              <path d="M12 3 2 20h20L12 3Zm0 6v5m0 3v.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            {a.url ? (
-              <a href={a.url} target="_blank" rel="noopener">
-                {text}
-                <span className="sr-only"> (National Weather Service, opens in new tab)</span>
-              </a>
-            ) : (
-              <span>{text}</span>
-            )}
-          </li>
-        );
-      })}
-    </ul>
   );
 }
 
@@ -477,6 +431,9 @@ function MenuSheet({ detail }: { detail: OpenDetail }) {
         </ul>
       </nav>
       <p className="vs-fine">Informational only. Confirm with the official source before you burn.</p>
+      <p className="vs-fine">
+        <a href="/data/">Data</a> · <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a>
+      </p>
     </div>
   );
 }

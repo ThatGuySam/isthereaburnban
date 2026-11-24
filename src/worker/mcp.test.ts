@@ -1,6 +1,6 @@
 // @ts-nocheck -- bun test types are not installed; this file runs under `bun test`, not the Worker build.
 import { describe, expect, test } from "bun:test";
-import { subscribeAlertsTool } from "./mcp";
+import { handleMcp, subscribeAlertsTool } from "./mcp";
 
 function fakeEnv(resend?: string) {
   const inserts: unknown[][] = [];
@@ -57,5 +57,43 @@ describe("subscribe_email_alerts", () => {
     const r = await subscribeAlertsTool(env as any, { email: "a@b.co", fips: ["99999"] });
     expect(r.isError).toBe(true);
     expect(inserts.length).toBe(0);
+  });
+});
+
+async function rpc(method: string, params: Record<string, unknown> = {}) {
+  const env = { SITE_URL: "https://isthereaburnban.com" };
+  const ctx = { waitUntil() {}, passThroughOnException() {} };
+  const req = new Request("https://isthereaburnban.com/mcp", {
+    method: "POST",
+    headers: { "content-type": "application/json", accept: "application/json, text/event-stream", host: "isthereaburnban.com" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+  });
+  const res = await handleMcp(req, env as any, ctx as any);
+  expect(res.status).toBe(200);
+  const body = await res.text();
+  const data = body.split("\n").find((l) => l.startsWith("data: "));
+  return JSON.parse(data ? data.slice(6) : body).result;
+}
+
+describe("MCP metadata for directories", () => {
+  test("initialize names the server, its site and how to use it", async () => {
+    const r = await rpc("initialize", { protocolVersion: "2025-11-25", capabilities: {}, clientInfo: { name: "test", version: "0" } });
+    expect(r.serverInfo).toMatchObject({ name: "isthereaburnban", title: "Is There a Burn Ban?", websiteUrl: "https://isthereaburnban.com/developers/" });
+    expect(r.serverInfo.version).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(r.instructions).toContain("check_burn_ban");
+    expect(r.instructions).toContain("officialUrl");
+  });
+
+  test("every tool has a title and read/write annotations", async () => {
+    const { tools } = await rpc("tools/list");
+    const by = Object.fromEntries(tools.map((t: any) => [t.name, t]));
+    expect(Object.keys(by).sort()).toEqual(["check_burn_ban", "coverage", "list_active_bans", "subscribe_email_alerts"]);
+    for (const t of tools) {
+      expect(typeof t.title).toBe("string");
+      expect(t.title.length).toBeGreaterThan(3);
+      expect(typeof t.annotations?.readOnlyHint).toBe("boolean");
+    }
+    for (const name of ["check_burn_ban", "list_active_bans", "coverage"]) expect(by[name].annotations.readOnlyHint).toBe(true);
+    expect(by.subscribe_email_alerts.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false, idempotentHint: true });
   });
 });

@@ -1,6 +1,6 @@
 // Status wording, colors and hero markup. Pure functions shared by the Worker (HTMLRewriter
 // injection) and the browser (client-side lookups), so every surface says the same thing.
-import type { BanStatus, CountyStatus, StateDirectoryEntry } from "./types";
+import type { BanStatus, CountyStatus, FireWeatherAlert, StateDirectoryEntry } from "./types";
 
 export type HeroStatus = BanStatus | "checking";
 
@@ -122,17 +122,65 @@ export function renderStatusHtml(cs: CountyStatus, opts: RenderOptions = {}): st
     meta.push(`<span>since <time datetime="${escapeHtml(cs.since)}">${escapeHtml(shortDate(cs.since))}</time></span>`);
   }
   if (cs.expires) meta.push(`<span>until <time datetime="${escapeHtml(cs.expires)}">${escapeHtml(shortDate(cs.expires))}</time></span>`);
+  const weather = renderAlertLineHtml(cs, base);
 
   const lines: string[] = [
     `<p class="status-word${theme.word.length > 5 ? " status-word--long" : ""}">${escapeHtml(theme.word)}</p>`,
     `<p class="status-sentence">${escapeHtml(statusSentence(cs))}</p>`,
   ];
   if (meta.length) lines.push(`<p class="status-meta">${meta.join('<span aria-hidden="true"> · </span>')}</p>`);
+  if (weather) lines.push(weather);
   if (opts.note) lines.push(`<p class="status-note">${escapeHtml(opts.note)}</p>`);
   if (cs.note) lines.push(`<p class="status-note">${escapeHtml(cs.note)}</p>`);
   if (opts.link) lines.push(`<p class="status-more"><a href="${escapeHtml(opts.link)}">More about ${escapeHtml(cs.county)}</a></p>`);
 
   return `<div class="status" data-status="${theme.status}" data-fips="${escapeHtml(cs.fips)}" data-place="${escapeHtml(placeName(cs))}">${lines.join("")}</div>`;
+}
+
+// ---------- NWS fire-weather line ----------
+
+/** Alerts still in effect at `now`, one per event name (a county can get the same warning from two offices). */
+export function currentAlerts(cs: Pick<CountyStatus, "alerts">, now: number = Date.now()): FireWeatherAlert[] {
+  const seen = new Set<string>();
+  return (cs.alerts ?? []).filter((a) => {
+    const end = a.ends ?? a.expires;
+    if (!a.event || (end && !(Date.parse(end) > now)) || seen.has(a.event)) return false;
+    seen.add(a.event);
+    return true;
+  });
+}
+
+/** "8 PM" on the county's clock, or "Tue 8 PM" when that's not today there. */
+export function alertUntil(iso: string, state: string, now: number = Date.now()): string {
+  const t = new Date(iso);
+  if (Number.isNaN(t.getTime())) return "";
+  const timeZone = stateTimeZone(state);
+  const time = t.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone }).replace(":00", "");
+  const day = (d: Date) => d.toLocaleDateString("en-US", { timeZone });
+  return day(t) === day(new Date(now)) ? time : `${t.toLocaleDateString("en-US", { weekday: "short", timeZone })} ${time}`;
+}
+
+/** "Red Flag Warning until 8 PM" (uses `ends`, the weather event's end, before the message expiry). */
+export function alertText(a: FireWeatherAlert, state: string, now: number = Date.now()): string {
+  const end = a.ends ?? a.expires;
+  const until = end ? alertUntil(end, state, now) : "";
+  return until ? `${a.event} until ${until}` : a.event;
+}
+
+/**
+ * One quiet line for active NWS fire-weather alerts, linked to the NWS message. Weather is a signal,
+ * not a ban, so it never changes the status. The glyph is U+26A0 + VS15 (text style, not emoji).
+ */
+export function renderAlertLineHtml(cs: Pick<CountyStatus, "alerts" | "state">, now: number = Date.now()): string {
+  const alerts = currentAlerts(cs, now);
+  if (!alerts.length) return "";
+  const items = alerts.map((a) => {
+    const text = escapeHtml(alertText(a, cs.state, now));
+    return a.url
+      ? `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener">${text}<span class="sr-only"> (National Weather Service, opens in new tab)</span></a>`
+      : `<span>${text}</span>`;
+  });
+  return `<p class="status-alert"><span aria-hidden="true">\u26A0\uFE0E </span>${items.join('<span aria-hidden="true"> · </span>')}</p>`;
 }
 
 /** Static "Checking" markup used as the prerendered fallback. */

@@ -14,6 +14,7 @@ export interface Env {
   DASH_TOKEN?: string;
   PUSH_CANARY_ENABLED?: string;
   PUSH_CANARY_FIPS?: string;
+  USAGE?: AnalyticsEngineDataset; // aggregate API/MCP counts (src/worker/usage.ts); optional
 }
 
 export const SNAPSHOT_KEY = "snapshot:v1";

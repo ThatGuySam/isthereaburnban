@@ -23,10 +23,16 @@ County, status, and MCP `check_burn_ban` results can include `alerts` entries wi
 
 ## MCP
 
-- Streamable HTTP endpoint: https://isthereaburnban.com/mcp (stateless, no auth). Tools: `check_burn_ban` ({zip} | {lat, lon} | {fips} | {city, state}), `list_active_bans` ({state?}), `coverage`, `subscribe_email_alerts` ({email, fips[]}; double opt-in, nothing is sent until the user confirms by email).
+- Streamable HTTP endpoint: https://isthereaburnban.com/mcp (stateless, no auth). Tools: `check_burn_ban` ({zip} | {lat, lon} | {fips} | {city, state}), `list_active_bans` ({state?}), `coverage`, `subscribe_email_alerts` ({email, fips[]}; double opt-in, nothing is sent until the user confirms by email). Every tool has a `title` and annotations; `subscribe_email_alerts` is the only one that writes (`readOnlyHint: false`, not destructive).
 - Setup for Claude, ChatGPT, Cursor and VS Code: https://isthereaburnban.com/developers/
 
 ## Pages
 
 - County pages: https://isthereaburnban.com/us/{state}/{county-slug}/ (e.g. /us/ok/tulsa-county/)
 - City pages (places with 5,000+ people or a county seat): https://isthereaburnban.com/us/{state}/city/{city-slug}/ (e.g. /us/ok/city/tulsa/). County bans usually cover unincorporated areas; cities can have their own rules.
+
+## About the data
+
+- [Dataset description](https://isthereaburnban.com/data/): coverage, every source with its official link, update cadence, and attribution. Statuses are facts summarized from public agencies; name the source and link `officialUrl` when you show one. Some publishers restrict bulk redistribution, so use per-county lookups rather than mirroring.
+- [Terms](https://isthereaburnban.com/terms/): informational only, no warranty, confirm with the official source before burning.
+- [Privacy](https://isthereaburnban.com/privacy/): lookups are not stored; email alerts are double opt-in with unsubscribe.
