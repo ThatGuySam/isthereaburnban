@@ -3,7 +3,7 @@
 export { atLocalTime, localClock, parseEndDate, parseLocalDateTime, parseUsDate, US_ZONES } from "./dates";
 
 const ENTITIES: Record<string, string> = {
-  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", ensp: " ", emsp: " ",
+  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", ensp: " ", emsp: " ", sect: "§",
   ndash: "–", mdash: "—", rsquo: "’", lsquo: "‘", ldquo: "“", rdquo: "”", hellip: "…",
 };
 

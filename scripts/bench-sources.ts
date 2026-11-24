@@ -47,6 +47,9 @@ import { mtDeqFall, parseDeqFall } from "../src/worker/sources/mt/deq-fall";
 import { mtDnrcRestrictions, parseDnrcRestrictions } from "../src/worker/sources/mt/dnrc";
 import { parseGallatin } from "../src/worker/sources/mt/gallatin";
 import { mtMissoulaSeasons, parseMissoulaSeasons } from "../src/worker/sources/mt/missoula";
+import { ncAirHours, parseNcAirHours } from "../src/worker/sources/nc/air-hours";
+import { applyNcOrders, ncForestOrders, parseNcNewsroom, parseNcOrder } from "../src/worker/sources/nc/forest-orders";
+import { ncPermits, parseNcPermits } from "../src/worker/sources/nc/permits";
 import { njRestrictions, parseNjRestrictions } from "../src/worker/sources/nj/restrictions";
 import { nvTmfpdPileBurning, parseTmfpdPileBurning } from "../src/worker/sources/nv/tmfpd";
 import { nvUsfsSpringMountains, parseSpringMountainsOrder } from "../src/worker/sources/nv/usfs";
@@ -194,6 +197,26 @@ const parseScDebrisFixture = () => {
   }));
 };
 const parseScRegulationFixture = () => parseScAirQuality(new Response(scRegulation), scCaptured);
+const ncNow = new Date("2026-11-24T12:00:00Z");
+const ncNewsroom = utf8("nc/fixtures/newsroom-2026-11-24.html");
+const ncOlderNews = utf8("nc/fixtures/newsroom-page-2-2026-11-24.html");
+const ncArticles = ["issue-2026-03-28", "partial-lift-2026-05-02", "final-lift-2026-05-07"].map((name) => ({
+  date: name.slice(-10), html: utf8(`nc/fixtures/${name}.html`),
+}));
+const ncStatute = utf8("nc/fixtures/article-78-2026-11-24.html");
+const ncDeq = utf8("nc/fixtures/deq-hours-2026-11-24.html");
+const parseNcNewsFixture = () => parseNcNewsroom(ncNewsroom, "2026-11-24");
+const parseNcOrderFixtures = async () => {
+  const listings = [...await parseNcNewsFixture(), ...await parseNcNewsroom(ncOlderNews, "2026-04-27")];
+  const orders = await Promise.all(ncArticles.map(async ({ date, html }) => {
+    const listing = listings.find(({ published }) => published === date);
+    if (!listing) throw new Error(`Missing NC newsroom fixture for ${date}`);
+    return parseNcOrder(await extractHtml(html), listing);
+  }));
+  return applyNcOrders(orders, new Date("2026-05-03T12:00:00Z"));
+};
+const parseNcPermitFixture = async () => parseNcPermits(await extractHtml(ncStatute), ncNow);
+const parseNcAirFixture = async () => parseNcAirHours(await extractHtml(ncDeq), ncNow);
 const akPermitLayer = utf8("ak/fixtures/permit-layer-2026-11-24.json");
 const akPermitZones = utf8("ak/fixtures/permit-zones-2026-11-24.json");
 const akFireSeason = utf8("ak/fixtures/as-41-15-050-2026-11-24.html");
@@ -283,6 +306,9 @@ recordedInputs.push(
   { source: nvUsfsSpringMountains, rows: await parseNvForestFixture(), checked: nvForestCaptured.toISOString() },
   { source: arFaulknerCountyOrders, rows: await parseArFaulknerFixture(), checked: arCaptured.toISOString() },
   { source: scAirQuality, rows: await parseScRegulationFixture(), checked: scCaptured.toISOString() },
+  { source: ncForestOrders, rows: [], checked: ncNow.toISOString() },
+  { source: ncPermits, rows: await parseNcPermitFixture(), checked: ncNow.toISOString() },
+  { source: ncAirHours, rows: await parseNcAirFixture(), checked: ncNow.toISOString() },
   { source: nwsFireWeather, rows: [], fireWeather: parseNwsLive(), checked: nwsCaptured.toISOString() },
 );
 
@@ -356,6 +382,9 @@ const jobs: Array<[string, () => unknown]> = [
   ["AR Faulkner County WordPress / Elementor and PDF", parseArFaulknerFixture],
   ["SC Forestry Commission custom WordPress REST", parseScDebrisFixture],
   ["SC DES regulation PDF and calendar", parseScRegulationFixture],
+  ["NC Forest Service Drupal newsroom and three orders", parseNcOrderFixtures],
+  ["NC woodland permits statute and calendar", parseNcPermitFixture],
+  ["NC DEQ open-burning hours and calendar", parseNcAirFixture],
   ["NV Spring Mountains Drupal order table", parseNvForestFixture],
   ["UT FFSL fire order polygons", parseUtOrders],
   ["UT closed fire season and calendar", parseUtStatute],

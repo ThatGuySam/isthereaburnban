@@ -556,10 +556,32 @@
   {
     "abbr": "NC",
     "name": "North Carolina",
-    "coverage": "directory",
-    "publisher": "N.C. Forest Service",
-    "officialUrl": "https://www.ncagr.gov/divisions/nc-forest-service/open-burning-permits",
-    "notes": "The N.C. Forest Service issues burn bans by county through press releases. Towns and fire marshals can also restrict burning."
+    "coverage": "restrictions",
+    "publisher": "N.C. Forest Service and N.C. Division of Air Quality",
+    "officialUrl": "https://www.ncagr.gov/divisions/nc-forest-service/newsroom",
+    "notes": "The N.C. Forest Service announces state burn bans and lifts. Woodland permits and air-quality burn hours depend on where and what you burn. Check your local fire marshal for local bans, especially within 100 feet of a home that is occupied, and check the county air-quality forecast before burning.",
+    "extraUrls": [
+      {
+        "label": "Open burning permits and rules",
+        "url": "https://www.ncagr.gov/divisions/nc-forest-service/open-burning-permits"
+      },
+      {
+        "label": "County Forest Service contacts",
+        "url": "https://www.ncagr.gov/divisions/nc-forest-service/contacts"
+      },
+      {
+        "label": "Local fire department and fire marshal directory",
+        "url": "https://www.ncosfm.gov/nc-fire-department-rescue-ems-directory-including-fdid"
+      },
+      {
+        "label": "Air-quality open-burning rules",
+        "url": "https://www.deq.nc.gov/about/divisions/air-quality/air-quality-compliance/open-burning"
+      },
+      {
+        "label": "County air-quality forecast",
+        "url": "https://airquality.climate.ncsu.edu/"
+      }
+    ]
   },
   {
     "abbr": "ND",

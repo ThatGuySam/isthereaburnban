@@ -3,7 +3,7 @@ import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { syncfusionGridRows, webFormsPost } from "./aspnet";
 import { arcgisDateOnly, arcgisDistinctUrl, arcgisEditWindow, arcgisLocalDate, arcgisRows, arcgisTimestampOffset, codedDomains, dataLastEditDate, findOperationalLayers, queryArcgis } from "./arcgis";
-import { activeRule, calendarDayWindows, CALENDAR_RULES } from "./calendar";
+import { activeRule, calendarDayWindows, calendarStatusRows, CALENDAR_RULES } from "./calendar";
 import { civicPlusAlertDetails, civicPlusNotices, civicPlusUrl } from "./civicplus";
 import { localDayWindow, parseWeekdayDate, reportWindow, weekdayOnOrAfter } from "./dates";
 import { decodeFeed, parseCsv, parseDotNetJsonDate, parseFeed, parseJson } from "./feeds";
@@ -52,6 +52,16 @@ test("HTML table cells separate adjacent paragraphs without splitting inline tex
   for (const parts of [parseHtml(markup), await extractHtml(markup)]) {
     expect(parts.tables[0].rows).toEqual([["04-17-24-01 Map", "Year-round"]]);
   }
+});
+
+test("calendar rows keep only covered counties and windows that have not ended", () => {
+  const rule = { ...CALENDAR_RULES.AZ, hours: [18 * 60, 8 * 60] };
+  const counties = [{ fips: "04013", name: "Maricopa County" }, { fips: "04019", name: "Pima County" }];
+  const publisher = { id: "az-example", sourceName: "Publisher", sourceUrl: rule.officialUrl };
+  const rows = calendarStatusRows(rule, counties, publisher, date("2026-06-01T18:00:00Z"));
+  expect(rows.map(({ fips, sourceId, validFrom, validUntil }) => ({ fips, sourceId, validFrom, validUntil }))).toEqual([{
+    fips: "04013", sourceId: "az-example", validFrom: "2026-06-02T01:00:00.000Z", validUntil: "2026-06-02T07:00:00.000Z",
+  }]);
 });
 
 test("publisher-local dates allow a comma before a whole hour with meridiem", () => {

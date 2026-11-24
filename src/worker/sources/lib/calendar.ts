@@ -1,3 +1,4 @@
+import type { CountyStatus } from "../../../shared/types";
 import { atLocalTime, localClock, localDayWindow, shiftDay, US_ZONES } from "./dates";
 
 // Inventory: Alaska burn permits and winter air rules, AZ Area A, Idaho and Utah closed fire seasons, NY DEC Open Burning, GA EPD Summer Open Burning Ban, KY fire hazard seasons, OH DNR Open Burning Regulations,
@@ -40,8 +41,32 @@ export function calendarDayWindows(rule: CalendarRule, now: Date) {
   });
 }
 
+type CalendarPublisher = Pick<CountyStatus, "sourceName" | "sourceUrl"> & { id: string };
+
+/** Emit a calendar rule's effective windows for its mapped counties, including later windows today. */
+export function calendarStatusRows(
+  rule: CalendarRule,
+  counties: ReadonlyArray<{ fips: string; name: string }>,
+  publisher: CalendarPublisher,
+  now: Date,
+): CountyStatus[] {
+  const checked = now.toISOString();
+  const covered = rule.counties ? counties.filter(({ name }) => ruleCoversCounty(rule, name)) : counties;
+  const { state, status, label, note, scope, scopeNote, officialUrl } = rule;
+  const { id: sourceId, sourceName, sourceUrl } = publisher;
+  return calendarDayWindows(rule, now).filter(({ validUntil }) => validUntil > checked)
+    .flatMap((window) => covered.map(({ fips, name }) => ({
+      ...window, fips, county: name, state, status, label, note, scope, scopeNote,
+      sourceId, sourceName, sourceUrl, officialUrl, checked, sourceUpdated: null, since: null, expires: null,
+    })));
+}
+
+function ruleCoversCounty(rule: CalendarRule, county?: string) {
+  return !rule.counties || (county !== undefined && rule.counties.has(county.replace(/\s+County$/i, "").toLowerCase()));
+}
+
 export function activeRule(rule: CalendarRule, now: Date, county?: string) {
-  if (rule.counties && (!county || !rule.counties.has(county.replace(/\s+County$/i, "").toLowerCase()))) return undefined;
+  if (!ruleCoversCounty(rule, county)) return undefined;
   const { date, minute } = localClock(now, rule.zone);
   if (!inSeason(rule, date)) return undefined;
   if (rule.hours) {
@@ -106,6 +131,34 @@ export const CALENDAR_RULES: Record<string, CalendarRule> = {
     officialUrl: "https://eec.ky.gov/natural-resources/forestry/wildland-fire-management/pages/outdoor-burning-laws.aspx",
     label: "Seasonal daytime burning restriction", seasons: [["02-15", "04-30"], ["10-01", "12-15"]], hours: [360, 1080],
     note: "Kentucky limits burning materials that can spread fire from 6 a.m. to 6 p.m. local time during February 15 through April 30 and October 1 through December 15. The law makes exceptions for snow-covered ground and certain activities. Check local orders and air-quality rules before burning.",
+  },
+  NC_HIGH_HAZARD: {
+    state: "NC", zone: US_ZONES.Eastern, status: "restricted", scope: "part",
+    officialUrl: "https://www.ncagr.gov/divisions/nc-forest-service/open-burning-permits",
+    scopeNote: "Open burning in or within 500 feet of woodland protected by the N.C. Forest Service",
+    label: "Woodland burn permit required all day",
+    note: "In high-hazard counties, North Carolina requires a permit for covered fires in or within 500 feet of protected woodland at any hour. Separate rules apply to large land-clearing burns. Check the Forest Service for exemptions and your fire marshal for local orders.",
+  },
+  NC_WOODLAND: {
+    state: "NC", zone: US_ZONES.Eastern, status: "restricted", scope: "part",
+    officialUrl: "https://www.ncagr.gov/divisions/nc-forest-service/open-burning-permits",
+    scopeNote: "Open burning in or within 500 feet of woodland protected by the N.C. Forest Service",
+    label: "Woodland burn permit required before 4 p.m.", hours: [0, 16 * 60],
+    note: "North Carolina requires a permit to start covered fires in or within 500 feet of protected woodland from midnight to 4 p.m. Eastern. Check the Forest Service for exemptions and your fire marshal for local orders.",
+  },
+  NC_HIGH_HAZARD_CLEARING: {
+    state: "NC", zone: US_ZONES.Eastern, status: "restricted", scope: "part",
+    officialUrl: "https://www.ncagr.gov/divisions/nc-forest-service/open-burning-permits",
+    scopeNote: "Land-clearing burns requiring a special permit in a high-hazard county",
+    label: "Special-permit land-clearing burn hours", hours: [16 * 60, 8 * 60],
+    note: "In high-hazard counties, covered land-clearing burns that require a special permit may start or take more fuel from 8 a.m. to 4 p.m. Eastern. A forest ranger can approve a written exception when weather conditions are favorable.",
+  },
+  NC_AIR_BURN_HOURS: {
+    state: "NC", zone: US_ZONES.Eastern, status: "restricted", scope: "part",
+    officialUrl: "https://www.deq.nc.gov/about/divisions/air-quality/air-quality-compliance/open-burning",
+    scopeNote: "Residential yard waste and land-clearing or right-of-way burning covered by the state air-quality rule",
+    label: "Air-quality open-burning hours", hours: [18 * 60, 8 * 60],
+    note: "State air-quality rules limit when covered land-clearing and right-of-way burns can start and when those fires and residential yard-waste fires can take more fuel. Check the rule for the conditions on each activity and any Air Quality Action Day for your county.",
   },
   MT_MISSOULA_GENERAL: {
     state: "MT", zone: US_ZONES.Mountain, status: "restricted", scope: "part",

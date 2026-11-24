@@ -28,6 +28,9 @@ import { mtDeqFall } from "./mt/deq-fall";
 import { mtDnrcRestrictions } from "./mt/dnrc";
 import { mtGallatinOpenBurning } from "./mt/gallatin";
 import { mtMissoulaSeasons } from "./mt/missoula";
+import { ncAirHours } from "./nc/air-hours";
+import { ncForestOrders } from "./nc/forest-orders";
+import { ncPermits } from "./nc/permits";
 import { ndDesRestrictions } from "./nd/restrictions";
 import { njRestrictions } from "./nj/restrictions";
 import { nvTmfpdPileBurning } from "./nv/tmfpd";
@@ -125,6 +128,16 @@ export const SOURCES: readonly Source[] = [
   nvUsfsSpringMountains,
   ...scfcDebris,
   scAirQuality,
+  ncForestOrders,
+  ncAirHours,
+  ncPermits,
+  {
+    id: "nc-air-quality-action-days", state: "NC", scope: "part", stack: "WordPress / PHP + KML", mode: "manual", cadence: null,
+    sourceName: "N.C. Division of Air Quality and Forsyth County Environmental Assistance and Protection",
+    sourceUrl: "https://airquality.climate.ncsu.edu/",
+    officialUrl: "https://airquality.climate.ncsu.edu/discussion/",
+    error: "The daily forecast map gives burn-ban flags without hours. Check the forecast discussion or local air-quality advisory for applicable counties and hours.",
+  },
   {
     id: "sc-scfc-issued-orders", state: "SC", scope: "part", stack: "WordPress / PDF", mode: "manual", cadence: null,
     sourceName: "South Carolina Forestry Commission",
