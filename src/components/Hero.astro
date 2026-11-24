@@ -17,7 +17,7 @@ const { mode, fips, place } = Astro.props;
     <div class="tools">
       <form class="zip-form" action="/" method="get" data-zip-form>
         <label for="zip">Not here? Enter a ZIP</label>
-        <input id="zip" name="zip" inputmode="numeric" autocomplete="postal-code" pattern="[0-9]{5}" maxlength="5" placeholder="74103" required />
+        <input id="zip" name="zip" inputmode="numeric" autocomplete="postal-code" pattern="[0-9]{5}" maxlength="5" placeholder="ZIP code" required />
         <button type="submit">Check</button>
       </form>
       <div class="chips">

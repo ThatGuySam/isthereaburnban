@@ -67,7 +67,7 @@ export function initHero(): void {
   }
 
   function paintMessage(word: string, sentence: string) {
-    slot.innerHTML = `<div class="status" data-status="unknown"><p class="status-word">${escapeHtml(word)}</p><p class="status-sentence">${escapeHtml(sentence)}</p></div>`;
+    slot.innerHTML = `<div class="status" data-status="unknown"><p class="status-word${word.length > 5 ? " status-word--long" : ""}">${escapeHtml(word)}</p><p class="status-sentence">${escapeHtml(sentence)}</p></div>`;
     setTheme("unknown");
   }
 

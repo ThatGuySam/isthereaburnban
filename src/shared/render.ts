@@ -120,7 +120,7 @@ export function renderStatusHtml(cs: CountyStatus, opts: RenderOptions = {}): st
   if (cs.expires) meta.push(`<span>until <time datetime="${escapeHtml(cs.expires)}">${escapeHtml(shortDate(cs.expires))}</time></span>`);
 
   const lines: string[] = [
-    `<p class="status-word">${escapeHtml(theme.word)}</p>`,
+    `<p class="status-word${theme.word.length > 5 ? " status-word--long" : ""}">${escapeHtml(theme.word)}</p>`,
     `<p class="status-sentence">${escapeHtml(statusSentence(cs))}</p>`,
   ];
   if (cs.status === "unknown" && official) lines.push(`<p class="status-official">${official.replace('class="official"', 'class="official official--prominent"')}</p>`);
@@ -135,7 +135,7 @@ export function renderStatusHtml(cs: CountyStatus, opts: RenderOptions = {}): st
 /** Static "Checking" markup used as the prerendered fallback. */
 export function renderCheckingHtml(place?: string): string {
   const sentence = place ? `Looking up burn bans for ${place}…` : "Looking up burn bans near you…";
-  return `<div class="status" data-status="checking"><p class="status-word">Checking</p><p class="status-sentence">${escapeHtml(sentence)}</p></div>`;
+  return `<div class="status" data-status="checking"><p class="status-word status-word--long">Checking</p><p class="status-sentence">${escapeHtml(sentence)}</p></div>`;
 }
 
 /** A county we have no live status for: "Not sure" plus the state's official link. Never "none". */

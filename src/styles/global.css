@@ -112,6 +112,11 @@ a {
   line-height: 0.95;
   letter-spacing: -0.03em;
   margin: 0;
+  padding-bottom: 0.08em;
+}
+
+.status-word--long {
+  font-size: clamp(3.5rem, 14vw, 10rem);
 }
 
 .status-sentence {
@@ -441,4 +446,8 @@ pre {
     animation: none !important;
     scroll-behavior: auto !important;
   }
+}
+
+.hero .crumbs ol {
+  justify-content: center;
 }
