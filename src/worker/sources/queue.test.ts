@@ -5,10 +5,13 @@ import { readFileSync } from "node:fs";
 import { STATES_DIR } from "../counties";
 import { SNAPSHOT_KEY } from "../env";
 import { withFireWeather } from "../fire-weather";
-import { readSnapshot } from "../snapshot";
+import { lookup } from "../lookup";
+import { snapshotReader } from "../snapshot";
+import { ACTIVE_KEY, INDEX_KEY, PRETTY_ACTIVE_KEY, stateKey } from "../snapshot-v2";
 import { US_ZONES } from "./lib/dates";
 import { mergeSources, STALE_MS } from "./merge";
 import { nwsFireWeather, parseNwsAlerts } from "./nws/alerts";
+import { MAX_CACHED_STATES } from "./publication";
 import { consumeSourceMessage, enqueueSources, isDue } from "./queue";
 import { SOURCES } from "./registry";
 import { applyChecks, readHeads } from "./state";
@@ -20,12 +23,15 @@ afterEach(() => { for (const store of stores.splice(0)) store.close(); });
 function sandbox() {
   const sqlite = new Database(":memory:");
   stores.push(sqlite);
-  for (const file of ["0001_init.sql", "0003_source_refresh.sql"]) {
+  for (const file of ["0001_init.sql", "0003_source_refresh.sql", "0004_state_snapshots.sql"]) {
     sqlite.exec(readFileSync(new URL(`../../../migrations/${file}`, import.meta.url), "utf8"));
   }
   const keys = new Map();
+  const metadata = new Map();
+  const gets = [];
   const puts = [];
   const messages = [];
+  const continuations = [];
   const alerts = [];
   const prepare = (sql, args = []) => {
     const query = sqlite.query(sql);
@@ -44,7 +50,7 @@ function sandbox() {
   const env = {
     DB: {
       prepare(sql) {
-        if (sql.startsWith("UPDATE source_snapshot SET published = 1") && failure.finalize) {
+        if (sql.startsWith("DELETE FROM snapshot_run") && failure.finalize) {
           return { bind: () => ({ run: async () => { throw new Error("D1 interrupted after alert"); } }) };
         }
         return prepare(sql);
@@ -53,27 +59,42 @@ function sandbox() {
     },
     KV: {
       get: async (key, type) => {
+        gets.push(key);
         const read = (key) => {
           const value = keys.get(key);
           return !value ? null : type === "json" || type?.type === "json" ? JSON.parse(value) : value;
         };
         return Array.isArray(key) ? new Map(key.map((key) => [key, read(key)])) : read(key);
       },
-      put: async (key, value) => {
+      getWithMetadata: async (key) => ({ value: keys.get(key), metadata: metadata.get(key) }),
+      put: async (key, value, options) => {
         if (key === failure.key) throw new Error("interrupted KV write");
         puts.push(key);
         keys.set(key, value);
+        metadata.set(key, options?.metadata);
       },
     },
     SOURCE_QUEUE: {
       sendBatch: async (batch) => messages.push(...batch),
-      send: async (body, options) => messages.push({ body, ...options }),
+      send: async (body, options) => {
+        if (body.kind === "publish") continuations.push(body);
+        else messages.push({ body, ...options });
+      },
     },
   };
   const sendNotices = async (_, runId, notices) => {
     if (!alerts.some((alert) => alert.runId === runId)) alerts.push({ runId, notices });
   };
-  return { env, failure, messages, alerts, puts, keys, sqlite, sendNotices, snapshot: () => JSON.parse(keys.get(SNAPSHOT_KEY)) };
+  const catalog = () => JSON.parse(keys.get(INDEX_KEY));
+  const snapshot = () => {
+    const index = catalog();
+    const get = sqlite.query("SELECT snapshot FROM snapshot_state WHERE state = ? AND revision = ?");
+    const shards = Object.entries(index.states).map(([state, ref]) => JSON.parse(get.get(state, ref.revision).snapshot));
+    return { ...index, counties: Object.assign({}, ...shards.map((shard) => shard.counties)),
+      changed: Object.assign({}, ...shards.map((shard) => shard.changed)),
+      fireWeather: Object.assign({}, ...shards.map((shard) => shard.fireWeather)) };
+  };
+  return { env, failure, messages, continuations, alerts, gets, puts, keys, sqlite, sendNotices, catalog, snapshot };
 }
 
 const initial = Date.parse("2026-11-23T17:07Z");
@@ -92,8 +113,14 @@ const source = (id, fetch, extra = {}) => ({
 const run = (box, sources, message, clock = message.slot) =>
   consumeSourceMessage(box.env, message, { sources, now: new Date(clock), sendNotices: box.sendNotices });
 const poll = (box, src, slot) => run(box, [src], { kind: "source", id: src.id, slot });
-const merge = (box, sources, slot, delay = 120_000) =>
-  run(box, sources, { kind: "merge", slot, due: sources.map(({ id }) => id) }, slot + delay);
+async function drain(box, sources, clock) {
+  while (box.continuations.length) await run(box, sources, box.continuations.shift(), clock);
+}
+const merge = async (box, sources, slot, delay = 120_000) => {
+  const result = await run(box, sources, { kind: "merge", slot, due: sources.map(({ id }) => id) }, slot + delay);
+  await drain(box, sources, slot + delay);
+  return result;
+};
 
 test("registry and states.json agree in both directions, and source IDs are unique", () => {
   const active = SOURCES.filter(isActive);
@@ -101,8 +128,8 @@ test("registry and states.json agree in both directions, and source IDs are uniq
   expect([...new Set(active.filter(({ coverage }) => coverage === "live").map(({ state }) => state))].sort()).toEqual(live);
   expect(new Set(SOURCES.map(({ id }) => id)).size).toBe(SOURCES.length);
   const dailyPolls = active.reduce((total, { cadence }) => total + (cadence.kind === "hourly" ? 24 : cadence.hours.length), 0);
-  expect(dailyPolls * 2 + 24).toBeLessThanOrEqual(1000); // two keys per changed poll plus one hourly publication
-  expect((dailyPolls + 24) * 3).toBeLessThanOrEqual(10000); // enqueue, dequeue, delete
+  expect(24 * (MAX_CACHED_STATES + 3)).toBeLessThan(1000); // D1 source revisions; capped shards, two active formats, and index
+  expect((dailyPolls + 24 * (1 + 51 + 4)) * 3).toBeLessThanOrEqual(10000); // enqueue, dequeue, delete
   for (const item of active) {
     if (item.product === "fire-weather") {
       expect(item.state).toBe("US");
@@ -154,10 +181,12 @@ test("queued NWS changes leave ban history alone and preserve a verified midnigh
   await poll(box, weather, before);
   await merge(box, sources, before);
   const baseline = box.snapshot();
+  box.puts.length = 0;
   await poll(box, county, active);
   await poll(box, weather, active);
   await merge(box, sources, active);
   const during = box.snapshot();
+  expect(box.puts).toEqual([stateKey("CO"), ACTIVE_KEY, PRETTY_ACTIVE_KEY, INDEX_KEY]);
   expect(during.counties["08059"].status).toBe("none");
   expect(withFireWeather(during, active).counties["08059"]).toMatchObject({
     status: "restricted", expires: "2026-11-19T07:00:00.000Z", alerts: [expect.objectContaining({ event: "Red Flag Warning" })],
@@ -195,7 +224,10 @@ test("queue stores one revision, absorbs duplicate deliveries and skips unchange
   await poll(box, src, initial);
   await merge(box, [src], initial);
   expect(called).toBe(1);
-  expect(box.puts).toEqual(["source:or", "source:or:hash", SNAPSHOT_KEY]);
+  expect(box.puts).toHaveLength(MAX_CACHED_STATES + 3);
+  expect(box.puts.slice(-3)).toEqual([ACTIVE_KEY, PRETTY_ACTIVE_KEY, INDEX_KEY]);
+  expect(box.sqlite.query("SELECT count(*) as count FROM snapshot_state").get().count).toBe(51);
+  expect(box.sqlite.query("SELECT count(*) as count FROM source_payload").get().count).toBe(1);
   expect(box.snapshot().sources[0]).toMatchObject({ ok: true, counties: 2 });
   await poll(box, src, nextHour);
   await merge(box, [src], nextHour);
@@ -203,7 +235,7 @@ test("queue stores one revision, absorbs duplicate deliveries and skips unchange
   await merge(box, [src], nextHour + 3_600_000);
   await poll(box, src, initial - 1);
   expect(called).toBe(3);
-  expect(box.puts).toHaveLength(3);
+  expect(box.puts).toHaveLength(MAX_CACHED_STATES + 3);
   const snapshot = box.snapshot();
   applyChecks(snapshot, await readHeads(box.env.DB), new Date(nextHour + 3_600_000));
   expect(snapshot.counties["41039"].checked).toBe(new Date(nextHour + 3_600_000).toISOString());
@@ -214,29 +246,121 @@ test("journal handles KV and D1 interruption without duplicating a transition or
   const box = sandbox();
   let status = "none";
   const src = source("or", async ({ now }) => ({ rows: [row(status, now.toISOString())] }));
+  const tx = source("tx-test", async ({ now }) => ({ rows: [row(status, now.toISOString(), { state: "TX", fips: "48001", county: "Anderson County" })] }), { state: "TX" });
+  const sources = [src, tx];
   await poll(box, src, initial);
-  await merge(box, [src], initial);
+  await poll(box, tx, initial);
+  await merge(box, sources, initial);
   status = "ban";
   await poll(box, src, nextHour);
+  await poll(box, tx, nextHour);
 
-  box.failure.key = SNAPSHOT_KEY;
-  await expect(merge(box, [src], nextHour)).rejects.toThrow("interrupted KV write");
+  box.failure.key = INDEX_KEY;
+  await expect(merge(box, sources, nextHour)).rejects.toThrow("interrupted KV write");
   expect(box.snapshot().counties["41039"].status).toBe("none");
-  expect(box.sqlite.query("SELECT old_status, new_status FROM transitions").all()).toEqual([{ old_status: "none", new_status: "ban" }]);
+  expect(box.snapshot().counties["48001"].status).toBe("none");
+  expect(box.sqlite.query("SELECT old_status, new_status FROM transitions").all()).toEqual([
+    { old_status: "none", new_status: "ban" }, { old_status: "none", new_status: "ban" },
+  ]);
   expect(box.alerts).toHaveLength(0);
 
   box.failure.key = null;
   box.failure.finalize = true;
-  await expect(merge(box, [src], nextHour)).rejects.toThrow("after alert");
+  await expect(merge(box, sources, nextHour)).rejects.toThrow("after alert");
   expect(box.snapshot().counties["41039"].status).toBe("ban");
   expect(box.alerts).toHaveLength(1);
 
   box.failure.finalize = false;
-  await merge(box, [src], nextHour);
-  await merge(box, [src], nextHour);
-  expect(box.sqlite.query("SELECT * FROM transitions").all()).toHaveLength(1);
+  await merge(box, sources, nextHour);
+  await merge(box, sources, nextHour);
+  expect(box.sqlite.query("SELECT * FROM transitions").all()).toHaveLength(2);
   expect(box.alerts).toHaveLength(1);
-  expect(box.alerts[0].notices[0].title).toBe("Burn ban: Lane County, OR");
+  expect(box.alerts[0].notices.map(({ title }) => title).sort()).toEqual(["Burn ban: Anderson County, TX", "Burn ban: Lane County, OR"]);
+});
+
+test("one dirty state rewrites only its shard and readers pin the catalog revision across KV lag", async () => {
+  const box = sandbox();
+  const start = Date.now() - 2 * 3_600_000;
+  const next = start + 3_600_000;
+  let status = "none";
+  const or = source("or-fixture", async ({ now }) => ({ rows: [row(status, now.toISOString())] }));
+  const tx = source("tx-fixture", async ({ now }) => ({ rows: [row("none", now.toISOString(), { state: "TX", fips: "48001" })] }), { state: "TX" });
+  await poll(box, or, start);
+  await poll(box, tx, start);
+  await merge(box, [or, tx], start);
+  const old = new Map(box.keys);
+  const before = box.catalog();
+  box.puts.length = 0;
+  status = "ban";
+  await poll(box, or, next);
+  await poll(box, tx, next);
+  await merge(box, [or, tx], next);
+  expect(box.puts).toEqual([stateKey("OR"), ACTIVE_KEY, PRETTY_ACTIVE_KEY, INDEX_KEY]);
+  expect(box.catalog().states.TX).toEqual(before.states.TX);
+
+  const freshOr = box.keys.get(stateKey("OR"));
+  box.keys.delete(stateKey("OR")); // Edge has cached a miss for the new shard.
+  box.keys.set(ACTIVE_KEY, old.get(ACTIVE_KEY));
+  const current = snapshotReader(box.env, { fresh: true });
+  expect((await current.state("OR")).counties["41039"].status).toBe("ban");
+  expect(JSON.parse((await current.bans()).body).counties.map(({ fips }) => fips)).toEqual(["41039"]);
+
+  box.keys.set(INDEX_KEY, old.get(INDEX_KEY)); // Edge sees the previous catalog with a newer shard.
+  box.keys.set(stateKey("OR"), freshOr);
+  const previous = snapshotReader(box.env, { fresh: true });
+  box.env.ASSETS = { fetch: async () => Response.json({ "12345": ["41039", "48001"] }) };
+  box.gets.length = 0;
+  const border = await lookup(box.env, previous, { zip: "12345" });
+  expect(border.results.map(({ state, status }) => [state, status])).toEqual([["OR", "none"], ["TX", "none"]]);
+  expect(box.gets.filter((key) => key === INDEX_KEY)).toHaveLength(1);
+  expect(box.gets.every((key) => [INDEX_KEY, stateKey("OR"), stateKey("TX")].includes(key))).toBe(true);
+});
+
+test("v1 KV remains readable and the first v2 merge preserves history and resumes pending legacy notices", async () => {
+  const box = sandbox();
+  const start = Date.now() - 7_200_000;
+  const publishedAt = new Date(start).toISOString();
+  const or = source("or-fixture", async ({ now }) => ({ rows: [row("ban", now.toISOString())] }));
+  const legacy = mergeSources(null, [{ source: or, rows: [row("none", publishedAt)], checked: publishedAt }], new Date(start)).snapshot;
+  box.keys.set(SNAPSHOT_KEY, JSON.stringify(legacy));
+  expect((await snapshotReader(box.env, { fresh: true }).state("OR")).counties["41039"].status).toBe("none");
+  box.sqlite.query("INSERT INTO source_snapshot VALUES (1, 'pending-v1', '', 0, ?, ?)")
+    .run(JSON.stringify(legacy), JSON.stringify([{ fips: "41039", title: "Pending v1 notice" }]));
+  const next = start + 3_600_000;
+  await poll(box, or, next);
+  await merge(box, [or], next);
+  expect(box.snapshot().counties["41039"].status).toBe("ban");
+  expect(box.snapshot().changed["41039"]).toBe(new Date(next + 120_000).toISOString());
+  expect(box.alerts.map(({ runId }) => runId)).toEqual(["sources-pending-v1", `sources-${box.catalog().revision}`]);
+  expect(box.sqlite.query("SELECT fips, old_status, new_status FROM transitions").all()).toEqual([
+    { fips: "41039", old_status: "none", new_status: "ban" },
+  ]);
+});
+
+test("unchanged scoped orders take the published check time without rewriting their shard", async () => {
+  const box = sandbox();
+  const start = Date.now() - 7_200_000;
+  const next = start + 3_600_000;
+  let status = "none";
+  const or = source("or-district", async ({ now }) => ({ rows: [row("restricted", now.toISOString(), {
+    label: 'Fire restrictions in the district — check "today"', scopeNote: "County district", validUntil: new Date(start + 86_400_000).toISOString(),
+  })] }), { mode: "positive-only", scope: "part" });
+  const tx = source("tx-test", async ({ now }) => ({ rows: [row(status, now.toISOString(), { state: "TX", fips: "48001" })] }), { state: "TX" });
+  await poll(box, or, start);
+  await poll(box, tx, start);
+  await merge(box, [or, tx], start);
+  const previous = box.catalog().states.OR;
+  await poll(box, or, next);
+  const reader = () => snapshotReader(box.env, { fresh: true });
+  expect((await reader().state("OR")).counties["41039"].orders[0].checked).toBe(new Date(start).toISOString());
+  status = "ban";
+  await poll(box, tx, next);
+  await merge(box, [or, tx], next);
+  expect(box.catalog().states.OR).toEqual(previous);
+  const county = (await reader().state("OR")).counties["41039"];
+  expect(county.orders[0].checked).toBe(new Date(next).toISOString());
+  expect(JSON.parse((await reader().bans()).body).counties[0]).toEqual(county);
+  expect(JSON.parse(JSON.parse((await reader().bans(undefined, "pretty")).body)).counties[0]).toEqual(county);
 });
 
 test("out-of-order merge replay leaves a newer incomplete hourly refresh unpublished", async () => {
@@ -258,20 +382,21 @@ test("out-of-order merge replay leaves a newer incomplete hourly refresh unpubli
   expect(box.alerts).toHaveLength(1);
 });
 
-test("merge retries an invisible KV revision without rolling the display back", async () => {
+test("merge waits for a legacy KV revision without rolling the display back", async () => {
   const box = sandbox();
   let status = "none";
   const src = source("or", async ({ now }) => ({ rows: [row(status, now.toISOString())] }));
   await poll(box, src, initial);
   await merge(box, [src], initial);
-  const old = box.keys.get("source:or");
+  const old = box.sqlite.query("SELECT hash, payload FROM source_payload WHERE id = 'or'").get();
   status = "ban";
   await poll(box, src, nextHour);
-  const published = box.keys.get("source:or");
-  box.keys.set("source:or", old);
+  const fresh = box.sqlite.query("SELECT hash, payload FROM source_payload WHERE id = 'or'").get();
+  box.sqlite.exec("UPDATE source_refresh SET stored = 0 WHERE id = 'or'");
+  box.keys.set("source:or", JSON.stringify({ ...JSON.parse(old.payload), hash: old.hash }));
   await expect(merge(box, [src], nextHour)).rejects.toThrow("not visible yet");
   expect(box.snapshot().counties["41039"].status).toBe("none");
-  box.keys.set("source:or", published);
+  box.keys.set("source:or", JSON.stringify({ ...JSON.parse(fresh.payload), hash: fresh.hash }));
   await merge(box, [src], nextHour);
   expect(box.snapshot().counties["41039"].status).toBe("ban");
 });
@@ -325,6 +450,6 @@ test("public expiration safety holds during a D1 health lookup failure", async (
   await merge(box, [src], start, 1_000);
   expect(box.snapshot().counties["41039"].status).toBe("ban");
   box.env.DB = { prepare: () => { throw new Error("D1 temporarily unavailable"); } };
-  const result = await readSnapshot(box.env, true);
+  const result = await snapshotReader(box.env, { fresh: true }).state("OR");
   expect(result.counties["41039"]).toMatchObject({ status: "unknown", label: "Source decision expired" });
 });

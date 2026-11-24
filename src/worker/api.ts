@@ -1,9 +1,9 @@
-import type { CountyStatus, Snapshot } from "../shared/types";
+import type { CountyStatus, SnapshotData } from "../shared/types";
 import { STATES_DIR } from "./counties";
 import { DISCLAIMER } from "./lookup";
 
 /** Active bans and restrictions, optionally for one state. */
-export function activeBans(snapshot: Snapshot, state?: string) {
+export function activeBans(snapshot: SnapshotData, state?: string) {
   const st = state?.trim().toUpperCase();
   const counties: CountyStatus[] = Object.values(snapshot.counties)
     .filter((c) => (c.status === "ban" || c.status === "restricted") && (!st || c.state === st))
@@ -12,11 +12,11 @@ export function activeBans(snapshot: Snapshot, state?: string) {
   return { generated: snapshot.generated, counties, sources, disclaimer: DISCLAIMER };
 }
 
-export function coverage(snapshot: Snapshot) {
+export function coverage(snapshot: Pick<SnapshotData, "generated" | "sources">) {
   return { generated: snapshot.generated, states: STATES_DIR, sources: snapshot.sources, disclaimer: DISCLAIMER };
 }
 
-export function activeFireWeather(snapshot: Snapshot, state?: string) {
+export function activeFireWeather(snapshot: SnapshotData, state?: string) {
   const st = state?.trim().toUpperCase();
   const counties = Object.keys(snapshot.fireWeather ?? {}).sort().flatMap((fips) => {
     const row = snapshot.counties[fips];

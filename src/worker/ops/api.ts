@@ -6,7 +6,7 @@ import { alertsPaused, MANUAL_LIMIT, setAlertsPaused } from "../notification-con
 import { countyBulletin, testNotice } from "../notification-message";
 import { NotificationError, notify, providerStatus } from "../notify";
 import { subscribePush } from "../push";
-import { readSnapshot, STALE_MS } from "../snapshot";
+import { snapshotReader, STALE_MS } from "../snapshot";
 
 const fips = z.string().regex(/^\d{5}$/).refine((value) => COUNTY_BY_FIPS.has(value));
 const channelSelection = z.enum(["push", "email", "both"]);
@@ -114,7 +114,7 @@ async function sendNotice(env: Env, action: z.infer<typeof notices>) {
   }
 
   const county = COUNTY_BY_FIPS.get(fips);
-  const current = (await readSnapshot(env, true))?.counties[fips];
+  const current = county ? (await snapshotReader(env, { fresh: true, initialize: false }).state(county.state, { weather: false })).counties[fips] : undefined;
   const age = current ? Date.now() - Date.parse(current.checked) : NaN;
   const bulletin = current && current.status !== "unknown" && age >= 0 && age <= STALE_MS
     ? countyBulletin(current) : null;

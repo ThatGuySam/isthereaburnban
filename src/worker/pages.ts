@@ -1,10 +1,13 @@
 // Server side of the static pages: inject live status into prerendered county pages, and build sitemaps.
 import countiesData from "../data/counties.json";
+import cityStates from "../data/places-states.json";
 import statesData from "../data/states.json";
 import { answerMeta, escapeHtml, heroStyle, localDate, renderStatusHtml, renderStatusLine, statusTheme, unknownStatus } from "../shared/render";
-import { STATES } from "../shared/states-fips";
-import type { CountyStatus, Snapshot, StateDirectoryEntry } from "../shared/types";
+import { STATES, STATE_BY_ABBR } from "../shared/states-fips";
+import type { CountyStatus, SnapshotData, StateDirectoryEntry } from "../shared/types";
 import type { Env } from "./env";
+import type { SnapshotReader } from "./snapshot";
+import { latest } from "./snapshot-v2";
 
 type County = { fips: string; state: string; stateFips: string; name: string; slug: string };
 
@@ -14,7 +17,7 @@ const BY_PATH = new Map(COUNTIES.map((c) => [`${c.state.toLowerCase()}/${c.slug}
 
 const PAGE_CACHE = "public, max-age=300";
 
-function countyStatus(snapshot: Snapshot, c: County): CountyStatus {
+function countyStatus(snapshot: SnapshotData, c: County): CountyStatus {
   return snapshot.counties[c.fips] ?? unknownStatus(c, STATE_DIR.get(c.state), snapshot.generated);
 }
 
@@ -46,7 +49,7 @@ const COUNTY_BY_FIPS = new Map(COUNTIES.map((c) => [c.fips, c]));
 /** Answer for the page's counties, read from <html data-answer-fips> before the head streams by. */
 type PageAnswer = { list: CountyStatus[]; changed?: string; meta: { title: string; description: string } | null };
 
-function pageAnswer(snapshot: Snapshot, question: string, fipsAttr: string, city: string | null): PageAnswer | null {
+function pageAnswer(snapshot: SnapshotData, question: string, fipsAttr: string, city: string | null): PageAnswer | null {
   const list = fipsAttr
     .split(",")
     .map((f) => COUNTY_BY_FIPS.get(f.trim()))
@@ -66,7 +69,7 @@ function apiLink(path: string): string | null {
   return c ? `</api/v1/status?fips=${c.fips}>; rel="alternate"; type="application/json"` : null;
 }
 
-export async function handlePage(request: Request, env: Env, snapshot: Snapshot): Promise<Response> {
+export async function handlePage(request: Request, env: Env, snapshots: SnapshotReader): Promise<Response> {
   const url = new URL(request.url);
   // Static assets handle trailing-slash redirects (/us/ok/tulsa-county -> /us/ok/tulsa-county/) and 404s.
   const asset = await env.ASSETS.fetch(request);
@@ -79,6 +82,8 @@ export async function handlePage(request: Request, env: Env, snapshot: Snapshot)
   headers.delete("content-length");
   const link = apiLink(url.pathname);
   if (link) headers.append("link", link);
+  const state = url.pathname.split("/")[2]?.toUpperCase();
+  const snapshot = link && state && STATE_BY_ABBR[state] ? await snapshots.state(state) : null;
 
   const now = Date.now();
   let answer: PageAnswer | null = null;
@@ -94,7 +99,7 @@ export async function handlePage(request: Request, env: Env, snapshot: Snapshot)
     .on("html", {
       element(el) {
         const fips = el.getAttribute("data-answer-fips");
-        if (fips) answer = pageAnswer(snapshot, el.getAttribute("data-q") ?? "", fips, el.getAttribute("data-city"));
+        if (fips && snapshot) answer = pageAnswer(snapshot, el.getAttribute("data-q") ?? "", fips, el.getAttribute("data-city"));
       },
     })
     .on("title", {
@@ -127,7 +132,7 @@ export async function handlePage(request: Request, env: Env, snapshot: Snapshot)
     .on("[data-status-slot]", {
       element(el) {
         const c = COUNTY_BY_FIPS.get(el.getAttribute("data-fips") ?? "");
-        if (!c) return;
+        if (!c || !snapshot) return;
         const note = el.getAttribute("data-note") ?? undefined;
         el.setInnerContent(renderStatusHtml(countyStatus(snapshot, c), { relativeTimeBase: now, note }), { html: true });
       },
@@ -135,7 +140,7 @@ export async function handlePage(request: Request, env: Env, snapshot: Snapshot)
     .on("[data-status-line]", {
       element(el) {
         const c = COUNTY_BY_FIPS.get(el.getAttribute("data-fips") ?? "");
-        if (c) el.setInnerContent(renderStatusLine(countyStatus(snapshot, c)), { html: true });
+        if (c && snapshot) el.setInnerContent(renderStatusLine(countyStatus(snapshot, c)), { html: true });
       },
     })
     .on("[data-status-changed]", {
@@ -173,19 +178,6 @@ function urlEntry(loc: string, lastmod?: string): string {
   return `<url><loc>${escapeHtml(loc)}</loc>${lastmod ? `<lastmod>${escapeHtml(lastmod)}</lastmod>` : ""}</url>`;
 }
 
-function latest(dates: (string | undefined)[]): string | undefined {
-  let best: string | undefined;
-  let bestT = -Infinity;
-  for (const d of dates) {
-    const t = d ? Date.parse(d) : NaN;
-    if (!Number.isNaN(t) && t > bestT) {
-      bestT = t;
-      best = d;
-    }
-  }
-  return best;
-}
-
 /** [[slug, county FIPS[]]] for a state's city pages (static asset from src/pages/data/cities/[st].json.ts). */
 async function cityRows(env: Env, st: string): Promise<[string, string[]][]> {
   const res = await env.ASSETS.fetch(new Request(`https://assets.local/data/cities/${st.toLowerCase()}.json`));
@@ -193,16 +185,18 @@ async function cityRows(env: Env, st: string): Promise<[string, string[]][]> {
 }
 
 /** /sitemap.xml (index), /sitemaps/core.xml, /sitemaps/<st>.xml (counties + cities). lastmod only when a status change is known. */
-export async function handleSitemap(request: Request, env: Env, snapshot: Snapshot): Promise<Response> {
+const CITY_STATES = new Set(cityStates);
+
+export async function handleSitemap(request: Request, env: Env, snapshots: SnapshotReader): Promise<Response> {
   const url = new URL(request.url);
   const origin = (env.SITE_URL || url.origin).replace(/\/+$/, "");
-  const changed = snapshot.changed ?? {};
   const path = url.pathname;
 
   if (path === "/sitemap.xml") {
+    const changed = await snapshots.lastChanged();
     const entries = [`<sitemap><loc>${escapeHtml(`${origin}/sitemaps/core.xml`)}</loc></sitemap>`];
     for (const s of STATES) {
-      const last = latest(COUNTIES.filter((c) => c.state === s.abbr).map((c) => changed[c.fips]));
+      const last = changed[s.abbr];
       entries.push(
         `<sitemap><loc>${escapeHtml(`${origin}/sitemaps/${s.abbr.toLowerCase()}.xml`)}</loc>${last ? `<lastmod>${escapeHtml(last)}</lastmod>` : ""}</sitemap>`,
       );
@@ -211,19 +205,21 @@ export async function handleSitemap(request: Request, env: Env, snapshot: Snapsh
   }
 
   if (path === "/sitemaps/core.xml") {
-    const cityIndexes = await Promise.all(STATES.map(async (s) => ((await cityRows(env, s.abbr)).length ? [`/us/${s.abbr.toLowerCase()}/city/`] : [])));
-    const paths = [...CORE_PATHS, ...STATES.map((s) => `/us/${s.abbr.toLowerCase()}/`), ...cityIndexes.flat()];
+    const cityIndexes = STATES.filter((s) => CITY_STATES.has(s.abbr)).map((s) => `/us/${s.abbr.toLowerCase()}/city/`);
+    const paths = [...CORE_PATHS, ...STATES.map((s) => `/us/${s.abbr.toLowerCase()}/`), ...cityIndexes];
     return xml(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${paths.map((p) => urlEntry(origin + p)).join("")}</urlset>`);
   }
 
   const m = path.match(/^\/sitemaps\/([a-z]{2})\.xml$/);
-  if (m && STATES.some((s) => s.abbr.toLowerCase() === m[1])) {
+  if (m && STATE_BY_ABBR[m[1].toUpperCase()]) {
     const st = m[1];
+    const [snapshot, cities] = await Promise.all([snapshots.state(st.toUpperCase(), { checks: false, weather: false }), cityRows(env, st)]);
+    const changed = snapshot.changed ?? {};
     const entries = COUNTIES.filter((c) => c.state.toLowerCase() === st)
       .sort((a, b) => a.slug.localeCompare(b.slug))
       .map((c) => urlEntry(`${origin}/us/${st}/${c.slug}/`, changed[c.fips]));
     // City pages change when any county they sit in changes.
-    for (const [slug, fips] of await cityRows(env, st)) {
+    for (const [slug, fips] of cities) {
       entries.push(urlEntry(`${origin}/us/${st}/city/${slug}/`, latest(fips.map((f) => changed[f]))));
     }
     return xml(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${entries.join("")}</urlset>`);

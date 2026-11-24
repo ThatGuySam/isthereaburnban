@@ -1,6 +1,9 @@
 // @ts-nocheck -- bun test types are not installed; this file runs under `bun test`, not the Worker build.
 import { describe, expect, test } from "bun:test";
+import { activeBans } from "./api";
 import { handleMcp, subscribeAlertsTool } from "./mcp";
+import { encodeActive, encodeState, INDEX_KEY, PRETTY_ACTIVE_KEY } from "./snapshot-v2";
+import { withCurrentLinks } from "./source-links";
 
 function fakeEnv(resend?: string) {
   const inserts: unknown[][] = [];
@@ -60,12 +63,11 @@ describe("subscribe_email_alerts", () => {
   });
 });
 
-async function rpc(method: string, params: Record<string, unknown> = {}) {
-  const env = { SITE_URL: "https://isthereaburnban.com" };
+async function rpc(method: string, params: Record<string, unknown> = {}, env = { SITE_URL: "https://isthereaburnban.com" }, extraHeaders = {}) {
   const ctx = { waitUntil() {}, passThroughOnException() {} };
   const req = new Request("https://isthereaburnban.com/mcp", {
     method: "POST",
-    headers: { "content-type": "application/json", accept: "application/json, text/event-stream", host: "isthereaburnban.com" },
+    headers: { "content-type": "application/json", accept: "application/json, text/event-stream", host: "isthereaburnban.com", ...extraHeaders },
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
   });
   const res = await handleMcp(req, env as any, ctx as any);
@@ -74,6 +76,31 @@ async function rpc(method: string, params: Record<string, unknown> = {}) {
   const data = body.split("\n").find((l) => l.startsWith("data: "));
   return JSON.parse(data ? data.slice(6) : body).result;
 }
+
+test("national bans preserve JSON text in legacy SSE and modern JSON MCP responses", async () => {
+  const generated = new Date().toISOString();
+  const snapshot = { version: 2, state: "OK", revision: "fixture", generated, sources: [], changed: {}, counties: {
+    "40143": { fips: "40143", state: "OK", county: "Tulsa County", status: "ban", label: 'Burn ban — read "updates"\nNew line',
+      since: null, expires: null, sourceUpdated: null, checked: generated, sourceName: "County", sourceUrl: "", officialUrl: "" },
+  } };
+  const row = encodeState(snapshot, "fixture");
+  const index = { version: 2, revision: "fixture", generated, sources: [], states: {}, orderChecks: {} };
+  const values = new Map([[INDEX_KEY, JSON.stringify(index)], [PRETTY_ACTIVE_KEY, encodeActive(index.revision, [{ ...row, active: row.pretty }])]]);
+  const env = { SITE_URL: "https://isthereaburnban.com", KV: { get: async (key, type) => {
+    const value = values.get(key);
+    return type === "json" && value ? JSON.parse(value) : value ?? null;
+  } }, DB: { prepare: () => ({ all: async () => ({ results: [] }) }) } };
+  const params = { name: "list_active_bans", arguments: {} };
+  const legacy = await rpc("tools/call", params, env);
+  const version = "2026-07-28";
+  const modern = await rpc("tools/call", { ...params, _meta: {
+    "io.modelcontextprotocol/protocolVersion": version, "io.modelcontextprotocol/clientCapabilities": {},
+  } }, env, {
+    "mcp-protocol-version": version, "mcp-method": "tools/call", "mcp-name": params.name,
+  });
+  expect(modern.content).toEqual(legacy.content);
+  expect(legacy.content[1].text).toBe(JSON.stringify(activeBans(withCurrentLinks(snapshot)), null, 2));
+});
 
 describe("MCP metadata for directories", () => {
   test("initialize names the server, its site and how to use it", async () => {

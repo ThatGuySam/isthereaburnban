@@ -49,7 +49,7 @@ export type ScopedOrder = Pick<CountyStatus, "status" | "label" | "note" | "sinc
 };
 
 /** Snapshot-only timing for local restrictions that can outlast the warning. */
-export type FireWeatherOrder = ScopedOrder & { retainAfter?: string };
+export type FireWeatherOrder = ScopedOrder & { retainAfter?: string; carried?: true };
 
 export type FireWeatherReport = {
   fips: string;
@@ -72,8 +72,7 @@ export type SourceHealth = {
   product?: "fire-weather";
 };
 
-export type Snapshot = {
-  version: 1;
+export type SnapshotData = {
   generated: string; // ISO
   /** keyed by 5-digit FIPS; counties missing here are "unknown" */
   counties: Record<string, CountyStatus>;
@@ -85,6 +84,9 @@ export type Snapshot = {
   /** Weather evidence used to decorate county results at read time. */
   fireWeather?: Record<string, { alerts: FireWeatherAlert[]; orders?: FireWeatherOrder[] }>;
 };
+
+/** Legacy aggregate and the merge engine's working shape. */
+export type Snapshot = SnapshotData & { version: 1 };
 
 export type Coverage = "live" | "restrictions" | "directory";
 

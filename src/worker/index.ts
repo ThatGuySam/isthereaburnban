@@ -1,4 +1,4 @@
-import { activeBans, activeFireWeather, coverage } from "./api";
+import { activeFireWeather, coverage } from "./api";
 import { confirmEmail, subscribeEmail, unsubscribeEmail } from "./email";
 import type { Env } from "./env";
 import { DISCLAIMER, lookup, LookupError, resultSentence, statusFor } from "./lookup";
@@ -7,9 +7,9 @@ import { handleOps } from "./ops";
 import { CANARY_CRON, runCanary } from "./notify";
 import { handlePage, handleSitemap } from "./pages";
 import { subscribePush, unsubscribePush } from "./push";
-import { getSnapshot, refresh } from "./snapshot";
+import { refresh, snapshotReader } from "./snapshot";
 import { consumeSourceQueue, enqueueSources, type SourceMessage } from "./sources/queue";
-import { peekMcp, recordUsage } from "./usage";
+import { peekMcp, recordUsage, type McpCall } from "./usage";
 
 const CORS = {
   "access-control-allow-origin": "*",
@@ -18,7 +18,11 @@ const CORS = {
 };
 
 function json(body: unknown, status = 200, cache = "public, max-age=300"): Response {
-  return new Response(JSON.stringify(body), {
+  return jsonResponse(JSON.stringify(body), status, cache);
+}
+
+function jsonResponse(body: string, status = 200, cache = "public, max-age=300"): Response {
+  return new Response(body, {
     status,
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": cache, ...CORS },
   });
@@ -66,7 +70,7 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
         : page("Link not valid", "This unsubscribe link is invalid.", 404);
     }
 
-    const snapshot = await getSnapshot(env);
+    const snapshots = snapshotReader(env);
     if (path === "/api/v1/status") {
       const here = p.get("here") === "1";
       const cf = request.cf as { latitude?: string; longitude?: string } | undefined;
@@ -80,15 +84,15 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
             lat: p.has("lat") ? Number(p.get("lat")) : undefined,
             lon: p.has("lon") ? Number(p.get("lon")) : undefined,
           };
-      const result = await lookup(env, snapshot, q);
+      const result = await lookup(env, snapshots, q);
       if (p.get("format") === "text") return text(result.results.map(resultSentence).join("\n") + `\n${DISCLAIMER}\n`);
       return json(result, 200, here ? "private, max-age=300" : undefined);
     }
-    if (path === "/api/v1/bans") return json(activeBans(snapshot, p.get("state") ?? undefined));
-    if (path === "/api/v1/fire-weather") return json(activeFireWeather(snapshot, p.get("state") ?? undefined));
-    if (path === "/api/v1/coverage") return json(coverage(snapshot));
+    if (path === "/api/v1/bans") return jsonResponse((await snapshots.bans(p.get("state") ?? undefined)).body);
+    if (path === "/api/v1/fire-weather") return json(activeFireWeather(await snapshots.weather(), p.get("state") ?? undefined));
+    if (path === "/api/v1/coverage") return json(coverage(await snapshots.coverage()));
     const m = path.match(/^\/api\/v1\/counties\/(\d{5})$/);
-    if (m) return json({ ...statusFor(snapshot, m[1]), disclaimer: DISCLAIMER });
+    if (m) return json({ ...statusFor(await snapshots.county(m[1]), m[1]), disclaimer: DISCLAIMER });
   }
 
   if (method === "POST") {
@@ -103,15 +107,15 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
   return error("not found", 404);
 }
 
-async function route(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+async function route(request: Request, env: Env, ctx: ExecutionContext, mcp?: McpCall): Promise<Response> {
   const url = new URL(request.url);
   const path = url.pathname;
   if (path === "/ops" || path.startsWith("/ops/")) return handleOps(request, env, url);
   try {
     if (path.startsWith("/api/")) return await api(request, env, url);
-    if (path === "/mcp" || path.startsWith("/mcp/")) return await handleMcp(request, env, ctx);
-    if (path.startsWith("/us/")) return await handlePage(request, env, await getSnapshot(env));
-    if (path === "/sitemap.xml" || path.startsWith("/sitemaps/")) return await handleSitemap(request, env, await getSnapshot(env));
+    if (path === "/mcp" || path.startsWith("/mcp/")) return await handleMcp(request, env, ctx, mcp);
+    if (path.startsWith("/us/")) return await handlePage(request, env, snapshotReader(env));
+    if (path === "/sitemap.xml" || path.startsWith("/sitemaps/")) return await handleSitemap(request, env, snapshotReader(env));
   } catch (err) {
     if (err instanceof LookupError) return error(err.message, err.status);
     console.error(err);
@@ -126,7 +130,7 @@ export default {
     const path = new URL(request.url).pathname;
     const counted = request.method !== "OPTIONS" && (path.startsWith("/api/") || path === "/mcp" || path.startsWith("/mcp/"));
     const mcp = counted && path.startsWith("/mcp") ? await peekMcp(request) : undefined;
-    const response = await route(request, env, ctx);
+    const response = await route(request, env, ctx, mcp);
     if (counted) recordUsage(env, request, response, mcp);
     return response;
   },

@@ -32,7 +32,7 @@ const publicKey = async (key) => Buffer.from(await crypto.subtle.exportKey("raw"
 const receiverKey = await publicKey(receiver.publicKey);
 const authSecret = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString("base64url");
 
-const migrations = ["0001_init.sql", "0002_notification_ops.sql"].map((file) =>
+const migrations = ["0001_init.sql", "0002_notification_ops.sql", "0003_source_refresh.sql", "0004_state_snapshots.sql"].map((file) =>
   readFileSync(new URL("../../migrations/" + file, import.meta.url), "utf8"));
 let sqlite: Database;
 let kv: Map<string, string>;

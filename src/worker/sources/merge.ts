@@ -1,4 +1,4 @@
-import type { CountyStatus, FireWeatherReport, ScopedOrder, Snapshot, SourceHealth } from "../../shared/types";
+import type { CountyStatus, FireWeatherReport, ScopedOrder, Snapshot, SnapshotData, SourceHealth } from "../../shared/types";
 import type { Transition } from "../notification-message";
 import type { Source } from "./types";
 
@@ -77,7 +77,7 @@ function summarize(group: CountyCandidates, now: number): Candidate | undefined 
 }
 
 /** Merge independently scoped reports before comparing any county status with its previous value. */
-export function mergeSources(prev: Snapshot | null, inputs: SourceInput[], now: Date) {
+export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], now: Date) {
   const at = now.toISOString();
   const clock = now.getTime();
   const counties: Record<string, CountyStatus> = {};
@@ -138,7 +138,7 @@ export function mergeSources(prev: Snapshot | null, inputs: SourceInput[], now: 
         const weather = fireWeather[fips] ??= { alerts: [] };
         const orders = weather.orders ??= [];
         if (!orders.some((entry) => entry.sourceId === prior.sourceId && entry.validFrom === prior.validFrom &&
-          entry.validUntil === prior.validUntil)) orders.push(prior);
+          entry.validUntil === prior.validUntil)) orders.push({ ...prior, carried: true });
       }
     }
   }

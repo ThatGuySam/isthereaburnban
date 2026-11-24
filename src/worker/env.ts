@@ -2,9 +2,9 @@ import type { SourceMessage } from "./sources/queue";
 
 export interface Env {
   ASSETS: Fetcher;
-  KV: KVNamespace; // key "snapshot:v1" -> Snapshot JSON (src/shared/types.ts)
+  KV: KVNamespace; // v2 catalog, active projection and cached state shards; v1 rollout fallback
   SOURCE_QUEUE?: Queue<SourceMessage>;
-  DB: D1Database; // subscriptions, transitions (migrations/)
+  DB: D1Database; // source revisions, snapshot publication journal, subscriptions and transitions (migrations/)
   SITE_URL: string;
   VAPID_PUBLIC_KEY: string;
   VAPID_PRIVATE_KEY?: string; // secret

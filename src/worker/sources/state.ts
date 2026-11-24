@@ -1,4 +1,4 @@
-import type { CountyStatus, FireWeatherReport, Snapshot } from "../../shared/types";
+import type { CountyStatus, FireWeatherReport, SnapshotData } from "../../shared/types";
 import { COUNTY_BY_FIPS } from "../counties";
 import type { Env } from "../env";
 import { sha256 } from "./lib/hash";
@@ -15,27 +15,33 @@ type Health = {
   boundaries?: string[];
 };
 
-export type SourceHead = Health & { id: string; slot: number; hash: string | null };
-type StoredHead = Pick<SourceHead, "id" | "slot" | "hash"> & { health: string };
+export type SourceHead = Health & { id: string; slot: number; hash: string | null; stored: number };
+type StoredHead = Pick<SourceHead, "id" | "slot" | "hash" | "stored"> & { health: string };
 
 const loadHead = ({ health, ...row }: StoredHead): SourceHead => ({ ...row, ...JSON.parse(health) as Health });
 const sourceKey = (id: string) => `source:${id}`;
-const hashKey = (id: string) => `${sourceKey(id)}:hash`;
 type SourcePayload = { rows: Omit<CountyStatus, "checked">[] } | { fireWeather: FireWeatherReport[] };
 type SourceData = { hash: string } & SourcePayload;
 const errorText = (reason: unknown) => (reason instanceof Error ? reason.message : String(reason)).slice(0, 300);
 const BY_VALIDITY = new Set(["ban", "restricted", "none", "unknown"]);
 
-export async function readHeads(db: D1Database): Promise<Map<string, SourceHead>> {
-  const { results } = await db.prepare("SELECT id, slot, hash, health FROM source_refresh").all<StoredHead>();
+const headColumns = "id, slot, hash, health, stored";
+
+export async function readHeads(db: D1Database, ids?: string[]): Promise<Map<string, SourceHead>> {
+  if (ids?.length === 0) return new Map();
+  const query = db.prepare(`SELECT ${headColumns} FROM source_refresh${ids ? " WHERE id IN (SELECT value FROM json_each(?))" : ""}`);
+  const { results } = await (ids ? query.bind(JSON.stringify(ids)) : query).all<StoredHead>();
   return new Map(results.map((row) => [row.id, loadHead(row)]));
 }
 
-function normalize(source: ActiveSource, result: Exclude<SourceResult, { notModified: true }>) {
+type NormalizedSource = { serialized: string; boundaries: string[] } &
+  ({ field: "fireWeather"; weather: FireWeatherReport[] } | { field: "rows" });
+
+function normalize(source: ActiveSource, result: Exclude<SourceResult, { notModified: true }>): NormalizedSource {
   if ("fireWeather" in result) {
     if (source.product !== "fire-weather" || result.fireWeather.some(({ fips, alerts }) =>
       !COUNTY_BY_FIPS.has(fips) || !alerts.length)) throw new Error(`${source.id}: invalid fire-weather report`);
-    return { field: "fireWeather", serialized: serialize(result.fireWeather), boundaries: [] };
+    return { field: "fireWeather", serialized: serialize(result.fireWeather), boundaries: [], weather: result.fireWeather };
   }
   if (source.product === "fire-weather") throw new Error(`${source.id}: expected fire-weather reports`);
   const { rows } = result;
@@ -64,18 +70,49 @@ function serialize(rows: unknown[]) {
   return [...new Set(rows.map((row) => JSON.stringify(row)))].sort().join(",");
 }
 
-async function writeSource(env: Env, id: string, hash: string, { field, serialized }: ReturnType<typeof normalize>): Promise<void> {
-  const storedHash = await env.KV.get(hashKey(id), "text");
-  if (storedHash === hash) {
-    const data = await env.KV.get<SourceData>(sourceKey(id), "json");
-    if (data?.hash === hash) return; // The prior attempt completed the KV write before losing its D1 checkpoint.
+async function legacyPayload(env: Env, id: string, hash: string) {
+  const data = await env.KV.get<SourceData>(sourceKey(id), "json");
+  if (data?.hash !== hash) throw new Error(`KV source revision is not visible yet: ${id}`);
+  return data;
+}
+
+async function weatherWrites(db: D1Database, id: string, weather: FireWeatherReport[]) {
+  const groups = new Map<string, FireWeatherReport[]>();
+  for (const report of weather) {
+    const state = COUNTY_BY_FIPS.get(report.fips)?.state;
+    if (!state) continue;
+    const group = groups.get(state);
+    if (group) group.push(report);
+    else groups.set(state, [report]);
   }
-  await env.KV.put(sourceKey(id), `{"hash":"${hash}","${field}":[${serialized}]}`);
-  if (storedHash !== hash) await env.KV.put(hashKey(id), hash);
+  const { results } = await db.prepare("SELECT state, hash FROM source_payload WHERE id = ?").bind(id)
+    .all<{ state: string; hash: string }>();
+  const previous = new Map(results.map(({ state, hash }) => [state, hash]));
+  const insert = payloadUpsert(db);
+  const remove = db.prepare("DELETE FROM source_payload WHERE id = ? AND state = ?");
+  const writes = results.filter(({ state }) => !groups.has(state)).map(({ state }) => remove.bind(id, state));
+  for (const [state, group] of groups) {
+    const serialized = serialize(group);
+    const hash = await sha256(serialized);
+    if (previous.get(state) !== hash) writes.push(insert.bind(id, state, hash, `{"fireWeather":[${serialized}]}`));
+  }
+  return writes;
+}
+
+const payloadUpsert = (db: D1Database) => db.prepare(`INSERT INTO source_payload (id, state, hash, payload) VALUES (?, ?, ?, ?)
+  ON CONFLICT(id, state) DO UPDATE SET hash = excluded.hash, payload = excluded.payload`);
+
+/** Finish importing a national legacy head before any state uses its partitioned reports. */
+export async function importLegacyWeather(env: Env, head: SourceHead) {
+  if (head.stored || !head.hash) return;
+  const data = await legacyPayload(env, head.id, head.hash);
+  if (!("fireWeather" in data)) throw new Error(`Expected fire-weather revision: ${head.id}`);
+  const writes = await weatherWrites(env.DB, head.id, data.fireWeather);
+  await env.DB.batch([...writes, env.DB.prepare("UPDATE source_refresh SET stored = 1 WHERE id = ?").bind(head.id)]);
 }
 
 export async function pollSource(env: Env, source: ActiveSource, slot: number, now: Date): Promise<void> {
-  const current = await env.DB.prepare("SELECT id, slot, hash, health FROM source_refresh WHERE id = ?")
+  const current = await env.DB.prepare(`SELECT ${headColumns} FROM source_refresh WHERE id = ?`)
     .bind(source.id).first<StoredHead>();
   if (current && current.slot >= slot) return;
   const previous = current ? loadHead(current) : undefined;
@@ -96,31 +133,44 @@ export async function pollSource(env: Env, source: ActiveSource, slot: number, n
     console.warn(`source ${source.id} failed: ${health.error}`);
   }
 
+  const writes: D1PreparedStatement[] = [];
+  const id = source.id;
   if (incoming) {
     const next = await sha256(incoming.serialized);
-    if (next !== hash) await writeSource(env, source.id, next, incoming);
+    if (next !== hash || !previous?.stored) {
+      if (incoming.field === "fireWeather") writes.push(...await weatherWrites(env.DB, id, incoming.weather));
+      else writes.push(payloadUpsert(env.DB).bind(id, source.state, next, `{"rows":[${incoming.serialized}]}`));
+    }
     hash = next;
     health.boundaries = incoming.boundaries;
+  } else if (hash && !previous?.stored) {
+    const data = await legacyPayload(env, id, hash);
+    if ("fireWeather" in data) writes.push(...await weatherWrites(env.DB, id, data.fireWeather));
+    else writes.push(payloadUpsert(env.DB).bind(id, source.state, hash, JSON.stringify({ rows: data.rows })));
   }
-  await env.DB.prepare(`INSERT INTO source_refresh (id, slot, hash, health) VALUES (?, ?, ?, ?)
-    ON CONFLICT(id) DO UPDATE SET slot = excluded.slot, hash = excluded.hash, health = excluded.health
-    WHERE source_refresh.slot < excluded.slot`).bind(source.id, slot, hash, JSON.stringify(health)).run();
+  const update = env.DB.prepare(`INSERT INTO source_refresh (id, slot, hash, health, stored) VALUES (?, ?, ?, ?, 1)
+    ON CONFLICT(id) DO UPDATE SET slot = excluded.slot, hash = excluded.hash, health = excluded.health, stored = 1
+    WHERE source_refresh.slot < excluded.slot`).bind(id, slot, hash, JSON.stringify(health));
+  if (writes.length) await env.DB.batch([...writes, update]);
+  else await update.run();
 }
 
-export function materialRevisions(sources: readonly Source[], heads: Map<string, SourceHead>, now: Date) {
+export function materialRevisions(sources: readonly Source[], heads: Map<string, SourceHead>, now: Date, weatherHashes?: Map<string, string>) {
   const time = now.getTime();
   return sources.map((source) => {
-    const identity = [source.id, source.scope, source.mode, source.officialUrl];
+    const identity = [source.id, source.scope, source.mode, source.officialUrl, source.sourceUrl, source.sourceName, source.keepRowLinks, source.recurring,
+      isActive(source) ? source.staleMs : null];
     const head = heads.get(source.id);
     if (!isActive(source)) return [...identity, source.error];
+    if (source.product === "fire-weather" && weatherHashes && !weatherHashes.has(source.id)) return identity;
     if (!head) return [...identity, "pending"];
     const stale = head.lastGood ? time - Date.parse(head.lastGood) > (source.staleMs ?? STALE_MS) : false;
     const reached = head.boundaries?.filter((boundary) => Date.parse(boundary) <= time).length ?? 0;
-    return [...identity, head.hash, head.error ? head.blocked ? "blocked" : "failed" : "ok", stale, reached];
+    return [...identity, weatherHashes?.get(source.id) ?? head.hash, head.error ? head.blocked ? "blocked" : "failed" : "ok", stale, reached];
   });
 }
 
-function fallback(source: Source, prev: Snapshot | null): CountyStatus[] {
+function fallback(source: Source, prev: SnapshotData | null): CountyStatus[] {
   if (source.product === "fire-weather") return [];
   const rows: CountyStatus[] = [];
   for (const county of Object.values(prev?.counties ?? {})) {
@@ -138,16 +188,15 @@ function fallback(source: Source, prev: Snapshot | null): CountyStatus[] {
 }
 
 export async function readSourceInputs(
-  env: Env, sources: readonly Source[], heads: Map<string, SourceHead>, prev: Snapshot | null, now: Date,
+  env: Env, state: string, sources: readonly Source[], heads: Map<string, SourceHead>, prev: SnapshotData | null, now: Date,
 ): Promise<SourceInput[]> {
   const inputs: SourceInput[] = [];
   const checked = now.toISOString();
-  const keys = sources.filter((source) => isActive(source) && heads.get(source.id)?.hash).map((source) => sourceKey(source.id));
-  const revisions = new Map<string, SourceData | null>();
-  for (let i = 0; i < keys.length; i += 100) {
-    const values = await env.KV.get<SourceData>(keys.slice(i, i + 100), "json");
-    for (const [key, data] of values) revisions.set(key, data);
-  }
+  const ids = sources.filter((source) => heads.get(source.id)?.stored).map(({ id }) => id);
+  const { results } = await env.DB.prepare(`SELECT id, hash, payload FROM source_payload
+    WHERE state = ? AND id IN (SELECT value FROM json_each(?))`).bind(state, JSON.stringify(ids))
+    .all<{ id: string; hash: string; payload: string }>();
+  const revisions = new Map(results.map((row) => [row.id, row]));
   for (const source of sources) {
     if (!isActive(source)) {
       inputs.push({ source, rows: [], checked, error: source.error });
@@ -158,8 +207,13 @@ export async function readSourceInputs(
       inputs.push({ source, rows: fallback(source, prev), checked: head?.checked ?? checked, error: head?.error ?? "Awaiting first source refresh" });
       continue;
     }
-    const data = revisions.get(sourceKey(source.id));
-    if (data?.hash !== head.hash) throw new Error(`KV source revision is not visible yet: ${source.id}`);
+    const stored = revisions.get(source.id);
+    const data: SourcePayload = head.stored
+      ? stored ? JSON.parse(stored.payload) : { fireWeather: [] }
+      : await legacyPayload(env, source.id, head.hash);
+    if (head.stored && source.product !== "fire-weather" && stored?.hash !== head.hash) {
+      throw new Error(`D1 source revision missing: ${source.id}`);
+    }
     const lastGood = head.lastGood ?? head.checked;
     inputs.push({ source, version: head.hash, checked: head.checked, lastGood, error: head.error,
       staleMs: source.staleMs, ...("fireWeather" in data ? { rows: [], fireWeather: data.fireWeather } : { rows: data.rows }) });
@@ -167,7 +221,7 @@ export async function readSourceInputs(
   return inputs;
 }
 
-export async function sourceInputs(sources: readonly Source[], prev: Snapshot | null, now: Date): Promise<SourceInput[]> {
+export async function sourceInputs(sources: readonly Source[], prev: SnapshotData | null, now: Date): Promise<SourceInput[]> {
   const inputs: SourceInput[] = [];
   for (const source of sources) {
     const checked = now.toISOString();
@@ -189,33 +243,40 @@ export async function sourceInputs(sources: readonly Source[], prev: Snapshot | 
   return inputs;
 }
 
-export function applyChecks(snapshot: Snapshot, heads: Map<string, SourceHead>, now: Date) {
-  for (const source of snapshot.sources) {
+export function applySourceChecks(sources: SnapshotData["sources"], heads: Map<string, SourceHead>) {
+  for (const source of sources) {
     const head = heads.get(source.id);
     if (!head) continue;
     source.checked = head.checked;
     source.ok = !head.error;
     source.error = head.error;
   }
+}
+
+export function applyChecks(snapshot: SnapshotData, heads: Map<string, SourceHead>, now: Date) {
+  applySourceChecks(snapshot.sources, heads);
   const clock = now.getTime();
   for (const row of Object.values(snapshot.counties)) {
     if (!row.sourceId) continue;
-    const head = heads.get(row.sourceId);
-    if (head?.lastGood && head.hash === snapshot.sourceVersions?.[row.sourceId]) row.checked = head.lastGood;
-    if (row.validUntil && Date.parse(row.validUntil) <= clock) {
-      row.status = "unknown";
-      row.label = "Source decision expired";
-      row.note = undefined;
-      row.since = row.expires = null;
-    } else if (clock - Date.parse(row.checked) > STALE_MS && row.status !== "unknown") {
-      row.status = "unknown";
-      row.label = "Source unavailable. Our last good data is over 48 hours old";
-      row.note = undefined;
-    }
-    if (row.orders?.some((order) => order.validUntil && Date.parse(order.validUntil) <= clock)) {
-      row.orders = row.orders.filter((order) => !order.validUntil || Date.parse(order.validUntil) > clock);
-      // The merge rebuilds the human-readable summary of remaining orders.
-      row.note = undefined;
-    }
+    applyCountyCheck(row, heads.get(row.sourceId), snapshot.sourceVersions?.[row.sourceId], clock);
+  }
+}
+
+export function applyCountyCheck(row: CountyStatus, head: SourceHead | undefined, version: string | undefined, clock: number) {
+  if (head?.lastGood && head.hash === version) row.checked = head.lastGood;
+  if (row.validUntil && Date.parse(row.validUntil) <= clock) {
+    row.status = "unknown";
+    row.label = "Source decision expired";
+    row.note = undefined;
+    row.since = row.expires = null;
+  } else if (clock - Date.parse(row.checked) > STALE_MS && row.status !== "unknown") {
+    row.status = "unknown";
+    row.label = "Source unavailable. Our last good data is over 48 hours old";
+    row.note = undefined;
+  }
+  if (row.orders?.some((order) => order.validUntil && Date.parse(order.validUntil) <= clock)) {
+    row.orders = row.orders.filter((order) => !order.validUntil || Date.parse(order.validUntil) > clock);
+    // The merge rebuilds the human-readable summary of remaining orders.
+    row.note = undefined;
   }
 }

@@ -5,6 +5,7 @@ import { activeFireWeather } from "../../api";
 import { withFireWeather } from "../../fire-weather";
 import worker from "../../index";
 import { mergeSources } from "../merge";
+import { ACTIVE_KEY, encodeActive, encodeState, INDEX_KEY, stateKey } from "../../snapshot-v2";
 import { fetchNwsAlerts, NWS_USER_AGENT, nwsFireWeather, parseNwsAlerts } from "./alerts";
 import { ND_DECLARATIONS_URL, readNdDeclarations } from "./rules";
 
@@ -149,7 +150,17 @@ test("Worker serves fire weather on both county routes, in text and through MCP"
   Object.assign(warning.properties, { sent, effective: sent, onset: sent, expires: until, ends: until });
   const rows = parseNwsAlerts(feed(warning), now);
   const { snapshot } = mergeSources(null, [{ source: nwsFireWeather, rows: [], fireWeather: rows, checked: now.toISOString() }], now);
-  const env = { SITE_URL: "https://isthereaburnban.com", KV: { get: async () => structuredClone(snapshot) } };
+  const revision = "nws-test";
+  const shard = encodeState({ ...snapshot, version: 2, state: "WY", revision }, revision);
+  const index = { version: 2, revision, generated: snapshot.generated, sources: snapshot.sources, orderChecks: {},
+    states: { WY: { revision, signature: revision, cached: true } } };
+  const values = new Map([[INDEX_KEY, JSON.stringify(index)], [ACTIVE_KEY, encodeActive(revision, [shard])], [stateKey("WY"), shard.snapshot]]);
+  const env = { SITE_URL: "https://isthereaburnban.com", DB: { prepare: () => ({
+    all: async () => ({ results: [] }), bind: () => ({ all: async () => ({ results: [] }) }),
+  }) }, KV: { get: async (key, type) => {
+    const value = values.get(key);
+    return value && type === "json" ? JSON.parse(value) : value ?? null;
+  } } };
   const ctx = { waitUntil: () => {}, passThroughOnException: () => {} };
   const route = (path, init) => worker.fetch(new Request(env.SITE_URL + path, init), env, ctx);
   const single = await route("/api/v1/counties/56001");

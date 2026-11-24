@@ -1,8 +1,9 @@
-import type { CountyStatus, LookupResult, Snapshot } from "../shared/types";
+import type { CountyStatus, LookupResult, SnapshotData } from "../shared/types";
 import { ADAPTERS } from "./adapters";
 import { COUNTY_BY_FIPS, countyPath, STATE_DIR_BY_ABBR } from "./counties";
 import type { Env } from "./env";
 import { resolveCity } from "./places";
+import type { SnapshotReader } from "./snapshot";
 
 export const DISCLAIMER = "Informational only. Always confirm with the official source before burning.";
 
@@ -15,7 +16,7 @@ export class LookupError extends Error {
 const TRACKED = new Set(ADAPTERS.map((a) => a.state));
 
 /** Status for one county. Never defaults to "none": anything we can't vouch for is "unknown". */
-export function statusFor(snapshot: Snapshot, fips: string): CountyStatus {
+export function statusFor(snapshot: SnapshotData, fips: string): CountyStatus {
   const hit = snapshot.counties[fips];
   if (hit) return hit;
   const c = COUNTY_BY_FIPS.get(fips);
@@ -39,8 +40,8 @@ export function statusFor(snapshot: Snapshot, fips: string): CountyStatus {
   };
 }
 
-export function buildResult(query: LookupResult["query"], fipsList: string[], snapshot: Snapshot, approximate = false): LookupResult {
-  const results = fipsList.map((f) => ({ ...statusFor(snapshot, f), url: countyPath(f) }));
+export function buildResult(query: LookupResult["query"], fipsList: string[], snapshot: SnapshotData | ((fips: string) => SnapshotData), approximate = false): LookupResult {
+  const results = fipsList.map((f) => ({ ...statusFor(typeof snapshot === "function" ? snapshot(f) : snapshot, f), url: countyPath(f) }));
   return { query, ambiguous: results.length > 1, approximate, results, disclaimer: DISCLAIMER };
 }
 
@@ -84,28 +85,38 @@ export async function coordsToFips(lat: number, lon: number): Promise<string[]> 
 /** Shared entry point for the API, MCP tools and pages. */
 export async function lookup(
   env: Env,
-  snapshot: Snapshot,
+  snapshots: SnapshotReader,
   q: { zip?: string; lat?: number; lon?: number; fips?: string; city?: string; state?: string },
 ): Promise<LookupResult> {
+  const result = async (query: LookupResult["query"], fips: string[], approximate = false) => {
+    const states = await snapshots.forCounties(fips);
+    return buildResult(query, fips, (id) => states.get(countyState(id))!, approximate);
+  };
   if (q.zip) {
     const z = await zipToFips(env, q.zip.trim());
-    return buildResult({ zip: q.zip.trim() }, z.fips, snapshot, z.approximate);
+    return result({ zip: q.zip.trim() }, z.fips, z.approximate);
   }
   if (q.lat !== undefined || q.lon !== undefined) {
     const lat = Number(q.lat);
     const lon = Number(q.lon);
-    return buildResult({ lat, lon }, await coordsToFips(lat, lon), snapshot);
+    return result({ lat, lon }, await coordsToFips(lat, lon));
   }
   if (q.fips) {
     const f = q.fips.trim();
     if (!/^\d{5}$/.test(f)) throw new LookupError("fips must be a 5-digit county FIPS code");
-    return buildResult({ fips: f }, [f], snapshot);
+    return result({ fips: f }, [f]);
   }
   if (q.city) {
     const place = await resolveCity(env, q.city, q.state);
-    return { ...buildResult({ city: q.city.trim(), ...(q.state ? { state: q.state.trim().toUpperCase() } : {}) }, place.counties, snapshot), place };
+    return { ...await result({ city: q.city.trim(), ...(q.state ? { state: q.state.trim().toUpperCase() } : {}) }, place.counties), place };
   }
   throw new LookupError("provide zip, lat and lon, fips, city (with state), or here=1");
+}
+
+export function countyState(fips: string): string {
+  const county = COUNTY_BY_FIPS.get(fips);
+  if (!county) throw new LookupError(`unknown county FIPS ${fips}`, 404);
+  return county.state;
 }
 
 /** "Yes: Tulsa County, OK has a burn ban (County Burn Ban). Source: ..., checked .... Official: ..." */

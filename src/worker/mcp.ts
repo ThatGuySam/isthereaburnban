@@ -1,13 +1,13 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp/server";
 import { z } from "zod";
-import type { Snapshot } from "../shared/types";
-import { activeBans, coverage } from "./api";
+import { coverage } from "./api";
 import { countyPath } from "./counties";
 import { subscribeEmail } from "./email";
 import type { Env } from "./env";
 import { lookup, resultSentence } from "./lookup";
-import { getSnapshot } from "./snapshot";
+import { snapshotReader } from "./snapshot";
+import { peekMcp, type McpCall } from "./usage";
 
 function json(value: unknown, summary?: string) {
   const content: { type: "text"; text: string }[] = [];
@@ -44,9 +44,9 @@ export const SERVER_INSTRUCTIONS =
   "Always show the officialUrl so the person can confirm with the official source before burning. " +
   "Only call subscribe_email_alerts when the person asks for alerts and gives their own email.";
 
-export function createServer(env: Env) {
-  let snap: Promise<Snapshot> | undefined;
-  const snapshot = () => (snap ??= getSnapshot(env));
+export function createServer(env: Env, banText: (wireText: string) => string = JSON.parse) {
+  let reader: ReturnType<typeof snapshotReader> | undefined;
+  const snapshots = () => (reader ??= snapshotReader(env));
   const server = new McpServer(SERVER_INFO, { instructions: SERVER_INSTRUCTIONS });
 
   server.registerTool(
@@ -67,7 +67,7 @@ export function createServer(env: Env) {
     },
     async (args) => {
       try {
-        const r = await lookup(env, await snapshot(), args);
+        const r = await lookup(env, snapshots(), args);
         return json(r, r.results.map(resultSentence).join("\n"));
       } catch (err) {
         return { content: [{ type: "text" as const, text: err instanceof Error ? err.message : String(err) }], isError: true };
@@ -84,8 +84,11 @@ export function createServer(env: Env) {
       inputSchema: z.object({ state: z.string().length(2).optional().describe("2-letter state code, e.g. TX") }),
     },
     async ({ state }) => {
-      const r = activeBans(await snapshot(), state);
-      return json(r, `${r.counties.length} counties with a ban or restriction${state ? ` in ${state.toUpperCase()}` : ""} as of ${r.generated}.`);
+      const { count, body, generated } = await snapshots().bans(state, "pretty");
+      return { content: [
+        { type: "text" as const, text: `${count} counties with a ban or restriction${state ? ` in ${state.toUpperCase()}` : ""} as of ${generated}.` },
+        { type: "text" as const, text: banText(body) },
+      ] };
     },
   );
 
@@ -112,16 +115,42 @@ export function createServer(env: Env) {
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
       description: "Which states have live burn ban data, which only have official links, and the health of each data source.",
     },
-    async () => json(coverage(await snapshot())),
+    async () => json(coverage(await snapshots().coverage())),
   );
 
   return server;
 }
 
-export function handleMcp(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+export async function handleMcp(request: Request, env: Env, ctx: ExecutionContext, hint?: McpCall): Promise<Response> {
   const site = new URL(env.SITE_URL).hostname;
   const host = new URL(request.url).hostname;
   const hosts = [site, "isthereaburnban.com", "www.isthereaburnban.com", "localhost", "127.0.0.1"];
   if (host.endsWith(".workers.dev")) hosts.push(host);
-  return createMcpHandler(() => createServer(env), { route: "/mcp", allowedHostnames: hosts })(request, env, ctx);
+  const call = hint ?? await peekMcp(request);
+  const banCall = request.method === "POST" && call?.method === "tools/call" && call.tool === "list_active_bans";
+  const deferred = new Map<string, string>();
+  const deferBanText = (wireText: string) => {
+    const marker = crypto.randomUUID();
+    deferred.set(JSON.stringify(marker), wireText);
+    return marker;
+  };
+  const response = await createMcpHandler(() => createServer(env, banCall ? deferBanText : undefined),
+    { route: "/mcp", allowedHostnames: hosts })(request, env, ctx);
+  if (!banCall || !response.ok || !response.body) return response;
+
+  // The SDK validates the exchange and serializes the envelope. Insert our escaped text after that,
+  // so it does not escape multi-megabyte county lists again. This tool emits no progress events.
+  const envelope = await response.text();
+  const parts: BlobPart[] = [];
+  let cursor = 0;
+  const slots = [...deferred].map(([marker, body]) => ({ marker, body, at: envelope.indexOf(marker) }))
+    .filter(({ at }) => at >= 0).sort((a, b) => a.at - b.at);
+  for (const { marker, body, at } of slots) {
+    parts.push(envelope.slice(cursor, at), body);
+    cursor = at + marker.length;
+  }
+  parts.push(envelope.slice(cursor));
+  const headers = new Headers(response.headers);
+  if (slots.length) headers.delete("content-length");
+  return new Response(new Blob(parts), { status: response.status, statusText: response.statusText, headers });
 }

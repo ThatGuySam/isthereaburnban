@@ -1,17 +1,25 @@
-import type { CountyStatus, Snapshot } from "../shared/types";
-import { ADAPTERS, type Adapter } from "./adapters";
+import type { CountyStatus, Snapshot, SnapshotData } from "../shared/types";
+import type { Adapter } from "./adapters";
+import { formatNationalBans, projectWeather, type BanFormat } from "./active-bans";
+import { activeBans } from "./api";
 import { SNAPSHOT_KEY, type Env } from "./env";
 import { withFireWeather } from "./fire-weather";
+import { countyState } from "./lookup";
 import { CHANNELS } from "./notification-audience";
 import { transitionNotice, type Transition } from "./notification-message";
 import { notify } from "./notify";
+import { withPublishedChecks } from "./published-checks";
+import { loadActive, loadIndex, loadState } from "./snapshot-store";
+import { lastChangedByState, type ActiveProjection, type SnapshotIndex, type StateSnapshot } from "./snapshot-v2";
+import { withCurrentLinks } from "./source-links";
 import { mergeSources } from "./sources/merge";
 import { SOURCES } from "./sources/registry";
-import { applyChecks, readHeads, sourceInputs } from "./sources/state";
+import { applyChecks, applySourceChecks, readHeads, sourceInputs, type SourceHead } from "./sources/state";
 import { isActive } from "./sources/types";
 
 export type { Transition } from "./notification-message";
 export { STALE_MS } from "./sources/merge";
+export { withCurrentLinks } from "./source-links";
 
 function errorText(reason: unknown): string {
   return (reason instanceof Error ? reason.message : String(reason)).slice(0, 300);
@@ -35,8 +43,6 @@ export function buildSnapshot(
 // Parsing the core snapshot costs a few ms of CPU. Reuse it within an isolate for a minute.
 const memo = new WeakMap<KVNamespace, { at: number; snapshot: Snapshot }>();
 const MEMO_MS = 60_000;
-const BY_ID = new Map(SOURCES.map((source) => [source.id, source]));
-const LEGACY_BY_STATE = new Map(ADAPTERS.map((source) => [source.state, source]));
 
 export async function readSnapshot(env: Env, fresh = false): Promise<Snapshot | null> {
   const cached = memo.get(env.KV);
@@ -45,26 +51,10 @@ export async function readSnapshot(env: Env, fresh = false): Promise<Snapshot | 
   if (!snapshot) return null;
   withCurrentLinks(snapshot);
   if (env.SOURCE_QUEUE) {
-    const heads = await readHeads(env.DB).catch((error) => {
-      console.warn("Source check times unavailable", errorText(error));
-      return new Map();
-    });
+    const heads = await publicHeads(env);
     applyChecks(snapshot, heads, new Date());
   }
   memo.set(env.KV, { at: Date.now(), snapshot });
-  return snapshot;
-}
-
-/** Apply current links without replacing a scoped or per-order link with a state directory link. */
-export function withCurrentLinks(snapshot: Snapshot, adapters?: Adapter[]): Snapshot {
-  const legacy = adapters ? new Map(adapters.map((a) => [a.state, a])) : LEGACY_BY_STATE;
-  for (const row of Object.values(snapshot.counties)) {
-    const a = row.sourceId && !adapters ? BY_ID.get(row.sourceId) : legacy.get(row.state);
-    if (!a) continue;
-    row.sourceName = a.sourceName;
-    row.sourceUrl = a.sourceUrl;
-    if (!a.keepRowLinks || !row.officialUrl) row.officialUrl = a.officialUrl;
-  }
   return snapshot;
 }
 
@@ -74,7 +64,7 @@ export function transitionInsert(db: D1Database, transitions: Transition[]) {
     .bind(JSON.stringify(transitions));
 }
 
-export function alertNotices(transitions: Transition[], snapshot: Snapshot) {
+export function alertNotices(transitions: Transition[], snapshot: SnapshotData) {
   return transitions
     .filter((t) => t.oldStatus === "ban" || t.newStatus === "ban" || t.oldStatus === "restricted" || t.newStatus === "restricted")
     .map((transition) => transitionNotice(transition, snapshot.counties[transition.fips]));
@@ -116,13 +106,133 @@ export async function refresh(env: Env, adapters?: Adapter[], scheduledTime?: nu
   return snapshot;
 }
 
-export async function getSnapshot(env: Env): Promise<Snapshot> {
-  const snapshot = await readSnapshot(env);
-  if (snapshot) return withFireWeather(snapshot);
-  if (!env.SOURCE_QUEUE) return withFireWeather(await refresh(env));
+async function legacyOrInitial(env: Env, fresh: boolean, initialize: boolean): Promise<Snapshot> {
+  const snapshot = await readSnapshot(env, fresh);
+  if (snapshot) return snapshot;
+  if (!env.SOURCE_QUEUE && initialize) return refresh(env);
   // A fresh deployment starts serving coverage immediately. The hourly queue fills in status.
   const now = new Date();
   return mergeSources(null, SOURCES.map((source) => ({
     source, rows: [], checked: now.toISOString(), error: isActive(source) ? "Awaiting first source refresh" : source.error,
   })), now).snapshot;
 }
+
+type Memo<T> = { until: number; value: T };
+type ReadCache = {
+  index?: Memo<SnapshotIndex>;
+  heads?: Memo<Map<string, SourceHead>>;
+  active: Partial<Record<BanFormat, Memo<ActiveProjection>>>;
+  states: Map<string, Memo<{ shard: StateSnapshot; checked: boolean }>>;
+};
+const readCache = new WeakMap<KVNamespace, ReadCache>();
+const keep = <T>(value: T): Memo<T> => ({ value, until: Date.now() + MEMO_MS });
+
+function publicHeads(env: Env, ids?: string[]) {
+  return readHeads(env.DB, ids).catch((error) => {
+    console.warn("Source check times unavailable", errorText(error));
+    return new Map<string, SourceHead>();
+  });
+}
+
+/** A request pins one catalog, so even border lookups follow the same publication. */
+export function snapshotReader(env: Env, { fresh = false, initialize = true } = {}) {
+  let cache = readCache.get(env.KV);
+  if (!cache) readCache.set(env.KV, cache = { active: {}, states: new Map() });
+  const memo = cache;
+  const reusable = (entry: Memo<unknown> | undefined) => !fresh && entry && Date.now() < entry.until;
+  let index: Promise<SnapshotIndex | null> | undefined;
+  let legacy: Promise<Snapshot> | undefined;
+  const old = () => (legacy ??= legacyOrInitial(env, fresh, initialize));
+  const catalog = () => (index ??= (async () => {
+    if (memo.index && reusable(memo.index)) return memo.index.value;
+    const value = await loadIndex(env);
+    if (value) memo.index = keep(value);
+    return value;
+  })());
+  const allHeads = async () => {
+    if (memo.heads && reusable(memo.heads)) return memo.heads.value;
+    const heads = await publicHeads(env);
+    memo.heads = keep(heads);
+    return heads;
+  };
+  const active = async (idx: SnapshotIndex, format: BanFormat) => {
+    const cached = memo.active[format];
+    if (cached && reusable(cached) && cached.value.revision === idx.revision) return cached.value;
+    const projection = await loadActive(env, idx, format);
+    memo.active[format] = keep(projection);
+    return projection;
+  };
+
+  async function state(st: string, { checks = true, weather = true } = {}): Promise<SnapshotData> {
+    const idx = await catalog();
+    if (!idx) {
+      const snapshot = await old();
+      return weather ? withFireWeather(snapshot) : snapshot;
+    }
+    let entry = memo.states.get(st);
+    if (!entry || !reusable(entry) || entry.value.shard.revision !== idx.states[st]?.revision) {
+      const shard = await loadState(env, idx, st);
+      if (!shard) return { generated: idx.generated, counties: {}, changed: {}, sources: [] };
+      entry = keep({ shard, checked: false });
+      memo.states.set(st, entry);
+    }
+    const { shard } = entry.value;
+    if (checks && !entry.value.checked) {
+      const heads = await publicHeads(env, shard.sources.filter((source) => source.mode !== "manual").map(({ id }) => id));
+      withCurrentLinks(shard);
+      applyChecks(shard, heads, new Date());
+      entry.value.checked = true;
+    }
+    const view = { ...shard, generated: idx.generated };
+    const published = checks ? withPublishedChecks(view, idx.orderChecks) : view;
+    return weather ? withFireWeather(published, Date.now(), idx.weatherChecked) : published;
+  }
+
+  return {
+    state,
+    async county(fips: string, options?: Parameters<typeof state>[1]) {
+      return state(countyState(fips), options);
+    },
+    async forCounties(fips: string[]) {
+      const states = [...new Set(fips.map(countyState))];
+      return new Map(await Promise.all(states.map(async (st) => [st, await state(st)] as const)));
+    },
+    async coverage() {
+      const idx = await catalog();
+      if (!idx) return old();
+      const sources = idx.sources.map((source) => ({ ...source }));
+      applySourceChecks(sources, await allHeads());
+      return { generated: idx.generated, sources };
+    },
+    async bans(stateQuery?: string, format: BanFormat = "compact") {
+      const idx = await catalog();
+      const st = stateQuery?.trim().toUpperCase();
+      if (!idx || st) {
+        const snapshot = idx && st ? await state(st) : withFireWeather(await old());
+        if (idx && st) {
+          const sources = idx.sources.filter((source) => source.state === st).map((source) => ({ ...source }));
+          applySourceChecks(sources, await publicHeads(env, sources.filter((s) => s.mode !== "manual").map(({ id }) => id)));
+          snapshot.sources = sources;
+        }
+        const data = activeBans(snapshot, st);
+        const body = format === "pretty" ? JSON.stringify(JSON.stringify(data, null, 2)) : JSON.stringify(data);
+        return { body, generated: data.generated, count: data.counties.length };
+      }
+      const [projection, heads] = await Promise.all([active(idx, format), allHeads()]);
+      return formatNationalBans(projection, idx, heads, new Date(), format);
+    },
+    async weather() {
+      const idx = await catalog();
+      if (!idx) return withFireWeather(await old());
+      const [projection, heads] = await Promise.all([active(idx, "compact"), allHeads()]);
+      return projectWeather(projection, idx, heads, new Date());
+    },
+    async lastChanged() {
+      const idx = await catalog();
+      if (!idx) return lastChangedByState((await old()).changed ?? {});
+      return Object.fromEntries(Object.entries(idx.states).map(([st, ref]) => [st, ref?.lastChanged]));
+    },
+  };
+}
+
+export type SnapshotReader = ReturnType<typeof snapshotReader>;

@@ -232,6 +232,7 @@ for (const p of out) {
 }
 
 writeFileSync("src/data/places.json", JSON.stringify(out));
+writeFileSync("src/data/places-states.json", JSON.stringify([...new Set(out.map(({ state }) => state))]) + "\n");
 
 // Lookup shards for every incorporated place, by first letter: public/data/places/t.json
 //   [name, state, page path, county FIPS[], primary county name]

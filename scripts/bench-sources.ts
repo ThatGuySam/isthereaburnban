@@ -1,4 +1,6 @@
 import { readFileSync } from "node:fs";
+import { nationalFixture, snapshotBenchmarks, timings } from "./snapshot-benchmark";
+import { SOURCES } from "../src/worker/sources/registry";
 import type { CountyStatus } from "../src/shared/types";
 import { ADAPTERS } from "../src/worker/adapters";
 import { parse as parseFl } from "../src/worker/adapters/fl";
@@ -384,4 +386,36 @@ for (const [name, run] of jobs) {
   const percentile = (p: number) => times[Math.ceil(times.length * p) - 1];
   const p95 = percentile(0.95);
   console.log(`${name.padEnd(42)} p50 ${percentile(0.5).toFixed(3)}  p95 ${p95.toFixed(3)}${p95 >= 7 ? "  REVIEW CPU BUDGET" : ""}`);
+}
+
+console.log("\nSnapshot timings in ms (Bun thread CPU, no I/O, 20 warmups and 120 samples per row).");
+const recordedById = new Map(recordedInputs.map((input) => [input.source.id, input]));
+const currentInputs: SourceInput[] = SOURCES.map((source) => {
+  const fixture = recordedById.get(source.id);
+  return fixture ? { ...fixture, source, version: "fixture" }
+    : { source, rows: [], checked, error: source.mode === "manual" ? source.error : "No recorded fixture" };
+});
+for (const [label, inputs] of [
+  ["current registry with recorded rows", currentInputs], ["projected", nationalFixture(now)], ["all counties active", nationalFixture(now, true)],
+] as const) {
+  const benchmark = snapshotBenchmarks(inputs, now);
+  console.log(`\n${label}`, benchmark.counts);
+  const measure = (name: string, run: () => unknown) => {
+    const { p50, p95 } = timings(run);
+    console.log(`${name.padEnd(42)} p50 ${p50.toFixed(3)}  p95 ${p95.toFixed(3)}`);
+  };
+  for (const [name, key] of [["State merge, decode and encode", "merge"], ["State read and status lookup", "read"]] as const) {
+    const state = benchmark.stateCases.map((entry) => ({ state: entry.state, ...timings(entry[key]) })).sort((a, b) => b.p95 - a.p95)[0];
+    console.log(`${`${name} (${state.state}, max p95)`.padEnd(55)} p50 ${state.p50.toFixed(3)}  p95 ${state.p95.toFixed(3)}`);
+  }
+  measure("Cold rebuild total across 51 state jobs", benchmark.coldRebuild);
+  measure("Join the active projection", benchmark.joinActive);
+  measure("Legacy parse, merge and encode", benchmark.wholeMerge);
+  measure("Parse the catalog", benchmark.parseIndex);
+  measure("Parse the largest shard", benchmark.parseLargestState);
+  measure("Parse the legacy aggregate", benchmark.parseWhole);
+  measure("Legacy aggregate read and lookup", benchmark.wholeRead);
+  measure("Cold national bans API read and encode", benchmark.readActive);
+  measure("Cold national bans MCP read and encode", benchmark.readActiveMcp);
+  measure("Cold MCP when scoped orders just expired", benchmark.readActiveExpired);
 }
