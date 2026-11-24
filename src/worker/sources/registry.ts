@@ -32,6 +32,8 @@ import { orWillametteBackyard } from "./or/willamette";
 import { paCarrollValley } from "./pa/carroll-valley";
 import { paStateForestSpring } from "./pa/seasonal";
 import type { ActiveSource, Source } from "./types";
+import { utFfslFireOrders } from "./ut/orders";
+import { utClosedFireSeason } from "./ut/seasonal";
 import { waEcologyAir } from "./wa/ecology-air";
 import { waKingFireSafety } from "./wa/king-fire-safety";
 import { waPugetSoundAir } from "./wa/puget-sound";
@@ -97,6 +99,15 @@ export const SOURCES: readonly Source[] = [
   akDnrPermitZones,
   akDnrFireSeason,
   akDecWinterBurning,
+  utFfslFireOrders,
+  utClosedFireSeason,
+  {
+    id: "ut-blm-campfire-orders", state: "UT", scope: "part", stack: "Drupal / PDF orders", mode: "manual", cadence: null,
+    sourceName: "Bureau of Land Management Utah",
+    sourceUrl: "https://www.blm.gov/utah/fire",
+    officialUrl: "https://www.blm.gov/utah/fire",
+    error: "Utah Fire Info lists a Salt Lake Field Office Stage 1 order that the BLM district page omits. Verify the order with BLM.",
+  },
   {
     id: "ak-dec-air-advisories", state: "AK", scope: "part", stack: "ASP.NET MVC / HTML and PDF", mode: "manual", cadence: null,
     sourceName: "Alaska Department of Environmental Conservation",

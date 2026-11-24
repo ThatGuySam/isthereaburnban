@@ -688,14 +688,34 @@
     "name": "Utah",
     "coverage": "restrictions",
     "publisher": "Utah Division of Forestry, Fire and State Lands",
-    "officialUrl": "https://www.arcgis.com/home/item.html?id=fea8819d80ff44b2993821efc6c99b4e",
+    "officialUrl": "https://utah-fire-info-utahdnr.hub.arcgis.com/pages/active-fire-restrictions",
     "extraUrls": [
       {
+        "label": "Utah fire-season burn permits",
+        "url": "https://ffsl.utah.gov/wildland-fire/burn-permits/"
+      },
+      {
+        "label": "Utah residential open-burning rules",
+        "url": "https://deq.utah.gov/daq/residential-open-burning"
+      },
+      {
+        "label": "Utah air-quality burn advisories",
+        "url": "https://air.utah.gov/mediaforecast.php"
+      },
+      {
+        "label": "National Weather Service clearing index",
+        "url": "https://www.weather.gov/slc/ClearingIndex"
+      },
+      {
+        "label": "BLM Utah fire restrictions",
+        "url": "https://www.blm.gov/utah/fire"
+      },
+      {
         "label": "Utah State Parks fire restrictions",
-        "url": "https://stateparks.utah.gov/resources/fire-restrictions/"
+        "url": "https://stateparks.utah.gov/fire-restrictions-and-safety/"
       }
     ],
-    "notes": "Utah fire restrictions are issued by order for state, county and federal land. Each order covers a specific area."
+    "notes": "The state forester issues fire restrictions on state and unincorporated private lands. Cities, tribal governments and federal land managers set rules for their own jurisdictions. County and city fire authorities handle residential burn permits, and Utah DEQ sets separate seasonal and air-quality rules. Check the order for your location."
   },
   {
     "abbr": "VT",

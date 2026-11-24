@@ -1,6 +1,6 @@
 import { atLocalTime, localClock, localDayWindow, shiftDay, US_ZONES } from "./dates";
 
-// Inventory: Alaska burn permits and winter air rules, AZ Area A, Idaho closed fire season, NY DEC Open Burning, GA EPD Summer Open Burning Ban, KY fire hazard seasons, OH DNR Open Burning Regulations,
+// Inventory: Alaska burn permits and winter air rules, AZ Area A, Idaho and Utah closed fire seasons, NY DEC Open Burning, GA EPD Summer Open Burning Ban, KY fire hazard seasons, OH DNR Open Burning Regulations,
 // PA state forest fires, VA DOF 4 PM Burning Law, WV Forestry Fire Burning Guidelines, and MD DNR Burning Guidance.
 export type CalendarRule = {
   state: string;
@@ -119,6 +119,13 @@ export const CALENDAR_RULES: Record<string, CalendarRule> = {
     officialUrl: "https://www.pacodeandbulletin.gov/secure/pacode/data/017/chapter21/s21.118.html",
     label: "Spring state forest fire restriction", seasons: [["03-01", "05-25"]],
     note: "From March 1 through May 25, fires in rings and fireplaces on Pennsylvania state forest land require permission from DCNR. Check with the district forester about permission and fire danger.",
+  },
+  UT: {
+    state: "UT", zone: US_ZONES.Mountain, status: "restricted", scope: "part",
+    scopeNote: "Forest, brush, range, field, cultivated-land and debris-pile burning covered by Utah law",
+    officialUrl: "https://le.utah.gov/xcode/Title65A/Chapter8/65A-8-S211.html",
+    label: "Closed fire season permit requirement", seasons: [["06-01", "10-31"]],
+    note: "June 1 through October 31, Utah requires a written permit and advance notification for covered burning. The state forester may change the season. Check the statute for exemptions and ask the local fire authority about permits, air-quality rules and Red Flag Warning rules.",
   },
   VA: {
     state: "VA", zone: US_ZONES.Eastern, status: "restricted", scope: "part", scopeNote: "Within 300 feet of woods or vegetation that could carry fire to woods",

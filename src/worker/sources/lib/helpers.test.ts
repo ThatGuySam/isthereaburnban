@@ -2,7 +2,7 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { syncfusionGridRows, webFormsPost } from "./aspnet";
-import { arcgisEditWindow, arcgisLocalDate, arcgisRows, codedDomains, dataLastEditDate, findOperationalLayers, queryArcgis } from "./arcgis";
+import { arcgisDateOnly, arcgisEditWindow, arcgisLocalDate, arcgisRows, codedDomains, dataLastEditDate, findOperationalLayers, queryArcgis } from "./arcgis";
 import { activeRule, calendarDayWindows, CALENDAR_RULES } from "./calendar";
 import { civicPlusAlertDetails, civicPlusNotices, civicPlusUrl } from "./civicplus";
 import { localDayWindow, parseWeekdayDate, reportWindow } from "./dates";
@@ -57,6 +57,13 @@ test("weekday-dated headings require a real date and a matching weekday", () => 
   expect(parseWeekdayDate("Monday Nov 24", 2026)).toBeNull();
   expect(parseWeekdayDate("February 29, 2024")).toBeNull();
   expect(parseWeekdayDate("Thursday February 29, 2026")).toBeNull();
+});
+
+test("ArcGIS DateOnly fields accept only valid ISO calendar dates", () => {
+  expect(arcgisDateOnly("2028-02-29")).toBe("2028-02-29");
+  for (const value of ["2026-02-29", "11/24/2026", "2026-11-24T00:00:00Z", " 2026-11-24", 1795478400000, null]) {
+    expect(arcgisDateOnly(value)).toBeNull();
+  }
 });
 
 test("legacy .NET JSON dates preserve the UTC instant regardless of the optional offset", () => {

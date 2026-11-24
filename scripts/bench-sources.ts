@@ -48,6 +48,8 @@ import { orOdfPublicUse, parseOdfPublicUse } from "../src/worker/sources/or/odf"
 import { orWillametteBackyard, parseWillametteBackyard } from "../src/worker/sources/or/willamette";
 import { paCarrollValley, parseCarrollValley } from "../src/worker/sources/pa/carroll-valley";
 import { paStateForestSpring, parsePaStateForestSpring } from "../src/worker/sources/pa/seasonal";
+import { parseUtahOrders, utFfslFireOrders } from "../src/worker/sources/ut/orders";
+import { parseUtahSeasonal, utClosedFireSeason } from "../src/worker/sources/ut/seasonal";
 import { parseEcologyAir, waEcologyAir } from "../src/worker/sources/wa/ecology-air";
 import { parseKingFireSafety, waKingFireSafety } from "../src/worker/sources/wa/king-fire-safety";
 import { parsePugetSound, waPugetSoundAir } from "../src/worker/sources/wa/puget-sound";
@@ -132,6 +134,12 @@ const idStatute = utf8("id/fixtures/section-38-115-2026-11-24.html");
 const parseIdlFixture = () => parseIdlStages(JSON.parse(idLayer), arcgisRows(JSON.parse(idZones), { requireComplete: true }), idCaptured);
 const parseIdForecastFixture = () => parseKootenaiAir(idForecast, idCaptured);
 const parseIdStatuteFixture = (time = summerDay) => parseIdahoSeasonal(idStatute, time);
+const utCaptured = new Date("2026-11-24T09:10:16Z");
+const utLayer = utf8("ut/fixtures/layer-2026-11-24.json");
+const utOrders = utf8("ut/fixtures/orders-2026-11-24.json");
+const utStatute = utf8("ut/fixtures/code-index-2026-11-24.html");
+const parseUtOrders = () => parseUtahOrders(JSON.parse(utLayer), JSON.parse(utOrders), utCaptured);
+const parseUtStatute = (time = summerDay) => parseUtahSeasonal(utStatute, time);
 const akPermitLayer = utf8("ak/fixtures/permit-layer-2026-11-24.json");
 const akPermitZones = utf8("ak/fixtures/permit-zones-2026-11-24.json");
 const akFireSeason = utf8("ak/fixtures/as-41-15-050-2026-11-24.html");
@@ -209,6 +217,8 @@ recordedInputs.push(
   { source: idIdlStages, rows: parseIdlFixture(), checked: idCaptured.toISOString() },
   { source: idKootenaiAir, rows: await parseIdForecastFixture(), checked: idCaptured.toISOString() },
   { source: idSeasonal, rows: await parseIdStatuteFixture(idCaptured), checked: idCaptured.toISOString() },
+  { source: utFfslFireOrders, rows: parseUtOrders(), checked: utCaptured.toISOString() },
+  { source: utClosedFireSeason, rows: parseUtStatute(utCaptured), checked: utCaptured.toISOString() },
   { source: nwsFireWeather, rows: [], fireWeather: parseNwsLive(), checked: nwsCaptured.toISOString() },
 );
 
@@ -275,6 +285,8 @@ const jobs: Array<[string, () => unknown]> = [
   ["ID IDL stage zones", parseIdlFixture],
   ["ID Kootenai district air forecast", parseIdForecastFixture],
   ["ID closed fire season and calendar", parseIdStatuteFixture],
+  ["UT FFSL fire order polygons", parseUtOrders],
+  ["UT closed fire season and calendar", parseUtStatute],
   ["AK DNR permit zone statuses", parseAkZones],
   ["AK DNR fire-season permit law", parseAkSummer],
   ["AK DEC winter open-burning rule", parseAkWinter],

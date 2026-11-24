@@ -1,4 +1,4 @@
-import { parseLocalDateTime, reportWindow } from "./dates";
+import { parseLocalDateTime, parseUsDate, reportWindow } from "./dates";
 import { getText } from "./http";
 
 // Inventory stacks: ArcGIS FeatureServer, MapServer, Online and Experience, including the IN WebEOC export.
@@ -36,6 +36,11 @@ export function arcgisRows(json: unknown, { allowEmpty = false, requireComplete 
 
 export function msToIso(v: unknown): string | null {
   return typeof v === "number" && Number.isFinite(v) && Math.abs(v) <= 8.64e15 ? new Date(v).toISOString() : null;
+}
+
+/** ArcGIS esriFieldTypeDateOnly values are calendar dates without a time or offset. */
+export function arcgisDateOnly(value: unknown): string | null {
+  return typeof value === "string" && parseUsDate(value) === value ? value : null;
 }
 
 /** Bound a row's freshness by its own UTC edit date, even if other features are edited later. */
