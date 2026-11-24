@@ -1,12 +1,14 @@
 ---
 import Base from "../layouts/Base.astro";
+import Mark from "../components/Mark.astro";
 ---
-<Base title="Not found · Is There a Burn Ban?" description="Page not found." noindex alerts={false}>
-  <main id="content" class="hero" style="--bg:#123646;--fg:#fff">
+<Base title="Not found · Is There a Burn Ban?" description="Page not found." noindex footer={false} themeColor="#123646">
+  <main id="content" class="hero" style="--bg:#123646;--fg:#fff;--meta:#d0d7da">
     <div class="hero-inner">
       <p class="status-word">Huh?</p>
       <p class="status-sentence">We couldn't find that page.</p>
-      <p class="status-more"><a href="/">Check your burn ban status →</a></p>
+      <p class="hero-links"><a class="hero-link" href="/">Check for a burn ban near you</a></p>
     </div>
+    <a class="hero-mark" href="/" aria-label="Home"><Mark /></a>
   </main>
 </Base>

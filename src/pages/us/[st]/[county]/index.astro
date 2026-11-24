@@ -48,32 +48,29 @@ const jsonLd = [
   },
 ];
 ---
-<Base title={title} description={description} path={path} jsonLd={jsonLd}>
-  <Hero mode="county" fips={c.fips} place={place}>
-    <Fragment slot="top">
-      <nav class="crumbs" aria-label="Breadcrumb">
-        <ol>
-          <li><a href="/">Home</a></li>
-          <li><a href={statePath(c.state)}>{stateName}</a></li>
-          <li aria-current="page">{c.name}</li>
-        </ol>
-      </nav>
-      <h1 class="hero-question">{title}</h1>
-    </Fragment>
-  </Hero>
+<Base title={title} description={description} path={path} jsonLd={jsonLd} sheets>
+  <Hero mode="county" fips={c.fips} place={place} url={path} />
 
   <div class="page">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <ol>
+        <li><a href="/">Home</a></li>
+        <li><a href={statePath(c.state)}>{stateName}</a></li>
+        <li aria-current="page">{c.name}</li>
+      </ol>
+    </nav>
+    <h1>{title}</h1>
     <p data-status-changed hidden></p>
     {state && (
       <section>
         <h2>Official source</h2>
         <p>
-          <a href={state.officialUrl} target="_blank" rel="noopener">{state.publisher} ↗</a>
+          <a href={state.officialUrl} target="_blank" rel="noopener">{state.publisher}</a>
           {" "}<span class={`badge badge--${state.coverage}`}>{COVERAGE_LABEL[state.coverage]}</span>
         </p>
         {state.extraUrls?.length ? (
           <ul>
-            {state.extraUrls.map((x) => <li><a href={x.url} target="_blank" rel="noopener">{x.label} ↗</a></li>)}
+            {state.extraUrls.map((x) => <li><a href={x.url} target="_blank" rel="noopener">{x.label}</a></li>)}
           </ul>
         ) : null}
       </section>

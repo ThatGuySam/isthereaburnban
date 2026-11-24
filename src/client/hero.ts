@@ -1,34 +1,10 @@
-// Home + county hero: lookups, ZIP form, "Use my location", remembered choice.
-import { escapeHtml, heroStyle, relativeTime, renderStatusHtml, statusTheme } from "../shared/render";
-import type { CountyStatus, LookupResult } from "../shared/types";
+// Home + county hero. Home asks first ("Use my location" / ZIP), then remembers the place in
+// localStorage and repaints it on later visits. No IP geolocation: it guessed the wrong state.
+import { heroStyle, relativeTime, renderStatusHtml, statusTheme } from "../shared/render";
+import type { LookupResult } from "../shared/types";
+import { bindSheetTriggers, locate, lookupStatus, openSheet, readPlace, savePlace, type ResolvedDetail, type Result } from "./place";
 
-type Result = CountyStatus & { url?: string };
-type Last = { fips: string; place: string; url?: string };
-
-const LAST_KEY = "itabb:last";
-
-function readLast(): Last | null {
-  try {
-    const raw = localStorage.getItem(LAST_KEY);
-    return raw ? (JSON.parse(raw) as Last) : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveLast(r: Result): void {
-  try {
-    localStorage.setItem(LAST_KEY, JSON.stringify({ fips: r.fips, place: `${r.county}, ${r.state}`, url: r.url }));
-  } catch {
-    /* private mode */
-  }
-}
-
-async function getJson<T>(url: string): Promise<T> {
-  const res = await fetch(url, { headers: { accept: "application/json" } });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return (await res.json()) as T;
-}
+type Extra = Omit<ResolvedDetail, "result">;
 
 export function refreshRelativeTimes(root: { querySelectorAll: Document["querySelectorAll"] } = document): void {
   root.querySelectorAll<HTMLTimeElement>("time[data-relative]").forEach((t) => {
@@ -41,105 +17,86 @@ export function initHero(): void {
   const hero = document.querySelector<HTMLElement>("[data-hero]");
   if (!hero) return;
   const slot = hero.querySelector<HTMLElement>("[data-status-slot]")!;
-  const choices = hero.querySelector<HTMLElement>("[data-choices]")!;
-  const msg = hero.querySelector<HTMLElement>("[data-tools-msg]")!;
-  const form = hero.querySelector<HTMLFormElement>("[data-zip-form]")!;
-  const locate = hero.querySelector<HTMLButtonElement>("[data-locate]")!;
-  const alertBtn = hero.querySelector<HTMLButtonElement>("[data-alert-open]");
+  const locateBtn = hero.querySelector<HTMLButtonElement>("[data-locate]");
   const mode = hero.dataset.mode === "county" ? "county" : "home";
   const pageFips = slot.dataset.fips;
 
-  const say = (text: string) => (msg.textContent = text);
+  bindSheetTriggers();
 
   function setTheme(status: string) {
+    const theme = statusTheme(status);
     hero!.dataset.status = status;
     hero!.style.cssText = heroStyle(status);
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", statusTheme(status).color);
+    if (mode === "home") document.documentElement.style.backgroundColor = theme.color;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme.color);
   }
 
-  function paint(r: Result, note?: string) {
-    const link = r.url && r.fips !== pageFips ? r.url : undefined;
-    slot.innerHTML = renderStatusHtml(r, { link, note });
-    setTheme(r.status);
-    if (alertBtn) alertBtn.dataset.fips = r.fips;
-    choices.hidden = true;
-    choices.replaceChildren();
-  }
-
-  function paintMessage(word: string, sentence: string) {
-    slot.innerHTML = `<div class="status" data-status="unknown"><p class="status-word${word.length > 5 ? " status-word--long" : ""}">${escapeHtml(word)}</p><p class="status-sentence">${escapeHtml(sentence)}</p></div>`;
-    setTheme("unknown");
-  }
-
-  function showChoices(res: LookupResult) {
-    const label = res.query.zip ? `ZIP ${res.query.zip} touches ${res.results.length} counties. Which one?` : "Which county?";
-    const p = document.createElement("p");
-    p.textContent = label;
-    const buttons = res.results.map((r) => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "chip";
-      b.textContent = `${r.county}, ${r.state}`;
-      b.addEventListener("click", () => {
-        paint(r);
-        saveLast(r);
-      });
-      return b;
+  /** Point the hero's sheet triggers at the county on screen. */
+  function setTriggers(fips: string, label: string, url?: string) {
+    hero!.querySelectorAll<HTMLElement>("[data-sheet]").forEach((el) => {
+      el.dataset.fips = fips;
+      el.dataset.place = label;
+      if (url) el.dataset.url = url;
     });
-    choices.replaceChildren(p, ...buttons);
-    choices.hidden = false;
-    buttons[0]?.focus();
   }
 
-  async function lookup(params: Record<string, string>, opts: { remember: boolean }) {
-    say("");
+  function paint(r: Result, extra: Extra = {}, remember = true) {
+    const label = `${r.county}, ${r.state}`;
+    slot.innerHTML = renderStatusHtml(r, { note: extra.note });
+    setTheme(r.status);
+    hero!.dataset.state = "answer";
+    setTriggers(r.fips, label, r.url);
+    if (!remember) return;
+    const prev = readPlace();
+    const same = prev?.fips === r.fips;
+    const chosen = extra.zip !== undefined || extra.lat !== undefined;
+    savePlace({
+      fips: r.fips,
+      label,
+      url: r.url ?? (same ? prev?.url : undefined),
+      zip: extra.zip ?? (same && !chosen ? prev?.zip : undefined),
+      lat: extra.lat ?? (same && !chosen ? prev?.lat : undefined),
+      lon: extra.lon ?? (same && !chosen ? prev?.lon : undefined),
+      ts: same && !chosen && prev?.ts ? prev.ts : Date.now(),
+      status: r.status,
+      style: heroStyle(r.status),
+      html: renderStatusHtml(r),
+    });
+  }
+
+  /** Look up and paint, or hand off to the location sheet when the answer needs a choice. */
+  async function lookup(params: Record<string, string>, extra: Extra = {}) {
+    let res: LookupResult;
     try {
-      const res = await getJson<LookupResult>(`/api/v1/status?${new URLSearchParams(params)}`);
-      if (!res.results?.length) {
-        if (params.here) paintMessage("Where?", "We couldn't tell where you are. Enter a ZIP below.");
-        else say("We couldn't find that place. Try another ZIP.");
-        return;
-      }
-      if (res.ambiguous && res.results.length > 1) {
-        if (slot.querySelector('[data-status="checking"]')) paintMessage("Which one?", "That spot touches more than one county.");
-        showChoices(res);
-        return;
-      }
-      const r = res.results[0];
-      const note = res.approximate ? `Closest match${res.query.zip ? ` for ZIP ${res.query.zip}` : ""}` : undefined;
-      paint(r, note);
-      if (opts.remember) saveLast(r);
+      res = await lookupStatus(params);
     } catch {
-      if (params.here) paintMessage("Where?", "We couldn't tell where you are. Enter a ZIP below.");
-      else if (slot.querySelector('[data-status="checking"]')) paintMessage("Not sure", "We couldn't reach our status service. Try again in a minute.");
-      else say("Lookup failed. Try again in a minute.");
+      if (hero!.dataset.state === "answer") return; // keep the remembered answer on screen
+      return openSheet({ sheet: "location", message: "We couldn't reach our status service. Try again in a minute." });
     }
+    if (!res.results?.length) return openSheet({ sheet: "location", message: "We couldn't find a US county there. Try a ZIP." });
+    if (res.ambiguous && res.results.length > 1) return openSheet({ sheet: "location", zip: params.zip });
+    const r = res.results[0];
+    const note = res.approximate ? `Closest match${res.query.zip ? ` for ZIP ${res.query.zip}` : ""}` : undefined;
+    paint(r, { ...extra, note });
   }
 
-  // ZIP form: real GET form to /?zip=; on the home page JS intercepts and looks up in place.
-  form.addEventListener("submit", (e) => {
-    if (mode !== "home") return;
-    const zip = String(new FormData(form).get("zip") ?? "").trim();
-    if (!/^\d{5}$/.test(zip)) return;
-    e.preventDefault();
-    history.replaceState(null, "", `/?zip=${zip}`);
-    void lookup({ zip }, { remember: true });
+  document.addEventListener("itabb:resolved", (e) => {
+    const d = (e as CustomEvent<ResolvedDetail>).detail;
+    paint(d.result, d);
+    // On a county page, a different county means a different page.
+    if (mode === "county" && d.result.fips !== pageFips && d.result.url) location.href = d.result.url;
   });
 
-  locate.addEventListener("click", () => {
-    if (!("geolocation" in navigator)) return say("This browser can't share location. Enter a ZIP instead.");
-    say("Finding you…");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const lat = pos.coords.latitude.toFixed(4);
-        const lon = pos.coords.longitude.toFixed(4);
-        if (mode !== "home") return void (location.href = `/?lat=${lat}&lon=${lon}`);
-        history.replaceState(null, "", `/?lat=${lat}&lon=${lon}`);
-        void lookup({ lat, lon }, { remember: true });
-      },
-      () => say("Location is off. Enter a ZIP instead."),
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 },
-    );
+  locateBtn?.addEventListener("click", async () => {
+    locateBtn.disabled = true;
+    try {
+      const { lat, lon } = await locate();
+      await lookup({ lat, lon }, { lat: Number(lat), lon: Number(lon) });
+    } catch {
+      openSheet({ sheet: "location", message: "Location is off. Enter a ZIP instead." });
+    } finally {
+      locateBtn.disabled = false;
+    }
   });
 
   setInterval(() => refreshRelativeTimes(slot), 60000);
@@ -147,34 +104,34 @@ export function initHero(): void {
   if (mode === "county") {
     // The Worker normally injects status. If the slot still says Checking (e.g. astro dev), fetch it.
     if (pageFips && slot.querySelector('[data-status="checking"]')) {
-      getJson<Result | LookupResult>(`/api/v1/counties/${pageFips}`)
-        .catch(() => getJson<LookupResult>(`/api/v1/status?fips=${pageFips}`))
-        .then((data) => {
-          const r = "results" in data ? data.results[0] : data;
-          if (r?.status) paint(r);
+      lookupStatus({ fips: pageFips })
+        .then((res) => {
+          const r = res.results?.[0];
+          if (r?.status) paint(r, {}, false);
         })
-        .catch(() => paintMessage("Not sure", "We couldn't load the status. Check the official source below."));
+        .catch(() => undefined);
     } else {
       refreshRelativeTimes(slot);
     }
     return;
   }
 
+  // Home. Explicit links (?zip= / ?lat=&lon= / ?fips=) win; otherwise the remembered place.
   const q = new URLSearchParams(location.search);
   const zip = q.get("zip")?.trim();
   const lat = q.get("lat");
   const lon = q.get("lon");
   const fips = q.get("fips");
-  if (zip && /^\d{5}$/.test(zip)) {
-    (form.elements.namedItem("zip") as HTMLInputElement).value = zip;
-    void lookup({ zip }, { remember: true });
-  } else if (lat && lon) {
-    void lookup({ lat, lon }, { remember: true });
-  } else if (fips && /^\d{5}$/.test(fips)) {
-    void lookup({ fips }, { remember: true });
-  } else {
-    const last = readLast();
-    if (last?.fips) void lookup({ fips: last.fips }, { remember: false });
-    else void lookup({ here: "1" }, { remember: false });
+  if (zip && /^\d{5}$/.test(zip)) void lookup({ zip }, { zip });
+  else if (lat && lon) void lookup({ lat, lon }, { lat: Number(lat), lon: Number(lon) });
+  else if (fips && /^\d{5}$/.test(fips)) void lookup({ fips });
+  else {
+    const last = readPlace();
+    if (last?.fips) {
+      // The inline script already painted the stored answer; refresh it quietly.
+      refreshRelativeTimes(slot);
+      setTriggers(last.fips, last.label, last.url);
+      void lookup({ fips: last.fips });
+    }
   }
 }

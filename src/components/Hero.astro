@@ -1,34 +1,69 @@
 ---
 import { heroStyle, renderCheckingHtml } from "../shared/render";
+import Mark from "./Mark.astro";
 
 interface Props {
-  /** "home" renders lookups in place; "county" navigates to the matching county page */
+  /** "home" asks for a location first and remembers it; "county" shows one county (Worker-injected) */
   mode: "home" | "county";
   fips?: string;
   place?: string;
+  /** county page path, for the menu's links */
+  url?: string;
 }
-const { mode, fips, place } = Astro.props;
+const { mode, fips, place, url } = Astro.props;
+const home = mode === "home";
+// Keep this markup in sync with src/worker/pages.ts, which rewrites [data-hero] and [data-status-slot].
+const ask = `<div class="status" data-status="checking"><p class="status-word status-word--long">Where?</p><p class="status-sentence">Is there a burn ban near you?</p></div>`;
 ---
-<main id="content" class="hero" data-hero data-mode={mode} data-status="checking" style={heroStyle("checking")}>
+<main
+  id="content"
+  class="hero"
+  data-hero
+  data-mode={mode}
+  data-state={home ? "ask" : "answer"}
+  data-status="checking"
+  style={heroStyle("checking")}
+>
   <div class="hero-inner">
-    <slot name="top" />
-    <div data-status-slot data-fips={fips} aria-live="polite" set:html={renderCheckingHtml(place)} />
-    <div class="choices" data-choices hidden></div>
-    <div class="tools">
-      <form class="zip-form" action="/" method="get" data-zip-form>
-        <label for="zip">Not here? Enter a ZIP</label>
-        <input id="zip" name="zip" inputmode="numeric" autocomplete="postal-code" pattern="[0-9]{5}" maxlength="5" placeholder="ZIP code" required />
-        <button type="submit">Check</button>
-      </form>
-      <div class="chips">
-        <button type="button" class="chip" data-locate>Use my location</button>
-        <a class="chip" href="/map/">Pick on a map</a>
-        <button type="button" class="chip" data-alert-open data-fips={fips}>Alert me</button>
+    <div data-status-slot data-fips={fips} aria-live="polite" set:html={home ? ask : renderCheckingHtml(place)} />
+    {home && (
+      <div class="hero-ask">
+        <button type="button" class="hero-cta" data-locate>
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M21 3 3 10.5l7.5 3 3 7.5L21 3Z" fill="currentColor" /></svg>
+          Use my location
+        </button>
+        <button type="button" class="hero-link" data-sheet="location">or enter a ZIP</button>
       </div>
-      <p class="tools-msg" data-tools-msg aria-live="polite"></p>
-    </div>
+    )}
+    <p class="hero-links">
+      <button type="button" class="hero-link" data-sheet="location">Change location</button>
+      <button type="button" class="hero-link" data-sheet="alert" data-fips={fips} data-place={place}>
+        <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 3a6 6 0 0 0-6 6v3.5L4.5 16h15L18 12.5V9a6 6 0 0 0-6-6Zm-2 15a2 2 0 0 0 4 0h-4Z" fill="currentColor" /></svg>
+        Alert me
+      </button>
+    </p>
   </div>
+  <button type="button" class="hero-mark" data-sheet="menu" data-fips={fips} data-place={place} data-url={url} aria-label="Menu">
+    <Mark />
+  </button>
 </main>
+
+{home && (
+  <script is:inline>
+    // Paint the remembered place before anything else loads (no flash of the question).
+    try {
+      var p = JSON.parse(localStorage.getItem("itabb:place") || "null");
+      if (p && p.html && p.style) {
+        var h = document.querySelector("[data-hero]");
+        h.dataset.state = "answer";
+        h.dataset.status = p.status;
+        h.style.cssText = p.style;
+        h.querySelector("[data-status-slot]").innerHTML = p.html;
+        document.documentElement.style.backgroundColor = getComputedStyle(h).getPropertyValue("--bg");
+      }
+    } catch (e) {}
+  </script>
+)}
 
 <script>
   import { initHero } from "../client/hero";

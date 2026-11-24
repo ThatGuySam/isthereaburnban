@@ -70,17 +70,23 @@ a {
 .hero {
   --bg: #767676;
   --fg: #ffffff;
+  --meta: #ffffff;
+  /* svh: the hero ends above Safari's toolbar even when the toolbar is expanded */
   min-height: 100vh;
   min-height: 100svh;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
   text-align: center;
-  padding: 3rem 1.25rem 2rem;
+  padding-block: max(2.5rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-bottom));
+  padding-inline: max(1.25rem, env(safe-area-inset-left)) max(1.25rem, env(safe-area-inset-right));
   background: var(--bg);
   color: var(--fg);
   transition: background-color 0.4s ease;
+}
+
+html:has(.hero[data-mode="home"]) {
+  background: #767676;
 }
 
 .hero a {
@@ -90,14 +96,7 @@ a {
 .hero-inner {
   width: 100%;
   max-width: 56rem;
-  margin: auto 0;
-}
-
-.hero-question {
-  font-size: clamp(1rem, 2.4vw, 1.25rem);
-  font-weight: 700;
-  margin: 0 0 0.5rem;
-  opacity: 0.95;
+  margin-block: auto;
 }
 
 .status {
@@ -125,132 +124,124 @@ a {
   line-height: 1.25;
   margin: 1rem auto 0;
   max-width: 40rem;
+  text-wrap: balance;
 }
 
-.status-note,
-.status-meta,
-.status-more,
-.status-official {
-  margin: 0.75rem 0 0;
-  font-weight: 600;
-  font-size: 1rem;
-}
-
-/* Small text sits on a darkened chip so it clears 4.5:1 on every background. */
+/* The quiet line: official source, checked time. Tone-on-tone (--meta), 4.5:1 on every status. */
 .status-meta,
 .status-note {
-  background: rgba(0, 0, 0, 0.22);
-  border-radius: 14px;
+  margin: 0.85rem auto 0;
   max-width: 40rem;
-  padding: 0.3rem 0.9rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--meta);
 }
-.hero[data-status="restricted"] .status-meta,
-.hero[data-status="restricted"] .status-note {
-  background: rgba(255, 255, 255, 0.45);
+.status-note {
+  margin-top: 0.25rem;
 }
-
-.official--prominent {
-  display: inline-block;
-  font-size: 1.15rem;
-  font-weight: 800;
-  padding: 0.7rem 1.4rem;
-  border-radius: 999px;
-  background: var(--fg);
-  color: var(--bg) !important;
-  text-decoration: none;
+.status-meta a {
+  color: inherit;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
 }
 
-.status-more a {
+/* Map panel only: link to the county page. */
+.status-more {
+  margin: 0.75rem 0 0;
   font-weight: 700;
 }
 
-/* ---------- Quiet secondary affordances ---------- */
-
-.tools {
-  margin: 2.5rem auto 0;
+/* First visit: one primary action and one quiet one. */
+.hero-ask {
+  margin-top: 2.25rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.85rem;
-  font-size: 1rem;
-}
-
-.zip-form {
-  display: flex;
   gap: 0.5rem;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
 }
-
-.zip-form label {
-  font-weight: 700;
-}
-
-.zip-form input {
-  font: inherit;
-  font-weight: 700;
-  width: 7.5rem;
-  padding: 0.45rem 0.7rem;
-  border-radius: 999px;
-  border: 2px solid currentColor;
-  background: rgba(255, 255, 255, 0.95);
-  color: #1a1a1a;
-  text-align: center;
-}
-
-.chip,
-.zip-form button {
-  font: inherit;
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: inherit;
-  background: rgba(0, 0, 0, 0.22);
-  border: 2px solid transparent;
-  border-radius: 999px;
-  padding: 0.45rem 1rem;
-  cursor: pointer;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-.hero[data-status="restricted"] .chip,
-.hero[data-status="restricted"] .zip-form button {
-  background: rgba(255, 255, 255, 0.5);
-}
-.chip:hover,
-.zip-form button:hover {
-  border-color: currentColor;
-}
-
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  justify-content: center;
-}
-
-.choices {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  justify-content: center;
-  margin-top: 1rem;
-}
-.choices[hidden] {
+.hero[data-state="answer"] .hero-ask,
+.hero[data-state="ask"] .hero-links {
   display: none;
 }
-.choices p {
-  width: 100%;
-  margin: 0;
+
+.hero-cta {
+  font: inherit;
+  font-size: 1.05rem;
   font-weight: 700;
+  min-height: 3rem;
+  padding: 0.75rem 1.5rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--fg);
+  color: var(--bg);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+.hero-cta:disabled {
+  opacity: 0.7;
+  cursor: progress;
 }
 
-.tools-msg {
-  min-height: 1.5em;
-  margin: 0;
+.hero-links {
+  margin: 1.5rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 1.25rem;
+}
+
+.hero-link {
+  font: inherit;
+  font-size: 0.95rem;
   font-weight: 600;
+  color: var(--meta) !important;
+  background: none;
+  border: 0;
+  padding: 0.6rem 0.25rem;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+/* The small mark from the original site, bottom center. Opens the menu sheet. */
+.hero-mark {
+  margin-top: 1.5rem;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--meta);
+  opacity: 0.8;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hero-cta,
+  .hero-mark {
+    transition: transform 0.16s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  .hero-cta:active,
+  .hero-mark:active {
+    transform: scale(0.96);
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  .hero-mark:hover {
+    opacity: 1;
+  }
+  .hero-link:hover {
+    text-decoration-thickness: 2px;
+  }
 }
 
 /* ---------- Content pages ---------- */
@@ -290,10 +281,6 @@ a {
 .crumbs li + li::before {
   content: "›";
   margin-right: 0.35rem;
-}
-
-.hero .crumbs {
-  color: inherit;
 }
 
 .badge {
@@ -372,70 +359,197 @@ pre {
   margin: 0.5rem 0 0;
 }
 
-/* ---------- Alert sheet ---------- */
+/* ---------- Vaul sheets (src/components/Sheets.tsx) ---------- */
 
-.sheet {
-  border: 0;
-  border-radius: 16px;
-  padding: 1.5rem;
-  width: min(28rem, calc(100vw - 2rem));
+:root {
+  /* Extra room under bottom sheets on touch devices so actions clear Safari's floating toolbar. */
+  --toolbar-clear: 0px;
+}
+@media (hover: none) and (pointer: coarse) {
+  :root {
+    --toolbar-clear: 2.5rem;
+  }
+}
+
+.vs-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgb(0 0 0 / 0.45);
+}
+
+.vs {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 1001;
+  margin-inline: auto;
+  width: 100%;
+  max-width: 30rem;
+  max-height: 88dvh;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
   color: var(--ink);
   font-family: var(--font);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  border-radius: 20px 20px 0 0;
+  padding-block: 0.5rem calc(max(1.25rem, env(safe-area-inset-bottom)) + var(--toolbar-clear));
+  padding-inline: max(1.25rem, env(safe-area-inset-left)) max(1.25rem, env(safe-area-inset-right));
+  box-shadow: 0 -10px 40px rgb(0 0 0 / 0.2);
+  outline: none;
 }
-.sheet::backdrop {
-  background: rgba(0, 0, 0, 0.5);
+@media (min-width: 40rem) {
+  .vs {
+    bottom: 1rem;
+    border-radius: 20px;
+    --initial-transform: calc(100% + 1rem);
+  }
 }
-.sheet h2 {
-  margin: 0 0 0.25rem;
-  font-size: 1.35rem;
-  font-weight: 800;
+
+.vs-handle {
+  margin-block: 0.25rem 0.5rem;
 }
-.sheet h3 {
-  margin: 1.25rem 0 0.4rem;
-  font-size: 1rem;
-  font-weight: 800;
-}
-.sheet p {
-  margin: 0.25rem 0;
-}
-.sheet .btn,
-.sheet input[type="email"] {
-  font: inherit;
-  padding: 0.55rem 0.9rem;
-  border-radius: 10px;
-  border: 2px solid #1a1a1a;
-}
-.sheet .btn {
-  background: #1a1a1a;
-  color: #fff;
-  font-weight: 700;
-  cursor: pointer;
-}
-.sheet .btn--ghost {
-  background: transparent;
-  color: #1a1a1a;
-}
-.sheet form {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-.sheet input[type="email"] {
-  flex: 1 1 12rem;
-}
-.sheet-close {
+
+.vs-close {
   position: absolute;
   top: 0.75rem;
   right: 0.75rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: #efefef;
+  color: var(--ink);
+  cursor: pointer;
 }
-.sheet-msg {
-  font-weight: 600;
-  min-height: 1.4em;
+
+.vs-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
-.hint {
+
+.vs-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.25;
+  margin: 0.25rem 2.75rem 0.25rem 0;
+}
+
+.vs-sub {
+  margin: 0 0 1rem;
   color: var(--muted);
+}
+
+.vs-msg {
+  margin: 0.4rem 0;
+  min-height: 1.4em;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.vs-msg:empty {
+  margin-block: 0.25rem;
+}
+
+.vs-btn {
+  font: inherit;
+  font-weight: 700;
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.65rem 1rem;
+  border: 0;
+  border-radius: 12px;
+  background: #1a1a1a;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+.vs-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.vs-btn--quiet {
+  width: auto;
+  flex: none;
+  background: #ececec;
+  color: var(--ink);
+}
+
+.vs-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+.vs-row input {
+  flex: 1;
+  min-width: 0;
+  min-height: 3rem;
+  /* 16px or larger, or iOS zooms the page on focus */
+  font: inherit;
+  font-size: max(1rem, 16px);
+  font-weight: 600;
+  padding: 0.5rem 0.85rem;
+  border: 2px solid #cfcfcf;
+  border-radius: 12px;
+  color: var(--ink);
+  background: #fff;
+}
+.vs-row input:focus-visible {
+  border-color: #1a1a1a;
+}
+
+.vs-hint {
+  margin: 0.6rem 0 0;
   font-size: 0.9rem;
+  color: var(--muted);
+}
+.vs-share {
+  vertical-align: -0.2em;
+}
+
+.vs-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+.vs-list a,
+.vs-list button {
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 600;
+  display: block;
+  width: 100%;
+  text-align: start;
+  padding: 0.85rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: var(--ink);
+  text-decoration: none;
+  cursor: pointer;
+}
+.vs-list li:last-child a,
+.vs-list li:last-child button {
+  border-bottom: 0;
+}
+
+.vs-fine {
+  margin: 1rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .vs-btn {
+    transition: transform 0.16s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  .vs-btn:active:not(:disabled) {
+    transform: scale(0.98);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -448,6 +562,3 @@ pre {
   }
 }
 
-.hero .crumbs ol {
-  justify-content: center;
-}
