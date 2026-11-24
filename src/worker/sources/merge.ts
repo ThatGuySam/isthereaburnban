@@ -1,9 +1,10 @@
-import type { CountyStatus, FireWeatherReport, Snapshot, SnapshotData, SourceHealth } from "../../shared/types";
+import type { CountyStatus, FireWeatherReport, RuleReview, Snapshot, SnapshotData, SourceHealth } from "../../shared/types";
 import { countyDecision, isScopedBan, storeCountyReports } from "../county-decision";
 import { checkDeadline, evidenceInEffect } from "../../shared/evidence";
 export { STALE_MS } from "../county-decision";
 import type { Transition } from "../notification-message";
 import type { ActiveSource, Source } from "./types";
+import { reviewWindow } from "./statutory-fallback";
 
 export type SourceInput = {
   source: Pick<Source, "id" | "state" | "mode" | "product"> & Partial<Pick<ActiveSource, "scope" | "officialUrl" | "recurring" | "staleMs">>;
@@ -14,6 +15,7 @@ export type SourceInput = {
   staleMs?: number;
   error?: string;
   failedSince?: string;
+  ruleReview?: RuleReview;
   version?: string;
 };
 
@@ -35,15 +37,17 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
   const transitions: Transition[] = [];
   const recurring = new Set(inputs.filter((i) => i.source.recurring).map((i) => i.source.id));
 
-  for (const { source, rows, fireWeather: reports, checked, lastGood, staleMs = source.staleMs, error, failedSince, version } of inputs) {
+  for (const { source, rows, fireWeather: reports, checked, lastGood, staleMs: configured = source.staleMs, error,
+    failedSince, ruleReview, version } of inputs) {
     if (version) sourceVersions[source.id] = version;
     const mapped = new Set<string>();
     const bans = new Set<string>();
     const successful = lastGood ?? (error ? null : checked);
+    const staleMs = ruleReview ? reviewWindow(ruleReview) : configured;
     const attempted = source.mode !== "manual" && error !== "Awaiting first source refresh";
     const outage = error && attempted ? failedSince ?? checked : undefined;
     const health = { checked, lastAttemptedAt: attempted ? checked : null,
-      lastSuccessfulAt: successful, ok: !error, error, failedSince: outage, staleMs };
+      lastSuccessfulAt: successful, ok: !error, error, failedSince: outage, staleMs, ruleReview };
     const timing = { ...(staleMs === undefined ? {} : { staleMs }),
       ...(outage ? { sourceCheckFailed: true as const, sourceFailedSince: outage, lastAttemptedAt: checked } : {}) };
     if (source.product === "fire-weather") {
@@ -62,7 +66,7 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
         ended.add(value.fips);
         continue;
       }
-      const row: CountyStatus = { ...value, ...timing, checked: lastGood ?? value.checked ?? successful,
+      const row: CountyStatus = { ...value, ...timing, checked: ruleReview?.reviewedAt ?? lastGood ?? value.checked ?? successful,
         scope: value.scope ?? source.scope, sourceId: source.id };
       mapped.add(row.fips);
       if (row.status === "ban" && row.scope !== "part" && evidenceInEffect(row, clock)) bans.add(row.fips);

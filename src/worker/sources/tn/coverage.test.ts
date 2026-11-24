@@ -89,6 +89,24 @@ test("the Tennessee merge reports scoped restrictions and keeps uncovered county
   ]);
 });
 
+test("blocked Tennessee guidance keeps the reviewed statutory season and its local exceptions", async () => {
+  const fetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response("Forbidden", { status: 403 });
+  try {
+    const result = await tnSeasonalBurnPermits.fetch({ now: captured });
+    expect(result.fallback).toMatchObject({ reviewedAt: expect.stringContaining("2026-11-24"), reason: expect.stringContaining("403") });
+    expect(result.rows).toHaveLength(92);
+    expect(result.rows.find(({ fips }) => fips === "47001")).toMatchObject({
+      status: "restricted", note: expect.stringContaining("last reviewed"), validUntil: expect.any(String),
+    });
+    expect(result.rows.some(({ county }) => /Davidson|Knox|Shelby/.test(county))).toBe(false);
+    expect((await tnSeasonalBurnPermits.fetch({ now: new Date("2027-06-02T12:00Z") }).catch((err) => err)).message)
+      .toContain("review deadline");
+  } finally {
+    globalThis.fetch = fetch;
+  }
+});
+
 test("the real Tennessee JSON and calendar fixtures parse below 4 ms p95 thread CPU", async () => {
   const parse = async () => {
     holdsAt();

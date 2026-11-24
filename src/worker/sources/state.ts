@@ -1,12 +1,13 @@
 import { withReportDates } from "../report-dates";
 import { checkDeadline } from "../../shared/evidence";
-import type { CountyStatus, EvidenceTiming, FireWeatherReport, SnapshotData, StoredCountyStatus } from "../../shared/types";
+import type { CountyStatus, EvidenceTiming, FireWeatherReport, RuleReview, SnapshotData, StoredCountyStatus } from "../../shared/types";
 import { COUNTY_BY_FIPS, countiesInState } from "../counties";
 import type { Env } from "../env";
 import { sha256 } from "./lib/hash";
 import { BlockedError, type Validators } from "./lib/http";
 import type { SourceInput } from "./merge";
 import { SOURCES } from "./registry";
+import { reviewWindow } from "./statutory-fallback";
 import { isActive, type ActiveSource, type Source, type SourceResult } from "./types";
 
 type Health = {
@@ -14,6 +15,7 @@ type Health = {
   lastGood?: string;
   error?: string;
   failedSince?: string;
+  ruleReview?: RuleReview;
   blocked?: boolean;
   validators?: Validators;
   boundaries?: string[];
@@ -49,6 +51,10 @@ function normalize(source: ActiveSource, result: Exclude<SourceResult, { notModi
   }
   if (source.product === "fire-weather") throw new Error(`${source.id}: expected fire-weather reports`);
   const { rows } = result;
+  if (result.fallback && (!source.recurring || !Number.isFinite(reviewWindow(result.fallback)) ||
+      reviewWindow(result.fallback) <= 0 || rows.some(({ status }) => status === "none"))) {
+    throw new Error(`${source.id}: invalid statutory fallback`);
+  }
   if (source.mode === "full") {
     const expected = new Set(source.expectedFips ?? countiesInState(source.state).map(({ fips }) => fips));
     if (!expected.size || !rows.length) throw new Error(`${source.id}: full source returned no county roster`);
@@ -133,18 +139,25 @@ export async function pollSource(env: Env, source: ActiveSource, slot: number, n
   const previous = current ? loadHead(current) : undefined;
   const checked = now.toISOString();
   let hash = previous?.hash ?? null;
-  let health: Health = { checked, lastGood: previous?.lastGood, validators: previous?.validators, boundaries: previous?.boundaries };
+  let health: Health = { checked, lastGood: previous?.lastGood, validators: previous?.validators,
+    boundaries: previous?.boundaries, ruleReview: previous?.ruleReview };
   let incoming: ReturnType<typeof normalize> | undefined;
+  const failedSince = previous?.error ? previous.failedSince ?? previous.checked : checked;
 
   try {
     const result = await source.fetch({ now, validators: hash ? health.validators : undefined });
     if ("notModified" in result) {
       if (!hash) throw new Error("Source returned 304 before its first successful fetch");
     } else incoming = normalize(source, result);
-    health = { ...health, lastGood: checked, validators: result.validators };
+    if ("fallback" in result && result.fallback) {
+      const { reviewedAt, reviewBy, reason } = result.fallback;
+      health = { ...health, error: errorText(reason), failedSince, ruleReview: { reviewedAt, reviewBy }, validators: undefined };
+    } else {
+      health = { ...health, lastGood: checked, validators: result.validators, ruleReview: undefined };
+    }
   } catch (reason) {
     health.error = errorText(reason);
-    health.failedSince = previous?.error ? previous.failedSince ?? previous.checked : checked;
+    health.failedSince = failedSince;
     health.blocked = reason instanceof BlockedError;
     console.warn(`source ${source.id} failed: ${health.error}`);
   }
@@ -180,9 +193,11 @@ export function materialRevisions(sources: readonly Source[], heads: Map<string,
     if (!isActive(source)) return [...identity, source.error];
     if (source.product === "fire-weather" && weatherHashes && !weatherHashes.has(source.id)) return identity;
     if (!head) return [...identity, "pending"];
-    const stale = head.lastGood ? time >= checkDeadline(head.lastGood, source.staleMs) : false;
+    const stale = head.ruleReview ? time >= checkDeadline(head.ruleReview.reviewedAt, reviewWindow(head.ruleReview)) :
+      head.lastGood ? time >= checkDeadline(head.lastGood, source.staleMs) : false;
     const reached = head.boundaries?.filter((boundary) => Date.parse(boundary) <= time).length ?? 0;
-    return [...identity, weatherHashes?.get(source.id) ?? head.hash, head.error ? head.blocked ? "blocked" : "failed" : "ok", stale, reached];
+    return [...identity, weatherHashes?.get(source.id) ?? head.hash, head.ruleReview?.reviewBy,
+      head.error ? head.blocked ? "blocked" : "failed" : "ok", stale, reached];
   });
 }
 
@@ -238,8 +253,9 @@ export async function readSourceInputs(
     if (head.stored && source.product !== "fire-weather" && stored?.hash !== head.hash) {
       throw new Error(`D1 source revision missing: ${source.id}`);
     }
-    const lastGood = head.lastGood ?? head.checked;
+    const lastGood = head.lastGood ?? (head.ruleReview ? undefined : head.checked);
     inputs.push({ source, version: head.hash, checked: head.checked, lastGood, error: head.error, failedSince: head.failedSince,
+      ruleReview: head.ruleReview,
       staleMs: source.staleMs, ...("fireWeather" in data ? { rows: [], fireWeather: data.fireWeather } : { rows: data.rows }) });
   }
   return inputs;
@@ -258,11 +274,17 @@ export async function sourceInputs(sources: readonly Source[], prev: SnapshotDat
       if ("notModified" in result) throw new Error("Unexpected 304 without stored validators");
       const { field, serialized } = normalize(source, result);
       const data = JSON.parse(`{"${field}":[${serialized}]}`) as SourcePayload;
-      inputs.push({ source, checked, lastGood: checked, staleMs: source.staleMs,
+      const fallback = "fallback" in result ? result.fallback : undefined;
+      const last = prev?.sources.find(({ id }) => id === source.id);
+      const review = fallback && { reviewedAt: fallback.reviewedAt, reviewBy: fallback.reviewBy };
+      inputs.push({ source, checked, lastGood: fallback ? last?.lastSuccessfulAt ?? undefined : checked, staleMs: source.staleMs,
+        ruleReview: review, error: fallback?.reason,
+        failedSince: fallback && last && !last.ok ? last.failedSince ?? last.lastAttemptedAt ?? undefined : undefined,
         ...("fireWeather" in data ? { rows: [], fireWeather: data.fireWeather } : { rows: data.rows }) });
     } catch (reason) {
       const last = prev?.sources.find(({ id }) => id === source.id);
       inputs.push({ source, rows: fallback(source, prev), checked, error: errorText(reason), staleMs: source.staleMs,
+        ruleReview: last?.ruleReview, lastGood: last?.lastSuccessfulAt ?? undefined,
         failedSince: last && !last.ok ? last.failedSince ?? last.lastAttemptedAt ?? undefined : undefined });
     }
   }
@@ -278,6 +300,7 @@ export function applySourceChecks(sources: SnapshotData["sources"], heads: Map<s
     source.ok = !head.error;
     source.error = head.error;
     source.failedSince = head.error ? head.failedSince ?? head.checked : undefined;
+    source.ruleReview = head.ruleReview;
   }
 }
 
@@ -293,7 +316,7 @@ export function reportChecks(snapshot: Pick<SnapshotData, "sources" | "sourceVer
     if (cached) return cached;
     const head = heads.get(id);
     const source = health.get(id);
-    const latest = head?.hash && head.hash === snapshot.sourceVersions?.[id] ? head.lastGood : undefined;
+    const latest = head?.hash && !head.ruleReview && head.hash === snapshot.sourceVersions?.[id] ? head.lastGood : undefined;
     const failedAt = head
       ? head.error ? head.failedSince ?? head.checked : undefined
       : source && !source.ok ? source.failedSince ?? source.lastAttemptedAt ?? undefined : undefined;

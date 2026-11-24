@@ -80,6 +80,8 @@ export type FireWeatherReport = {
   orders?: Omit<FireWeatherOrder, "checked">[];
 };
 
+export type RuleReview = { reviewedAt: string; reviewBy: string };
+
 export type SourceHealth = {
   id: string; // "ok", "tx", ...
   state: string;
@@ -89,6 +91,7 @@ export type SourceHealth = {
   lastSuccessfulAt?: string | null;
   failedSince?: string;
   staleMs?: number;
+  ruleReview?: RuleReview;
   error?: string;
   counties: number; // distinct counties with a mapped report
   bans: number;

@@ -277,6 +277,30 @@ test("a positive-only issuer rescission survives normalization and does not send
   expect(box.alerts).toEqual([]);
 });
 
+test("a reviewed calendar fallback publishes evidence without recording a successful live check", async () => {
+  const box = sandbox();
+  const reviewedAt = new Date(initial - 7 * 86400_000).toISOString();
+  const reviewBy = new Date(nextHour + 2 * 3_600_000).toISOString();
+  const src = source("or-review", async ({ now }) => now.getTime() === initial
+    ? { rows: [row("restricted", now.toISOString())] }
+    : { rows: [row("restricted", now.toISOString(), { note: "Reviewed statutory rule" })],
+      fallback: { reviewedAt, reviewBy, reason: "Official site HTTP 520" } },
+  { mode: "positive-only", recurring: true });
+  await poll(box, src, initial);
+  await merge(box, [src], initial);
+  await poll(box, src, nextHour);
+  await merge(box, [src], nextHour);
+
+  const snapshot = box.snapshot();
+  const heads = await readHeads(box.env.DB);
+  expect(heads.get(src.id)).toMatchObject({ lastGood: new Date(initial).toISOString(), ruleReview: { reviewedAt, reviewBy } });
+  expect(snapshot.sources[0]).toMatchObject({ ok: false, error: "Official site HTTP 520", ruleReview: { reviewedAt, reviewBy } });
+  applyChecks(snapshot, heads, new Date(nextHour));
+  expect(statusFor(snapshot, "41039", nextHour)).toMatchObject({ status: "restricted", checked: reviewedAt, sourceCheckFailed: true });
+  expect(statusFor(snapshot, "41039", Date.parse(reviewBy)).status).toBe("unknown");
+  expect(box.alerts).toEqual([]);
+});
+
 test("journal handles KV and D1 interruption without duplicating a transition or alert run", async () => {
   const box = sandbox();
   let status = "none";

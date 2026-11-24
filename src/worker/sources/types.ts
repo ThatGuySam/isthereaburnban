@@ -1,4 +1,4 @@
-import type { CountyStatus, Coverage, FireWeatherReport, SourceHealth } from "../../shared/types";
+import type { CountyStatus, Coverage, FireWeatherReport, RuleReview, SourceHealth } from "../../shared/types";
 import type { Validators } from "./lib/http";
 
 export type Cadence =
@@ -20,7 +20,7 @@ type Metadata = {
 };
 
 export type SourceResult =
-  | { rows: CountyStatus[]; validators?: Validators }
+  | { rows: CountyStatus[]; validators?: Validators; fallback?: RuleReview & { reason: string } }
   | { fireWeather: FireWeatherReport[]; validators?: Validators }
   | { notModified: true; validators: Validators };
 

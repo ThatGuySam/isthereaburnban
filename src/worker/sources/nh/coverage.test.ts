@@ -54,6 +54,20 @@ test("NH rejects changed permit terms, order scope, identity and publisher dates
     .rejects.toThrow("order changed");
 });
 
+test("the reviewed NH law survives an HTTP outage and expires on its review date", async () => {
+  const fetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response("Origin temporarily unavailable", { status: 520 });
+  try {
+    const result = await nhOpenBurningPermits.fetch({ now });
+    expect(result.fallback).toMatchObject({ reviewedAt: expect.any(String), reason: expect.stringContaining("520") });
+    expect(result.rows).toHaveLength(10);
+    expect(result.rows[0]).toMatchObject({ status: "restricted", note: expect.stringContaining("last reviewed") });
+    await expect(nhOpenBurningPermits.fetch({ now: new Date(result.fallback.reviewBy) })).rejects.toThrow("review deadline");
+  } finally {
+    globalThis.fetch = fetch;
+  }
+});
+
 test("the USFS reader uses current alert cards and an absent or expired order stays unknown", async () => {
   const withoutOrder = listing.replace(/<li class="usa-card usa-card--flag wfs-alert-flag caution">(?:(?!<\/li>)[\s\S])*?Town Hall Road[\s\S]*?<\/li>/, "");
   const archiveLink = '<nav><a href="/r09/whitemountain/alerts/town-hall-road-camping-and-fire-restrictions">Town Hall Road</a></nav>';
