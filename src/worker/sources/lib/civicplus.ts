@@ -62,20 +62,23 @@ export async function civicPlusActiveAlerts(input: Response | string, pageUrl: s
   const header = '[id$="_divAlertCenterHeader"]';
   const card = '[id$="_categoriesUpdatePanel"] ol.alerts-list > li > .alert.on';
   const title = `${card} > h3 > a`;
+  const stamp = `${card} > .date`;
   const [heading, ...alerts] = await extractHtmlGrid(input, {
     row: `${header}, ${card}`,
-    cell: `${header} h1, ${title}, ${card} > p`,
+    cell: `${header} h1, ${stamp}, ${title}, ${card} > p`,
   });
   if (heading?.length !== 1 || heading[0].text !== "Alert Center") throw new Error("Expected a CivicEngage Alert Center");
   const page = new URL(pageUrl);
-  return alerts.map(([link, ...paragraphs]) => {
+  return alerts.map((cells) => {
+    const hasDate = cells[0]?.className.split(/\s+/).includes("date");
+    const [link, ...paragraphs] = hasDate ? cells.slice(1) : cells;
     const url = link?.href && new URL(link.href, page);
     const text = paragraphs.map((paragraph) => paragraph.text).filter(Boolean).join(" ");
     if (!url || url.origin !== page.origin || url.pathname !== page.pathname || !url.searchParams.get("AID") ||
         !link.text) {
       throw new Error("Unexpected CivicEngage Alert Center card");
     }
-    return { title: link.text, url: url.href, text };
+    return { title: link.text, url: url.href, text, published: hasDate ? cells[0].text : null };
   });
 }
 

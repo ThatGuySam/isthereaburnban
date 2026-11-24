@@ -417,9 +417,17 @@
       {
         "label": "Active burn bans dashboard",
         "url": "https://iowa.maps.arcgis.com/apps/dashboards/c22956334fd8435080ed851f549c5263"
+      },
+      {
+        "label": "Iowa DNR open-burning and permit rules",
+        "url": "https://www.iowadnr.gov/environmental-protection/air-quality/open-burning"
+      },
+      {
+        "label": "County emergency management contacts",
+        "url": "https://homelandsecurity.iowa.gov/resources/county-emergency-management"
       }
     ],
-    "notes": "The State Fire Marshal can issue area-specific proclamations at the request of a fire chief, city council or county board. We show listed active proclamations. Other county statuses stay unconfirmed."
+    "notes": "The State Fire Marshal can issue area-specific proclamations at the request of a fire chief, city council or county board. Some county bulletins confirm whether a countywide ban is in effect. Local burn rules and permit requirements can apply separately."
   },
   {
     "abbr": "KS",

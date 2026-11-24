@@ -66,11 +66,12 @@ function windowsOn(rule: CalendarRule, date: string) {
 }
 
 type CalendarPublisher = Pick<CountyStatus, "sourceName" | "sourceUrl"> & { id: string };
+export type CalendarCounty = { fips: string; name: string; scopeNote?: string; officialUrl?: string };
 
 /** Emit effective windows for mapped counties, with optional lookahead and published season dates. */
 export function calendarStatusRows(
   rule: CalendarRule,
-  counties: ReadonlyArray<{ fips: string; name: string; scopeNote?: string }>,
+  counties: readonly CalendarCounty[],
   publisher: CalendarPublisher,
   now: Date,
   { includeTomorrow = false, includeSeasonDates = false } = {},
@@ -92,9 +93,9 @@ export function calendarStatusRows(
       previous.validUntil = window.validUntil;
     } else if (window.validUntil > checked) windows.push(window);
   }
-  return windows.flatMap((window) => covered.map(({ fips, name, scopeNote: localScope }) => ({
+  return windows.flatMap((window) => covered.map(({ fips, name, scopeNote: localScope, officialUrl: localUrl }) => ({
     ...window, fips, county: name, state, status, label, note, scope, scopeNote: localScope ?? scopeNote,
-    sourceId, sourceName, sourceUrl, officialUrl, checked, sourceUpdated: null,
+    sourceId, sourceName, sourceUrl, officialUrl: localUrl ?? officialUrl, checked, sourceUpdated: null,
   })));
 }
 

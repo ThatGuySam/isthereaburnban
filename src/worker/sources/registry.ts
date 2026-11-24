@@ -28,6 +28,8 @@ import { gaLocalRuleSources } from "./ga/local-rules";
 import { gaPermitCalendars } from "./ga/permit-calendar";
 import { hiCabNoBurnPeriods } from "./hi/no-burn-periods";
 import { hiCabOpenBurning } from "./hi/open-burning";
+import { iaCountyBulletins } from "./ia/county-status";
+import { iaLocalCalendars } from "./ia/local-rules";
 import { idIdlStages } from "./id/idl-stages";
 import { idKootenaiAir } from "./id/kootenai-air";
 import { idSeasonal } from "./id/seasonal";
@@ -134,6 +136,8 @@ export const SOURCES: readonly Source[] = [
     },
   } satisfies ActiveSource)),
   nwsFireWeather,
+  ...iaCountyBulletins.map(({ source }) => source),
+  ...iaLocalCalendars.map(({ source }) => source),
   flMiamiDadeResidentialBurning,
   inIdemResidentialBurning,
   pfirs,

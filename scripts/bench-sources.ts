@@ -32,6 +32,8 @@ import { parseGwinnett } from "../src/worker/sources/ga/gwinnett";
 import { hinesvilleFormLink, parseHinesvilleClosure } from "../src/worker/sources/ga/hinesville";
 import { GA_LOCAL_RULES, gaLocalRuleKeys, gaLocalRuleSources, parseGaLocalRule } from "../src/worker/sources/ga/local-rules";
 import { parsePermitCalendar } from "../src/worker/sources/ga/permit-calendar";
+import { iaCountyBulletins } from "../src/worker/sources/ia/county-status";
+import { iaLocalCalendars } from "../src/worker/sources/ia/local-rules";
 import { idIdlStages, parseIdlStages } from "../src/worker/sources/id/idl-stages";
 import { idKootenaiAir, parseKootenaiAir } from "../src/worker/sources/id/kootenai-air";
 import { idSeasonal, parseIdahoSeasonal } from "../src/worker/sources/id/seasonal";
@@ -430,6 +432,22 @@ const parseNcOrderFixtures = async () => {
 };
 const parseNcPermitFixture = async () => parseNcPermits(await extractHtml(ncStatute), ncNow);
 const parseNcAirFixture = async () => parseNcAirHours(await extractHtml(ncDeq), ncNow);
+const iaCountyCaptured = new Date("2026-11-24T22:56:00Z");
+const iaCountyFixtures = [
+  ...iaCountyBulletins.map(({ source, parse }) => {
+    const county = source.id.replace(/^ia-|-ema$/g, "");
+    const body = utf8(`ia/fixtures/${county}-2026-11-24.html`);
+    return { source, parse: () => parse(body, iaCountyCaptured) };
+  }),
+  ...iaLocalCalendars.map(({ id, kind, source, parse }) => {
+    if (kind === "pdf-etag") {
+      const head: ResponseInit = JSON.parse(utf8(`ia/fixtures/rule-${id}-2026-11-24.json`));
+      return { source, parse: () => parse(new Response(null, head), iaCountyCaptured) };
+    }
+    const body = raw(`ia/fixtures/rule-${id}-2026-11-24.${kind}`);
+    return { source, parse: () => parse(new Response(body), iaCountyCaptured) };
+  }),
+];
 const moCaptured = new Date("2026-11-24T12:15:56Z");
 const moActive = utf8("mo/fixtures/show-me-fire-active-2026-11-24.json");
 const moSip = utf8("mo/fixtures/epa-sip-2026-11-24.html");
@@ -595,6 +613,9 @@ recordedInputs.push(
   { source: ncForestOrders, rows: [], checked: ncNow.toISOString() },
   { source: ncPermits, rows: await parseNcPermitFixture(), checked: ncNow.toISOString() },
   { source: ncAirHours, rows: await parseNcAirFixture(), checked: ncNow.toISOString() },
+  ...await Promise.all(iaCountyFixtures.map(async ({ source, parse }) => ({
+    source, rows: await parse(), checked: iaCountyCaptured.toISOString(),
+  }))),
   { source: moShowMeFireBans, rows: parseMoBansFixture(), checked: moCaptured.toISOString() },
   { source: moYardWaste, rows: await parseMoSipFixture(), checked: moCaptured.toISOString() },
   { source: moCapeGirardeau, rows: await parseMoCapeDay(), checked: moCountyCaptured.toISOString() },
@@ -712,6 +733,7 @@ const jobs: Array<[string, () => unknown]> = [
   ["NC Forest Service Drupal newsroom and three orders", parseNcOrderFixtures],
   ["NC woodland permits statute and calendar", parseNcPermitFixture],
   ["NC DEQ open-burning hours and calendar", parseNcAirFixture],
+  ...iaCountyFixtures.map(({ source, parse }): [string, typeof parse] => [source.id, parse]),
   ["MO Show Me Fire active county JSON", parseMoBansFixture],
   ["MO EPA SIP index, PDFs and calendar", parseMoSipFixture],
   ["MO Cape Girardeau daily Elementor notice", parseMoCapeDay],
