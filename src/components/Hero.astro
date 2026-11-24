@@ -1,0 +1,36 @@
+---
+import { heroStyle, renderCheckingHtml } from "../shared/render";
+
+interface Props {
+  /** "home" renders lookups in place; "county" navigates to the matching county page */
+  mode: "home" | "county";
+  fips?: string;
+  place?: string;
+}
+const { mode, fips, place } = Astro.props;
+---
+<main id="content" class="hero" data-hero data-mode={mode} data-status="checking" style={heroStyle("checking")}>
+  <div class="hero-inner">
+    <slot name="top" />
+    <div data-status-slot data-fips={fips} aria-live="polite" set:html={renderCheckingHtml(place)} />
+    <div class="choices" data-choices hidden></div>
+    <div class="tools">
+      <form class="zip-form" action="/" method="get" data-zip-form>
+        <label for="zip">Not here? Enter a ZIP</label>
+        <input id="zip" name="zip" inputmode="numeric" autocomplete="postal-code" pattern="[0-9]{5}" maxlength="5" placeholder="74103" required />
+        <button type="submit">Check</button>
+      </form>
+      <div class="chips">
+        <button type="button" class="chip" data-locate>Use my location</button>
+        <a class="chip" href="/map/">Pick on a map</a>
+        <button type="button" class="chip" data-alert-open data-fips={fips}>Alert me</button>
+      </div>
+      <p class="tools-msg" data-tools-msg aria-live="polite"></p>
+    </div>
+  </div>
+</main>
+
+<script>
+  import { initHero } from "../client/hero";
+  initHero();
+</script>

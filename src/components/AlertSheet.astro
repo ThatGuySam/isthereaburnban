@@ -1,0 +1,26 @@
+---
+---
+<dialog class="sheet" data-alert-sheet aria-labelledby="alert-title">
+  <form method="dialog" class="sheet-close"><button class="btn btn--ghost" aria-label="Close">✕</button></form>
+  <h2 id="alert-title">Alert me</h2>
+  <p>Get a heads-up when the burn ban status changes for <strong data-alert-place>this county</strong>.</p>
+
+  <h3>Browser notifications</h3>
+  <p class="hint" data-ios-hint hidden>On iPhone or iPad, tap Share → Add to Home Screen first, then open the app and turn this on.</p>
+  <button type="button" class="btn" data-push-btn>Turn on notifications</button>
+  <p class="sheet-msg" data-push-msg aria-live="polite"></p>
+
+  <h3>Email</h3>
+  <form data-email-form>
+    <label class="sr-only" for="alert-email">Email address</label>
+    <input id="alert-email" type="email" name="email" autocomplete="email" placeholder="you@example.com" required />
+    <button class="btn" type="submit">Email me</button>
+  </form>
+  <p class="sheet-msg" data-email-msg aria-live="polite"></p>
+  <p class="hint">We only email when the status changes. Every email has a one-click unsubscribe.</p>
+</dialog>
+
+<script>
+  import { initAlerts } from "../client/alerts";
+  initAlerts();
+</script>

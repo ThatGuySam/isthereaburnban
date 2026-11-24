@@ -1,0 +1,26 @@
+---
+import Base from "../../layouts/Base.astro";
+import { COVERAGE_LABEL, states, statePath } from "../../components/site-data";
+
+const groups = (["live", "restrictions", "directory"] as const).map((k) => ({ k, list: states.filter((s) => s.coverage === k) }));
+const blurb = {
+  live: "We read an official county-level burn ban feed and update about every hour.",
+  restrictions: "We link permit, fire-danger or land-manager restriction data. These aren't county burn bans, so we say \"Not sure\" rather than \"Nope\".",
+  directory: "No machine-readable feed yet. We link the official source.",
+};
+---
+<Base title="Coverage · Is There a Burn Ban?" description="Which states have live burn ban data, which have restrictions feeds, and the official source for every state." path="/us/" alerts={false}>
+  <main id="content" class="page">
+    <h1>Coverage</h1>
+    <p>There's no national burn ban feed. Here's what we can check in each state.</p>
+    {groups.map(({ k, list }) => (
+      <section>
+        <h2>{COVERAGE_LABEL[k]} ({list.length})</h2>
+        <p>{blurb[k]}</p>
+        <ul class="county-list">
+          {list.map((s) => <li><a href={statePath(s.abbr)}>{s.name}</a></li>)}
+        </ul>
+      </section>
+    ))}
+  </main>
+</Base>

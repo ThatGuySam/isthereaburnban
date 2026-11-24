@@ -1,0 +1,18 @@
+---
+import Base from "../layouts/Base.astro";
+import Hero from "../components/Hero.astro";
+import { SITE } from "../components/site-data";
+
+const jsonLd = [
+  { "@context": "https://schema.org", "@type": "WebSite", name: "Is There a Burn Ban?", url: `${SITE}/` },
+];
+---
+<Base
+  title="Is There a Burn Ban?"
+  description="Is there a burn ban where you are? One word answer for your county, with the official source and when we last checked."
+  path="/"
+  jsonLd={jsonLd}
+  themeColor="#767676"
+>
+  <Hero mode="home" />
+</Base>

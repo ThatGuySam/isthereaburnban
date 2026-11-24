@@ -1,0 +1,81 @@
+---
+import Base from "../../../layouts/Base.astro";
+import { SITE, COVERAGE_LABEL, countiesIn, countyPath, states, statePath } from "../../../components/site-data";
+import type { StateDirectoryEntry } from "../../../shared/types";
+
+export function getStaticPaths() {
+  return states.map((s) => ({ params: { st: s.abbr.toLowerCase() }, props: { s } }));
+}
+
+const { s } = Astro.props as { s: StateDirectoryEntry };
+const list = countiesIn(s.abbr);
+const unit = s.abbr === "LA" ? "parishes" : s.abbr === "AK" ? "boroughs and census areas" : "counties";
+const title = `Burn bans in ${s.name}`;
+const description = `Who issues burn bans in ${s.name}, the official source, and current status for all ${list.length} ${unit}.`;
+const jsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: `${SITE}/` },
+      { "@type": "ListItem", position: 2, name: "States", item: `${SITE}/us/` },
+      { "@type": "ListItem", position: 3, name: s.name, item: `${SITE}${statePath(s.abbr)}` },
+    ],
+  },
+];
+---
+<Base title={title} description={description} path={statePath(s.abbr)} jsonLd={jsonLd} alerts={false}>
+  <main id="content" class="page">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <ol>
+        <li><a href="/">Home</a></li>
+        <li><a href="/us/">States</a></li>
+        <li aria-current="page">{s.name}</li>
+      </ol>
+    </nav>
+    <h1>{title}</h1>
+    <p><span class={`badge badge--${s.coverage}`}>{COVERAGE_LABEL[s.coverage]}</span></p>
+
+    {s.coverage === "live" && (
+      <p data-ban-count data-state={s.abbr} aria-live="polite"><strong>Checking current bans…</strong></p>
+    )}
+    {s.coverage !== "live" && (
+      <p class="callout">We can't confirm county burn bans in {s.name} yet. Use the official source below.</p>
+    )}
+
+    <h2>Who issues bans</h2>
+    <p>{s.notes}</p>
+
+    <h2>Official source</h2>
+    <ul>
+      <li><a href={s.officialUrl} target="_blank" rel="noopener">{s.publisher} ↗</a></li>
+      {s.extraUrls?.map((x) => <li><a href={x.url} target="_blank" rel="noopener">{x.label} ↗</a></li>)}
+    </ul>
+
+    <h2>All {list.length} {unit}</h2>
+    <ul class="county-list">
+      {list.map((c) => <li><a href={countyPath(c)}>{c.name}</a></li>)}
+    </ul>
+  </main>
+</Base>
+
+<script>
+  const el = document.querySelector<HTMLElement>("[data-ban-count]");
+  if (el) {
+    fetch(`/api/v1/bans?state=${el.dataset.state}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((d: { counties: { status: string; county: string }[] }) => {
+        const bans = d.counties.filter((c) => c.status === "ban").length;
+        const restricted = d.counties.filter((c) => c.status === "restricted").length;
+        const parts = [`${bans} ${bans === 1 ? "county" : "counties"} under a burn ban right now`];
+        if (restricted) parts.push(`${restricted} with restrictions`);
+        el.innerHTML = "";
+        const strong = document.createElement("strong");
+        strong.textContent = parts.join(", ") + ".";
+        el.append(strong);
+      })
+      .catch(() => {
+        el.textContent = "Live counts are unavailable right now.";
+      });
+  }
+</script>

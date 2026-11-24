@@ -1,0 +1,54 @@
+---
+import "../styles/global.css";
+import Footer from "../components/Footer.astro";
+import AlertSheet from "../components/AlertSheet.astro";
+import { SITE } from "../components/site-data";
+
+interface Props {
+  title: string;
+  description: string;
+  /** path like /us/ok/ ; omit for pages that should not be canonicalized */
+  path?: string;
+  jsonLd?: Record<string, unknown>[];
+  /** data-ld key for the WebPage block so the Worker can inject dateModified */
+  noindex?: boolean;
+  alerts?: boolean;
+  themeColor?: string;
+}
+
+const { title, description, path, jsonLd = [], noindex = false, alerts = true, themeColor = "#2a9d70" } = Astro.props;
+const canonical = path ? new URL(path, SITE).href : undefined;
+const ld = (o: Record<string, unknown>) => JSON.stringify(o).replace(/</g, "\\u003c");
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {canonical && <link rel="canonical" href={canonical} />}
+    {noindex && <meta name="robots" content="noindex" />}
+    <meta name="theme-color" content={themeColor} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    {canonical && <meta property="og:url" content={canonical} />}
+    <meta property="og:image" content={new URL("/icons/icon-512.png", SITE).href} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&display=swap" />
+    {jsonLd.map((o) => <script type="application/ld+json" data-ld={String(o["@type"])} set:html={ld(o)} />)}
+    <slot name="head" />
+  </head>
+  <body>
+    <a class="skip" href="#content">Skip to content</a>
+    <slot />
+    <Footer />
+    {alerts && <AlertSheet />}
+  </body>
+</html>

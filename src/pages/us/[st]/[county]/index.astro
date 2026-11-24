@@ -1,0 +1,112 @@
+---
+import Base from "../../../../layouts/Base.astro";
+import Hero from "../../../../components/Hero.astro";
+import {
+  SITE,
+  COVERAGE_LABEL,
+  counties,
+  countyNeighbors,
+  countyPath,
+  stateByAbbr,
+  statePath,
+  type County,
+} from "../../../../components/site-data";
+
+export function getStaticPaths() {
+  return counties.map((c) => ({ params: { st: c.state.toLowerCase(), county: c.slug }, props: { c } }));
+}
+
+const { c } = Astro.props as { c: County };
+const state = stateByAbbr[c.state];
+const stateName = state?.name ?? c.state;
+const place = `${c.name}, ${c.state}`;
+const path = countyPath(c);
+const url = `${SITE}${path}`;
+const neighbors = countyNeighbors(c.fips);
+const title = `Is there a burn ban in ${place}?`;
+const description = `Current burn ban status for ${c.name}, ${stateName}, with the official source${state ? ` (${state.publisher})` : ""} and when it last changed.`;
+
+const jsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: `${SITE}/` },
+      { "@type": "ListItem", position: 2, name: "States", item: `${SITE}/us/` },
+      { "@type": "ListItem", position: 3, name: stateName, item: `${SITE}${statePath(c.state)}` },
+      { "@type": "ListItem", position: 4, name: c.name, item: url },
+    ],
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name: title,
+    url,
+    description,
+    isPartOf: { "@type": "WebSite", name: "Is There a Burn Ban?", url: `${SITE}/` },
+    about: { "@type": "AdministrativeArea", name: `${c.name}, ${stateName}`, identifier: c.fips },
+  },
+];
+---
+<Base title={title} description={description} path={path} jsonLd={jsonLd}>
+  <Hero mode="county" fips={c.fips} place={place}>
+    <Fragment slot="top">
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="/">Home</a></li>
+          <li><a href={statePath(c.state)}>{stateName}</a></li>
+          <li aria-current="page">{c.name}</li>
+        </ol>
+      </nav>
+      <h1 class="hero-question">{title}</h1>
+    </Fragment>
+  </Hero>
+
+  <div class="page">
+    {state && (
+      <section>
+        <h2>Official source</h2>
+        <p>
+          <a href={state.officialUrl} target="_blank" rel="noopener">{state.publisher} ↗</a>
+          {" "}<span class={`badge badge--${state.coverage}`}>{COVERAGE_LABEL[state.coverage]}</span>
+        </p>
+        {state.extraUrls?.length ? (
+          <ul>
+            {state.extraUrls.map((x) => <li><a href={x.url} target="_blank" rel="noopener">{x.label} ↗</a></li>)}
+          </ul>
+        ) : null}
+      </section>
+    )}
+
+    <section>
+      <h2>Who issues burn bans in {stateName}</h2>
+      <p>{state?.notes ?? "Burn bans are set by state and local authorities. Check with your county emergency manager or fire department."}</p>
+      {state?.coverage !== "live" && (
+        <p class="callout">We don't have a live county feed for {stateName} yet, so this page can't confirm whether {c.name} has a ban. Use the official source above.</p>
+      )}
+    </section>
+
+    {neighbors.length > 0 && (
+      <section>
+        <h2>Neighboring counties</h2>
+        <ul class="inline-list">
+          {neighbors.map((n) => (
+            <li><a href={countyPath(n)}>{n.name}{n.state !== c.state ? `, ${n.state}` : ""}</a></li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    <section>
+      <h2>How to check</h2>
+      <p>
+        The answer above comes from the official source for {stateName} and shows when we last checked it.
+        Burn bans can start or end the same day, and county bans often cover only unincorporated areas,
+        so cities may have their own rules. Before you burn, confirm with the official source, your local
+        fire department or the {c.name} emergency manager.
+      </p>
+    </section>
+
+    <p><a href={statePath(c.state)}>All {stateName} counties →</a></p>
+  </div>
+</Base>
