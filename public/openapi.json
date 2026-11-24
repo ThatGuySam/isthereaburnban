@@ -3,7 +3,17 @@
   "info": {
     "title": "Is There a Burn Ban? API",
     "version": "1.1.0",
-    "description": "County burn status and National Weather Service fire-weather alerts, refreshed hourly. Informational only. Confirm restrictions with the official authority before burning."
+    "description": "County burn status and National Weather Service fire-weather alerts, refreshed hourly. Informational only. Confirm restrictions with the official authority before burning.",
+    "termsOfService": "https://isthereaburnban.com/terms/",
+    "contact": {
+      "name": "Is There a Burn Ban?",
+      "url": "https://isthereaburnban.com/developers/",
+      "email": "hello@isthereaburnban.com"
+    },
+    "license": {
+      "name": "Facts summarized from public agencies; attribute and link each source. See terms.",
+      "url": "https://isthereaburnban.com/terms/"
+    }
   },
   "servers": [
     {
@@ -773,5 +783,9 @@
         }
       }
     }
+  },
+  "externalDocs": {
+    "description": "Dataset description, sources and attribution",
+    "url": "https://isthereaburnban.com/data/"
   }
 }
