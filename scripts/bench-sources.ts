@@ -107,6 +107,8 @@ import { neLincolnLancasterAir, parseNeLincolnAir } from "../src/worker/sources/
 import { neOpenBurningLaw, parseNeOpenBurning } from "../src/worker/sources/ne/open-burning";
 import { nhOpenBurningPermits, parseNhOpenBurning } from "../src/worker/sources/nh/open-burning";
 import { nhTownHallRoad, parseTownHallRoad } from "../src/worker/sources/nh/town-hall-road";
+import { parseRiDemRule, riDemForest, riDemParks } from "../src/worker/sources/ri/dem-rules";
+import { parseRiTownRule, riTownSources } from "../src/worker/sources/ri/town-rules";
 
 const sourceUrl = new URL("../src/worker/sources/", import.meta.url);
 const from = (path: string) => readFileSync(new URL(path, sourceUrl));
@@ -208,6 +210,22 @@ const neStatute = utf8("ne/fixtures/statute-81-520-01-2026-11-24.html");
 const neLincolnAir = utf8("ne/fixtures/lincoln-air-2026-11-24.html");
 const parseNeStatuteFixture = () => parseNeOpenBurning(neStatute, neStatuteCaptured);
 const parseNeLincolnFixture = () => parseNeLincolnAir(neLincolnAir, neLincolnCaptured);
+
+const riCaptured = new Date("2026-11-24T16:46:44Z");
+const riSpring = new Date("2027-04-01T14:00:00Z");
+const riFixture = (name: string) => utf8(`ri/fixtures/${name}-2026-11-24.html`);
+const riForest = riFixture("rules-forest");
+const riParks = riFixture("rules-parks");
+const riNarragansett = riFixture("narragansett");
+const riNorthKingstown = riFixture("northkingstown");
+const riSouthKingstown = riFixture("southkingstown");
+const riJobs = [
+  ["RI DEM forest-fire rules", riDemForest, (at: Date) => parseRiDemRule(riForest, at, "forest")],
+  ["RI DEM state park fire rules", riDemParks, (at: Date) => parseRiDemRule(riParks, at, "parks")],
+  ["RI Narragansett CivicPlus rules", riTownSources.narragansett, (at: Date) => parseRiTownRule(riNarragansett, at, "narragansett")],
+  ["RI North Kingstown CivicPlus rules", riTownSources.northkingstown, (at: Date) => parseRiTownRule(riNorthKingstown, at, "northkingstown")],
+  ["RI South Kingstown CivicPlus rules", riTownSources.southkingstown, (at: Date) => parseRiTownRule(riSouthKingstown, at, "southkingstown")],
+] as const;
 
 const parseNwsLive = () => parseNwsAlerts(JSON.parse(nwsLive), nwsCaptured);
 const parseNwsArchive = () => parseNwsAlerts(JSON.parse(nwsArchive), new Date("2026-11-18T20:00Z"), { archive: true });
@@ -463,6 +481,9 @@ recordedInputs.push(
   { source: nhTownHallRoad, rows: await parseNhForestFixture(), checked: nhCaptured.toISOString() },
   { source: neOpenBurningLaw, rows: await parseNeStatuteFixture(), checked: neStatuteCaptured.toISOString() },
   { source: neLincolnLancasterAir, rows: await parseNeLincolnFixture(), checked: neLincolnCaptured.toISOString() },
+  ...await Promise.all(riJobs.map(async ([, source, parse]) => ({
+    source, rows: await parse(riCaptured), checked: riCaptured.toISOString(),
+  }))),
   { source: ohSeasonal, rows: await parseOhFixture(), checked },
   { source: gaEpdNonSummer, rows: await parseGaNonSummerFixture(), checked },
   { source: azPimaWildfire, rows: await parseAzPimaFixture(), checked },
@@ -550,6 +571,7 @@ const jobs: Array<[string, () => unknown]> = [
   ["NH White Mountain Drupal forest order", parseNhForestFixture],
   ["NE open-burning statute and calendar", parseNeStatuteFixture],
   ["NE Lincoln-Lancaster open-burning rules and calendar", parseNeLincolnFixture],
+  ...riJobs.map(([name, , parse]): [string, () => unknown] => [name, () => parse(riSpring)]),
   ["CivicPlus News Flash", () => civicPlusNotices(parseHtml(placer, { links: true }), "https://www.placer.ca.gov/")],
   ["ASP.NET WebForms", () => webFormsPost(michigan, "https://www2.dnr.state.mi.us/burnpermits/", "ctl00$ContentPlaceHolder1$CntyName")],
   ["SharePoint list", () => sharePointListItems(parseHtml(kentucky), /current burn bans/i)],

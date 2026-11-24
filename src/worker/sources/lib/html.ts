@@ -249,13 +249,17 @@ export async function matchesReviewedHtmlSection(blocks: Block[], heading: RegEx
   return section.length > 0 && await sha256(section.map(({ text }) => text).join("\n")) === fingerprint;
 }
 
-/** Read a numbered section in legacy rulebooks that mark their headings as paragraphs. */
-export function numberedRuleSection({ blocks }: HtmlParts, section: string): string[] {
+/** Read a numbered section whose heading is published as a paragraph. */
+export function numberedRuleSection(
+  { blocks }: HtmlParts, section: string, { compact = false } = {},
+): string[] {
   if (!/^\d+(?:\.\d+)+$/.test(section)) throw new Error("Invalid rule section number");
   const chapter = section.slice(0, section.lastIndexOf(".")).replaceAll(".", "\\.");
-  const heading = new RegExp(`^${chapter}\\.\\d+\\s+[A-Z][A-Z0-9 ;()/–-]+:`);
+  const title = compact ? "\\s*[A-Z]" : "\\s+[A-Z][A-Z0-9 ;()/–-]+:";
+  const heading = new RegExp(`^${chapter}\\.\\d+${title}`);
+  const target = new RegExp(`^${section.replaceAll(".", "\\.")}${title}`);
   const paragraphs = blocks.filter(({ tag }) => tag === "p").map(({ text }) => text);
-  const matches = (text: string) => text.startsWith(section + " ") && heading.test(text);
+  const matches = (text: string) => target.test(text);
   const start = paragraphs.findIndex(matches);
   if (start < 0 || paragraphs.findLastIndex(matches) !== start) return [];
   const end = paragraphs.findIndex((text, index) => index > start && heading.test(text));

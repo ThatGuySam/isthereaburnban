@@ -983,10 +983,20 @@
   {
     "abbr": "RI",
     "name": "Rhode Island",
-    "coverage": "directory",
-    "publisher": "Rhode Island DEM",
+    "coverage": "restrictions",
+    "publisher": "Rhode Island DEM and local fire authorities",
     "officialUrl": "https://dem.ri.gov/ri-wildfire-danger-status",
-    "notes": "Rhode Island DEM can ban fires on state land, and towns set their own rules."
+    "extraUrls": [
+      { "label": "State forest-fire and burning rules", "url": "https://rules.sos.ri.gov/regulations/part/250-70-00-2" },
+      { "label": "State park and management area fire rules", "url": "https://rules.sos.ri.gov/regulations/Part/250-100-00-7" },
+      { "label": "State parks and campground contacts", "url": "https://riparks.ri.gov/contact" },
+      { "label": "State air-quality rules for open fires", "url": "https://rules.sos.ri.gov/regulations/part/250-120-05-4" },
+      { "label": "Local fire departments and districts", "url": "https://fire-marshal.ri.gov/ri-fire-departments" },
+      { "label": "Narragansett open-burning rules", "url": "https://www.narragansettri.gov/610/Open-Burning-Laws" },
+      { "label": "North Kingstown open-burning rules", "url": "https://www.northkingstownri.gov/172/Outdoor-Burning" },
+      { "label": "South Kingstown burn permits", "url": "https://www.southkingstownri.gov/1206/Burn-Permits" }
+    ],
+    "notes": "Rhode Island requires written permits for covered burning on state property or on or near forest land. State parks have separate fire rules. The Governor and DEM have emergency powers, and towns and fire districts set local rules. We track standing state rules and the published rules for Narragansett, North Kingstown and South Kingstown. Ask your local fire department or land manager about temporary orders and permits for your site."
   },
   {
     "abbr": "SC",

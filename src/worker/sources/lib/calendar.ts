@@ -3,7 +3,7 @@ import { atLocalTime, localClock, localDayWindow, shiftDay, US_ZONES } from "./d
 
 // Inventory: Alabama and Jefferson County open burning, Alaska burn permits and winter air rules, AZ Area A, Idaho and Utah closed fire seasons, NY DEC Open Burning, GA EPD Summer Open Burning Ban, KY fire hazard seasons, OH DNR Open Burning Regulations,
 // PA state forest fires, VA DOF 4 PM Burning Law, WV Forestry Fire Burning Guidelines, MD DNR Burning Guidance,
-// ME, NE, NH and VT open-burning permits, DE open burning, and MA residential brush burning.
+// ME, NE, NH, RI and VT open-burning rules, DE open burning, and MA residential brush burning.
 export type CalendarRule = {
   state: string;
   officialUrl: string;
@@ -331,6 +331,36 @@ export const CALENDAR_RULES: Record<string, CalendarRule> = {
     officialUrl: "https://gc.nh.gov/rsa/html/XIX-A/227-L/227-L-17.htm",
     label: "Permit required for covered open burning",
     note: "New Hampshire generally requires permission from the local forest fire warden for open burning. The law has exceptions for snow cover, certain camp or picnic sites, and other limited situations. Ask the warden about current permit availability, burn hours, and local restrictions.",
+  },
+  RI_FOREST: {
+    state: "RI", zone: US_ZONES.Eastern, status: "restricted", scope: "part",
+    scopeNote: "State property and land on or next to forests, subject to the forest-fire rules",
+    officialUrl: "https://rules.sos.ri.gov/regulations/part/250-70-00-2",
+    label: "Written permit required for covered open burning",
+    note: "Rhode Island requires a written permit for covered open burning on state property or on or next to forest land. State law provides exceptions, including for certain attended or fire-department-supervised fires. Ask the local fire department or land manager about permits and temporary orders for the site.",
+  },
+  RI_FOREST_SPRING: {
+    state: "RI", zone: US_ZONES.Eastern, status: "restricted", scope: "state",
+    scopeNote: "Outdoor rubbish burners, incinerators and outdoor fireplaces",
+    officialUrl: "https://rules.sos.ri.gov/regulations/part/250-70-00-2",
+    label: "Spring daytime limits on outdoor burners and fireplaces",
+    seasons: [["03-15", "05-15"]], hours: [600, 1020],
+    note: "From March 15 through May 15, the forest-fire rule restricts burning in these devices from 10 a.m. to 5 p.m. Eastern. The rule makes exceptions for rain, snow cover or a written permit. Other state and local rules can still apply.",
+  },
+  RI_PARKS: {
+    state: "RI", zone: US_ZONES.Eastern, status: "restricted", scope: "part",
+    scopeNote: "DEM-managed state parks and conservation management areas",
+    officialUrl: "https://rules.sos.ri.gov/regulations/Part/250-100-00-7",
+    label: "Open fires limited to designated areas or written permission",
+    note: "DEM limits open fires, including charcoal fires, to designated areas or sites with official written permission. Check with the park or campground for any temporary restrictions.",
+  },
+  RI_PARKS_SPRING: {
+    state: "RI", zone: US_ZONES.Eastern, status: "restricted", scope: "part",
+    scopeNote: "DEM-managed state parks and conservation management areas",
+    officialUrl: "https://rules.sos.ri.gov/regulations/Part/250-100-00-7",
+    label: "Spring daytime permit required for open fires",
+    seasons: [["03-15", "05-15"]], hours: [600, 1020],
+    note: "From March 15 through May 15, the local fire department must issue a permit for open fires from 10 a.m. to 5 p.m. Eastern in areas covered by the state park rules. Check with the park or campground for current conditions.",
   },
   OH: {
     state: "OH", zone: US_ZONES.Eastern, status: "restricted", scope: "part", scopeNote: "Unincorporated areas outside railroad-controlled land",

@@ -68,6 +68,8 @@ import { orOdfPublicUse } from "./or/odf";
 import { orWillametteBackyard } from "./or/willamette";
 import { paCarrollValley } from "./pa/carroll-valley";
 import { paStateForestSpring } from "./pa/seasonal";
+import { riDemForest, riDemParks } from "./ri/dem-rules";
+import { riTownSources } from "./ri/town-rules";
 import { scAirQuality } from "./sc/air-quality";
 import { scfcDebris } from "./sc/debris";
 import { tnForestryPermitHolds } from "./tn/permit-holds";
@@ -205,6 +207,16 @@ export const SOURCES: readonly Source[] = [
   nhTownHallRoad,
   neOpenBurningLaw,
   neLincolnLancasterAir,
+  riDemForest,
+  riDemParks,
+  ...Object.values(riTownSources),
+  {
+    id: "ri-dem-temporary-fire-orders", state: "RI", scope: "part", stack: "Drupal / HTML notices and RSS",
+    mode: "manual", cadence: null, sourceName: "Rhode Island DEM",
+    sourceUrl: "https://dem.ri.gov/press-releases",
+    officialUrl: "https://dem.ri.gov/ri-wildfire-danger-status",
+    error: "DEM publishes individual orders and general wildfire guidance. Ask the land manager for current fire restrictions at a specific site.",
+  },
   {
     id: "ne-governor-burn-orders", state: "NE", scope: "state", stack: "IIS / HTML index and signed PDFs",
     mode: "manual", cadence: null, sourceName: "Nebraska Governor's Office and State Publications",

@@ -67,6 +67,16 @@ test("legacy number headings isolate a complete, unique rule section", async () 
   expect(numberedRuleSection(await extractHtml(first + first + next), "20.2.60.2")).toEqual([]);
 });
 
+test("compact number headings separate adjacent sections and preserve nested clauses", async () => {
+  const first = "<p><span>7.1</span><span>Fires</span></p><p>7.1.1Local permits</p><p>Permit required.</p>";
+  const next = "<p>7.10 Other Rules</p><p>Other text.</p>";
+  const read = async (html) => numberedRuleSection(await extractHtml(html), "7.1", { compact: true });
+  expect(await read(first + next)).toEqual(["7.1Fires", "7.1.1Local permits", "Permit required."]);
+  expect(await read(first + first + next)).toEqual([]);
+  expect(await read(first)).toEqual([]);
+  expect(await read(next)).toEqual([]);
+});
+
 test("classic CivicPlus page paragraphs exclude sidebars and require the expected title", async () => {
   const widget = (text) => `<div class="pageContent"><div class="widgetText"><div class="textContent"><p>${text}</p></div></div></div>`;
   const markup = '<div id="moduleContent"><div id="page"><h1 id="versionHeadLine">Fire Rules</h1>' +
