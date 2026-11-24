@@ -186,6 +186,12 @@ const coverage = Object.fromEntries(
 <script>
   import { bindSheetTriggers } from "../../client/place";
   bindSheetTriggers();
+  // Legend starts open where there's room (before the map fits the country around it).
+  if (matchMedia("(min-width: 48rem)").matches) {
+    document.querySelector("[data-legend]")?.classList.add("is-open");
+    document.querySelector("[data-legend]")?.removeAttribute("inert");
+    document.querySelector("[data-legend-toggle]")?.setAttribute("aria-expanded", "true");
+  }
   // iOS Safari: a pinch that starts on the chrome would zoom the page. The map handles its own pinch.
   document.addEventListener("gesturestart", (e) => e.preventDefault(), { passive: false });
   // MapLibre + geometry load only on this page. The map is the page, so start right away.

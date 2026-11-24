@@ -252,7 +252,9 @@ export async function initMap(): Promise<void> {
   function chromePadding() {
     const h = host.clientHeight;
     const head = document.querySelector(".map-head")?.getBoundingClientRect().bottom ?? 60;
-    const bar = document.querySelector(".map-controls")?.getBoundingClientRect().top ?? h - 60;
+    // The legend starts open on wide screens; keep the country clear of it.
+    const legendOpen = document.querySelector(".map-legend.is-open");
+    const bar = (legendOpen ?? document.querySelector(".map-controls"))?.getBoundingClientRect().top ?? h - 60;
     return { top: head + 12, bottom: Math.max(12, h - bar + 12), left: 12, right: 12 };
   }
 
@@ -351,7 +353,6 @@ export async function initMap(): Promise<void> {
     legend.inert = !open;
     legendBtn.setAttribute("aria-expanded", String(open));
   }
-  setLegend(matchMedia("(min-width: 48rem)").matches);
   legendBtn.addEventListener("click", () => setLegend(!legend.classList.contains("is-open")));
 
   document.querySelectorAll<HTMLButtonElement>("[data-zoom]").forEach((b) =>
