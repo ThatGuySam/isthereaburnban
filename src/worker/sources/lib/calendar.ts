@@ -98,7 +98,7 @@ export function calendarStatusRows(
   })));
 }
 
-function ruleCoversCounty(rule: CalendarRule, county?: string) {
+export function ruleCoversCounty(rule: CalendarRule, county?: string) {
   return !rule.counties || (county !== undefined && rule.counties.has(county.replace(/\s+County$/i, "").toLowerCase()));
 }
 
@@ -194,6 +194,22 @@ export const CALENDAR_RULES: Record<string, CalendarRule> = {
     officialUrl: "https://legislature.idaho.gov/statutesrules/idstat/Title38/T38CH1/SECT38-115/",
     label: "Closed fire season permit requirement", seasons: [["05-10", "10-20"]],
     note: "Idaho generally requires a fire-safety permit for outdoor burning outside city limits from May 10 through October 20. Campfires are generally exempt from the permit requirement. Districts can extend the season or suspend permits and campfires. Check local and air-quality rules as well.",
+  },
+  KS: {
+    state: "KS", zone: US_ZONES.Central, status: "restricted", scope: "state",
+    scopeNote: "Open burning subject to Kansas air-quality regulations",
+    officialUrl: "https://www.epa.gov/air-quality-implementation-plans/kansas-sip-open-burning-restrictions",
+    label: "Kansas open-burning limits",
+    note: "Kansas air-quality rules limit open burning to listed exceptions or approved activities. Qualifying residential, recreational and agricultural fires have separate conditions. Check with your local fire authority for current orders and permit requirements.",
+  },
+  KS_APRIL: {
+    state: "KS", zone: US_ZONES.Central, status: "restricted", scope: "county",
+    scopeNote: "Open burning covered by Kansas's April smoke-management rule",
+    officialUrl: "https://ksfire.org/regulations/",
+    label: "Kansas April open-burning restrictions", seasons: [["04-01", "04-30"]],
+    counties: new Set(["butler", "chase", "chautauqua", "cowley", "elk", "geary", "greenwood", "johnson", "lyon",
+      "marion", "morris", "pottawatomie", "riley", "sedgwick", "wabaunsee", "wyandotte"]),
+    note: "Kansas limits open burning here during April. Qualifying pasture, range and Conservation Reserve Program burns and certain residential, cooking and ceremonial fires have exceptions. Land-clearing and construction debris in Johnson, Sedgwick and Wyandotte counties require local approval. Check with the local fire authority for stricter limits and permits.",
   },
   KY: {
     state: "KY", zone: US_ZONES.Eastern, status: "restricted", scope: "part",

@@ -38,7 +38,7 @@ Give each town, city, fire or air district, tribal authority, or land manager a 
 | Inventory stack or shape | Shared helper | Sources and use |
 | --- | --- | --- |
 | Every HTTP publisher | `http.ts` | User agent, deadlines, bounded bodies, validators, retry backoff, and typed access blocks |
-| FeatureServer and MapServer | `arcgis.ts` | OK, TX, FL, IN, LA, IA, NJDEP divisions, ODF regulated-use areas, AK permit zones, ND declarations, and WY county layers. Read coded domains, edit stamps, and all pages. |
+| FeatureServer and MapServer | `arcgis.ts` | OK, TX, FL, IN, LA, IA, NJDEP divisions, ODF regulated-use areas, AK permit zones, ND declarations, WY county layers and Dickinson County, KS fire districts. Read coded domains or subtypes, edit stamps, and all pages. |
 | Dashboard, Experience, WebMap | `arcgis.ts` | Southwest interagency Experience, Florida and Montana dashboards. Follow item data to operational layers and select the layers that establish status. |
 | CivicPlus/CivicEngage, Granicus and municipal portals | `civicplus.ts`, `html.ts` | Pima, Angel Fire, Placer and Greenwich notices, Puget Sound status table, Boulder govDelivery. Pair issue and lift notices by authority and effective date. |
 | WordPress | `wordpress.ts`, `html.ts` | Faulkner homepage and REST search, Mississippi Ninja Tables, WV Forestry and SC Forestry. Check that the REST content type actually carries status. |
@@ -48,7 +48,7 @@ Give each town, city, fire or air district, tribal authority, or land manager a 
 | JSON, GeoJSON, CSV, RSS and Atom | `feeds.ts`, `dates.ts` | Wisconsin DNR, Texas UTF-16 RSS, Maine class days, Minnesota CGI, Idaho DEQ, Tennessee fiResponse. Verify the schema, date and explicit codes. |
 | EPA AirNow reporting area file | `airnow.ts`, `dates.ts` | Delaware Action Days. Use the issuing agency's dated forecast and explicit Action Day flag. Map reporting areas to their verified scope. |
 | PDF, signed order, map or workbook | `pdf.ts` for PDFs | Pennsylvania DCNR, Faulkner orders, Missouri SEMA. The manual PDF helper records Last-Modified and SHA-256. Use publisher HTML or a structured export for automated status. XLSX needs its own implementation and timing. |
-| Statute or standing seasonal rule | `calendar.ts`, `dates.ts` | NY brush, GA EPD's 54 counties, OH unincorporated areas, VA 4 p.m., WV fire seasons, and MD woodland limits. The presets are available for future state registrations. |
+| Statute or standing seasonal rule | `calendar.ts`, `dates.ts` | NY brush, GA EPD's 54 counties, OH unincorporated areas, VA 4 p.m., WV fire seasons, MD woodland limits and KS April limits. The presets are available for future state registrations. |
 | Forecast or hazard tied to an explicit rule | `feeds.ts` or `arcgis.ts` plus the issuer's rule | ND declaration triggers, Maine town permits. Forecast alone is context. Federal and tribal supplements use their own scope. |
 
 ### National fire weather

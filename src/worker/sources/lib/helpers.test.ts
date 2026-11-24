@@ -2,7 +2,7 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { syncfusionGridRows, webFormsPost } from "./aspnet";
-import { arcgisDateOnly, arcgisDistinctUrl, arcgisEditWindow, arcgisLocalDate, arcgisRows, arcgisTimestampOffset, codedDomains, dataLastEditDate, findOperationalLayers, queryArcgis } from "./arcgis";
+import { arcgisDateOnly, arcgisDistinctUrl, arcgisEditWindow, arcgisLocalDate, arcgisRows, arcgisTimestampOffset, codedDomains, codedSubtypes, dataLastEditDate, findOperationalLayers, queryArcgis } from "./arcgis";
 import { activeRule, calendarDayWindows, calendarStatusRows, CALENDAR_RULES } from "./calendar";
 import { civicPlusAlertDetails, civicPlusNotices, civicPlusPageParagraphs, civicPlusPageText, civicPlusUrl } from "./civicplus";
 import { localDayWindow, parseLocalIsoTimestamp, parseWeekdayDate, reportWindow, weekdayOnOrAfter } from "./dates";
@@ -215,6 +215,14 @@ test("ArcGIS distinct queries request only unique attribute combinations", () =>
   expect(Object.fromEntries(url.searchParams)).toEqual({
     where: "State = 'WY'", outFields: "Owner,Status", returnGeometry: "false", f: "json", returnDistinctValues: "true",
   });
+});
+
+test("ArcGIS subtype names come from the specified type field and require unique codes", () => {
+  const types = [{ id: 1, name: "Open" }, { id: 2, name: "Closed" }];
+  expect(codedSubtypes({ typeIdField: "state", types }, "state")).toEqual(new Map([[1, "Open"], [2, "Closed"]]));
+  expect(codedSubtypes({ typeIdField: "other", types }, "state")).toBeUndefined();
+  expect(codedSubtypes({ typeIdField: "state" }, "state")).toBeUndefined();
+  expect(() => codedSubtypes({ typeIdField: "state", types: [...types, types[0]] }, "state")).toThrow("Duplicate ArcGIS subtype code");
 });
 
 test("legacy .NET JSON dates preserve the UTC instant regardless of the optional offset", () => {

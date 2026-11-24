@@ -34,6 +34,8 @@ import { idKootenaiAir, parseKootenaiAir } from "../src/worker/sources/id/kooten
 import { idSeasonal, parseIdahoSeasonal } from "../src/worker/sources/id/seasonal";
 import { ilCrawfordCountyOrders, parseCrawfordCountyOrders } from "../src/worker/sources/il/crawford";
 import { illinoisGuidanceSources, parseIllinoisGuidance } from "../src/worker/sources/il/guidance";
+import { ksDickinsonDistricts, parseDickinsonDistricts } from "../src/worker/sources/ks/dickinson";
+import { ksAprilBurning, ksFranklinPermits, ksOpenBurning, parseFranklinPermits, parseKansasApril, parseKansasOpenBurning } from "../src/worker/sources/ks/open-burning";
 import { kyForestryCountyBans, parseKentuckyCountyBans } from "../src/worker/sources/ky/county-bans";
 import { kySeasonal, parseKentuckySeasonal } from "../src/worker/sources/ky/seasonal";
 import { arcgisRows, codedDomains, dataLastEditDate, findOperationalLayers } from "../src/worker/sources/lib/arcgis";
@@ -170,6 +172,16 @@ const ilJobs = ([
   const html = utf8(`il/fixtures/${file}-2026-11-24.html`);
   return [name, illinoisGuidanceSources[jurisdiction], (at = ilCaptured) => parseIllinoisGuidance(html, jurisdiction, at)] as const;
 });
+const ksCaptured = new Date("2026-11-24T15:52:01Z");
+const ksDistrictLayer = utf8("ks/fixtures/dickinson-layer-2026-11-24.json");
+const ksDistricts = utf8("ks/fixtures/dickinson-districts-2026-11-24.json");
+const ksStateHtml = utf8("ks/fixtures/joco-regulations-2026-11-24.html");
+const ksAprilHtml = utf8("ks/fixtures/ksfire-april-2026-11-24.html");
+const ksFranklinHtml = utf8("ks/fixtures/franklin-permits-2026-11-24.html");
+const parseKsDistricts = () => parseDickinsonDistricts(JSON.parse(ksDistrictLayer), JSON.parse(ksDistricts), ksCaptured);
+const parseKsState = () => parseKansasOpenBurning(ksStateHtml, ksCaptured);
+const parseKsApril = (at = ksCaptured) => parseKansasApril(ksAprilHtml, at);
+const parseKsFranklin = () => parseFranklinPermits(ksFranklinHtml, ksCaptured);
 const parseNwsLive = () => parseNwsAlerts(JSON.parse(nwsLive), nwsCaptured);
 const parseNwsArchive = () => parseNwsAlerts(JSON.parse(nwsArchive), new Date("2026-11-18T20:00Z"), { archive: true });
 const nyDecHtml = utf8("ny/fixtures/dec-open-burning-2026-11-24.html");
@@ -413,6 +425,10 @@ recordedInputs.push(
   { source: ctDeepFireDanger, rows: await parseCtFireDangerFixture(), checked: ctCaptured.toISOString() },
   { source: ilCrawfordCountyOrders, rows: parseIlCrawford(now), checked },
   ...await Promise.all(ilJobs.map(async ([, source, parse]) => ({ source, rows: await parse(now), checked }))),
+  { source: ksDickinsonDistricts, rows: parseKsDistricts(), checked: ksCaptured.toISOString() },
+  { source: ksOpenBurning, rows: await parseKsState(), checked: ksCaptured.toISOString() },
+  { source: ksAprilBurning, rows: await parseKsApril(), checked: ksCaptured.toISOString() },
+  { source: ksFranklinPermits, rows: await parseKsFranklin(), checked: ksCaptured.toISOString() },
   { source: ohSeasonal, rows: await parseOhFixture(), checked },
   { source: gaEpdNonSummer, rows: await parseGaNonSummerFixture(), checked },
   { source: azPimaWildfire, rows: await parseAzPimaFixture(), checked },
@@ -489,6 +505,10 @@ const jobs: Array<[string, () => unknown]> = [
   ["CT DEEP daily fire danger", parseCtFireDangerFixture],
   ["IL Crawford County orders via WTYE", parseIlCrawford],
   ...ilJobs.map(([name, , parse]): [string, () => unknown] => [name, parse]),
+  ["KS Dickinson County ArcGIS fire districts", parseKsDistricts],
+  ["KS state open-burning rules and calendar", parseKsState],
+  ["KS April open-burning rules and calendar", () => parseKsApril(new Date("2027-04-01T05:00:00Z"))],
+  ["KS Franklin County burn permits", parseKsFranklin],
   ["CivicPlus News Flash", () => civicPlusNotices(parseHtml(placer, { links: true }), "https://www.placer.ca.gov/")],
   ["ASP.NET WebForms", () => webFormsPost(michigan, "https://www2.dnr.state.mi.us/burnpermits/", "ctl00$ContentPlaceHolder1$CntyName")],
   ["SharePoint list", () => sharePointListItems(parseHtml(kentucky), /current burn bans/i)],

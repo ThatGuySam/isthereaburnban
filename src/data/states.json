@@ -360,16 +360,36 @@
   {
     "abbr": "KS",
     "name": "Kansas",
-    "coverage": "directory",
-    "publisher": "Kansas Forest Service",
+    "coverage": "restrictions",
+    "publisher": "Kansas Forest Service, state air-quality regulators and local fire authorities",
     "officialUrl": "https://ksfire.org/burn-info/",
     "extraUrls": [
       {
-        "label": "KDHE Flint Hills smoke management",
-        "url": "https://www.kdhe.ks.gov/508/Flint-Hills-Smoke-Management-Plan-Develo"
+        "label": "Kansas air-quality rules for open burning",
+        "url": "https://www.epa.gov/air-quality-implementation-plans/kansas-sip-open-burning-restrictions"
+      },
+      {
+        "label": "Kansas Forest Service April burning rules",
+        "url": "https://ksfire.org/regulations/"
+      },
+      {
+        "label": "Dickinson County fire-district burn restrictions map",
+        "url": "https://www.dkcoks.gov/Burn-Restrictions-Map"
+      },
+      {
+        "label": "Franklin County burn permits",
+        "url": "https://www.franklincoks.org/1120/Burn-Permits"
+      },
+      {
+        "label": "Sedgwick County April burn rules and permit exceptions",
+        "url": "https://www.sedgwickcounty.org/fire/fire-prevention-division/april-burn-ban/"
+      },
+      {
+        "label": "Coffey County permit and burn-ban contacts",
+        "url": "https://www.coffeycountyks.org/182/Burn-Ban-Information"
       }
     ],
-    "notes": "Kansas counties and fire districts issue burn bans. The Flint Hills smoke plan limits some burning each April."
+    "notes": "Kansas air-quality rules limit open burning year-round, with tighter April rules in 16 counties. We also check Dickinson County's fire-district map and Franklin County's permit rules. Contact the local fire authority for temporary orders and permit requirements at your burn site."
   },
   {
     "abbr": "KY",

@@ -67,6 +67,8 @@ export function arcgisLocalDate(value: unknown, zone: string): string | null {
 export type LayerMetadata = {
   objectIdField?: string;
   maxRecordCount?: number;
+  typeIdField?: string;
+  types?: { id: string | number; name: string }[];
   advancedQueryCapabilities?: { supportsPagination?: boolean };
   editingInfo?: { dataLastEditDate?: number };
   dataLastEditDate?: number;
@@ -81,6 +83,14 @@ export function codedDomains(layer: LayerMetadata): Map<string, Map<string | num
     if (domain?.codedValues) out.set(name, new Map(domain.codedValues.map(({ code, name }) => [code, name])));
   }
   return out;
+}
+
+/** Read feature subtype codes when a layer classifies rows through its type ID field. */
+export function codedSubtypes(layer: Pick<LayerMetadata, "typeIdField" | "types">, field: string) {
+  if (layer.typeIdField !== field || !layer.types?.length) return undefined;
+  const types = new Map(layer.types.map(({ id, name }) => [id, name]));
+  if (types.size !== layer.types.length) throw new Error("Duplicate ArcGIS subtype code");
+  return types;
 }
 
 type JsonReader = (url: string) => Promise<unknown>;

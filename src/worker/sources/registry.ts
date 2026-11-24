@@ -23,6 +23,8 @@ import { idKootenaiAir } from "./id/kootenai-air";
 import { idSeasonal } from "./id/seasonal";
 import { ilCrawfordCountyOrders } from "./il/crawford";
 import { illinoisGuidanceSources } from "./il/guidance";
+import { ksDickinsonDistricts } from "./ks/dickinson";
+import { ksAprilBurning, ksFranklinPermits, ksOpenBurning } from "./ks/open-burning";
 import { kyForestryCountyBans } from "./ky/county-bans";
 import { kySeasonal } from "./ky/seasonal";
 import type { ArcgisResponse } from "./lib/arcgis";
@@ -186,6 +188,31 @@ export const SOURCES: readonly Source[] = [
   ctDeepFireDanger,
   ...Object.values(illinoisGuidanceSources),
   ilCrawfordCountyOrders,
+  ksOpenBurning,
+  ksAprilBurning,
+  ksFranklinPermits,
+  ksDickinsonDistricts,
+  {
+    id: "ks-kdhe-flint-hills", state: "KS", scope: "county", stack: "CivicPlus / HTML and PDF",
+    mode: "manual", cadence: null, sourceName: "Kansas Department of Health and Environment",
+    sourceUrl: "https://www.kdhe.ks.gov/508/Flint-Hills-Smoke-Management-Plan-Develo",
+    officialUrl: "https://www.kdhe.ks.gov/508/Flint-Hills-Smoke-Management-Plan-Develo",
+    error: "Direct requests returned a Cloudflare HTTP 403 challenge. The Kansas Forest Service publishes the April rule and its county list.",
+  },
+  {
+    id: "ks-reno-controlled-burning", state: "KS", scope: "part", stack: "HTML / Cloudflare",
+    mode: "manual", cadence: null, sourceName: "Reno County Emergency Management",
+    sourceUrl: "https://www.renocountyks.gov/controlled-burn-guidelines",
+    officialUrl: "https://www.renocountyks.gov/controlled-burn-guidelines",
+    error: "Direct requests returned a Cloudflare HTTP 403 challenge. Ask Reno County Emergency Management or the local fire authority about permits and current restrictions.",
+  },
+  {
+    id: "ks-coffey-burn-orders", state: "KS", scope: "county", stack: "CivicPlus / AlertCenter and RSS",
+    mode: "manual", cadence: null, sourceName: "Coffey County Fire District No. 1",
+    sourceUrl: "https://www.coffeycountyks.org/AlertCenter.aspx",
+    officialUrl: "https://www.coffeycountyks.org/182/Burn-Ban-Information",
+    error: "The online alert feed did not confirm the November 17 order or a lift. Call county dispatch at 620-364-2123 for current status.",
+  },
   {
     id: "il-mchenry-open-burning", state: "IL", scope: "part", stack: "Granicus / Vision HTML",
     mode: "manual", cadence: null, sourceName: "McHenry County Department of Health",
