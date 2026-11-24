@@ -32,7 +32,7 @@ export function countyDecision(row: CountyStatus, now: number): CountyStatus {
   if (row.scope === "part" && row.status === "restricted" && row.sourceId === order.sourceId &&
     row.scopeNote === scopeNote && status !== "ban") return row;
   const countywide = row.countywide ?? (row.scope !== "part" && !row.standing && row.sourceUrl ? {
-    status: row.status, label: row.label, checked: row.checked, sourceName: row.sourceName,
+    status: row.status, label: row.label, checked: row.checked, sourceId: row.sourceId, sourceName: row.sourceName,
     sourceUpdated: row.sourceUpdated, officialUrl: row.officialUrl,
   } : undefined);
   return { ...row, ...order, scopeNote, label: scopedLabel, status: "restricted",

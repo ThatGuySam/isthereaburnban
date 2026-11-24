@@ -35,3 +35,19 @@ test("prepared bans retain the public JSON for partial and complete scoped-order
     }
   }
 });
+
+test("an active list already in KV hides legacy synthetic effective dates", () => {
+  const generated = "2026-11-24T11:09:00.000Z";
+  const row = { fips: "41039", state: "OR", county: "Lane County", status: "ban", label: "Ban",
+    since: "2026-11-23T11:00:00.000Z", expires: null, sourceUpdated: null, checked: generated,
+    sourceName: "Issuer", sourceId: "issuer", sourceUrl: "https://example.gov/feed", officialUrl: "https://example.gov/" };
+  const encoded = JSON.stringify(row);
+  const body = [encoded.indexOf('"checked":"') + '"checked":"'.length, encoded.length];
+  const active = JSON.stringify([[row.fips, row.sourceId, generated, null, null, body]]).slice(1, -1) + "\n" + encoded;
+  const index = { version: 2, revision: "legacy", generated, sources: [], states: {}, orderChecks: {} };
+  const projection = decodeActive(encodeActive(index.revision, [{ active, weather: "", weatherCounties: "" }]));
+  const result = formatNationalBans(projection, index, new Map(), new Date(generated), "compact");
+  expect(JSON.parse(result.body.join("")).counties[0]).toMatchObject({
+    status: "ban", since: null, firstSeenAt: null, statusChangedAt: null,
+  });
+});

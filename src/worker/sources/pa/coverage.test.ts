@@ -33,7 +33,7 @@ test("Carroll Valley's current notice reports one borough ban and no countywide 
   expect(rows).toHaveLength(1);
   expect(rows[0]).toMatchObject({
     fips: "42001", scope: "part", scopeNote: "Carroll Valley Borough, outdoor open burning", status: "ban",
-    since: "2026-11-20", expires: null, sourceUpdated: null, validUntil: "2026-12-04T05:00:00.000Z",
+    since: null, expires: null, sourceUpdated: "2026-11-20", validUntil: "2026-12-04T05:00:00.000Z",
   });
   const { snapshot } = mergeSources(null, [{ source: paCarrollValley, rows, checked: captured.toISOString() }], captured);
   const statuses = countiesInState("PA").map(({ fips }) => statusFor(snapshot, fips));

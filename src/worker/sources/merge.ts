@@ -6,7 +6,7 @@ import type { Source } from "./types";
 
 export type SourceInput = {
   source: Pick<Source, "id" | "state" | "mode" | "product"> & Partial<Pick<Source, "scope" | "officialUrl" | "recurring">>;
-  rows: (Omit<CountyStatus, "checked"> & { checked?: string })[];
+  rows: (Omit<CountyStatus, "checked"> & Partial<Pick<CountyStatus, "checked">>)[];
   fireWeather?: FireWeatherReport[];
   lastGood?: string;
   checked: string;
@@ -18,7 +18,8 @@ export type SourceInput = {
 const RANK = { unknown: 0, none: 1, restricted: 2, ban: 3 };
 const active = (row: CountyStatus) => activeStatus(row.status);
 
-type Candidate = { row: CountyStatus; confirmed: boolean };
+type CheckedCounty = CountyStatus & { checked: string };
+type Candidate = { row: CheckedCounty; confirmed: boolean };
 type CountyCandidates = Candidate | Candidate[];
 function better(current: Candidate | undefined, candidate: Candidate) {
   if (!current) return candidate;
@@ -28,7 +29,7 @@ function better(current: Candidate | undefined, candidate: Candidate) {
   return candidate.row.scope === "county" && current.row.scope === "state" ? candidate : current;
 }
 
-function order(row: CountyStatus): ScopedOrder {
+function order(row: CheckedCounty): ScopedOrder {
   const { status, label, note, since, expires, sourceId, sourceName, sourceUpdated, sourceUrl, officialUrl, checked, validFrom, validUntil, standing } = row;
   return { status, label, note, since, expires, sourceId, sourceName, sourceUpdated, sourceUrl, officialUrl, checked, validFrom, validUntil, standing,
     scope: row.scope ?? "county", scopeNote: row.scopeNote ?? row.label };
@@ -93,6 +94,8 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
     if (version) sourceVersions[source.id] = version;
     const mapped = new Set<string>();
     const bans = new Set<string>();
+    const health = { checked, lastAttemptedAt: source.mode === "manual" ? null : checked,
+      lastSuccessfulAt: lastGood ?? (error ? null : checked), ok: !error, error };
     const defaultChecked = lastGood ?? checked;
     const defaultStale = clock - Date.parse(defaultChecked) > staleMs;
     if (source.product === "fire-weather") {
@@ -102,14 +105,15 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
         mapped.add(fips);
       }
       sources.push({ id: source.id, state: source.state, mode: source.mode, product: source.product,
-        officialUrl: source.officialUrl, checked, ok: !error, error, counties: mapped.size, bans: 0 });
+        officialUrl: source.officialUrl, ...health, counties: mapped.size, bans: 0 });
       continue;
     }
     for (const value of rows) {
       const seen = lastGood ?? value.checked ?? defaultChecked;
       const stale = seen === defaultChecked ? defaultStale : clock - Date.parse(seen) > staleMs;
-      const row: CountyStatus = { ...value, checked: seen, scope: value.scope ?? source.scope, sourceId: source.id };
+      const row: CheckedCounty = { ...value, checked: seen, scope: value.scope ?? source.scope, sourceId: source.id };
       if (stale) {
+        row.since = null;
         row.status = "unknown";
         row.label = `Source unavailable. Our last good data is over ${staleMs / 3_600_000} hours old`;
         row.note = undefined;
@@ -126,7 +130,7 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
       else groups.set(row.fips, group ? [group, entry] : entry);
     }
     sources.push({ id: source.id, state: source.state, mode: source.mode, scope: source.scope,
-      officialUrl: source.officialUrl, checked, ok: !error, error, counties: mapped.size, bans: bans.size });
+      officialUrl: source.officialUrl, ...health, counties: mapped.size, bans: bans.size });
   }
 
   // A verified standing rule can run until local midnight after a warning ends.
@@ -151,14 +155,17 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
     }
     const { row, confirmed } = result;
     const previous = prev?.counties[fips];
+    row.firstSeenAt = previous?.firstSeenAt ?? at;
+    row.statusChangedAt = previous?.statusChangedAt ?? null;
     const before = previous && countyDecision(previous, Date.parse(prev.generated));
     const decision = countyDecision(row, clock);
     const decisionSource = Array.isArray(group) ? group.find((entry) =>
       entry.row.sourceId === decision.sourceId && entry.row.scopeNote === decision.scopeNote) : group;
     const isRecurring = recurring.has(decision.sourceId ?? "");
     const newBan = decision.status === "ban" && !isRecurring;
+    if (before && before.status !== decision.status) row.statusChangedAt = at;
     if (!before) {
-      changed[fips] = row.since ?? row.sourceUpdated ?? at;
+      changed[fips] = at;
     } else if (before.status !== decision.status && !newBan && (isRecurring || recurring.has(before.sourceId ?? ""))) {
       // A scheduled calendar window opened or closed: not news, no alert, no lastmod churn.
     } else if (before.status !== decision.status) {
@@ -170,7 +177,6 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
         transitions.push({ fips, oldStatus: before.status, newStatus: decision.status, at });
       }
     }
-    if (!row.since) row.since = before?.status === row.status && before.since ? before.since : changed[fips] ?? at;
     counties[fips] = row;
   }
 

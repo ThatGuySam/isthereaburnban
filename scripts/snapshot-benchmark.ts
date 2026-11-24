@@ -115,7 +115,7 @@ export function snapshotBenchmarks(inputs: SourceInput[], now: Date) {
   const active = encodeActive("fixture", previous);
   const pretty = encodeActive("fixture", previous.map((entry) => ({ ...entry, active: entry.pretty })));
   const whole: SnapshotData = JSON.parse(originalJson);
-  const index: SnapshotIndex = { version: 2, revision: "fixture", generated: now.toISOString(),
+  const index: SnapshotIndex = { version: 2, reportDates: true, revision: "fixture", generated: now.toISOString(),
     sources: whole.sources, sourceVersions: whole.sourceVersions, orderChecks,
     states: Object.fromEntries(states.map(({ state }, i) => {
       const summary: StateSummary = JSON.parse(previous[i].summary);

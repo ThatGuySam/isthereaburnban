@@ -1,6 +1,7 @@
 import type { CountyStatus, SnapshotData } from "../shared/types";
 import { activeStatus, countyDecision } from "./county-decision";
 import { STATES_DIR } from "./counties";
+import { withReportDates } from "./report-dates";
 import { DISCLAIMER } from "./lookup";
 
 /** Active bans and restrictions, optionally for one state. */
@@ -8,7 +9,7 @@ export function activeBans(snapshot: SnapshotData, state?: string, now = Date.no
   const st = state?.trim().toUpperCase();
   const counties: CountyStatus[] = Object.values(snapshot.counties)
     .filter((c) => !st || c.state === st)
-    .map((c) => countyDecision(c, now))
+    .map((c) => countyDecision(withReportDates(c), now))
     .filter((c) => activeStatus(c.status))
     .sort((a, b) => a.state.localeCompare(b.state) || a.county.localeCompare(b.county));
   const sources = snapshot.sources.filter((s) => !st || s.state === st);

@@ -101,7 +101,7 @@ test("Merged Kentucky status keeps local bans and changes seasonal restrictions 
   const night = mergeSources(day.snapshot, inputs, new Date("2026-11-25T00:00:00Z"));
 
   const counts = (snapshot) => countiesInState("KY").reduce((result, { fips }) => {
-    result[statusFor(snapshot, fips).status]++;
+    result[statusFor(snapshot, fips, Date.parse(snapshot.generated)).status]++;
     return result;
   }, { ban: 0, restricted: 0, unknown: 0, none: 0 });
 

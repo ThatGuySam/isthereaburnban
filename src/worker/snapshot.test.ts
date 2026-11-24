@@ -24,7 +24,7 @@ describe("buildSnapshot", () => {
 
   test("first import seeds changed and emits no transitions", () => {
     expect(first.transitions).toEqual([]);
-    expect(first.snapshot.changed["40143"]).toBe("2026-11-20T00:00:00.000Z");
+    expect(first.snapshot.changed["40143"]).toBe(t0.toISOString());
     expect(first.snapshot.changed["40001"]).toBe(t0.toISOString());
     expect(first.snapshot.sources[0]).toMatchObject({ id: "ok", ok: true, counties: 2, bans: 1 });
   });
@@ -60,7 +60,7 @@ describe("lookup", () => {
   test("missing county is unknown, never none", () => {
     const s = statusFor(snap, "06037");
     expect(s.status).toBe("unknown");
-    expect(s.label).toBe("We don't track this state yet");
+    expect(s.label).toBe("No confirmed county report");
     expect(s.officialUrl).toContain("fire.ca.gov");
   });
 
@@ -72,7 +72,7 @@ describe("lookup", () => {
   });
 
   test("text sentence", () => {
-    expect(resultSentence(snap.counties["40143"])).toBe("Yes: Burn ban reported for Tulsa County, OK. Source: OFS, checked 2026-11-23T19:07Z. Official source: y");
+    expect(resultSentence(snap.counties["40143"])).toBe("Yes: Burn ban reported for Tulsa County, OK. Source: OFS, checked 2026-11-23T19:07Z. First recorded 2026-11-23T19:07:31.000Z. Official source: y");
   });
 
   test("activeBans filters by state", () => {
@@ -131,7 +131,8 @@ test("a district ban overrides a county-level negative in public answers and ale
       const { body } = formatNationalBans(projection, index, new Map(), now, format);
       return JSON.parse(format === "pretty" ? JSON.parse(body.join("")) : body.join("")).counties;
     };
-    expect(bans(t1)).toEqual([JSON.parse(JSON.stringify(answer))]);
+    const { lastAttemptedAt: _attempt, ...expected } = answer;
+    expect(bans(t1)).toEqual([JSON.parse(JSON.stringify(expected))]);
     expect(bans(new Date(expires))).toEqual([]);
   }
 });
@@ -194,4 +195,26 @@ test("coordinates use the Census vintage with Hartford County FIPS", async () =>
   } finally {
     globalThis.fetch = realFetch;
   }
+});
+
+test("effective dates, public observations and latest checks stay distinct", () => {
+  const t0 = new Date("2026-11-24T10:00:00Z");
+  const t1 = new Date("2026-11-24T11:00:00Z");
+  const t2 = new Date("2026-11-24T12:00:00Z");
+  const cleared = row("40143", "none", t0.toISOString(), { sourceUpdated: "2026-11-23T18:00:00Z" });
+  const initial = buildSnapshot(null, A, [ok([cleared])], t0).snapshot;
+  expect(initial.counties["40143"]).toMatchObject({ since: null, firstSeenAt: t0.toISOString(), statusChangedAt: null });
+  const ban = row("40143", "ban", t1.toISOString(), { since: "2026-11-24T10:30:00Z", sourceUpdated: "2026-11-24T10:40:00Z" });
+  const next = buildSnapshot(initial, A, [ok([ban])], t1).snapshot;
+  const updated = buildSnapshot(next, A, [ok([{ ...ban, checked: t2.toISOString() }])], t2).snapshot;
+  expect(updated.counties["40143"]).toMatchObject({ since: ban.since, firstSeenAt: t0.toISOString(),
+    statusChangedAt: t1.toISOString(), sourceUpdated: ban.sourceUpdated, checked: t2.toISOString() });
+  expect(statusFor(updated, "40109")).toMatchObject({ since: null, checked: null, firstSeenAt: null, statusChangedAt: null });
+});
+
+test("legacy snapshots do not expose guessed effective dates", () => {
+  const now = new Date();
+  const old = row("40143", "ban", now.toISOString(), { since: "2026-11-23T18:00:00Z", sourceUpdated: "2026-11-23T18:00:00Z" });
+  const snapshot = { generated: now.toISOString(), changed: {}, sources: [], counties: { [old.fips]: old } };
+  expect(statusFor(snapshot, old.fips)).toMatchObject({ since: null, firstSeenAt: null, statusChangedAt: null });
 });

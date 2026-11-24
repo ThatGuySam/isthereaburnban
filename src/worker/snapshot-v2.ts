@@ -16,12 +16,14 @@ export type SnapshotIndex = Pick<SnapshotData, "generated" | "sources" | "source
   states: Partial<Record<string, StateReference>>;
   orderChecks: Record<string, string>;
   weatherChecked?: string;
+  reportDates?: true;
 };
 
 type ActiveHeader = Pick<SnapshotData, "counties" | "fireWeather"> & { revision: string; bans: BanEntry[] };
 export type ActiveProjection = ActiveHeader & { bodyStart: number; raw: string };
 export type StateSummary = Pick<SnapshotData, "sourceVersions"> & {
   signature: string;
+  reportDates?: true;
   lastChanged?: string;
   sources: SourceHealth[];
 };
@@ -52,7 +54,7 @@ type ActiveFragments = { active: string; weatherCounties: string; weather: strin
 
 export function encodeState(snapshot: StateSnapshot, signature: string) {
   const { sources, sourceVersions, fireWeather, changed } = snapshot;
-  const summary: StateSummary = { signature, sources, sourceVersions, lastChanged: latest(Object.values(changed)) };
+  const summary: StateSummary = { signature, reportDates: true, sources, sourceVersions, lastChanged: latest(Object.values(changed)) };
   const { compact, pretty, weatherCounties } = prepareBanEntries(snapshot);
   return {
     snapshot: JSON.stringify(snapshot), summary: JSON.stringify(summary),

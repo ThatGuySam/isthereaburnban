@@ -98,7 +98,10 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
     if (path === "/api/v1/fire-weather") return json(activeFireWeather(await snapshots.weather(), p.get("state") ?? undefined));
     if (path === "/api/v1/coverage") return json(coverage(await snapshots.coverage()));
     const m = path.match(/^\/api\/v1\/counties\/(\d{5})$/);
-    if (m) return json({ ...statusFor(await snapshots.county(m[1]), m[1]), disclaimer: DISCLAIMER });
+    if (m) {
+      const snapshot = await snapshots.county(m[1]);
+      return json({ ...statusFor(snapshot, m[1]), generated: snapshot.generated, disclaimer: DISCLAIMER });
+    }
   }
 
   if (method === "POST") {

@@ -56,7 +56,7 @@ function pageAnswer(snapshot: SnapshotData, question: string, fipsAttr: string, 
     .filter((c): c is County => Boolean(c))
     .map((c) => countyStatus(snapshot, c));
   if (!list.length) return null;
-  const changed = latest(list.map((c) => snapshot.changed?.[c.fips]));
+  const changed = latest(list.map((c) => c.statusChangedAt ?? undefined));
   return { list, city, changed, meta: answerMeta(question, list, city ?? undefined) };
 }
 

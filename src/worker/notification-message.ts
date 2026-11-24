@@ -31,12 +31,12 @@ export function transitionNotice(t: Transition, county?: CountyStatus): Notice {
 }
 
 export function countyBulletin(county: CountyStatus): Notice {
-  const checked = new Date(county.checked).toISOString().slice(0, 16).replace("T", " ");
+  const checked = county.checked?.slice(0, 16).replace("T", " ");
   return {
     kind: "live",
     fips: county.fips,
     title: `Burn status update: ${county.county}, ${county.state}`,
-    body: `${statusSentence(county)}. Source: ${county.sourceName}, checked ${checked} UTC. Check the official page before burning.`,
+    body: `${statusSentence(county)}. Source: ${county.sourceName}${checked ? `, checked ${checked} UTC` : ""}. Check the official page before burning.`,
     url: countyPath(county.fips),
   };
 }

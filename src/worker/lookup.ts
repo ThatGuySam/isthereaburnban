@@ -2,10 +2,10 @@ import type { CountyStatus, LookupResult, SnapshotData } from "../shared/types";
 import { cityRulesUrl } from "../shared/city-rules";
 import { DEPENDS_SENTENCE, locationConfirmation, placeName, placeStatus, statusSentence, statusTheme, unknownStatus } from "../shared/render";
 import { countyDecision } from "./county-decision";
-import { ADAPTERS } from "./adapters";
 import { COUNTY_BY_FIPS, countyPath, STATE_DIR_BY_ABBR } from "./counties";
 import type { Env } from "./env";
 import { resolveCity } from "./places";
+import { withReportDates } from "./report-dates";
 import type { SnapshotReader } from "./snapshot";
 
 export const DISCLAIMER = "Informational only. Always confirm with the official source before burning.";
@@ -16,26 +16,30 @@ export class LookupError extends Error {
   }
 }
 
-const TRACKED = new Set(ADAPTERS.map((a) => a.state));
-
 /** Status for one county. Never defaults to "none": anything we can't vouch for is "unknown". */
 export function statusFor(snapshot: SnapshotData, fips: string, now = Date.now()): CountyStatus {
   const hit = snapshot.counties[fips];
-  if (hit) return countyDecision(hit, now);
+  if (hit) {
+    const decision = countyDecision(withReportDates(hit), now);
+    const checked = decision.sourceUrl ? decision.checked : null;
+    const lastAttemptedAt = decision.sourceId && snapshot.sources.find((s) => s.id === decision.sourceId)?.lastAttemptedAt;
+    return { ...decision, checked, lastAttemptedAt: lastAttemptedAt || undefined };
+  }
   const c = COUNTY_BY_FIPS.get(fips);
   if (!c) throw new LookupError(`unknown county FIPS ${fips}`, 404);
   const dir = STATE_DIR_BY_ABBR.get(c.state);
-  const tracked = TRACKED.has(c.state) || snapshot.sources.some((source) => source.state === c.state && source.mode !== "manual");
   return {
     fips,
     state: c.state,
     county: c.name,
     status: "unknown",
-    label: tracked ? "Not in the latest source data" : "We don't track this state yet",
+    label: "No confirmed county report",
     since: null,
     expires: null,
     sourceUpdated: null,
-    checked: snapshot.generated,
+    checked: null,
+    firstSeenAt: null,
+    statusChangedAt: null,
     sourceName: dir?.publisher ?? "",
     sourceUrl: "",
     officialUrl: dir?.officialUrl ?? "",
@@ -44,16 +48,18 @@ export function statusFor(snapshot: SnapshotData, fips: string, now = Date.now()
 }
 
 export function buildResult(query: LookupResult["query"], fipsList: string[], snapshot: SnapshotData | ((fips: string) => SnapshotData)): LookupResult {
-  const results = fipsList.map((f) => ({ ...statusFor(typeof snapshot === "function" ? snapshot(f) : snapshot, f), url: countyPath(f) }));
-  return { query, answer: placeStatus(results), ambiguous: results.length > 1, approximate: false, results, disclaimer: DISCLAIMER };
+  const forCounty = typeof snapshot === "function" ? snapshot : () => snapshot;
+  const results = fipsList.map((f) => ({ ...statusFor(forCounty(f), f), url: countyPath(f) }));
+  const generated = fipsList.length ? forCounty(fipsList[0]).generated : null;
+  return { query, answer: placeStatus(results), generated, ambiguous: results.length > 1, approximate: false, results, disclaimer: DISCLAIMER };
 }
 
 function locationCandidates(query: LookupResult["query"], ids: string[], reason: string, matchedZip?: string): LookupResult {
   const results = ids.map((id) => {
     const county = COUNTY_BY_FIPS.get(id)!;
-    return { ...unknownStatus(county, STATE_DIR_BY_ABBR.get(county.state), ""), label: "Location needs confirmation", url: countyPath(id) };
+    return { ...unknownStatus(county, STATE_DIR_BY_ABBR.get(county.state)), label: "Location needs confirmation", url: countyPath(id) };
   });
-  return { query, answer: "unknown", approximate: true, ambiguous: results.length > 1,
+  return { query, answer: "unknown", generated: null, approximate: true, ambiguous: results.length > 1,
     matchedZip, approximationReason: reason, results, disclaimer: DISCLAIMER };
 }
 
@@ -140,15 +146,21 @@ export function countyState(fips: string): string {
 
 /** "Yes: Tulsa County, OK has a burn ban (County Burn Ban). Source: ..., checked .... Official: ..." */
 export function resultSentence(r: CountyStatus): string {
-  const checked = /^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(r.checked) ? `${r.checked.slice(0, 16)}Z` : r.checked;
+  const checked = r.checked?.replace(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}):.*Z$/, "$1Z");
   const head = `${statusTheme(r.status).word}: ${statusSentence(r)}.`;
-  const src = r.sourceUrl && r.sourceName ? ` Source: ${r.sourceName}, checked ${checked}.` : "";
+  const src = r.sourceUrl && r.sourceName ? ` Source: ${r.sourceName}${checked ? `, checked ${checked}` : ""}.` : "";
+  const dates = [
+    r.since && `Effective ${r.since}.`,
+    r.firstSeenAt && `First recorded ${r.firstSeenAt}.`,
+    r.statusChangedAt && `Published status changed ${r.statusChangedAt}.`,
+    r.sourceUpdated && `Publisher report date ${r.sourceUpdated}.`,
+  ].filter(Boolean).join(" ");
   const exp = r.expires ? ` Expires ${r.expires}.` : "";
   const weather = r.alerts?.map((alert) => {
     const end = alert.ends ?? alert.expires;
     return ` NWS fire weather: ${alert.event}${end ? ` until ${end}` : ""}.`;
   }).join("") ?? "";
-  return `${head}${exp}${src}${weather}${r.officialUrl ? ` ${r.sourceUrl ? "Official source" : "Official directory"}: ${r.officialUrl}` : ""}`;
+  return `${head}${exp}${src}${dates ? ` ${dates}` : ""}${weather}${r.officialUrl ? ` ${r.sourceUrl ? "Official source" : "Official directory"}: ${r.officialUrl}` : ""}`;
 }
 
 /** Share the place qualifier and county answers across the text API and MCP. */

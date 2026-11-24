@@ -218,18 +218,19 @@ export function renderCheckingHtml(place?: string): string {
 export function unknownStatus(
   county: { fips: string; state: string; name: string },
   entry: Pick<StateDirectoryEntry, "publisher" | "officialUrl"> | undefined,
-  checked: string,
 ): CountyStatus {
   return {
     fips: county.fips,
     state: county.state,
     county: county.name,
     status: "unknown",
-    label: "Not tracked",
+    label: "No confirmed report",
     since: null,
     expires: null,
     sourceUpdated: null,
-    checked,
+    checked: null,
+    firstSeenAt: null,
+    statusChangedAt: null,
     sourceName: entry?.publisher ?? "",
     sourceUrl: "",
     officialUrl: entry?.officialUrl ?? "",

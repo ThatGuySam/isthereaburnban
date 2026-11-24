@@ -10,6 +10,7 @@ import { countyState } from "./lookup";
 import { CHANNELS } from "./notification-audience";
 import { transitionNotice, type Transition } from "./notification-message";
 import { notify } from "./notify";
+import { withReportDates } from "./report-dates";
 import { withPublishedChecks } from "./published-checks";
 import { loadActive, loadIndex, loadMapStates, loadState } from "./snapshot-store";
 import { lastChangedByState, type ActiveProjection, type SnapshotIndex, type StateSnapshot } from "./snapshot-v2";
@@ -38,7 +39,7 @@ export function buildSnapshot(
     if (result.status === "fulfilled") return { source, rows: result.value, checked: now.toISOString() };
     const rows = Object.values(prev?.counties ?? {}).filter((row) =>
       row.sourceId ? row.sourceId === source.id : row.state === source.state);
-    return { source, rows, checked: now.toISOString(), error: errorText(result.reason) };
+    return { source, rows: rows.map(withReportDates), checked: now.toISOString(), error: errorText(result.reason) };
   }), now);
 }
 
@@ -256,7 +257,7 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
       const idx = await catalog();
       const st = stateQuery?.trim().toUpperCase();
       if (!idx || st) {
-        const snapshot = idx && st ? await state(st) : withFireWeather(await old());
+        const snapshot = await state(st ?? "");
         if (idx && st) {
           const sources = idx.sources.filter((source) => source.state === st).map((source) => ({ ...source }));
           applySourceChecks(sources, await publicHeads(env, sources.filter((s) => s.mode !== "manual").map(({ id }) => id)));

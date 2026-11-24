@@ -1,3 +1,4 @@
+import { withReportDates } from "../report-dates";
 import type { CountyStatus, FireWeatherReport, SnapshotData } from "../../shared/types";
 import { COUNTY_BY_FIPS } from "../counties";
 import type { Env } from "../env";
@@ -178,7 +179,7 @@ function fallback(source: Source, prev: SnapshotData | null): CountyStatus[] {
     const ownOrders = county.orders?.filter((order) => order.sourceId === source.id) ?? [];
     const selected = county.sourceId ? county.sourceId === source.id : source.id === source.state.toLowerCase();
     if (selected && ((county.scope !== "part" && !county.standing) || !ownOrders.length)) {
-      rows.push({ ...county, orders: undefined });
+      rows.push({ ...withReportDates(county), orders: undefined });
     }
     for (const order of ownOrders) {
       rows.push({ ...county, ...order, sourceUrl: source.sourceUrl, orders: undefined });
@@ -247,7 +248,8 @@ export function applySourceChecks(sources: SnapshotData["sources"], heads: Map<s
   for (const source of sources) {
     const head = heads.get(source.id);
     if (!head) continue;
-    source.checked = head.checked;
+    source.checked = source.lastAttemptedAt = head.checked;
+    source.lastSuccessfulAt = head.lastGood ?? null;
     source.ok = !head.error;
     source.error = head.error;
   }
@@ -269,7 +271,7 @@ export function applyCountyCheck(row: CountyStatus, head: SourceHead | undefined
     row.label = "Source decision expired";
     row.note = undefined;
     row.since = row.expires = null;
-  } else if (clock - Date.parse(row.checked) >= STALE_MS && row.status !== "unknown") {
+  } else if ((!row.checked || clock - Date.parse(row.checked) >= STALE_MS) && row.status !== "unknown") {
     row.status = "unknown";
     row.label = "Source unavailable. Our last good data is over 48 hours old";
     row.note = undefined;

@@ -17,7 +17,7 @@ export function projectMapStatus(revision: string, snapshots: SnapshotData[], no
       const decision = countyDecision(row, now);
       if (decision.status !== "unknown") {
         result.counties[row.fips] = decision.status;
-        boundary(Date.parse(decision.checked) + STALE_MS);
+        if (decision.checked) boundary(Date.parse(decision.checked) + STALE_MS);
       }
       validWindow(row);
       for (const order of row.orders ?? []) validWindow(order);
