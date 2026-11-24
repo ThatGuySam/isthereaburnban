@@ -23,6 +23,8 @@ import {
   parseArapahoeFire, parseBoulderFire, parseDouglasFire, parseElPasoFire, parseEstesFire, parseLarimerFire,
 } from "../src/worker/sources/co/county-status";
 import { coDenverAir, parseDenverAir } from "../src/worker/sources/co/denver-air";
+import { deActionDays, parseDeActionDays } from "../src/worker/sources/de/air-quality";
+import { deOpenBurning, parseDeOpenBurning } from "../src/worker/sources/de/open-burning";
 import { gaEpdNonSummer, parseEpdSeasonal } from "../src/worker/sources/ga/epd";
 import { parseGwinnett } from "../src/worker/sources/ga/gwinnett";
 import { idIdlStages, parseIdlStages } from "../src/worker/sources/id/idl-stages";
@@ -127,6 +129,13 @@ const parseNmParksFixture = () => parseNmStateParks(nmParksHtml, nmCaptured);
 const parseNmAngelFixture = () => parseAngelFirePermits(nmAngelHtml, nmCaptured);
 const parseNmStateCodeFixture = () => parseNmOpenBurning(nmStateCode, "state", nmCaptured);
 const parseNmBernalilloCodeFixture = () => parseNmOpenBurning(nmBernalilloCode, "bernalillo", nmCaptured);
+const deCaptured = new Date("2026-11-24T14:16:32Z");
+const deGuidance = utf8("de/fixtures/dnrec-open-burning-2026-11-24.json");
+const deAirNow = utf8("de/fixtures/airnow-2026-11-24.dat");
+const deActionDay = utf8("de/fixtures/airnow-2026-07-16.dat");
+const parseDeGuidance = () => parseDeOpenBurning(JSON.parse(deGuidance), deCaptured);
+const parseDeCurrentAir = () => parseDeActionDays(deAirNow, deCaptured);
+const parseDeArchivedAir = () => parseDeActionDays(deActionDay, new Date("2026-07-17T15:00:00Z"));
 const parseNwsLive = () => parseNwsAlerts(JSON.parse(nwsLive), nwsCaptured);
 const parseNwsArchive = () => parseNwsAlerts(JSON.parse(nwsArchive), new Date("2026-11-18T20:00Z"), { archive: true });
 const nyDecHtml = utf8("ny/fixtures/dec-open-burning-2026-11-24.html");
@@ -361,6 +370,8 @@ recordedInputs.push(
   { source: nmAngelFirePermits, rows: await parseNmAngelFixture(), checked: nmCaptured.toISOString() },
   { source: nmOpenBurning, rows: await parseNmStateCodeFixture(), checked: nmCaptured.toISOString() },
   { source: nmBernalilloOpenBurning, rows: await parseNmBernalilloCodeFixture(), checked: nmCaptured.toISOString() },
+  { source: deOpenBurning, rows: await parseDeGuidance(), checked: deCaptured.toISOString() },
+  { source: deActionDays, rows: parseDeCurrentAir(), checked: deCaptured.toISOString() },
   { source: ohSeasonal, rows: await parseOhFixture(), checked },
   { source: gaEpdNonSummer, rows: await parseGaNonSummerFixture(), checked },
   { source: azPimaWildfire, rows: await parseAzPimaFixture(), checked },
@@ -492,6 +503,9 @@ const jobs: Array<[string, () => unknown]> = [
   ["NM Angel Fire CivicPlus permit notice", parseNmAngelFixture],
   ["NM state open-burning code and calendar", parseNmStateCodeFixture],
   ["NM Bernalillo open-burning code and calendar", parseNmBernalilloCodeFixture],
+  ["DE DNREC WordPress guidance and calendar", parseDeGuidance],
+  ["DE AirNow current reporting-area data", parseDeCurrentAir],
+  ["DE AirNow archived Code Red Action Day", parseDeArchivedAir],
   ["NV Spring Mountains Drupal order table", parseNvForestFixture],
   ["UT FFSL fire order polygons", parseUtOrders],
   ["UT closed fire season and calendar", parseUtStatute],

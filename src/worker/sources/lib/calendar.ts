@@ -2,7 +2,7 @@ import type { CountyStatus } from "../../../shared/types";
 import { atLocalTime, localClock, localDayWindow, shiftDay, US_ZONES } from "./dates";
 
 // Inventory: Alaska burn permits and winter air rules, AZ Area A, Idaho and Utah closed fire seasons, NY DEC Open Burning, GA EPD Summer Open Burning Ban, KY fire hazard seasons, OH DNR Open Burning Regulations,
-// PA state forest fires, VA DOF 4 PM Burning Law, WV Forestry Fire Burning Guidelines, MD DNR Burning Guidance, and VT open-burning permits.
+// PA state forest fires, VA DOF 4 PM Burning Law, WV Forestry Fire Burning Guidelines, MD DNR Burning Guidance, VT open-burning permits, and DE open burning.
 export type CalendarRule = {
   state: string;
   officialUrl: string;
@@ -18,10 +18,24 @@ export type CalendarRule = {
   counties?: ReadonlySet<string>; // publisher county names without "County"
 };
 
-function inSeason(rule: CalendarRule, date: string): boolean {
+function seasonOn(rule: CalendarRule, date: string) {
   const day = date.slice(5);
-  return !rule.seasons || rule.seasons.some(([start, end]) =>
+  return rule.seasons?.find(([start, end]) =>
     start <= end ? day >= start && day <= end : day >= start || day <= end);
+}
+
+function inSeason(rule: CalendarRule, date: string): boolean {
+  return !rule.seasons || seasonOn(rule, date) !== undefined;
+}
+
+function seasonDates(rule: CalendarRule, date: string) {
+  const season = seasonOn(rule, date);
+  if (!season) return { since: null, expires: null };
+  const [start, end] = season;
+  const year = Number(date.slice(0, 4));
+  const wrapsYear = start > end;
+  const startYear = wrapsYear && date.slice(5) < start ? year - 1 : year;
+  return { since: `${startYear}-${start}`, expires: `${startYear + Number(wrapsYear)}-${end}` };
 }
 
 function hoursOn(rule: CalendarRule, date: string) {
@@ -52,13 +66,13 @@ function windowsOn(rule: CalendarRule, date: string) {
 
 type CalendarPublisher = Pick<CountyStatus, "sourceName" | "sourceUrl"> & { id: string };
 
-/** Emit effective windows for the mapped counties, optionally covering the next local day. */
+/** Emit effective windows for mapped counties, with optional lookahead and published season dates. */
 export function calendarStatusRows(
   rule: CalendarRule,
   counties: ReadonlyArray<{ fips: string; name: string; scopeNote?: string }>,
   publisher: CalendarPublisher,
   now: Date,
-  { includeTomorrow = false } = {},
+  { includeTomorrow = false, includeSeasonDates = false } = {},
 ): CountyStatus[] {
   const checked = now.toISOString();
   const covered = rule.counties ? counties.filter(({ name }) => ruleCoversCounty(rule, name)) : counties;
@@ -66,15 +80,20 @@ export function calendarStatusRows(
   const { id: sourceId, sourceName, sourceUrl } = publisher;
   const { date } = localClock(now, rule.zone);
   const dates = includeTomorrow ? [date, shiftDay(date, 1)] : [date];
-  const windows: ReturnType<typeof windowsOn> = [];
-  for (const window of dates.flatMap((day) => windowsOn(rule, day))) {
+  const dailyWindows = dates.flatMap((day) => {
+    const bounds = includeSeasonDates ? seasonDates(rule, day) : { since: null, expires: null };
+    return windowsOn(rule, day).map((window) => ({ ...window, ...bounds }));
+  });
+  const windows: typeof dailyWindows = [];
+  for (const window of dailyWindows) {
     const previous = windows.at(-1);
-    if (previous?.validUntil === window.validFrom) previous.validUntil = window.validUntil;
-    else if (window.validUntil > checked) windows.push(window);
+    if (previous?.validUntil === window.validFrom && previous.since === window.since && previous.expires === window.expires) {
+      previous.validUntil = window.validUntil;
+    } else if (window.validUntil > checked) windows.push(window);
   }
   return windows.flatMap((window) => covered.map(({ fips, name, scopeNote: localScope }) => ({
     ...window, fips, county: name, state, status, label, note, scope, scopeNote: localScope ?? scopeNote,
-    sourceId, sourceName, sourceUrl, officialUrl, checked, sourceUpdated: null, since: null, expires: null,
+    sourceId, sourceName, sourceUrl, officialUrl, checked, sourceUpdated: null,
   })));
 }
 
@@ -123,6 +142,20 @@ export const CALENDAR_RULES: Record<string, CalendarRule> = {
     label: "Area A summer open-burning restriction", seasons: [["05-01", "09-30"]],
     counties: new Set(["maricopa", "pinal", "yavapai"]),
     note: "Arizona limits open outdoor fires in Area A from May 1 through September 30. The law lists exceptions, including cooking, and local air quality rules may impose stricter limits.",
+  },
+  DE_OZONE: {
+    state: "DE", zone: US_ZONES.Eastern, status: "restricted", scope: "state",
+    scopeNote: "Statewide ozone-season open-burning rule",
+    officialUrl: "https://dnrec.delaware.gov/air/open-burning/",
+    label: "Ozone-season open-burning restriction", seasons: [["05-01", "09-30"]],
+    note: "Delaware restricts most open burning from May 1 through September 30. Qualifying cooking, camp and ceremonial fires are exempt from the seasonal rule. DNREC can grant limited written exceptions. Check Air Quality Action Days and State Fire Marshal orders separately.",
+  },
+  DE_RESIDENTIAL: {
+    state: "DE", zone: US_ZONES.Eastern, status: "restricted", scope: "state",
+    scopeNote: "Statewide residential brush-burning limits",
+    officialUrl: "https://dnrec.delaware.gov/air/open-burning/residential/",
+    label: "Residential brush-burning limits", seasons: [["10-01", "04-30"]],
+    note: "From October 1 through April 30, residential brush burning is limited to eligible branches, limbs and shrubbery from the property, up to 27 cubic feet, from 8 a.m. to 4 p.m. Notify the county fire board before burning. Qualifying recreational fires have separate rules. Check Air Quality Action Days and State Fire Marshal orders.",
   },
   NY: {
     state: "NY", zone: US_ZONES.Eastern, status: "restricted", scope: "state", scopeNote: "Statewide residential brush-burning rule",

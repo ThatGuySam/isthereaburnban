@@ -11,7 +11,7 @@ import { blockAfterHeading, extractHtml, extractHtmlGrid, localClock, numberedRu
 import { BlockedError, fetchSource, HttpError, pacedSourceReader, pacedTextReader, USER_AGENT } from "./http";
 import { manualPdf } from "./pdf";
 import { parseSharePointItems, parseSharePointPage, sharePointListItems, sharePointListUrl, sharePointRows } from "./sharepoint";
-import { ninjaTablesUrl, parseNinjaRows, parseWpItems, parseWpPage, parseWpPageBlocks, wpRestEndpoint, wpRestUrl } from "./wordpress";
+import { ninjaTablesUrl, parseNinjaRows, parseWpItems, parseWpPage, parseWpPageBlocks, parseWpPagesBlocks, wpRestEndpoint, wpRestUrl } from "./wordpress";
 import { checkLink, htmlLinks } from "../../../../scripts/check-links";
 
 const data = (name) => readFileSync(new URL(`./fixtures/${name}`, import.meta.url));
@@ -116,6 +116,17 @@ test("calendar lookahead joins adjacent days and applies the opening day's hours
   expect(calendarStatusRows(rule, counties, publisher, now, { includeTomorrow: true })).toMatchObject([{
     checked: now.toISOString(), validFrom: "2026-03-16T12:00:00.000Z", validUntil: "2026-03-18T04:00:00.000Z",
   }]);
+});
+
+test("calendar rows can expose the season dates across New Year", () => {
+  const rule = { ...CALENDAR_RULES.NY, seasons: [["11-01", "02-28"]] };
+  const counties = [{ fips: "36001", name: "Albany County" }];
+  const publisher = { id: "ny-example", sourceName: "Publisher", sourceUrl: rule.officialUrl };
+  const now = date("2027-01-01T05:00:00Z");
+  expect(calendarStatusRows(rule, counties, publisher, now, { includeTomorrow: true, includeSeasonDates: true })).toMatchObject([{
+    since: "2026-11-01", expires: "2027-02-28", validUntil: "2027-01-03T05:00:00.000Z",
+  }]);
+  expect(calendarStatusRows(rule, counties, publisher, now)[0]).toMatchObject({ since: null, expires: null });
 });
 
 test("calendar rows preserve multiple local scopes for one county", () => {
@@ -473,6 +484,24 @@ test("WordPress validates a published page and keeps its rendered structure", as
   expect(() => parseWpPage({ ...page, status: "draft" }, expected)).toThrow("Invalid public WordPress page");
   expect(() => parseWpPage({ ...page, modified_gmt: "2026-02-30T19:25:00" }, expected)).toThrow("Invalid public WordPress page");
   expect(() => parseWpPage({ ...page, content: { ...page.content, protected: true } }, expected)).toThrow("Invalid public WordPress page");
+});
+
+test("WordPress collections require each selected page exactly once", async () => {
+  const now = new Date("2026-11-24T12:00Z");
+  const expected = [
+    { id: 12, url: "https://county.gov/rules/" },
+    { id: 18, url: "https://county.gov/exceptions/" },
+  ];
+  const pages = expected.map(({ id, url }) => ({
+    id, link: url, status: "publish", modified_gmt: "2026-02-03T19:25:00",
+    content: { rendered: `<p>Page ${id}</p>`, protected: false },
+  }));
+  expect((await parseWpPagesBlocks(pages.toReversed(), expected, now)).map(({ blocks }) => blocks[0].text))
+    .toEqual(["Page 12", "Page 18"]);
+  await expect(parseWpPagesBlocks(pages.slice(0, 1), expected, now)).rejects.toThrow("Incomplete WordPress page collection");
+  await expect(parseWpPagesBlocks([pages[0], pages[0]], expected, now)).rejects.toThrow("Missing or duplicate WordPress page");
+  await expect(parseWpPagesBlocks([pages[0], { ...pages[1], link: pages[0].link }], expected, now))
+    .rejects.toThrow("Invalid public WordPress page");
 });
 
 test("CivicPlus recognizes related links in Placer mobile News Flash, and both desktop families", () => {

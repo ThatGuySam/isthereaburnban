@@ -186,10 +186,16 @@
   {
     "abbr": "DE",
     "name": "Delaware",
-    "coverage": "directory",
-    "publisher": "Delaware DNREC",
+    "coverage": "restrictions",
+    "publisher": "Delaware DNREC Division of Air Quality",
     "officialUrl": "https://dnrec.delaware.gov/air/open-burning/",
-    "notes": "Delaware bans open burning every year from May 1 to September 30. The State Fire Marshal can issue other bans when conditions are dangerous."
+    "extraUrls": [
+      { "label": "Residential open-burning rules", "url": "https://dnrec.delaware.gov/air/open-burning/residential/" },
+      { "label": "Air Quality Action Day forecast", "url": "https://dnrec.delaware.gov/air/quality/forecast/" },
+      { "label": "State Fire Marshal notices", "url": "https://news.delaware.gov/category/state-fire-marshal/" },
+      { "label": "State Fire Marshal office", "url": "https://statefiremarshal.delaware.gov/" }
+    ],
+    "notes": "Delaware restricts most open burning from May 1 through September 30. The rest of the year, residential brush burning has limits on materials, pile size and hours and requires advance notice to the county fire board. Air Quality Action Days can prohibit all open burning in affected areas. The State Fire Marshal can issue emergency bans by county or statewide. Check with fire officials for current orders at your location."
   },
   {
     "abbr": "DC",

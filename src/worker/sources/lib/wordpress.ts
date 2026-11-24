@@ -21,9 +21,10 @@ const wpPage = z.object({
   modified_gmt: z.iso.datetime({ local: true, precision: 0 }),
   content: z.object({ rendered: z.string().trim().min(1), protected: z.literal(false) }),
 });
+type PageIdentity = { id: number; url: string };
 
 /** Keep rendered markup so callers can distinguish the current status from historical or explanatory text. */
-export function parseWpPage(data: unknown, expected: { id: number; url: string }) {
+export function parseWpPage(data: unknown, expected: PageIdentity) {
   const page = wpPage.safeParse(data);
   if (!page.success || page.data.id !== expected.id || page.data.link !== expected.url) {
     throw new Error(`Invalid public WordPress page: ${expected.url}`);
@@ -33,10 +34,20 @@ export function parseWpPage(data: unknown, expected: { id: number; url: string }
 }
 
 /** Extract the published page's blocks and reject updates dated after this check. */
-export async function parseWpPageBlocks(data: unknown, expected: { id: number; url: string }, now: Date) {
+export async function parseWpPageBlocks(data: unknown, expected: PageIdentity, now: Date) {
   const { html, modified } = parseWpPage(data, expected);
   if (Date.parse(modified) > now.getTime()) throw new Error(`Future WordPress page update: ${expected.url}`);
   return { blocks: (await extractHtml(html)).blocks, modified };
+}
+
+/** Require exactly the pages requested from a REST collection and return them in request order. */
+export async function parseWpPagesBlocks(data: unknown, expected: readonly PageIdentity[], now: Date) {
+  if (!Array.isArray(data) || data.length !== expected.length) throw new Error("Incomplete WordPress page collection");
+  return Promise.all(expected.map(async (page) => {
+    const matches = data.filter((item) => item?.id === page.id);
+    if (matches.length !== 1) throw new Error(`Missing or duplicate WordPress page: ${page.url}`);
+    return parseWpPageBlocks(matches[0], page, now);
+  }));
 }
 
 export function ninjaTablesUrl(site: string, tableId: number): string {

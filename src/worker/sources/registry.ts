@@ -13,6 +13,8 @@ import { azPimaWildfire } from "./az/pima";
 import { pfirs } from "./ca/pfirs";
 import { coArapahoeFire, coBoulderFire, coDouglasFire, coElPasoFire, coEstesFire, coLarimerFire } from "./co/county-status";
 import { coDenverAir } from "./co/denver-air";
+import { deActionDays } from "./de/air-quality";
+import { deOpenBurning } from "./de/open-burning";
 import { gaEpdNonSummer, gaEpdSummer } from "./ga/epd";
 import { gaGwinnett } from "./ga/gwinnett";
 import { idIdlStages } from "./id/idl-stages";
@@ -168,6 +170,15 @@ export const SOURCES: readonly Source[] = [
   nmAngelFirePermits,
   nmOpenBurning,
   nmBernalilloOpenBurning,
+  deOpenBurning,
+  deActionDays,
+  {
+    id: "de-fire-marshal-orders", state: "DE", scope: "state", stack: "WordPress / REST news search",
+    mode: "manual", cadence: null, sourceName: "Delaware State Fire Marshal",
+    sourceUrl: "https://news.delaware.gov/wp-json/wp/v2/posts?categories=2738&search=burning%20ban&per_page=100&_fields=id,date,link,title",
+    officialUrl: "https://news.delaware.gov/category/state-fire-marshal/",
+    error: "The newsroom posts individual orders and lifts. Ask the Fire Marshal or local fire authority about current orders at the burn location.",
+  },
   {
     id: "nm-swcg-fire-restrictions", state: "NM", scope: "part", stack: "WordPress / ArcGIS Dashboard and WebMap",
     mode: "manual", cadence: null, sourceName: "New Mexico Forestry Division and Southwest Coordinating Group",
