@@ -11,16 +11,20 @@ export type StatusTheme = {
   color: string;
   /** text color on that background (WCAG AA for large text or better) */
   text: string;
+  /** quiet tone-on-tone color for the small meta line; still 4.5:1 or better on `color` */
+  meta: string;
 };
 
 // Colors follow the original site, darkened where white text would fail WCAG AA large-text (3:1):
 // #35c28c -> #2a9d70 (3.4:1), #9a9a9a -> #767676 (4.5:1). Amber uses dark text (8.6:1).
+// Small text can't be white on green or red (3.4:1), so the meta line uses a deep shade of the
+// background instead: none 4.7:1, ban 4.7:1, restricted 5.2:1, unknown 8.8:1, checking 4.5:1.
 const THEMES: Record<HeroStatus, StatusTheme> = {
-  ban: { status: "ban", word: "Yes", color: "#f34f49", text: "#ffffff" },
-  none: { status: "none", word: "Nope", color: "#2a9d70", text: "#ffffff" },
-  restricted: { status: "restricted", word: "Sort of", color: "#f5a623", text: "#1a1a1a" },
-  unknown: { status: "unknown", word: "Not sure", color: "#123646", text: "#ffffff" },
-  checking: { status: "checking", word: "Checking", color: "#767676", text: "#ffffff" },
+  ban: { status: "ban", word: "Yes", color: "#f34f49", text: "#ffffff", meta: "#3a1312" },
+  none: { status: "none", word: "Nope", color: "#2a9d70", text: "#ffffff", meta: "#0a261b" },
+  restricted: { status: "restricted", word: "Sort of", color: "#f5a623", text: "#1a1a1a", meta: "#563a0c" },
+  unknown: { status: "unknown", word: "Not sure", color: "#123646", text: "#ffffff", meta: "#d0d7da" },
+  checking: { status: "checking", word: "Checking", color: "#767676", text: "#ffffff", meta: "#ffffff" },
 };
 
 export function statusTheme(status: HeroStatus | string | null | undefined): StatusTheme {
@@ -30,7 +34,7 @@ export function statusTheme(status: HeroStatus | string | null | undefined): Sta
 /** Inline style for the hero container: sets the CSS custom properties the stylesheet reads. */
 export function heroStyle(status: HeroStatus | string): string {
   const t = statusTheme(status);
-  return `--bg:${t.color};--fg:${t.text}`;
+  return `--bg:${t.color};--fg:${t.text};--meta:${t.meta}`;
 }
 
 export function escapeHtml(value: unknown): string {
@@ -102,16 +106,16 @@ function timeTag(iso: string, text: string): string {
   return `<time datetime="${escapeHtml(iso)}" data-relative>${escapeHtml(text)}</time>`;
 }
 
-/** Hero markup: big word, sentence, and the official-source / checked line. All text escaped. */
+/** Hero markup: big word, sentence, and one quiet official-source / checked line. All text escaped. */
 export function renderStatusHtml(cs: CountyStatus, opts: RenderOptions = {}): string {
   const theme = statusTheme(cs.status);
   const base = opts.relativeTimeBase ?? Date.now();
   const official = cs.officialUrl
-    ? `<a class="official" href="${escapeHtml(cs.officialUrl)}" target="_blank" rel="noopener">Official source<span aria-hidden="true"> ↗</span><span class="sr-only"> (${escapeHtml(cs.sourceName || "opens in new tab")})</span></a>`
+    ? `<a class="official" href="${escapeHtml(cs.officialUrl)}" target="_blank" rel="noopener">Official source<span class="sr-only"> (${escapeHtml(cs.sourceName || "official site")}, opens in new tab)</span></a>`
     : "";
 
   const meta: string[] = [];
-  if (cs.status !== "unknown" && official) meta.push(official);
+  if (official) meta.push(official);
   // A county with no feed (sourceUrl empty) was never "checked"; don't imply it was.
   if (cs.checked && cs.sourceUrl) meta.push(`<span>checked ${timeTag(cs.checked, relativeTime(cs.checked, base))}</span>`);
   if ((cs.status === "ban" || cs.status === "restricted") && cs.since) {
@@ -123,10 +127,9 @@ export function renderStatusHtml(cs: CountyStatus, opts: RenderOptions = {}): st
     `<p class="status-word${theme.word.length > 5 ? " status-word--long" : ""}">${escapeHtml(theme.word)}</p>`,
     `<p class="status-sentence">${escapeHtml(statusSentence(cs))}</p>`,
   ];
-  if (cs.status === "unknown" && official) lines.push(`<p class="status-official">${official.replace('class="official"', 'class="official official--prominent"')}</p>`);
+  if (meta.length) lines.push(`<p class="status-meta">${meta.join('<span aria-hidden="true"> · </span>')}</p>`);
   if (opts.note) lines.push(`<p class="status-note">${escapeHtml(opts.note)}</p>`);
   if (cs.note) lines.push(`<p class="status-note">${escapeHtml(cs.note)}</p>`);
-  if (meta.length) lines.push(`<p class="status-meta">${meta.join('<span aria-hidden="true"> · </span>')}</p>`);
   if (opts.link) lines.push(`<p class="status-more"><a href="${escapeHtml(opts.link)}">More about ${escapeHtml(cs.county)}<span aria-hidden="true"> →</span></a></p>`);
 
   return `<div class="status" data-status="${theme.status}" data-fips="${escapeHtml(cs.fips)}" data-place="${escapeHtml(placeName(cs))}">${lines.join("")}</div>`;
