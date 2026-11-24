@@ -366,10 +366,16 @@
   {
     "abbr": "MD",
     "name": "Maryland",
-    "coverage": "directory",
-    "publisher": "Maryland Department of Natural Resources",
+    "coverage": "restrictions",
+    "publisher": "Maryland DNR Forest Service and Maryland Department of the Environment",
     "officialUrl": "https://dnr.maryland.gov/forests/Pages/fire/prevention-burning-guidance.aspx",
-    "notes": "Maryland DNR can issue statewide burn bans by emergency order. Counties and towns have their own rules."
+    "extraUrls": [
+      { "label": "Maryland summer air-quality rules", "url": "https://regs.maryland.gov/us/md/exec/comar/26.11.07.03#C" },
+      { "label": "Maryland DNR burn-ban announcements", "url": "https://news.maryland.gov/dnr/?s=burn+ban" },
+      { "label": "Local health departments and permits", "url": "https://health.maryland.gov/Pages/departments.aspx" },
+      { "label": "Local emergency management contacts", "url": "https://mdem.maryland.gov/pages/local-eoc.aspx" }
+    ],
+    "notes": "Maryland has year-round rules for burning in or near woodland outside incorporated towns. Summer air-quality rules restrict open burning in 11 counties and Baltimore City from June through August. The Governor or DNR can order emergency bans. Check with your local health department or fire marshal for current orders and permits."
   },
   {
     "abbr": "MA",

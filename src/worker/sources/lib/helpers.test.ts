@@ -54,6 +54,19 @@ test("HTML table cells separate adjacent paragraphs without splitting inline tex
   }
 });
 
+test("strict HTML and SharePoint sections omit missing and duplicate headings", () => {
+  const first = "<h2>Rules</h2><p>First</p>";
+  const duplicate = parseHtml(`${first}<h3>Rules</h3><p>Second</p>`);
+  const heading = /^Rules$/g;
+  const options = { requireUnique: true };
+  expect(sharePointListItems(parseHtml(first), heading, options)).toEqual(["First"]);
+  expect(sharePointListItems(duplicate, /^Missing$/, options)).toEqual([]);
+  expect(sharePointListItems(duplicate, heading, options)).toEqual([]);
+  expect(blockAfterHeading(duplicate.blocks, heading)).toEqual([
+    { tag: "p", text: "First" }, { tag: "h3", text: "Rules" }, { tag: "p", text: "Second" },
+  ]);
+});
+
 test("calendar rows keep only covered counties and windows that have not ended", () => {
   const rule = { ...CALENDAR_RULES.AZ, hours: [18 * 60, 8 * 60] };
   const counties = [{ fips: "04013", name: "Maricopa County" }, { fips: "04019", name: "Pima County" }];

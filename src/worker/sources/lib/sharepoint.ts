@@ -22,8 +22,8 @@ export function sharePointRows(parts: HtmlParts, columns: string[]): string[][] 
 }
 
 /** Rendered list layouts, including SharePoint rich-text lists built from paragraphs. */
-export function sharePointListItems(parts: HtmlParts, heading: RegExp): string[] {
-  return blockAfterHeading(parts.blocks, heading).filter(({ tag }) => tag === "li" || tag === "p").map(({ text }) => text);
+export function sharePointListItems(parts: HtmlParts, heading: RegExp, options?: { requireUnique?: boolean }): string[] {
+  return blockAfterHeading(parts.blocks, heading, options).filter(({ tag }) => tag === "li" || tag === "p").map(({ text }) => text);
 }
 
 export function parseSharePointItems(data: unknown): { rows: Record<string, unknown>[]; next?: string } {

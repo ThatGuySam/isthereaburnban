@@ -224,10 +224,11 @@ export async function extractHtmlGrid(input: Response | string, selectors: { row
   return rows;
 }
 
-export function blockAfterHeading(blocks: Block[], pattern: RegExp): Block[] {
+export function blockAfterHeading(blocks: Block[], pattern: RegExp, { requireUnique = false } = {}): Block[] {
   const match = new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, ""));
-  const start = blocks.findIndex(({ tag, text }) => HEAD.test(tag) && match.test(text));
-  if (start < 0) return [];
+  const isHeading = ({ tag, text }: Block) => HEAD.test(tag) && match.test(text);
+  const start = blocks.findIndex(isHeading);
+  if (start < 0 || (requireUnique && blocks.findLastIndex(isHeading) !== start)) return [];
   const end = blocks.findIndex(({ tag }, index) => index > start && HEAD.test(tag) && tag <= blocks[start].tag);
   return blocks.slice(start + 1, end < 0 ? undefined : end);
 }

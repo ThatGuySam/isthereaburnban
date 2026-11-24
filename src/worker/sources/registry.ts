@@ -22,6 +22,8 @@ import { kyForestryCountyBans } from "./ky/county-bans";
 import { kySeasonal } from "./ky/seasonal";
 import type { ArcgisResponse } from "./lib/arcgis";
 import { fetchSource } from "./lib/http";
+import { mdSummerAir } from "./md/summer-air";
+import { mdDnrWoodland } from "./md/woodland";
 import { miPermits } from "./mi/permits";
 import { mnRestrictions } from "./mn/restrictions";
 import { moShowMeFireBans } from "./mo/show-me-fire";
@@ -151,6 +153,22 @@ export const SOURCES: readonly Source[] = [
   vaRapidanAlerts,
   vaShenandoahAlerts,
   wvForestryFireSeason,
+  mdDnrWoodland,
+  mdSummerAir,
+  {
+    id: "md-dnr-emergency-orders", state: "MD", scope: "state", stack: "WordPress / REST search", mode: "manual", cadence: null,
+    sourceName: "Maryland Department of Natural Resources",
+    sourceUrl: "https://news.maryland.gov/dnr/wp-json/wp/v2/posts?search=burn%20ban&per_page=100&_fields=date%2Clink%2Ctitle%2Cslug",
+    officialUrl: "https://news.maryland.gov/dnr/?s=burn+ban",
+    error: "DNR publishes orders and lifts as news announcements. Confirm the effective dates, jurisdiction and any later extension or lift.",
+  },
+  {
+    id: "md-worcester-fire-marshal", state: "MD", scope: "county", stack: "Drupal / HTML news archive", mode: "manual", cadence: null,
+    sourceName: "Worcester County Fire Marshal",
+    sourceUrl: "https://worcestermd.gov/departments/fmo/fmo-news",
+    officialUrl: "https://worcestermd.gov/departments/fmo/fmo-news",
+    error: "The Fire Marshal posts individual orders and lifts. Check the latest notice or contact the Fire Marshal for current status.",
+  },
   {
     id: "wv-governor-fire-orders", state: "WV", scope: "state", stack: "Drupal / HTML news archive", mode: "manual", cadence: null,
     sourceName: "West Virginia Governor's Office",

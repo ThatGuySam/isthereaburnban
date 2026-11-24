@@ -41,6 +41,8 @@ import { manualPdf } from "../src/worker/sources/lib/pdf";
 import { sharePointListItems } from "../src/worker/sources/lib/sharepoint";
 import { parseNinjaRows, parseWpItems } from "../src/worker/sources/lib/wordpress";
 import { mergeSources, type SourceInput } from "../src/worker/sources/merge";
+import { mdSummerAir, parseMdSummerAir } from "../src/worker/sources/md/summer-air";
+import { mdDnrWoodland, parseMdWoodland } from "../src/worker/sources/md/woodland";
 import { miPermits, parseMichiganPermits } from "../src/worker/sources/mi/permits";
 import { mnRestrictions, parseMinnesotaRestrictions } from "../src/worker/sources/mn/restrictions";
 import { moShowMeFireBans, parseShowMeFireBans } from "../src/worker/sources/mo/show-me-fire";
@@ -117,6 +119,11 @@ const parseVaParkFixture = () => parseShenandoahAlerts(JSON.parse(vaParkJson), n
 const wvForestryJson = utf8("wv/fixtures/forestry-fire-laws-2026-11-24.json");
 const wvDaytime = new Date("2026-11-24T13:16:05Z");
 const parseWvForestryFixture = () => parseWestVirginiaSeasonal(JSON.parse(wvForestryJson), wvDaytime);
+const mdWoodlandHtml = utf8("md/fixtures/dnr-woodland-2026-11-24.html");
+const mdComarHtml = utf8("md/fixtures/comar-26.11.07.03-2026-11-24.html");
+const mdSummer = new Date("2027-06-01T04:00:00Z");
+const parseMdWoodlandFixture = async () => parseMdWoodland(await extractHtml(mdWoodlandHtml), now);
+const parseMdSummerFixture = async (at: Date) => parseMdSummerAir(await extractHtml(mdComarHtml), at);
 const ohStatute = utf8("oh/fixtures/section-1503.18-2026-11-24.html");
 const gaGwinnettHtml = utf8("ga/fixtures/gwinnett-2026-11-24.html");
 const gaSummerHtml = utf8("ga/fixtures/epd-summer-2026-11-24.html");
@@ -321,6 +328,8 @@ recordedInputs.push(
   { source: vaRapidanAlerts, rows: await parseVaRapidanFixture(), checked },
   { source: vaShenandoahAlerts, rows: parseVaParkFixture(), checked },
   { source: wvForestryFireSeason, rows: await parseWvForestryFixture(), checked: wvDaytime.toISOString() },
+  { source: mdDnrWoodland, rows: await parseMdWoodlandFixture(), checked },
+  { source: mdSummerAir, rows: await parseMdSummerFixture(now), checked },
   { source: ohSeasonal, rows: await parseOhFixture(), checked },
   { source: gaEpdNonSummer, rows: await parseGaNonSummerFixture(), checked },
   { source: azPimaWildfire, rows: await parseAzPimaFixture(), checked },
@@ -443,6 +452,8 @@ const jobs: Array<[string, () => unknown]> = [
   ["VA DWR Rapidan WordPress notice table", parseVaRapidanFixture],
   ["VA NPS Shenandoah park-alert JSON", parseVaParkFixture],
   ["WV Forestry WordPress and fire-season calendar", parseWvForestryFixture],
+  ["MD DNR SharePoint woodland guidance and calendar", parseMdWoodlandFixture],
+  ["MD COMAR summer air-quality rule and calendar", () => parseMdSummerFixture(mdSummer)],
   ["NV Spring Mountains Drupal order table", parseNvForestFixture],
   ["UT FFSL fire order polygons", parseUtOrders],
   ["UT closed fire season and calendar", parseUtStatute],

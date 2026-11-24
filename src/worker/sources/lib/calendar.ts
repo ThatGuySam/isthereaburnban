@@ -292,9 +292,22 @@ export const CALENDAR_RULES: Record<string, CalendarRule> = {
     note: "Wyoming limits open fires, campfires and charcoal grills on state trust lands year-round. W.S. § 36-2-107 allows exceptions for areas designated by the Board of Land Commissioners and activities authorized by a valid board lease, authorization or permit.",
   },
   MD: {
-    state: "MD", zone: US_ZONES.Eastern, status: "restricted", scope: "part", scopeNote: "Woodland and areas within 200 feet, outside incorporated towns",
+    state: "MD", zone: US_ZONES.Eastern, status: "restricted", scope: "part",
+    scopeNote: "In or within 200 feet of woodland or where flammable material can carry fire to woodland, outside incorporated towns",
     officialUrl: "https://dnr.maryland.gov/forests/Pages/fire/prevention-burning-guidance.aspx",
-    label: "Maryland woodland open-air burning limits",
-    note: "Maryland limits open-air burning in or near woodland outside incorporated towns to 4 p.m.–midnight and requires a firebreak, equipment and attendance. Small recreational fires are exempt. Snow cover may change the hours.",
+    label: "Year-round woodland burning restrictions",
+    note: "Covered open-air burning requires a 10-foot firebreak, enough people and equipment to keep the fire contained, and attendance until it is out. Burning is limited to 4 p.m.–midnight Eastern. Snow cover lifts the hours limit, and a Forest Service permit may set different conditions. Small recreational fires are exempt. Check state and local rules as well.",
+  },
+  MD_SUMMER_AIR: {
+    state: "MD", zone: US_ZONES.Eastern, status: "restricted", scope: "county",
+    scopeNote: "Open burning subject to Maryland's summer air-quality rule",
+    officialUrl: "https://regs.maryland.gov/us/md/exec/comar/26.11.07.03#C",
+    label: "Summer open burning restrictions",
+    seasons: [["06-01", "08-31"]],
+    counties: new Set([
+      "anne arundel", "baltimore", "baltimore city", "calvert", "carroll", "cecil", "charles", "frederick",
+      "harford", "howard", "montgomery", "prince george's",
+    ]),
+    note: "Maryland prohibits most open burning here from June 1 through August 31. Exceptions include certain cooking fires, recreational fires such as campfires, and fires authorized by a public officer under COMAR 26.11.07.04. Local rules still apply.",
   },
 };
