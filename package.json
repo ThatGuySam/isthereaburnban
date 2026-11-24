@@ -9,7 +9,8 @@
     "preview": "bun run build && wrangler dev",
     "deploy": "bun run build && wrangler deploy",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test",
+    "places": "bun scripts/build-places.ts"
   },
   "dependencies": {
     "@astrojs/react": "^7.1.9",
