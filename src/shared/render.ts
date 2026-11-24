@@ -162,3 +162,64 @@ export function unknownStatus(
     officialUrl: entry?.officialUrl ?? "",
   };
 }
+
+// ---------- Answers for titles, descriptions and lists (server-injected, so agents get them without JS) ----------
+
+// Main time zone per state, so "as of" dates match the reader's calendar day (UTC runs a day ahead every evening).
+const PACIFIC = new Set(["CA", "WA", "OR", "NV"]);
+const MOUNTAIN = new Set(["MT", "WY", "CO", "NM", "UT", "ID"]);
+const CENTRAL = new Set(["TX", "OK", "KS", "NE", "SD", "ND", "MN", "IA", "MO", "AR", "LA", "MS", "AL", "TN", "WI", "IL"]);
+
+export function stateTimeZone(state: string): string {
+  if (state === "AK") return "America/Anchorage";
+  if (state === "HI") return "Pacific/Honolulu";
+  if (state === "AZ") return "America/Phoenix";
+  if (PACIFIC.has(state)) return "America/Los_Angeles";
+  if (MOUNTAIN.has(state)) return "America/Denver";
+  if (CENTRAL.has(state)) return "America/Chicago";
+  return "America/New_York";
+}
+
+/** "Nov 23, 2026" on the state's calendar. */
+export function localDate(iso: string | null | undefined, state: string): string {
+  if (!iso) return "";
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return "";
+  return new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: stateTimeZone(state) });
+}
+
+const SHORT_ANSWER: Record<string, string> = { ban: "Yes", none: "No", restricted: "Restrictions only" };
+
+/** True when the source actually vouched for this status (a fetched feed, not a directory fallback). */
+function vouched(cs: CountyStatus): boolean {
+  return cs.status !== "unknown" && Boolean(cs.sourceUrl);
+}
+
+/**
+ * Title and meta description that answer the question, for one or more counties (a city can span several).
+ * Returns null when we can't vouch for an answer, so the page keeps its plain question title.
+ */
+export function answerMeta(question: string, list: CountyStatus[], cityName?: string): { title: string; description: string } | null {
+  if (!list.length || !list.every(vouched)) return null;
+  const first = list[0];
+  const same = list.every((c) => c.status === first.status);
+  const asOf = localDate(first.checked, first.state);
+  const answer = same ? SHORT_ANSWER[first.status] : "It depends on the county";
+  const title = `${question} ${answer} — as of ${asOf}`;
+  const ALL: Record<string, string> = { none: "None of them has an active burn ban.", ban: "All of them are under a burn ban.", restricted: "All of them have burning restrictions." };
+  let body: string;
+  if (list.length === 1) body = `${cityName ? `${cityName} is in ${placeName(first)}. ` : ""}${statusSentence(first)}.`;
+  else {
+    const names = list.map((c) => c.county);
+    const joined = `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+    body = `${cityName ?? "This place"} spans ${list.length} counties: ${joined}. ${same ? ALL[first.status] : list.map((c) => `${statusSentence(c)}.`).join(" ")}`;
+  }
+  const description = `${body} Checked ${asOf} with ${first.sourceName}. Confirm with the official source before you burn.`;
+  return { title, description };
+}
+
+/** One-line status for lists ("Nope: There is no burn ban active for Wagoner County, OK."). */
+export function renderStatusLine(cs: CountyStatus): string {
+  const theme = statusTheme(cs.status);
+  return `<strong class="status-dot status-dot--${theme.status}">${escapeHtml(theme.word)}</strong> ${escapeHtml(statusSentence(cs))}.`;
+}

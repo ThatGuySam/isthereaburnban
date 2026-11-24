@@ -17,14 +17,21 @@ interface Props {
   /** site footer at the end of the page; full-screen pages leave it out */
   footer?: boolean;
   themeColor?: string;
+  /**
+   * Lets the Worker answer in the <title> and description (src/worker/pages.ts): the question,
+   * the county FIPS codes the answer depends on, and the city name for city pages.
+   */
+  answer?: { question: string; fips: string[]; city?: string };
+  /** machine-readable version of this page (rel=alternate, application/json) */
+  apiHref?: string;
 }
 
-const { title, description, path, jsonLd = [], noindex = false, sheets = false, footer = true, themeColor = "#2a9d70" } = Astro.props;
+const { title, description, path, jsonLd = [], noindex = false, sheets = false, footer = true, themeColor = "#2a9d70", answer, apiHref } = Astro.props;
 const canonical = path ? new URL(path, SITE).href : undefined;
 const ld = (o: Record<string, unknown>) => JSON.stringify(o).replace(/</g, "\\u003c");
 ---
 <!doctype html>
-<html lang="en">
+<html lang="en" data-q={answer?.question} data-answer-fips={answer?.fips.join(",")} data-city={answer?.city}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -42,9 +49,9 @@ const ld = (o: Record<string, unknown>) => JSON.stringify(o).replace(/</g, "\\u0
     <meta property="og:type" content="website" />
     {canonical && <meta property="og:url" content={canonical} />}
     <meta property="og:image" content={new URL("/icons/icon-512.png", SITE).href} />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&display=swap" />
+    <meta name="twitter:card" content="summary" />
+    <link rel="preload" href="/fonts/montserrat-latin-var.woff2" as="font" type="font/woff2" crossorigin />
+    {apiHref && <link rel="alternate" type="application/json" href={apiHref} title="Burn ban status as JSON" />}
     {jsonLd.map((o) => <script type="application/ld+json" data-ld={String(o["@type"])} set:html={ld(o)} />)}
     <slot name="head" />
   </head>
@@ -52,6 +59,7 @@ const ld = (o: Record<string, unknown>) => JSON.stringify(o).replace(/</g, "\\u0
     <a class="skip" href="#content">Skip to content</a>
     <slot />
     {footer && <Footer />}
-    {sheets && <Sheets client:idle />}
+    {/* client-only: the closed drawer renders nothing, and Vaul needs a browser (preact/compat aliasing) */}
+    {sheets && <Sheets client:only="preact" />}
   </body>
 </html>

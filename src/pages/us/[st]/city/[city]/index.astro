@@ -1,0 +1,156 @@
+---
+import Base from "../../../../../layouts/Base.astro";
+import Hero from "../../../../../components/Hero.astro";
+import { countySlug } from "../../../../../shared/slug";
+import {
+  SITE,
+  COVERAGE_LABEL,
+  countyByFips,
+  countyPath,
+  nearbyPlaces,
+  placePath,
+  places,
+  stateByAbbr,
+  stateCitiesPath,
+  statePath,
+  type Place,
+} from "../../../../../components/site-data";
+
+export function getStaticPaths() {
+  return places.map((p) => ({ params: { st: p.state.toLowerCase(), city: p.slug }, props: { p } }));
+}
+
+const { p } = Astro.props as { p: Place };
+const state = stateByAbbr[p.state];
+const stateName = state?.name ?? p.state;
+const counties = p.counties.map((f) => countyByFips[f]).filter(Boolean);
+const primary = counties[0];
+const others = counties.slice(1);
+const where = `${p.name}, ${p.state}`;
+const path = placePath(p);
+const url = `${SITE}${path}`;
+const nearby = nearbyPlaces(p);
+const seatOf = (p.seatOf ?? []).map((f) => countyByFips[f]?.name).filter(Boolean);
+const kind = p.lsad === "city and borough" ? "city and borough" : p.lsad;
+const title = `Is there a burn ban in ${where}?`;
+const description = `Current burn ban status for ${p.name}, ${stateName} (${primary.name}), with the official source and when it last changed.`;
+const pop = new Intl.NumberFormat("en-US").format(p.pop < 10000 ? p.pop : Math.round(p.pop / 100) * 100);
+const note = others.length
+  ? `Most of ${p.name} is in ${primary.name}. Parts reach ${others.length === 1 ? "one other county" : `${others.length} other counties`}, listed below.`
+  : `${p.name} is in ${primary.name}.`;
+const apiCity = p.slug === countySlug(p.name) ? p.name : p.slug;
+const apiHref = `/api/v1/status?city=${encodeURIComponent(apiCity)}&state=${p.state}`;
+
+const jsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: `${SITE}/` },
+      { "@type": "ListItem", position: 2, name: "States", item: `${SITE}/us/` },
+      { "@type": "ListItem", position: 3, name: stateName, item: `${SITE}${statePath(p.state)}` },
+      { "@type": "ListItem", position: 4, name: primary.name, item: `${SITE}${countyPath(primary)}` },
+      { "@type": "ListItem", position: 5, name: p.name, item: url },
+    ],
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name: title,
+    url,
+    description,
+    isPartOf: { "@type": "WebSite", name: "Is There a Burn Ban?", url: `${SITE}/` },
+    about: {
+      "@type": "City",
+      name: `${p.name}, ${stateName}`,
+      identifier: p.geoid,
+      geo: { "@type": "GeoCoordinates", latitude: p.lat, longitude: p.lon },
+      containedInPlace: counties.map((c) => ({ "@type": "AdministrativeArea", name: `${c.name}, ${stateName}`, identifier: c.fips, url: `${SITE}${countyPath(c)}` })),
+    },
+  },
+];
+---
+<Base
+  title={title}
+  description={description}
+  path={path}
+  jsonLd={jsonLd}
+  answer={{ question: title, fips: p.counties, city: where }}
+  apiHref={apiHref}
+  sheets
+>
+  <Hero mode="county" fips={primary.fips} place={`${primary.name}, ${p.state}`} url={countyPath(primary)} note={note} />
+
+  <div class="page">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <ol>
+        <li><a href="/">Home</a></li>
+        <li><a href={statePath(p.state)}>{stateName}</a></li>
+        <li><a href={countyPath(primary)}>{primary.name}</a></li>
+        <li aria-current="page">{p.name}</li>
+      </ol>
+    </nav>
+    <h1>{title}</h1>
+    <p data-status-changed hidden></p>
+
+    <section>
+      <h2>City or county?</h2>
+      <p>
+        The answer above is the burn ban status for {primary.name}{others.length ? ", where most of " + p.name + " is" : ""}.
+        County burn bans usually cover unincorporated areas. Inside {p.name} city limits, the city can set its own
+        burning rules, and they are often stricter. Before you burn, check the official source and the {p.name} fire department.
+      </p>
+      <p>
+        {seatOf.includes(primary.name)
+          ? <>{p.name} is a {kind} in {stateName} and the county seat of <a href={countyPath(primary)}>{primary.name}</a>{seatOf.length > 1 ? ` and ${seatOf.filter((n) => n !== primary.name).join(" and ")}` : ""}.</>
+          : <>{p.name} is a {kind} in <a href={countyPath(primary)}>{primary.name}</a>, {stateName}{seatOf.length ? `, and the county seat of ${seatOf.join(" and ")}` : ""}.</>}
+        Population about {pop} (Census 2024 estimate).
+      </p>
+    </section>
+
+    {others.length > 0 && (
+      <section>
+        <h2>{p.name} spans {counties.length} counties</h2>
+        <ul class="status-list">
+          {counties.map((c) => (
+            <li>
+              <a href={countyPath(c)}>{c.name}</a>
+              <span data-status-line data-fips={c.fips}>Checking…</span>
+            </li>
+          ))}
+        </ul>
+        <p>Counties are listed by how many {p.name} residents live in each.</p>
+      </section>
+    )}
+
+    {state && (
+      <section>
+        <h2>Official source</h2>
+        <p>
+          <a href={state.officialUrl} target="_blank" rel="noopener">{state.publisher}</a>
+          {" "}<span class={`badge badge--${state.coverage}`}>{COVERAGE_LABEL[state.coverage]}</span>
+        </p>
+        <p>{state.notes}</p>
+        {state.coverage !== "live" && (
+          <p class="callout">We don't have a live county feed for {stateName} yet, so this page can't confirm whether {p.name} has a ban. Use the official source above.</p>
+        )}
+      </section>
+    )}
+
+    {nearby.length > 0 && (
+      <section>
+        <h2>Nearby cities</h2>
+        <ul class="inline-list">
+          {nearby.map((n) => (
+            <li><a href={placePath(n)}>{n.name}{n.state !== p.state ? `, ${n.state}` : ""}</a></li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    <p>
+      <a href={countyPath(primary)}>All of {primary.name} →</a><br />
+      <a href={stateCitiesPath(p.state)}>Cities in {stateName} →</a>
+    </p>
+  </div>
+</Base>

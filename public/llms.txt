@@ -9,6 +9,7 @@ Coverage: live county-level data for Oklahoma, Texas, Florida, Indiana, Louisian
 - [Status by ZIP](https://isthereaburnban.com/api/v1/status?zip=74103): one result per county the ZIP touches; `ambiguous` is true when there are several.
 - [Status by coordinates](https://isthereaburnban.com/api/v1/status?lat=36.154&lon=-95.993)
 - [Status by county FIPS](https://isthereaburnban.com/api/v1/status?fips=48453)
+- [Status by city](https://isthereaburnban.com/api/v1/status?city=Tulsa&state=OK): every county the city touches, plus a `place` object with its page.
 - [Plain-text answer](https://isthereaburnban.com/api/v1/status?zip=74103&format=text)
 - [One county](https://isthereaburnban.com/api/v1/counties/40143)
 - [All active bans](https://isthereaburnban.com/api/v1/bans) and [by state](https://isthereaburnban.com/api/v1/bans?state=TX)
@@ -19,8 +20,10 @@ Status values: `ban`, `restricted` (partial or activity-specific limits), `none`
 
 ## MCP
 
-- Streamable HTTP endpoint: https://isthereaburnban.com/mcp (stateless, no auth). Tools: `check_burn_ban` ({zip} | {lat, lon} | {fips}), `list_active_bans` ({state?}), `coverage`.
+- Streamable HTTP endpoint: https://isthereaburnban.com/mcp (stateless, no auth). Tools: `check_burn_ban` ({zip} | {lat, lon} | {fips} | {city, state}), `list_active_bans` ({state?}), `coverage`, `subscribe_email_alerts` ({email, fips[]}; double opt-in, nothing is sent until the user confirms by email).
+- Setup for Claude, ChatGPT, Cursor and VS Code: https://isthereaburnban.com/developers/
 
 ## Pages
 
 - County pages: https://isthereaburnban.com/us/{state}/{county-slug}/ (e.g. /us/ok/tulsa-county/)
+- City pages (places with 5,000+ people or a county seat): https://isthereaburnban.com/us/{state}/city/{city-slug}/ (e.g. /us/ok/city/tulsa/). County bans usually cover unincorporated areas; cities can have their own rules.

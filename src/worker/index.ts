@@ -74,6 +74,7 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
         : {
             zip: p.get("zip") ?? undefined,
             fips: p.get("fips") ?? undefined,
+            city: p.get("city") ?? undefined, state: p.get("state") ?? undefined,
             lat: p.has("lat") ? Number(p.get("lat")) : undefined,
             lon: p.has("lon") ? Number(p.get("lon")) : undefined,
           };

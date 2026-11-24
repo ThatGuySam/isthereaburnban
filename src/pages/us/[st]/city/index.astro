@@ -1,0 +1,83 @@
+---
+import Base from "../../../../layouts/Base.astro";
+import { SITE, countyByFips, placePath, placesInState, states, stateCitiesPath, statePath, type Place } from "../../../../components/site-data";
+import type { StateDirectoryEntry } from "../../../../shared/types";
+
+export function getStaticPaths() {
+  return states.filter((s) => placesInState(s.abbr).length).map((s) => ({ params: { st: s.abbr.toLowerCase() }, props: { s } }));
+}
+
+const { s } = Astro.props as { s: StateDirectoryEntry };
+const list: Place[] = placesInState(s.abbr);
+const useIndex = list.length > 30;
+const groups = useIndex
+  ? [...new Set(list.map((p) => p.name[0].toUpperCase()))].map((letter) => ({ letter, list: list.filter((p) => p.name[0].toUpperCase() === letter) }))
+  : [{ letter: "", list }];
+const title = `Burn bans by city in ${s.name}`;
+const description = `Burn ban status for ${list.length} cities and towns in ${s.name}, each with its county, the official source and when the status last changed.`;
+const jsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: `${SITE}/` },
+      { "@type": "ListItem", position: 2, name: "States", item: `${SITE}/us/` },
+      { "@type": "ListItem", position: 3, name: s.name, item: `${SITE}${statePath(s.abbr)}` },
+      { "@type": "ListItem", position: 4, name: "Cities", item: `${SITE}${stateCitiesPath(s.abbr)}` },
+    ],
+  },
+];
+---
+<Base title={title} description={description} path={stateCitiesPath(s.abbr)} jsonLd={jsonLd}>
+  <main id="content" class="page browse">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <ol>
+        <li><a href="/">Home</a></li>
+        <li><a href={statePath(s.abbr)}>{s.name}</a></li>
+        <li aria-current="page">Cities</li>
+      </ol>
+    </nav>
+    <h1>{title}</h1>
+    <p>
+      Cities and towns with at least 5,000 people, plus every county seat. A city page shows its county's burn ban
+      status and explains where the city's own rules may differ. Smaller towns: use <a href={statePath(s.abbr)}>your county</a>.
+    </p>
+
+    <form class="finder" data-finder role="search" action={stateCitiesPath(s.abbr)}>
+      <label class="finder-label" for="q">Find your city or town</label>
+      <input id="q" name="q" type="search" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="go" placeholder="Start typing a city name" />
+      <p class="finder-status" data-finder-status role="status"></p>
+    </form>
+    {useIndex && (
+      <nav class="az" aria-label="Jump to a letter" data-unfiltered>
+        <ul role="list">
+          {groups.map((g) => <li><a href={`#letter-${g.letter.toLowerCase()}`}>{g.letter}</a></li>)}
+        </ul>
+      </nav>
+    )}
+    <div class="az-list az-list--places" data-county-list data-unit="cities and towns" data-unit-one="city or town">
+      {groups.map((g) => (
+        <section class="az-group" data-group aria-labelledby={g.letter ? `letter-${g.letter.toLowerCase()}` : undefined}>
+          {g.letter && <h2 class="az-head" id={`letter-${g.letter.toLowerCase()}`}>{g.letter}</h2>}
+          <ul class="rows rows--places" role="list">
+            {g.list.map((p) => (
+              <li data-row={p.name}>
+                <a class="row" href={placePath(p)}>
+                  <span class="row-name">{p.name}</span>
+                  <span class="row-abbr">{countyByFips[p.counties[0]]?.name}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+
+    <p class="back"><a href={statePath(s.abbr)}>All {s.name} counties</a></p>
+  </main>
+</Base>
+
+<script>
+  import { initCountyFinder } from "../../../../client/browse";
+  initCountyFinder();
+</script>

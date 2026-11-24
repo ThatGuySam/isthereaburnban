@@ -1,7 +1,7 @@
 ---
 import Base from "../../../layouts/Base.astro";
 import StateIcon from "../../../components/StateIcon.astro";
-import { SITE, COVERAGE_LABEL, countiesIn, countyPath, states, statePath } from "../../../components/site-data";
+import { SITE, COVERAGE_LABEL, countiesIn, countyPath, placesInState, states, stateCitiesPath, statePath } from "../../../components/site-data";
 import type { StateDirectoryEntry } from "../../../shared/types";
 
 export function getStaticPaths() {
@@ -10,6 +10,7 @@ export function getStaticPaths() {
 
 const { s } = Astro.props as { s: StateDirectoryEntry };
 const list = countiesIn(s.abbr);
+const cityCount = placesInState(s.abbr).length;
 const unit = s.abbr === "LA" ? "parishes" : s.abbr === "AK" ? "boroughs and census areas" : "counties";
 const unitOne = s.abbr === "LA" ? "parish" : s.abbr === "AK" ? "borough or census area" : "county";
 const findLabel = s.abbr === "LA" ? "Find your parish" : s.abbr === "AK" ? "Find your borough" : "Find your county";
@@ -89,6 +90,8 @@ const jsonLd = [
         </section>
       ))}
     </div>
+
+    {cityCount > 0 && <p><a href={stateCitiesPath(s.abbr)}>Look up by city ({cityCount} cities and towns) →</a></p>}
 
     <h2>Who issues bans</h2>
     <p>{s.notes}</p>

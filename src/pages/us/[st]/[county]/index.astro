@@ -7,6 +7,8 @@ import {
   counties,
   countyNeighbors,
   countyPath,
+  placePath,
+  placesInCounty,
   stateByAbbr,
   statePath,
   type County,
@@ -23,6 +25,7 @@ const place = `${c.name}, ${c.state}`;
 const path = countyPath(c);
 const url = `${SITE}${path}`;
 const neighbors = countyNeighbors(c.fips);
+const cities = placesInCounty(c.fips);
 const title = `Is there a burn ban in ${place}?`;
 const description = `Current burn ban status for ${c.name}, ${stateName}, with the official source${state ? ` (${state.publisher})` : ""} and when it last changed.`;
 
@@ -48,7 +51,15 @@ const jsonLd = [
   },
 ];
 ---
-<Base title={title} description={description} path={path} jsonLd={jsonLd} sheets>
+<Base
+  title={title}
+  description={description}
+  path={path}
+  jsonLd={jsonLd}
+  answer={{ question: title, fips: [c.fips] }}
+  apiHref={`/api/v1/status?fips=${c.fips}`}
+  sheets
+>
   <Hero mode="county" fips={c.fips} place={place} url={path} />
 
   <div class="page">
@@ -83,6 +94,18 @@ const jsonLd = [
         <p class="callout">We don't have a live county feed for {stateName} yet, so this page can't confirm whether {c.name} has a ban. Use the official source above.</p>
       )}
     </section>
+
+    {cities.length > 0 && (
+      <section>
+        <h2>Cities in {c.name}</h2>
+        <ul class="inline-list">
+          {cities.map((p) => (
+            <li><a href={placePath(p)}>{p.name}</a>{p.counties[0] !== c.fips ? <span class="muted"> (part)</span> : null}</li>
+          ))}
+        </ul>
+        <p class="muted">City limits can have their own burning rules. Each city page explains how they relate to the county's.</p>
+      </section>
+    )}
 
     {neighbors.length > 0 && (
       <section>

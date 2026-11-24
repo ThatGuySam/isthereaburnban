@@ -1,5 +1,25 @@
+/* Montserrat (OFL), self-hosted: latin subset, variable weight 600-800. Preloaded in Base.astro. */
+@font-face {
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 600 800;
+  font-display: swap;
+  src: url("/fonts/montserrat-latin-var.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Arial scaled to Montserrat's metrics, so the swap doesn't move the hero text. */
+@font-face {
+  font-family: "Montserrat Fallback";
+  src: local("Arial"), local("Helvetica"), local("Liberation Sans");
+  size-adjust: 113.7%;
+  ascent-override: 85%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+}
+
 :root {
-  --font: "Montserrat", "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font: "Montserrat", "Montserrat Fallback", "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --ink: #1a1a1a;
   --muted: #555;
   --paper: #ffffff;
@@ -501,7 +521,9 @@ body[data-filtering] [data-unfiltered] {
   letter-spacing: 0.04em;
   color: var(--muted);
 }
-.row--county .row-abbr {
+.row--county .row-abbr,
+.row--city .row-abbr,
+.rows--places .row-abbr {
   letter-spacing: 0;
   font-weight: 600;
 }
@@ -888,3 +910,71 @@ body[data-filtering] [data-unfiltered] {
   }
 }
 
+
+/* ---------- City pages ---------- */
+
+.status-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.status-list li {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.status-list li > a {
+  font-weight: 700;
+  display: block;
+}
+.status-dot {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 800;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  margin-right: 0.25rem;
+  background: #767676;
+  color: #fff;
+}
+.status-dot--ban {
+  background: #c62828;
+}
+.status-dot--none {
+  background: #1b6e4c;
+}
+.status-dot--restricted {
+  background: #f5a623;
+  color: #1a1a1a;
+}
+.status-dot--unknown {
+  background: #123646;
+}
+.muted {
+  color: var(--muted);
+}
+
+/* ---------- Connect your agent ---------- */
+
+.mcp-url {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  padding: 0.85rem 1rem;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+}
+.mcp-url span {
+  font-weight: 700;
+}
+.mcp-url code {
+  overflow-wrap: anywhere;
+  font-size: 1rem;
+}
+.dev pre code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.dev li + li {
+  margin-top: 0.4rem;
+}

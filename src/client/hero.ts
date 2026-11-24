@@ -107,7 +107,7 @@ export function initHero(): void {
       lookupStatus({ fips: pageFips })
         .then((res) => {
           const r = res.results?.[0];
-          if (r?.status) paint(r, {}, false);
+          if (r?.status) paint(r, { note: slot.dataset.note }, false);
         })
         .catch(() => undefined);
     } else {

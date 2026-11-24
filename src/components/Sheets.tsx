@@ -1,4 +1,4 @@
-// The only React on the site: one Vaul drawer that shows the location, alert or menu sheet.
+// The only island on the site (Preact via preact/compat): one Vaul drawer that shows the location, alert or menu sheet.
 // Pages open it with openSheet() (src/client/place.ts) or any [data-sheet] element.
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Drawer } from "vaul";
@@ -16,9 +16,12 @@ import {
 export default function Sheets() {
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<OpenDetail>({ sheet: "menu" });
+  // Sheets open from page buttons outside React, so Radix has no trigger to refocus; remember it ourselves.
+  const opener = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const show = (d: OpenDetail) => {
+      if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body) opener.current = document.activeElement;
       setDetail(d);
       setOpen(true);
     };
@@ -38,7 +41,16 @@ export default function Sheets() {
     <Drawer.Root open={open} onOpenChange={setOpen} autoFocus>
       <Drawer.Portal>
         <Drawer.Overlay className="vs-overlay" />
-        <Drawer.Content className="vs" aria-describedby={undefined}>
+        <Drawer.Content
+          className="vs"
+          aria-describedby={undefined}
+          onCloseAutoFocus={(e) => {
+            if (opener.current?.isConnected) {
+              e.preventDefault();
+              opener.current.focus();
+            }
+          }}
+        >
           <Drawer.Handle className="vs-handle" />
           <button type="button" className="vs-close" onClick={close} aria-label="Close">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
@@ -313,7 +325,7 @@ function MenuSheet({ detail }: { detail: OpenDetail }) {
           {here !== "/" && <li><a href="/">Home</a></li>}
           <li><a href="/map/">Burn ban map</a></li>
           <li><a href="/us/">Browse states</a></li>
-          <li><a href="/developers/">Developers</a></li>
+          <li><a href="/developers/">Connect your agent</a></li>
         </ul>
       </nav>
       <p className="vs-fine">Informational only. Confirm with the official source before you burn.</p>

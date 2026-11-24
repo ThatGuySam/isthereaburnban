@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Is There a Burn Ban? API",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "County burn ban status from official US state sources, refreshed hourly. Informational only; always confirm with the official source. Missing data is reported as `unknown`, never `none`."
   },
   "servers": [
@@ -14,7 +14,7 @@
     "/api/v1/status": {
       "get": {
         "operationId": "getStatus",
-        "summary": "Burn ban status for a ZIP, coordinates, county FIPS, or the caller's IP location",
+        "summary": "Burn ban status for a ZIP, coordinates, county FIPS, city and state, or the caller's IP location",
         "parameters": [
           {
             "name": "zip",
@@ -49,6 +49,26 @@
               "pattern": "^\\d{5}$"
             },
             "example": "48453"
+          },
+          {
+            "name": "city",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "example": "Tulsa",
+            "description": "Incorporated city, town or village name. Pass state too; a name used in several states returns 400. Small towns without a page resolve to their county."
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z]{2}$"
+            },
+            "example": "OK",
+            "description": "2-letter state code, used with city"
           },
           {
             "name": "here",
@@ -468,12 +488,18 @@
               },
               "fips": {
                 "type": "string"
+              },
+              "city": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
               }
             }
           },
           "ambiguous": {
             "type": "boolean",
-            "description": "The ZIP touches more than one county"
+            "description": "The ZIP or city touches more than one county"
           },
           "approximate": {
             "type": "boolean",
@@ -505,6 +531,28 @@
             "examples": [
               "Informational only. Always confirm with the official source before burning."
             ]
+          },
+          "place": {
+            "type": "object",
+            "description": "Set for city lookups: the matched place, its page (or its county page) and every county it touches, largest population share first",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string",
+                "description": "Page path, e.g. /us/ok/city/tulsa/"
+              },
+              "counties": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
           }
         }
       },
