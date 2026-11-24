@@ -1,26 +1,98 @@
 ---
 import Base from "../../layouts/Base.astro";
+import StateIcon from "../../components/StateIcon.astro";
 import { COVERAGE_LABEL, states, statePath } from "../../components/site-data";
 
-const groups = (["live", "restrictions", "directory"] as const).map((k) => ({ k, list: states.filter((s) => s.coverage === k) }));
+// A–Z order on purpose: people know their state's name (docs/research/state-navigation-ux-2026-11-23.md).
+const groups = [...new Set(states.map((s) => s.name[0]))].map((letter) => ({
+  letter,
+  list: states.filter((s) => s.name[0] === letter),
+}));
+const live = states.filter((s) => s.coverage === "live");
+const TAG: Record<string, string | null> = { live: "Live", restrictions: "Restrictions", directory: null };
+const counts = (["live", "restrictions", "directory"] as const).map((k) => ({ k, n: states.filter((s) => s.coverage === k).length }));
 const blurb = {
   live: "We read an official county-level burn ban feed and update about every hour.",
   restrictions: "We link permit, fire-danger or land-manager restriction data. These aren't county burn bans, so we say \"Not sure\" rather than \"Nope\".",
   directory: "No machine-readable feed yet. We link the official source.",
 };
 ---
-<Base title="Coverage · Is There a Burn Ban?" description="Which states have live burn ban data, which have restrictions feeds, and the official source for every state." path="/us/">
-  <main id="content" class="page">
-    <h1>Coverage</h1>
-    <p>There's no national burn ban feed. Here's what we can check in each state.</p>
-    {groups.map(({ k, list }) => (
-      <section>
-        <h2>{COVERAGE_LABEL[k]} ({list.length})</h2>
-        <p>{blurb[k]}</p>
-        <ul class="county-list">
-          {list.map((s) => <li><a href={statePath(s.abbr)}>{s.name}</a></li>)}
-        </ul>
-      </section>
-    ))}
+<Base title="Burn bans by state · Is There a Burn Ban?" description="Find your state or county: live county burn ban status where an official feed exists, and the official source for every state." path="/us/">
+  <main id="content" class="page browse">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <ol>
+        <li><a href="/">Home</a></li>
+        <li aria-current="page">States</li>
+      </ol>
+    </nav>
+    <h1>Burn bans by state</h1>
+
+    <form class="finder" data-finder role="search" action="/us/">
+      <label class="finder-label" for="q">Find your state or county</label>
+      <input id="q" name="q" type="search" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="go" placeholder="Texas, TX or Travis" />
+      <p class="finder-status" data-finder-status role="status"></p>
+    </form>
+    <div class="locate">
+      <button type="button" class="locate-btn" data-locate>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 3 3 10.5l7.5 3 3 7.5L21 3Z" fill="currentColor" /></svg>
+        Use my location
+      </button>
+      <span class="locate-msg" data-locate-msg aria-live="polite"></span>
+    </div>
+
+    <p class="live-now" data-unfiltered>
+      <span class="tag tag--live">Live</span> county status in{" "}
+      {live.map((s, i) => <>{i > 0 && (i === live.length - 1 ? " and " : ", ")}<a href={statePath(s.abbr)}>{s.name}</a></>)}.
+    </p>
+
+    <nav class="az" aria-label="Jump to a letter" data-unfiltered>
+      <ul role="list">
+        {groups.map((g) => <li><a href={`#letter-${g.letter.toLowerCase()}`}>{g.letter}</a></li>)}
+      </ul>
+    </nav>
+
+    <div class="az-list" data-state-list>
+      {groups.map((g) => (
+        <section class="az-group" data-group aria-labelledby={`letter-${g.letter.toLowerCase()}`}>
+          <h2 class="az-head" id={`letter-${g.letter.toLowerCase()}`}>{g.letter}</h2>
+          <ul class="rows" role="list">
+            {g.list.map((s) => (
+              <li data-row={`${s.name.toLowerCase()} ${s.abbr.toLowerCase()}`}>
+                <a class={`row row--${s.coverage}`} href={statePath(s.abbr)} data-abbr={s.abbr} data-name={s.name}>
+                  <StateIcon abbr={s.abbr} />
+                  <span class="row-name">{s.name}</span>
+                  <span class="row-abbr" aria-hidden="true">{s.abbr}</span>
+                  {TAG[s.coverage] && <span class={`tag tag--${s.coverage}`}><span class="sr-only">, </span>{TAG[s.coverage]}</span>}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+
+    <section class="county-hits" data-county-hits aria-labelledby="county-hits-h" hidden>
+      <h2 class="az-head" id="county-hits-h">Counties</h2>
+      <ul class="rows" role="list"></ul>
+      <p class="finder-more" data-more></p>
+    </section>
+
+    <details class="key" data-unfiltered>
+      <summary>What the labels mean</summary>
+      <dl>
+        {counts.map(({ k, n }) => (
+          <>
+            <dt>{TAG[k] ? <span class={`tag tag--${k}`}>{TAG[k]}</span> : <span class="tag tag--none">No label</span>} {COVERAGE_LABEL[k]} ({n} {n === 1 ? "state" : "states"})</dt>
+            <dd>{blurb[k]}</dd>
+          </>
+        ))}
+      </dl>
+      <p>There's no national burn ban feed, so coverage depends on what each state publishes.</p>
+    </details>
   </main>
 </Base>
+
+<script>
+  import { initStateFinder } from "../../client/browse";
+  initStateFinder();
+</script>

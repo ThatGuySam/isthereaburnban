@@ -151,7 +151,7 @@ function LocationSheet({ detail, done }: { detail: OpenDetail; done: () => void 
         <button type="submit" className="vs-btn vs-btn--quiet" disabled={busy}>Check</button>
       </form>
       <p className="vs-fine">
-        <a href="/map/">Pick on a map instead</a>
+        <a href="/map/">Pick on a map</a> · <a href="/us/">Browse states</a>
       </p>
     </div>
   );
@@ -312,7 +312,7 @@ function MenuSheet({ detail }: { detail: OpenDetail }) {
           )}
           {here !== "/" && <li><a href="/">Home</a></li>}
           <li><a href="/map/">Burn ban map</a></li>
-          <li><a href="/us/">Coverage by state</a></li>
+          <li><a href="/us/">Browse states</a></li>
           <li><a href="/developers/">Developers</a></li>
         </ul>
       </nav>

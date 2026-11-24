@@ -347,6 +347,321 @@ pre {
   border-radius: 0 8px 8px 0;
 }
 
+/* ---------- State and county lists (/us/, /us/{st}/) ---------- */
+
+.browse {
+  --live: oklch(0.47 0.09 160);
+  --restr: oklch(0.5 0.11 65);
+  --quiet: oklch(0.68 0 none);
+}
+.browse [hidden],
+body[data-filtering] [data-unfiltered] {
+  display: none !important;
+}
+
+.finder {
+  margin-block: 1.25rem 0;
+}
+.finder-label {
+  display: block;
+  font-weight: 700;
+  margin-block-end: 0.4rem;
+}
+.finder input {
+  inline-size: 100%;
+  min-block-size: 3rem;
+  /* 16px or larger, or iOS zooms the page on focus */
+  font: inherit;
+  font-size: max(1.05rem, 16px);
+  font-weight: 600;
+  padding: 0.55rem 0.9rem;
+  border: 2px solid oklch(0.82 0 none);
+  border-radius: 12px;
+  color: var(--ink);
+  background: #fff;
+}
+.finder input:focus-visible {
+  border-color: var(--ink);
+}
+.finder-status {
+  margin: 0.4rem 0 0;
+  min-block-size: 1.4em;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.finder-more {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.locate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+}
+.locate-btn {
+  font: inherit;
+  font-weight: 700;
+  min-block-size: 2.75rem;
+  padding: 0.5rem 1rem;
+  border: 0;
+  border-radius: 999px;
+  background: oklch(0.94 0 none);
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+}
+.locate-btn svg {
+  flex: none;
+  block-size: 1em;
+  inline-size: auto;
+}
+.locate-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.locate-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.locate-msg {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.live-now {
+  margin-block: 1.25rem 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.az ul {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(2rem, 1fr));
+  gap: 2px;
+}
+.az a {
+  display: grid;
+  place-items: center;
+  min-block-size: 2.75rem;
+  border-radius: 10px;
+  background: oklch(0.965 0 none);
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: none;
+}
+.az a:active {
+  background: oklch(0.9 0 none);
+}
+
+.az-head {
+  /* Clears the top edge when a letter link jumps here */
+  scroll-margin-block-start: 0.75rem;
+  margin: 0 !important;
+  padding-block-end: 0.25rem;
+  border-block-end: 2px solid var(--ink);
+  font-size: 0.95rem !important;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-block-size: 3.25rem;
+  padding: 0.5rem 0.25rem;
+  border-block-end: 1px solid var(--line);
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+.row:active {
+  background: oklch(0.95 0 none);
+}
+.row-name {
+  min-inline-size: 0;
+}
+.row-abbr {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.row--county .row-abbr {
+  letter-spacing: 0;
+  font-weight: 600;
+}
+
+.st-icon {
+  flex: none;
+  inline-size: 2rem;
+  block-size: 2rem;
+  fill: var(--quiet);
+  stroke: var(--quiet);
+  stroke-width: 0.6;
+  stroke-linejoin: round;
+}
+.row--live .st-icon {
+  fill: var(--live);
+  stroke: var(--live);
+}
+.row--restrictions .st-icon {
+  fill: var(--restr);
+  stroke: var(--restr);
+}
+
+.tag {
+  flex: none;
+  margin-inline-start: auto;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.tag--live {
+  color: oklch(0.38 0.08 160);
+  background: oklch(0.94 0.04 160);
+}
+.tag--restrictions,
+.tag--restricted {
+  color: oklch(0.42 0.1 65);
+  background: oklch(0.95 0.05 80);
+}
+.tag--ban {
+  color: oklch(0.42 0.16 28);
+  background: oklch(0.94 0.04 28);
+}
+.tag--none {
+  color: var(--muted);
+  background: oklch(0.95 0 none);
+}
+.live-now .tag,
+.key .tag {
+  margin-inline-start: 0;
+}
+
+/* Two columns once there's room; each letter stays together. */
+.az-list {
+  columns: 2 19rem;
+  column-gap: 2rem;
+}
+.az-list--places {
+  columns: 3 15rem;
+}
+.az-list {
+  margin-block-start: 1.25rem;
+}
+.az-group {
+  break-inside: avoid;
+  padding-block-end: 1.5rem;
+}
+.rows--places .row {
+  min-block-size: 2.75rem;
+  padding-block: 0.35rem;
+}
+
+.county-hits {
+  margin-block-start: 1.25rem;
+}
+
+.state-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.state-head h1 {
+  margin: 0 !important;
+}
+.st-icon--lg {
+  inline-size: clamp(3.5rem, 14vw, 5rem);
+  block-size: clamp(3.5rem, 14vw, 5rem);
+}
+.state-badge {
+  margin: 0.5rem 0 0;
+}
+
+.banned summary {
+  cursor: pointer;
+  padding-block: 0.5rem;
+  min-block-size: 2.75rem;
+}
+.banned-hint {
+  margin-inline-start: 0.5rem;
+  font-weight: 700;
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+.banned[open] .banned-hint {
+  display: none;
+}
+.rows--cols {
+  columns: 2 15rem;
+  column-gap: 2rem;
+  margin-block-end: 0.5rem;
+}
+.rows--cols li {
+  break-inside: avoid;
+}
+
+.key {
+  margin-block-start: 2rem;
+  border-block-start: 1px solid var(--line);
+  padding-block-start: 1rem;
+}
+.key summary {
+  font-weight: 700;
+  cursor: pointer;
+  min-block-size: 2.75rem;
+  display: flex;
+  align-items: center;
+}
+.key dt {
+  font-weight: 700;
+  margin-block-start: 0.75rem;
+}
+.key dd {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+}
+
+.back {
+  margin-block-start: 2rem;
+  font-weight: 700;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .row:hover,
+  .az a:hover {
+    background: oklch(0.97 0 none);
+  }
+  .row:hover .row-name {
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .locate-btn {
+    transition: transform 0.16s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+}
+
 /* ---------- Footer ---------- */
 
 .site-footer {
