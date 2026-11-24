@@ -9,6 +9,7 @@ import { handlePage, handleSitemap } from "./pages";
 import { subscribePush, unsubscribePush } from "./push";
 import { getSnapshot, refresh } from "./snapshot";
 import { consumeSourceQueue, enqueueSources, type SourceMessage } from "./sources/queue";
+import { peekMcp, recordUsage } from "./usage";
 
 const CORS = {
   "access-control-allow-origin": "*",
@@ -102,22 +103,32 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
   return error("not found", 404);
 }
 
+async function route(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  const url = new URL(request.url);
+  const path = url.pathname;
+  if (path === "/ops" || path.startsWith("/ops/")) return handleOps(request, env, url);
+  try {
+    if (path.startsWith("/api/")) return await api(request, env, url);
+    if (path === "/mcp" || path.startsWith("/mcp/")) return await handleMcp(request, env, ctx);
+    if (path.startsWith("/us/")) return await handlePage(request, env, await getSnapshot(env));
+    if (path === "/sitemap.xml" || path.startsWith("/sitemaps/")) return await handleSitemap(request, env, await getSnapshot(env));
+  } catch (err) {
+    if (err instanceof LookupError) return error(err.message, err.status);
+    console.error(err);
+    return error("internal error", 500);
+  }
+  return env.ASSETS.fetch(request);
+}
+
 export default {
   async fetch(request, env, ctx): Promise<Response> {
-    const url = new URL(request.url);
-    const path = url.pathname;
-    if (path === "/ops" || path.startsWith("/ops/")) return handleOps(request, env, url);
-    try {
-      if (path.startsWith("/api/")) return await api(request, env, url);
-      if (path === "/mcp" || path.startsWith("/mcp/")) return await handleMcp(request, env, ctx);
-      if (path.startsWith("/us/")) return await handlePage(request, env, await getSnapshot(env));
-      if (path === "/sitemap.xml" || path.startsWith("/sitemaps/")) return await handleSitemap(request, env, await getSnapshot(env));
-    } catch (err) {
-      if (err instanceof LookupError) return error(err.message, err.status);
-      console.error(err);
-      return error("internal error", 500);
-    }
-    return env.ASSETS.fetch(request);
+    // Aggregate API/MCP counts (src/worker/usage.ts); nothing identifying is written.
+    const path = new URL(request.url).pathname;
+    const counted = request.method !== "OPTIONS" && (path.startsWith("/api/") || path === "/mcp" || path.startsWith("/mcp/"));
+    const mcp = counted && path.startsWith("/mcp") ? await peekMcp(request) : undefined;
+    const response = await route(request, env, ctx);
+    if (counted) recordUsage(env, request, response, mcp);
+    return response;
   },
 
   scheduled(controller, env, ctx) {
