@@ -49,6 +49,8 @@ import { ncAirHours } from "./nc/air-hours";
 import { ncForestOrders } from "./nc/forest-orders";
 import { ncPermits } from "./nc/permits";
 import { ndDesRestrictions } from "./nd/restrictions";
+import { neLincolnLancasterAir } from "./ne/lincoln-air";
+import { neOpenBurningLaw } from "./ne/open-burning";
 import { nhOpenBurningPermits } from "./nh/open-burning";
 import { nhTownHallRoad } from "./nh/town-hall-road";
 import { njRestrictions } from "./nj/restrictions";
@@ -201,6 +203,43 @@ export const SOURCES: readonly Source[] = [
   alCahabaBurning,
   nhOpenBurningPermits,
   nhTownHallRoad,
+  neOpenBurningLaw,
+  neLincolnLancasterAir,
+  {
+    id: "ne-governor-burn-orders", state: "NE", scope: "state", stack: "IIS / HTML index and signed PDFs",
+    mode: "manual", cadence: null, sourceName: "Nebraska Governor's Office and State Publications",
+    sourceUrl: "https://govdocs.nebraska.gov/docs/pilot/pubs/eoindex.html",
+    officialUrl: "https://govdocs.nebraska.gov/docs/pilot/pubs/eoindex.html",
+    error: "The March 2026 statewide permit suspension was rescinded April 2. Check the signed orders for any later suspension, its geographic boundaries and expiration.",
+  },
+  {
+    id: "ne-mccook-fire-alerts", state: "NE", scope: "part", stack: "CivicPlus Alert Center / HTML and RSS",
+    mode: "manual", cadence: null, sourceName: "City of McCook Fire Department",
+    sourceUrl: "https://cityofmccook.com/AlertCenter.aspx?CID=Fire-Department-8",
+    officialUrl: "https://cityofmccook.com/AlertCenter.aspx?AID=FIREOUTDOOR-BURNING-BAN-72",
+    error: "The April 2 city alert remains listed. Its PDF returned 404 and the RSS feed had no matching alert. Confirm current McCook restrictions with the fire department.",
+  },
+  {
+    id: "ne-waverly-fire-orders", state: "NE", scope: "part", stack: "SOCS / HTML notices",
+    mode: "manual", cadence: null, sourceName: "City of Waverly Fire & Rescue",
+    sourceUrl: "https://www.citywaverly.com/vnotifier/?group_id=933&page=listmessages",
+    officialUrl: "https://www.citywaverly.com/vnews/display.v/SEC/Fire/Rescue%7CBurn%20Permit%3E%3EBurn%20Ban%20Information",
+    error: "The October harvest suspension has no verified end date. Ask Waverly Fire & Rescue for current permits and any weather-triggered hold.",
+  },
+  {
+    id: "ne-omaha-burn-permits", state: "NE", scope: "part", stack: "WordPress / HTML",
+    mode: "manual", cadence: null, sourceName: "Omaha Public Works and Omaha Fire Department",
+    sourceUrl: "https://publicworks.omaha.gov/permit/burn-permits/",
+    officialUrl: "https://fire.omaha.gov/burnpolicy/",
+    error: "Direct requests returned Akamai HTTP 403. Omaha publishes standing city rules. Ask Omaha Fire or Air Quality Control about current permit availability.",
+  },
+  {
+    id: "ne-bennet-burn-permits", state: "NE", scope: "part", stack: "HTML / embedded Google Forms",
+    mode: "manual", cadence: null, sourceName: "Bennet Rural Fire Protection District",
+    sourceUrl: "https://docs.google.com/forms/d/e/1FAIpQLSeidNdJ_epJaKKgO_ARKQZeboErRIZbLhDyLZUKOJHbEgpJyA/viewform?embedded=true",
+    officialUrl: "https://bennetne.gov/bennet-rural-fire-district",
+    error: "The district policy page returned HTTP 511. Its public form lists dates applicants can request. Check with the district for current restrictions and wait for permit approval.",
+  },
   {
     id: "nh-forestry-emergency-orders", state: "NH", scope: "part", stack: "Drupal / email and social updates",
     mode: "manual", cadence: null, sourceName: "New Hampshire Division of Forests and Lands",

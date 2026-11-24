@@ -1,5 +1,7 @@
 // Inventory shapes HTML table and HTML text/list across Sitecore, Drupal, WordPress, SharePoint,
 // CivicPlus, Granicus, WebForms and PHP. Publishers still supply the selectors and interpretation.
+import { sha256 } from "./hash";
+
 export { atLocalTime, localClock, parseEndDate, parseLocalDateTime, parseUsDate, US_ZONES } from "./dates";
 
 const ENTITIES: Record<string, string> = {
@@ -239,6 +241,12 @@ export function blockAfterHeading(blocks: Block[], pattern: RegExp, { requireUni
   if (start < 0 || (requireUnique && blocks.findLastIndex(isHeading) !== start)) return [];
   const end = blocks.findIndex(({ tag }, index) => index > start && HEAD.test(tag) && tag <= blocks[start].tag);
   return blocks.slice(start + 1, end < 0 ? undefined : end);
+}
+
+/** Verify the normalized text under a unique heading, outside surrounding navigation. */
+export async function matchesReviewedHtmlSection(blocks: Block[], heading: RegExp, fingerprint: string): Promise<boolean> {
+  const section = blockAfterHeading(blocks, heading, { requireUnique: true });
+  return section.length > 0 && await sha256(section.map(({ text }) => text).join("\n")) === fingerprint;
 }
 
 /** Read a numbered section in legacy rulebooks that mark their headings as paragraphs. */

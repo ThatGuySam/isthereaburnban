@@ -619,10 +619,44 @@
   {
     "abbr": "NE",
     "name": "Nebraska",
-    "coverage": "directory",
-    "publisher": "Nebraska State Fire Marshal",
+    "coverage": "restrictions",
+    "publisher": "Nebraska Legislature, Nebraska State Fire Marshal and Lincoln-Lancaster County Health Department",
     "officialUrl": "https://sfm.nebraska.gov/fire-departments/burn-permits",
-    "notes": "Local fire chiefs issue open-burning permits in Nebraska. The state can suspend permits by executive order."
+    "extraUrls": [
+      {
+        "label": "Nebraska open-burning law",
+        "url": "https://nebraskalegislature.gov/laws/statutes.php?statute=81-520.01"
+      },
+      {
+        "label": "Local fire department contacts",
+        "url": "https://sfm.nebraska.gov/fire-departments/general-information"
+      },
+      {
+        "label": "Governor's signed executive orders",
+        "url": "https://govdocs.nebraska.gov/docs/pilot/pubs/eoindex.html"
+      },
+      {
+        "label": "Nebraska air-quality permits",
+        "url": "https://dwee.nebraska.gov/forms/publications-grants-forms/07-285"
+      },
+      {
+        "label": "Lincoln and Lancaster County open-burning rules",
+        "url": "https://www.lincoln.ne.gov/City/Departments/Health-Department/Environmental/Air#section-4"
+      },
+      {
+        "label": "Omaha Fire Department burn policy",
+        "url": "https://fire.omaha.gov/burnpolicy/"
+      },
+      {
+        "label": "Nebraska National Forests and Grasslands alerts",
+        "url": "https://www.fs.usda.gov/r02/nebraska/alerts"
+      },
+      {
+        "label": "State park campfire bans and advisories",
+        "url": "https://outdoornebraska.gov/parks/park-faqs/safety/closures-and-safety-advisories/"
+      }
+    ],
+    "notes": "Nebraska limits bonfires, outdoor rubbish fires and land-clearing fires year-round. Local fire chiefs can issue permits or waive the rule for their area. The Governor can suspend permits. Ask the local fire department about current orders, waivers and permits for your burn site. Air-quality and public-land rules can also apply."
   },
   {
     "abbr": "NV",

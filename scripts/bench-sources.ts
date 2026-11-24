@@ -103,6 +103,8 @@ import { parseWisconsinPermits, wiPermits } from "../src/worker/sources/wi/permi
 import { parseWyomingCountyOrders, wyCountyOrders } from "../src/worker/sources/wy/county-orders";
 import { parseWyomingStateLands, wyStateLands } from "../src/worker/sources/wy/state-lands";
 import { ndDesRestrictions, parseNdRestrictions } from "../src/worker/sources/nd/restrictions";
+import { neLincolnLancasterAir, parseNeLincolnAir } from "../src/worker/sources/ne/lincoln-air";
+import { neOpenBurningLaw, parseNeOpenBurning } from "../src/worker/sources/ne/open-burning";
 import { nhOpenBurningPermits, parseNhOpenBurning } from "../src/worker/sources/nh/open-burning";
 import { nhTownHallRoad, parseTownHallRoad } from "../src/worker/sources/nh/town-hall-road";
 
@@ -199,6 +201,13 @@ const nhForestAlerts = utf8("nh/fixtures/usfs-alerts-2026-11-24.html");
 const nhRoadOrder = utf8("nh/fixtures/usfs-town-hall-road-2026-11-24.html");
 const parseNhStatuteFixture = () => parseNhOpenBurning(nhStatute, nhCaptured);
 const parseNhForestFixture = () => parseTownHallRoad(nhForestAlerts, async () => nhRoadOrder, nhCaptured);
+
+const neStatuteCaptured = new Date("2026-11-24T16:31:48Z");
+const neLincolnCaptured = new Date("2026-11-24T16:32:38Z");
+const neStatute = utf8("ne/fixtures/statute-81-520-01-2026-11-24.html");
+const neLincolnAir = utf8("ne/fixtures/lincoln-air-2026-11-24.html");
+const parseNeStatuteFixture = () => parseNeOpenBurning(neStatute, neStatuteCaptured);
+const parseNeLincolnFixture = () => parseNeLincolnAir(neLincolnAir, neLincolnCaptured);
 
 const parseNwsLive = () => parseNwsAlerts(JSON.parse(nwsLive), nwsCaptured);
 const parseNwsArchive = () => parseNwsAlerts(JSON.parse(nwsArchive), new Date("2026-11-18T20:00Z"), { archive: true });
@@ -452,6 +461,8 @@ recordedInputs.push(
   { source: alCahabaBurning, rows: await parseAlCahaba(), checked: alCaptured.toISOString() },
   { source: nhOpenBurningPermits, rows: await parseNhStatuteFixture(), checked: nhCaptured.toISOString() },
   { source: nhTownHallRoad, rows: await parseNhForestFixture(), checked: nhCaptured.toISOString() },
+  { source: neOpenBurningLaw, rows: await parseNeStatuteFixture(), checked: neStatuteCaptured.toISOString() },
+  { source: neLincolnLancasterAir, rows: await parseNeLincolnFixture(), checked: neLincolnCaptured.toISOString() },
   { source: ohSeasonal, rows: await parseOhFixture(), checked },
   { source: gaEpdNonSummer, rows: await parseGaNonSummerFixture(), checked },
   { source: azPimaWildfire, rows: await parseAzPimaFixture(), checked },
@@ -537,6 +548,8 @@ const jobs: Array<[string, () => unknown]> = [
   ["AL Cahaba Valley district status", parseAlCahaba],
   ["NH open-burning statute and calendar", parseNhStatuteFixture],
   ["NH White Mountain Drupal forest order", parseNhForestFixture],
+  ["NE open-burning statute and calendar", parseNeStatuteFixture],
+  ["NE Lincoln-Lancaster open-burning rules and calendar", parseNeLincolnFixture],
   ["CivicPlus News Flash", () => civicPlusNotices(parseHtml(placer, { links: true }), "https://www.placer.ca.gov/")],
   ["ASP.NET WebForms", () => webFormsPost(michigan, "https://www2.dnr.state.mi.us/burnpermits/", "ctl00$ContentPlaceHolder1$CntyName")],
   ["SharePoint list", () => sharePointListItems(parseHtml(kentucky), /current burn bans/i)],

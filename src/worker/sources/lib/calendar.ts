@@ -3,7 +3,7 @@ import { atLocalTime, localClock, localDayWindow, shiftDay, US_ZONES } from "./d
 
 // Inventory: Alabama and Jefferson County open burning, Alaska burn permits and winter air rules, AZ Area A, Idaho and Utah closed fire seasons, NY DEC Open Burning, GA EPD Summer Open Burning Ban, KY fire hazard seasons, OH DNR Open Burning Regulations,
 // PA state forest fires, VA DOF 4 PM Burning Law, WV Forestry Fire Burning Guidelines, MD DNR Burning Guidance,
-// ME, NH and VT open-burning permits, DE open burning, and MA residential brush burning.
+// ME, NE, NH and VT open-burning permits, DE open burning, and MA residential brush burning.
 export type CalendarRule = {
   state: string;
   officialUrl: string;
@@ -317,6 +317,13 @@ export const CALENDAR_RULES: Record<string, CalendarRule> = {
     officialUrl: "https://legislature.maine.gov/statutes/12/title12sec9325.html",
     label: "Permit required for covered open burning",
     note: "Maine requires a permit for burning brush, leaves and other activities listed in state law. Ask the town forest fire warden or, in unorganized areas, a Maine Forest Service ranger. The law has exceptions for certain small campfires on snow or frozen water and qualifying outdoor cooking fires. Check for local restrictions before burning.",
+  },
+  NE: {
+    state: "NE", zone: US_ZONES.Central, status: "restricted", scope: "state",
+    scopeNote: "Bonfires, outdoor rubbish fires and land-clearing fires",
+    officialUrl: "https://nebraskalegislature.gov/laws/statutes.php?statute=81-520.01",
+    label: "Local fire chief approval for covered open burning",
+    note: "Nebraska law prohibits bonfires, outdoor rubbish fires and land-clearing fires unless the local fire chief issues a permit or waives the ban for the jurisdiction. If the chief has issued an area waiver, notify the chief before burning. Ask the local fire department about waivers, permits and temporary restrictions at your burn site.",
   },
   NH: {
     state: "NH", zone: US_ZONES.Eastern, status: "restricted", scope: "state",

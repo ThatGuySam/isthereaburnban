@@ -7,7 +7,8 @@ import { activeRule, calendarDayWindows, calendarStatusRows, CALENDAR_RULES } fr
 import { civicPlusAlertDetails, civicPlusNotices, civicPlusPageParagraphs, civicPlusPageText, civicPlusUrl } from "./civicplus";
 import { localDayWindow, parseLocalIsoTimestamp, parseWeekdayDate, reportWindow, weekdayOnOrAfter } from "./dates";
 import { decodeFeed, parseCsv, parseDotNetJsonDate, parseFeed, parseJson } from "./feeds";
-import { blockAfterHeading, extractHtml, extractHtmlGrid, localClock, numberedRuleSection, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, US_ZONES } from "./html";
+import { blockAfterHeading, extractHtml, extractHtmlGrid, localClock, matchesReviewedHtmlSection, numberedRuleSection, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, US_ZONES } from "./html";
+import { sha256 } from "./hash";
 import { BlockedError, fetchSource, HttpError, pacedSourceReader, pacedTextReader, USER_AGENT } from "./http";
 import { manualPdf } from "./pdf";
 import { parseSharePointItems, parseSharePointPage, sharePointListItems, sharePointListUrl, sharePointRows } from "./sharepoint";
@@ -34,6 +35,17 @@ test("HTML tables can follow a publisher's text labels instead of heading tags",
     expect(parts.tables).toEqual([{ heading: "Stage & status", id: undefined, rows: [["Active"]] }]);
   }
   expect((await extractHtml(markup)).tables[0].heading).toBe("Orders");
+});
+
+test("reviewed HTML sections validate unique headings and normalized section text", async () => {
+  const heading = /^Permit rule$/;
+  const fingerprint = await sha256("Permit required & notify first.\nLocal waivers apply.");
+  const validate = (html) => matchesReviewedHtmlSection(parseHtml(html).blocks, heading, fingerprint);
+  const section = "<h3>Permit rule</h3><p>Permit  <b>required</b> &amp; notify first.</p><p>Local waivers apply.</p>";
+  expect(await validate(`<p>Navigation</p>${section}<h3>Source</h3><p>New link</p>`)).toBe(true);
+  expect(await validate(section.replace("required", "optional"))).toBe(false);
+  expect(await validate(section + section)).toBe(false);
+  expect(await validate("<h3>Permit rule</h3><h3>Source</h3>")).toBe(false);
 });
 
 test("HTML status grids extract only selected rows and keep cell data", async () => {
