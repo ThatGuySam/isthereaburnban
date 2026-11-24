@@ -1,3 +1,4 @@
+// @ts-nocheck -- bun test types are not installed; this file runs under `bun test`, not the Worker build.
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";

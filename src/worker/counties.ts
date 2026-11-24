@@ -28,3 +28,15 @@ export function countyByName(state: string, name: string): County | undefined {
 export function countiesInState(state: string): County[] {
   return COUNTIES.filter((c) => c.state === state);
 }
+
+/** Canonical county page path, e.g. "/us/ok/tulsa-county/". */
+export function countyPath(fips: string): string {
+  const c = COUNTY_BY_FIPS.get(fips);
+  return c ? `/us/${c.state.toLowerCase()}/${c.slug}/` : "/";
+}
+
+/** Keep only known 5-digit county FIPS codes, deduped, at most `max`. */
+export function cleanFipsList(input: unknown, max = 20): string[] {
+  if (!Array.isArray(input)) return [];
+  return [...new Set(input.map(String).filter((f) => COUNTY_BY_FIPS.has(f)))].slice(0, max);
+}
