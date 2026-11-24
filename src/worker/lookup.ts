@@ -2,6 +2,7 @@ import type { CountyStatus, LookupResult, Snapshot } from "../shared/types";
 import { ADAPTERS } from "./adapters";
 import { COUNTY_BY_FIPS, countyPath, STATE_DIR_BY_ABBR } from "./counties";
 import type { Env } from "./env";
+import { resolveCity } from "./places";
 
 export const DISCLAIMER = "Informational only. Always confirm with the official source before burning.";
 
@@ -84,7 +85,7 @@ export async function coordsToFips(lat: number, lon: number): Promise<string[]> 
 export async function lookup(
   env: Env,
   snapshot: Snapshot,
-  q: { zip?: string; lat?: number; lon?: number; fips?: string },
+  q: { zip?: string; lat?: number; lon?: number; fips?: string; city?: string; state?: string },
 ): Promise<LookupResult> {
   if (q.zip) {
     const z = await zipToFips(env, q.zip.trim());
@@ -100,7 +101,11 @@ export async function lookup(
     if (!/^\d{5}$/.test(f)) throw new LookupError("fips must be a 5-digit county FIPS code");
     return buildResult({ fips: f }, [f], snapshot);
   }
-  throw new LookupError("provide zip, lat and lon, fips, or here=1");
+  if (q.city) {
+    const place = await resolveCity(env, q.city, q.state);
+    return { ...buildResult({ city: q.city.trim(), ...(q.state ? { state: q.state.trim().toUpperCase() } : {}) }, place.counties, snapshot), place };
+  }
+  throw new LookupError("provide zip, lat and lon, fips, city (with state), or here=1");
 }
 
 /** "Yes: Tulsa County, OK has a burn ban (County Burn Ban). Source: ..., checked .... Official: ..." */

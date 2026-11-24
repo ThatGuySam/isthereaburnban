@@ -60,7 +60,9 @@ export type StateDirectoryEntry = {
 };
 
 export type LookupResult = {
-  query: { zip?: string; lat?: number; lon?: number; fips?: string };
+  query: { zip?: string; lat?: number; lon?: number; fips?: string; city?: string; state?: string };
+  /** set for city= lookups: the matched incorporated place and its page (or its county page when it has none) */
+  place?: { name: string; state: string; url: string; counties: string[] };
   /** true if a ZIP touches more than one county; UI should ask the user to pick */
   ambiguous: boolean;
   /** true if the ZIP was not in Census ZCTA data and we used the nearest ZIP */
