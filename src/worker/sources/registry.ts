@@ -27,6 +27,7 @@ import { mtDeqFall } from "./mt/deq-fall";
 import { mtDnrcRestrictions } from "./mt/dnrc";
 import { mtGallatinOpenBurning } from "./mt/gallatin";
 import { mtMissoulaSeasons } from "./mt/missoula";
+import { ndDesRestrictions } from "./nd/restrictions";
 import { njRestrictions } from "./nj/restrictions";
 import { nwsFireWeather } from "./nws/alerts";
 import { ohSeasonal } from "./oh/seasonal";
@@ -113,6 +114,14 @@ export const SOURCES: readonly Source[] = [
   mtMissoulaSeasons,
   wyCountyOrders,
   wyStateLands,
+  ndDesRestrictions,
+  {
+    id: "nd-cass-county-order", state: "ND", scope: "part", stack: "Granicus / Vision HTML and PDF", mode: "manual", cadence: null,
+    sourceName: "Cass County Emergency Management",
+    sourceUrl: "https://www.casscountynd.gov/Home/Components/News/News/2647/16?seldept=18&selectview=0",
+    officialUrl: "https://nddesgis.nd.gov/server/rest/services/Hosted/WebEOC_Burn_Restriciions_Publish/FeatureServer/0/31/attachments/82",
+    error: "The county notice and PDF returned Akamai 403 on 2026-11-24. DES hosts a copy of the signed county declaration.",
+  },
   {
     id: "ut-blm-campfire-orders", state: "UT", scope: "part", stack: "Drupal / PDF orders", mode: "manual", cadence: null,
     sourceName: "Bureau of Land Management Utah",

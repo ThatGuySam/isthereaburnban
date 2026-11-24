@@ -1,7 +1,8 @@
 import type { FireWeatherAlert, FireWeatherOrder, ScopedOrder } from "../../../shared/types";
-import { arcgisRows, arcgisUrl, msToIso } from "../lib/arcgis";
+import { arcgisRows, arcgisUrl } from "../lib/arcgis";
 import { localClock, localDayWindow, US_ZONES } from "../lib/dates";
 import { fetchSource, type HttpFetch } from "../lib/http";
+import { ND_DECLARATION_FIELDS, ND_DECLARATION_LAYER, ndDeclarationWindow } from "../nd/declarations";
 
 type Declaration = { start: string; end: string };
 
@@ -97,14 +98,14 @@ const datedRules: Record<string, { county: string; filename: string; signedEnd: 
   },
 };
 const ndRulesByName = new Map(Object.entries(datedRules).map(([fips, value]) => [value.county, { fips, ...value }]));
-const ND_DES = "https://services1.arcgis.com/qQaNyq8h4wNEdlUV/arcgis/rest/services/Fire_Decs_Indexes_Warnings_Template_Publish/FeatureServer/0";
 const counties = [...ndRulesByName.keys()].map((name) => `'${name}'`).join(", ");
-export const ND_DECLARATIONS_URL = arcgisUrl(ND_DES, [
-  "county", "attachment_declaration_name", "declaration_status", "declaration_rescinded",
-  "declaration_date_new", "burn_expiration_date",
+export const ND_DECLARATIONS_URL = arcgisUrl(ND_DECLARATION_LAYER, [
+  "county", "attachment_declaration_name", ...ND_DECLARATION_FIELDS,
 ], { where: `county IN (${counties}) AND Jurisdiction_Type = 'County FDR'` });
 
-export const hasDatedRedFlagRule = (fips: string) => Object.hasOwn(datedRules, fips);
+export function hasDatedRedFlagRule(fips: string, filename?: string) {
+  return Object.hasOwn(datedRules, fips) && (filename === undefined || datedRules[fips].filename === filename);
+}
 
 export async function readNdDeclarations(now: Date, fetchImpl?: HttpFetch): Promise<Map<string, Declaration>> {
   const reply = await fetchSource(ND_DECLARATIONS_URL, { fetchImpl, maxBytes: 32_000, timeoutMs: 5_000, attempts: 1 });
@@ -114,12 +115,9 @@ export async function readNdDeclarations(now: Date, fetchImpl?: HttpFetch): Prom
   const valid = new Map<string, Declaration>();
   for (const row of rows) {
     const expected = typeof row.county === "string" ? ndRulesByName.get(row.county) : undefined;
-    if (!expected || row.attachment_declaration_name !== expected.filename ||
-      row.declaration_status !== "Yes" || row.declaration_rescinded !== "No") continue;
-    const start = msToIso(row.declaration_date_new);
-    const publishedEnd = msToIso(row.burn_expiration_date);
-    const end = publishedEnd && publishedEnd < expected.signedEnd ? publishedEnd : expected.signedEnd;
-    if (start && end && start <= checked && checked < end) valid.set(expected.fips, { start, end });
+    if (!expected || row.attachment_declaration_name !== expected.filename) continue;
+    const declaration = ndDeclarationWindow(row, checked, expected.signedEnd);
+    if (declaration?.end) valid.set(expected.fips, { start: declaration.start, end: declaration.end });
   }
   return valid;
 }

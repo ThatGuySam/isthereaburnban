@@ -60,6 +60,7 @@ import { parsePugetSound, waPugetSoundAir } from "../src/worker/sources/wa/puget
 import { parseWisconsinPermits, wiPermits } from "../src/worker/sources/wi/permits";
 import { parseWyomingCountyOrders, wyCountyOrders } from "../src/worker/sources/wy/county-orders";
 import { parseWyomingStateLands, wyStateLands } from "../src/worker/sources/wy/state-lands";
+import { ndDesRestrictions, parseNdRestrictions } from "../src/worker/sources/nd/restrictions";
 
 const sourceUrl = new URL("../src/worker/sources/", import.meta.url);
 const from = (path: string) => readFileSync(new URL(path, sourceUrl));
@@ -162,6 +163,10 @@ const wyCounties = utf8("wy/fixtures/county-restrictions-2026-11-24.json");
 const wyLands = utf8("wy/fixtures/state-lands-rule-2026-11-24.json");
 const parseWyCountyFixture = () => parseWyomingCountyOrders(JSON.parse(wyCountyLayer), JSON.parse(wyCounties), wyCaptured);
 const parseWyLandFixture = () => parseWyomingStateLands(JSON.parse(wyLands), wyCaptured);
+const ndCaptured = new Date("2026-11-24T10:06:16Z");
+const ndRestrictions = utf8("nd/fixtures/restrictions-2026-11-24.json");
+const ndFireDanger = utf8("nd/fixtures/fire-danger-2026-11-24.json");
+const parseNdFixture = () => parseNdRestrictions(JSON.parse(ndRestrictions), JSON.parse(ndFireDanger), ndCaptured);
 const akPermitLayer = utf8("ak/fixtures/permit-layer-2026-11-24.json");
 const akPermitZones = utf8("ak/fixtures/permit-zones-2026-11-24.json");
 const akFireSeason = utf8("ak/fixtures/as-41-15-050-2026-11-24.html");
@@ -246,6 +251,7 @@ recordedInputs.push(
   { source: mtMissoulaSeasons, rows: await parseMtMissoula(), checked: mtCaptured.toISOString() },
   { source: wyCountyOrders, rows: parseWyCountyFixture(), checked: wyCaptured.toISOString() },
   { source: wyStateLands, rows: parseWyLandFixture(), checked: wyCaptured.toISOString() },
+  { source: ndDesRestrictions, rows: parseNdFixture(), checked: ndCaptured.toISOString() },
   { source: nwsFireWeather, rows: [], fireWeather: parseNwsLive(), checked: nwsCaptured.toISOString() },
 );
 
@@ -314,6 +320,7 @@ const jobs: Array<[string, () => unknown]> = [
   ["ID closed fire season and calendar", parseIdStatuteFixture],
   ["WY State Forestry county orders", parseWyCountyFixture],
   ["WY state trust lands rule", parseWyLandFixture],
+  ["ND DES ArcGIS daily restrictions", parseNdFixture],
   ["UT FFSL fire order polygons", parseUtOrders],
   ["UT closed fire season and calendar", parseUtStatute],
   ["MT DEQ fall open-burning decisions", parseMtDeq],

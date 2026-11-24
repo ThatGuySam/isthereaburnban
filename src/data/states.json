@@ -542,14 +542,26 @@
     "name": "North Dakota",
     "coverage": "restrictions",
     "publisher": "North Dakota Department of Emergency Services",
-    "officialUrl": "https://www.des.nd.gov/response-section/burn-restrictions-wildland-fires",
+    "officialUrl": "https://burnrestrictions.nd.gov",
     "extraUrls": [
       {
-        "label": "ND Response burn restriction map",
+        "label": "ND Response map guide",
         "url": "https://www.ndresponse.gov/burn-restrictions-fire-danger-maps"
+      },
+      {
+        "label": "County and tribal emergency managers",
+        "url": "https://www.des.nd.gov/countytribal-contacts"
+      },
+      {
+        "label": "State open-burning and variance rules",
+        "url": "https://deq.nd.gov/aq/permitting/OpenBurning.aspx"
+      },
+      {
+        "label": "Fire emergency and burn restriction guidance",
+        "url": "https://www.des.nd.gov/response-section/burn-restrictions-wildland-fires"
       }
     ],
-    "notes": "North Dakota counties declare burn restrictions, often tied to daily fire danger. The state maps them."
+    "notes": "The governor and local governments can issue burn restrictions. The state map shows reported county, city, tribal and land-manager restrictions, often tied to fire danger or a Red Flag Warning. Check with the authority that covers your location and activity."
   },
   {
     "abbr": "OH",

@@ -2,7 +2,7 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { syncfusionGridRows, webFormsPost } from "./aspnet";
-import { arcgisDateOnly, arcgisDistinctUrl, arcgisEditWindow, arcgisLocalDate, arcgisRows, codedDomains, dataLastEditDate, findOperationalLayers, queryArcgis } from "./arcgis";
+import { arcgisDateOnly, arcgisDistinctUrl, arcgisEditWindow, arcgisLocalDate, arcgisRows, arcgisTimestampOffset, codedDomains, dataLastEditDate, findOperationalLayers, queryArcgis } from "./arcgis";
 import { activeRule, calendarDayWindows, CALENDAR_RULES } from "./calendar";
 import { civicPlusAlertDetails, civicPlusNotices, civicPlusUrl } from "./civicplus";
 import { localDayWindow, parseWeekdayDate, reportWindow, weekdayOnOrAfter } from "./dates";
@@ -72,6 +72,15 @@ test("ArcGIS DateOnly fields accept only valid ISO calendar dates", () => {
   expect(arcgisDateOnly("2028-02-29")).toBe("2028-02-29");
   for (const value of ["2026-02-29", "11/24/2026", "2026-11-24T00:00:00Z", " 2026-11-24", 1795478400000, null]) {
     expect(arcgisDateOnly(value)).toBeNull();
+  }
+});
+
+test("ArcGIS TimestampOffset fields require a real date and explicit offset", () => {
+  expect(arcgisTimestampOffset("2026-11-24T04:15:00.927-06:00")).toBe("2026-11-24T10:15:00.927Z");
+  expect(arcgisTimestampOffset("2026-11-24T04:15:00Z")).toBe("2026-11-24T04:15:00.000Z");
+  for (const value of ["2026-11-24T04:15:00", "2026-02-29T04:15:00-06:00", "2026-11-24T24:00:00Z",
+    "2026-11-24T04:15:00+24:00", "2026-11-24", 1795478400000, null]) {
+    expect(arcgisTimestampOffset(value)).toBeNull();
   }
 });
 
