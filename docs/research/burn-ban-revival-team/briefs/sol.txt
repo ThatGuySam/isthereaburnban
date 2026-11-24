@@ -1,0 +1,31 @@
+Today is 2026-11-23. You are one seat on a research team. Unattended run.
+
+QUESTION: How should Sam rebuild his old site isthereaburnban.com? Old version: Next.js 9 on Vercel; covers only Oklahoma and Texas at county level (OK from an Oklahoma Forestry Services ArcGIS feature service with a Burn_Ban_Status field per county; TX from a plain-text list of counties with bans published by Texas A&M Forest Service). Its whole UI is one screen: big "Nope" / "Yes" and "There is no burn ban active for Tulsa, OK", colored green/red. The new version should:
+1. stay ultra, ultra simple at its core;
+2. be statically rendered where possible, Sam is considering Astro ("I don't know if that's a good deal"), and must move to Cloudflare;
+3. link each result to the official burn ban page or ArcGIS source for that area;
+4. cover as many US states as possible (or broader, if cheap);
+5. let you enter a zip code and see if there's a burn ban there;
+6. offer an optional map to browse and pick a spot;
+7. use public data sources: find what exists, per state, with machine-readable endpoints (ArcGIS REST FeatureServer/MapServer URLs, JSON, CSV, RSS, scrape-able pages), update cadence, granularity (state/county/fire district/city), and terms of use;
+8. send web push notifications and email alerts when a ban starts near you;
+9. maximize SEO surface area (Google) and be agent-friendly (simple API that agents can query for burn ban status).
+
+User's own words: "I want to update it where it will link to the ArcGIS, like official burn band page. I want to get it working on as many states as possible... research into public data that we can use to pull into it and get as much coverage across the United States or even broader as possible on burn bans... optimize it for some SEO surface area, some agents... a simple, very agent-friendly interface for lots of places."
+
+Unknown / do not assume: budget (prefer free tiers), whether the live domain moves now, whether non-US matters (US first).
+
+METHOD: Follow the research skill at ~/.cache/research-team/burnban/skill/sams-research/SKILL.md and its references, with these changes: no local-context step, no memo, no publishing, no commit; notes only.
+
+RULES: Read nothing outside your workspace except those skill files. No browser. Web search and plain HTTP fetches (curl) only. Test endpoints with curl where you can (e.g. ArcGIS ?f=json, query?where=1=1&outFields=*&f=json&resultRecordCount=2) and record what came back. Stop at 40 minutes elapsed.
+
+NOTES: Create notes.md in your workspace in the first few minutes and update it as you go so a killed run leaves notes. Format:
+- Takeaway: three lines at most
+- Cited findings: claim, direct link, the passage or figure, date, and whether read in full / in part / search summary only
+- Not found: what you looked for and where
+- Inferences: marked as yours
+- Blocked: sources that refused to load
+Repeat your notes as your final message.
+
+YOUR EMPHASIS:
+Answer the whole question; dig deepest into DATA AND COVERAGE: a state-by-state table (all 50 states + DC) of official burn ban sources: who publishes (state forestry, fire marshal, county emergency management, air quality agency), URL of the official human page, machine-readable endpoint if any (tested with curl), granularity, update cadence, and whether bans there are typically county-, district- or city-level. Also look for national aggregators (NIFC, USFS, NWS Red Flag Warnings, NOAA, Esri Living Atlas, state-run ArcGIS Hub items, open data portals) and existing burn ban aggregator sites and how they get data. Read Reddit/forums for practitioner experience (people who built burn ban or fire-restriction trackers; give thread URL and exact quote). Also note zip-to-county crosswalk data (HUD USPS crosswalk, Census ZCTA) suitable for a static build. Other seats dig into SEO/agent interface and stack/alerts; do not leave those areas out on their account, but spend your extra effort on data.
