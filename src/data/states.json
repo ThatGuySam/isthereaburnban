@@ -364,10 +364,28 @@
   {
     "abbr": "ME",
     "name": "Maine",
-    "coverage": "directory",
-    "publisher": "Maine Forest Service",
+    "coverage": "restrictions",
+    "publisher": "Maine Forest Service, Maine Legislature and town fire departments",
     "officialUrl": "https://apps1.web.maine.gov/burnpermit/public/index.html",
-    "notes": "Towns issue open-burn permits in Maine, based on daily fire danger. There is no statewide list of bans."
+    "extraUrls": [
+      {
+        "label": "Maine Forest Service daily wildfire danger report",
+        "url": "https://www11.maine.gov/dacf/mfs/wildfire_danger_report/index.html"
+      },
+      {
+        "label": "Maine open-burning permit law",
+        "url": "https://legislature.maine.gov/statutes/12/title12sec9325.html"
+      },
+      {
+        "label": "Maine Red Flag Warning burning law",
+        "url": "https://legislature.maine.gov/statutes/12/title12sec9324.html"
+      },
+      {
+        "label": "Maine Forest Service guidance and ranger contacts",
+        "url": "https://www11.maine.gov/dacf/mfs/forest_protection/programs_services.html"
+      }
+    ],
+    "notes": "Town forest fire wardens issue permits in organized towns, and Maine Forest Service rangers handle unorganized areas. Maine requires permits for covered open burning and restricts burning during Red Flag Warnings. We also report fire-danger permit limits in Cumberland, South Thomaston, Union and Windham. Ask your local fire warden or ranger about today's rules and permit availability at your address."
   },
   {
     "abbr": "MD",

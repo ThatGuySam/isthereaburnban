@@ -3,7 +3,7 @@ import { atLocalTime, localClock, localDayWindow, shiftDay, US_ZONES } from "./d
 
 // Inventory: Alaska burn permits and winter air rules, AZ Area A, Idaho and Utah closed fire seasons, NY DEC Open Burning, GA EPD Summer Open Burning Ban, KY fire hazard seasons, OH DNR Open Burning Regulations,
 // PA state forest fires, VA DOF 4 PM Burning Law, WV Forestry Fire Burning Guidelines, MD DNR Burning Guidance,
-// VT open-burning permits, DE open burning, and MA residential brush burning.
+// ME and VT open-burning permits, DE open burning, and MA residential brush burning.
 export type CalendarRule = {
   state: string;
   officialUrl: string;
@@ -262,6 +262,13 @@ export const CALENDAR_RULES: Record<string, CalendarRule> = {
     scopeNote: "Essential agricultural burning under Missoula County’s permit program",
     label: "Essential agricultural burning season closed", seasons: [["11-01", "02-29"]],
     note: "Missoula Public Health’s regular essential agricultural burning season is March 1 through October 31. Check the permit system for daily decisions for other types of burning.",
+  },
+  ME: {
+    state: "ME", zone: US_ZONES.Eastern, status: "restricted", scope: "state",
+    scopeNote: "Open burning covered by Maine's permit law",
+    officialUrl: "https://legislature.maine.gov/statutes/12/title12sec9325.html",
+    label: "Permit required for covered open burning",
+    note: "Maine requires a permit for burning brush, leaves and other activities listed in state law. Ask the town forest fire warden or, in unorganized areas, a Maine Forest Service ranger. The law has exceptions for certain small campfires on snow or frozen water and qualifying outdoor cooking fires. Check for local restrictions before burning.",
   },
   OH: {
     state: "OH", zone: US_ZONES.Eastern, status: "restricted", scope: "part", scopeNote: "Unincorporated areas outside railroad-controlled land",

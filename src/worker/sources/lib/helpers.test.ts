@@ -149,6 +149,8 @@ test("calendar rows preserve multiple local scopes for one county", () => {
 test("offset-free ISO timestamps use the stated zone and reject invalid local times", () => {
   expect(parseLocalIsoTimestamp("2026-11-24T00:01:02.1234567", US_ZONES.Central)).toBe("2026-11-24T06:01:02.123Z");
   expect(parseLocalIsoTimestamp("2026-11-24T00:01:02", US_ZONES.Eastern)).toBe("2026-11-24T05:01:02.000Z");
+  expect(parseLocalIsoTimestamp("2026-11-24 08:00:00", US_ZONES.Eastern)).toBe("2026-11-24T13:00:00.000Z");
+  expect(parseLocalIsoTimestamp("2026-03-08 02:30:00", US_ZONES.Eastern)).toBeNull();
   expect(parseLocalIsoTimestamp("2026-03-08T02:30:00", US_ZONES.Eastern)).toBeNull();
   expect(parseLocalIsoTimestamp("2026-02-30T00:00:00", US_ZONES.Central)).toBeNull();
   expect(parseLocalIsoTimestamp("2026-11-24T00:00:00Z", US_ZONES.Central)).toBeNull();

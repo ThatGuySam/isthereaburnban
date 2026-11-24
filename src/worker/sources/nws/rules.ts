@@ -65,6 +65,15 @@ const newMexico: Rule = {
   note: "NMSA 1978 §68-5-3(C), as enacted by 2023 Laws, Chapter 88, prohibits starting a prescribed burn when the NWS has issued a Red Flag Warning for the planned burn area.",
 };
 
+const maine: Rule = {
+  scope: "part", scopeNote: "Open burning in the area covered by the warning", sourceName: "Maine Legislature",
+  label: "Open burning prohibited during Red Flag Warning",
+  officialUrl: "https://legislature.maine.gov/statutes/12/title12sec9324.html",
+  note: "Maine law prohibits open burning under 12 M.R.S. §9325, including recreational campfires, in the warned area. Certain licensed camping facilities and designated state campsites have exceptions. Maine law also allows certain permitted wild blueberry burns.",
+};
+
+const statewideRules: Readonly<Record<string, Rule | undefined>> = { "23": maine, "35": newMexico };
+
 const datedRules: Record<string, { county: string; filename: string; signedEnd: string; rule: Rule }> = {
   "38017": {
     county: "Cass County", filename: "Cass County 04062026 Burn Restriction Declaration.pdf",
@@ -126,7 +135,8 @@ export function redFlagOrder(fips: string, alert: FireWeatherAlert, effective: s
   declaration?: Declaration,
 ): Omit<FireWeatherOrder, "checked"> | undefined {
   if (alert.event !== "Red Flag Warning") return;
-  const rule = declaration ? datedRules[fips]?.rule : fips.startsWith("35") ? newMexico : standingRules[fips];
+  const stateRule = statewideRules[fips.slice(0, 2)];
+  const rule = declaration ? datedRules[fips]?.rule : stateRule ?? standingRules[fips];
   const onset = alert.onset ?? effective;
   const end = alert.ends ?? alert.expires;
   if (!rule || !onset || !end) return;

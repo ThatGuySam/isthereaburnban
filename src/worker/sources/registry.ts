@@ -28,6 +28,8 @@ import { maAirAdvisories } from "./ma/air-advisories";
 import { maOpenBurning } from "./ma/open-burning";
 import { mdSummerAir } from "./md/summer-air";
 import { mdDnrWoodland } from "./md/woodland";
+import { meOpenBurningPermits } from "./me/open-burning";
+import { meTownPermitHolds } from "./me/town-permits";
 import { miPermits } from "./mi/permits";
 import { mnRestrictions } from "./mn/restrictions";
 import { moShowMeFireBans } from "./mo/show-me-fire";
@@ -175,6 +177,8 @@ export const SOURCES: readonly Source[] = [
   deOpenBurning,
   deActionDays,
   maAirAdvisories,
+  meTownPermitHolds,
+  meOpenBurningPermits,
   maOpenBurning,
   {
     id: "ma-mass-gov-open-burning", state: "MA", scope: "state", stack: "Drupal / HTML",
@@ -455,6 +459,13 @@ export const SOURCES: readonly Source[] = [
     sourceUrl: "https://georgiafc.firesponse.com/burn-permit/api/burnrestriction/all/public?levels=PUBLIC&levels=PRIVATE_PUBLIC",
     officialUrl: "https://georgiafc.firesponse.com/public/",
     error: "Public map summary provides area labels without dates or order types. The restriction type catalog returned HTTP 401.",
+  },
+  {
+    id: "me-burn-permit-portal", state: "ME", scope: "part", stack: "State permit portal / HTML form", mode: "manual", cadence: null,
+    sourceName: "Maine Forest Service Open Burn Permit System",
+    sourceUrl: "https://apps1.web.maine.gov/burnpermit/public/index.html",
+    officialUrl: "https://apps1.web.maine.gov/burnpermit/public/index.html",
+    error: "Permit decisions depend on the selected town and burn type. The public landing page and municipality picker carry no dated decision list.",
   },
   {
     id: "ca-calfire", state: "CA", scope: "part", stack: "Sitecore / HTML table", mode: "manual", cadence: null,

@@ -1,0 +1,9 @@
+{
+    "@context": {
+        "@version": "1.1"
+    },
+    "type": "FeatureCollection",
+    "features": [],
+    "title": "Current Red Flag Warning events for Maine",
+    "updated": "2026-11-24T15:02:00+00:00"
+}

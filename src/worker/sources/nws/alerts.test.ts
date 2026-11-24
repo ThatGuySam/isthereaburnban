@@ -64,6 +64,22 @@ test("maps direct county UGC and both cross-state and supplementary zone mapping
   expect(parseNwsAlerts(feed(feature), archivedAt).map(({ fips }) => fips).sort()).toEqual(["15005", "15009"]);
 });
 
+test("a Maine Red Flag Warning produces a restriction only for the warned area and times", () => {
+  const feature = wyomingWarning();
+  feature.properties.geocode = { SAME: [], UGC: ["MEZ109"] };
+  feature.properties.affectedZones = ["https://api.weather.gov/zones/fire/MEZ109"];
+  const rows = parseNwsAlerts(feed(feature), archivedAt);
+  expect(rows.map(({ fips }) => fips).sort()).toEqual(["23001", "23005", "23017", "23031"]);
+  expect(rows[0].orders).toEqual([expect.objectContaining({
+    status: "restricted", scope: "part", scopeNote: "Open burning in the area covered by the warning",
+    officialUrl: "https://legislature.maine.gov/statutes/12/title12sec9324.html",
+    validFrom: "2026-11-19T18:00:00.000Z", validUntil: "2026-11-20T00:00:00.000Z",
+  })]);
+  expect(parseNwsAlerts(feed(feature), new Date("2026-11-20T00:00:00Z"))).toEqual([]);
+  feature.properties.event = "Fire Weather Watch";
+  expect(parseNwsAlerts(feed(feature), archivedAt)[0].orders).toBeUndefined();
+});
+
 test("opens warnings ahead of onset, prefers latest updates, and respects cancellation and event end", () => {
   const warning = wyomingWarning();
   expect(parseNwsAlerts(feed(warning), new Date("2026-11-19T17:30Z"))).toHaveLength(3);
