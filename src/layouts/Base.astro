@@ -59,6 +59,7 @@ const ld = (o: Record<string, unknown>) => JSON.stringify(o).replace(/</g, "\\u0
     <a class="skip" href="#content">Skip to content</a>
     <slot />
     {footer && <Footer />}
-    {sheets && <Sheets client:idle />}
+    {/* client-only: the closed drawer renders nothing, and Vaul needs a browser (preact/compat aliasing) */}
+    {sheets && <Sheets client:only="preact" />}
   </body>
 </html>

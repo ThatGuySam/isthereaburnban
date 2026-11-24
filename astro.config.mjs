@@ -1,12 +1,12 @@
 import { defineConfig } from "astro/config";
-import react from "@astrojs/react";
+import preact from "@astrojs/preact";
 
 // Fully static build. Dynamic status is injected by the Worker (src/worker) via HTMLRewriter.
-// React is used for one island only (src/components/Sheets.tsx, the Vaul sheets).
+// Preact (with the React compat layer, for Vaul) runs one island only: src/components/Sheets.tsx.
 export default defineConfig({
   site: "https://isthereaburnban.com",
   output: "static",
   trailingSlash: "always",
   build: { format: "directory" },
-  integrations: [react()],
+  integrations: [preact({ compat: true })],
 });
