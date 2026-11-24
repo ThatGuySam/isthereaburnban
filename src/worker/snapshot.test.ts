@@ -91,3 +91,12 @@ describe("zipToFips", () => {
     await expect(zipToFips(env, "00001")).rejects.toThrow("no counties");
   });
 });
+
+import { withCurrentLinks as _wcl } from "./snapshot";
+test("official links come from current adapter code, not the stored snapshot", () => {
+  const snap: any = { version: 1, generated: "", sources: [], changed: {}, counties: {
+    "40143": { fips: "40143", state: "OK", county: "Tulsa County", status: "none", label: "None", since: null, expires: null, sourceUpdated: null, checked: "", sourceName: "old", sourceUrl: "old", officialUrl: "https://forestry.ok.gov/burn-ban-info" },
+  } };
+  _wcl(snap);
+  expect(snap.counties["40143"].officialUrl).toBe("https://experience.arcgis.com/experience/8bdc59b2a54a4383a9a2996fb9407580/");
+});

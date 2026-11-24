@@ -8,6 +8,8 @@ export type Adapter = {
   sourceName: string;
   sourceUrl: string;
   officialUrl: string;
+  /** true if rows may carry their own per-county official link (e.g. a signed order) */
+  keepRowLinks?: boolean;
   fetch(): Promise<CountyStatus[]>;
 };
 

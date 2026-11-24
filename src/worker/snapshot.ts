@@ -80,7 +80,27 @@ const MEMO_MS = 60_000;
 export async function readSnapshot(env: Env, fresh = false): Promise<Snapshot | null> {
   if (!fresh && memo && Date.now() - memo.at < MEMO_MS) return memo.snapshot;
   const snapshot = await env.KV.get<Snapshot>(SNAPSHOT_KEY, { type: "json", cacheTtl: 60 });
-  if (snapshot) memo = { at: Date.now(), snapshot };
+  if (snapshot) {
+    withCurrentLinks(snapshot);
+    memo = { at: Date.now(), snapshot };
+  }
+  return snapshot;
+}
+
+/**
+ * Official links come from the deployed adapter code, not from the stored snapshot,
+ * so a link fix takes effect on deploy instead of waiting for the next cron run.
+ * Adapters that link per-county documents (keepRowLinks) keep their row links.
+ */
+export function withCurrentLinks(snapshot: Snapshot, adapters: Adapter[] = ADAPTERS): Snapshot {
+  const byState = new Map(adapters.map((a) => [a.state, a]));
+  for (const row of Object.values(snapshot.counties)) {
+    const a = byState.get(row.state);
+    if (!a) continue;
+    row.sourceName = a.sourceName;
+    row.sourceUrl = a.sourceUrl;
+    if (!a.keepRowLinks || !row.officialUrl) row.officialUrl = a.officialUrl;
+  }
   return snapshot;
 }
 

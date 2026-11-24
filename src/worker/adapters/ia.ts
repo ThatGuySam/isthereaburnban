@@ -28,6 +28,7 @@ export function parse(json: ArcgisResponse, checked: string): CountyStatus[] {
 export const ia: Adapter = {
   id: "ia",
   mode: "positive-only",
+  keepRowLinks: true,
   ...meta,
   async fetch() {
     return parse(await getJson(meta.sourceUrl), new Date().toISOString());
