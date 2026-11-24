@@ -33,6 +33,20 @@ export type Block = { tag: string; text: string; links?: Link[] };
 export type Link = { href: string; text: string };
 export type HtmlParts = { blocks: Block[]; tables: Table[]; links: Link[] };
 
+/** Require one identified table with the expected heading and nonempty, fixed-width rows. */
+export function statusTableRows(parts: HtmlParts, { id, heading, columns }: {
+  id: string; heading: string; columns: readonly string[];
+}): string[][] {
+  const [table, ...duplicates] = parts.tables.filter((entry) => entry.id === id);
+  const [header, ...rows] = table?.rows ?? [];
+  if (duplicates.length || table?.heading !== heading ||
+      header?.length !== columns.length || columns.some((column, index) => header[index] !== column) ||
+      !rows.length || rows.some((row) => row.length !== columns.length || row.some((cell) => !cell))) {
+    throw new Error(`Missing or changed HTML status table: ${id}`);
+  }
+  return rows;
+}
+
 const HEAD = /^h[1-6]$/;
 const BLOCK = /^(?:h[1-6]|p|li|dt|dd|blockquote|figcaption)$/;
 const IGNORED = /^(?:script|style|template|noscript)$/;

@@ -72,6 +72,8 @@ import { riDemForest, riDemParks } from "./ri/dem-rules";
 import { riTownSources } from "./ri/town-rules";
 import { scAirQuality } from "./sc/air-quality";
 import { scfcDebris } from "./sc/debris";
+import { sdBlmFireRestrictions } from "./sd/blm";
+import { sdBlackHillsPileBurning } from "./sd/pile-burning";
 import { tnForestryPermitHolds } from "./tn/permit-holds";
 import { tnSeasonalBurnPermits } from "./tn/seasonal";
 import type { ActiveSource, Source } from "./types";
@@ -210,6 +212,22 @@ export const SOURCES: readonly Source[] = [
   riDemForest,
   riDemParks,
   ...Object.values(riTownSources),
+  sdBlackHillsPileBurning,
+  sdBlmFireRestrictions,
+  {
+    id: "sd-meade-county-orders", state: "SD", scope: "county", stack: "Squarespace / notices and signed images",
+    mode: "manual", cadence: null, sourceName: "Meade County Commission",
+    sourceUrl: "https://www.meadecounty.org/public-notices?format=json",
+    officialUrl: "https://www.meadecounty.org/public-notices",
+    error: "The August order is an image. The public notices do not corroborate the reported November 10 rescission, and the official minutes portal returned HTTP 403. Ask the county for current orders.",
+  },
+  {
+    id: "sd-fall-river-county-orders", state: "SD", scope: "part", stack: "WordPress / HTML and signed PDFs",
+    mode: "manual", cadence: null, sourceName: "Fall River County Emergency Management",
+    sourceUrl: "https://fallrivercountysd.gov/tag/burn-ban/",
+    officialUrl: "https://fallrivercountysd.gov/emergency-management/",
+    error: "County notices, WordPress REST and the ordinance in the May 7 minutes returned Cloudflare HTTP 403. Confirm the rules and current fire-danger trigger with the county.",
+  },
   {
     id: "ri-dem-temporary-fire-orders", state: "RI", scope: "part", stack: "Drupal / HTML notices and RSS",
     mode: "manual", cadence: null, sourceName: "Rhode Island DEM",

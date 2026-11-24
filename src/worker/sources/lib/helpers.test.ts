@@ -7,7 +7,7 @@ import { activeRule, calendarDayWindows, calendarStatusRows, CALENDAR_RULES } fr
 import { civicPlusAlertDetails, civicPlusNotices, civicPlusPageParagraphs, civicPlusPageText, civicPlusUrl } from "./civicplus";
 import { localDayWindow, parseLocalIsoTimestamp, parseWeekdayDate, reportWindow, weekdayOnOrAfter } from "./dates";
 import { decodeFeed, parseCsv, parseDotNetJsonDate, parseFeed, parseJson } from "./feeds";
-import { blockAfterHeading, extractHtml, extractHtmlGrid, localClock, matchesReviewedHtmlSection, numberedRuleSection, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, US_ZONES } from "./html";
+import { blockAfterHeading, extractHtml, extractHtmlGrid, localClock, matchesReviewedHtmlSection, numberedRuleSection, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, statusTableRows, US_ZONES } from "./html";
 import { sha256 } from "./hash";
 import { BlockedError, fetchSource, HttpError, pacedSourceReader, pacedTextReader, USER_AGENT } from "./http";
 import { manualPdf } from "./pdf";
@@ -35,6 +35,19 @@ test("HTML tables can follow a publisher's text labels instead of heading tags",
     expect(parts.tables).toEqual([{ heading: "Stage & status", id: undefined, rows: [["Active"]] }]);
   }
   expect((await extractHtml(markup)).tables[0].heading).toBe("Orders");
+});
+
+test("HTML status tables require a unique ID, the reviewed schema and populated cells", async () => {
+  const markup = '<h2>Orders</h2><table id="orders"><tr><th>Area</th><th>Status</th></tr>' +
+    '<tr><td>North</td><td>Active</td></tr></table>';
+  const schema = { id: "orders", heading: "Orders", columns: ["Area", "Status"] };
+  for (const parts of [parseHtml(markup), await extractHtml(markup)]) {
+    expect(statusTableRows(parts, schema)).toEqual([["North", "Active"]]);
+  }
+  for (const changed of [markup + markup, markup.replace("Orders", "Archive"),
+    markup.replace("Status", "History"), markup.replace("Active", ""), markup.replace("<td>Active</td>", "")]) {
+    expect(() => statusTableRows(parseHtml(changed), schema)).toThrow("Missing or changed HTML status table");
+  }
 });
 
 test("reviewed HTML sections validate unique headings and normalized section text", async () => {

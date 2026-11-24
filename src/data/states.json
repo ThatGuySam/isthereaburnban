@@ -1015,10 +1015,19 @@
   {
     "abbr": "SD",
     "name": "South Dakota",
-    "coverage": "directory",
-    "publisher": "South Dakota (county commissions)",
-    "officialUrl": "https://sdlegislature.gov/Statutes/34-29B-11.1",
-    "notes": "South Dakota county commissioners issue burn bans. There is no statewide list."
+    "coverage": "restrictions",
+    "publisher": "South Dakota Wildland Fire and BLM South Dakota Field Office",
+    "officialUrl": "https://burnpermit.sd.gov/Windows/Login.aspx",
+    "extraUrls": [
+      { "label": "Black Hills burn permit rules and district map", "url": "https://www.sd.gov/dps?id=kb_article_view&sysparm_article=KB0043643" },
+      { "label": "BLM fire restrictions and signed orders", "url": "https://www.blm.gov/programs/fire/regional-info/south-dakota/fire-restrictions" },
+      { "label": "Black Hills National Forest fire restrictions", "url": "https://www.fs.usda.gov/r02/blackhills/fire/prevention/fire-restrictions" },
+      { "label": "South Dakota air quality rules for open burning", "url": "https://danr.sd.gov/Environment/AirQuality/OpenBurning/default.aspx" },
+      { "label": "Meade County public notices", "url": "https://www.meadecounty.org/public-notices" },
+      { "label": "Fall River County Emergency Management", "url": "https://fallrivercountysd.gov/emergency-management/" },
+      { "label": "Pennington County burning regulations", "url": "https://www.pennco.org/law_public_safety/fire/burn_regulations.php" }
+    ],
+    "notes": "County commissions, local authorities and the state fire marshal can restrict open burning. We check pile-burning conditions for private land in the Black Hills Forest Fire Protection District and fire restrictions for lands managed by BLM. Ask your county, city, tribe or land manager about current rules for the burn site."
   },
   {
     "abbr": "TN",

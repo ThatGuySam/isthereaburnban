@@ -85,6 +85,8 @@ import { paCarrollValley, parseCarrollValley } from "../src/worker/sources/pa/ca
 import { paStateForestSpring, parsePaStateForestSpring } from "../src/worker/sources/pa/seasonal";
 import { parseScAirQuality, scAirQuality } from "../src/worker/sources/sc/air-quality";
 import { parseScfcDebris } from "../src/worker/sources/sc/debris";
+import { parseSdBlmRestrictions, sdBlmFireRestrictions } from "../src/worker/sources/sd/blm";
+import { parseBlackHillsPileBurning, sdBlackHillsPileBurning } from "../src/worker/sources/sd/pile-burning";
 import { parseTennesseePermitHolds, parseTennesseePermitRoster, tnForestryPermitHolds } from "../src/worker/sources/tn/permit-holds";
 import { parseTennesseePermitSeason, tnSeasonalBurnPermits } from "../src/worker/sources/tn/seasonal";
 import { parseUtahOrders, utFfslFireOrders } from "../src/worker/sources/ut/orders";
@@ -226,6 +228,13 @@ const riJobs = [
   ["RI North Kingstown CivicPlus rules", riTownSources.northkingstown, (at: Date) => parseRiTownRule(riNorthKingstown, at, "northkingstown")],
   ["RI South Kingstown CivicPlus rules", riTownSources.southkingstown, (at: Date) => parseRiTownRule(riSouthKingstown, at, "southkingstown")],
 ] as const;
+
+const sdCaptured = new Date("2026-11-24T17:04:00Z");
+const sdPermitHtml = utf8("sd/fixtures/pile-burning-2026-11-24.html");
+const sdBlmHtml = utf8("sd/fixtures/blm-current-2026-11-24.html");
+const sdBlmOrder = raw("sd/fixtures/blm-stage1-2026-10-01.pdf");
+const parseSdPermitFixture = async () => parseBlackHillsPileBurning(await extractHtml(sdPermitHtml), sdCaptured);
+const parseSdBlmFixture = () => parseSdBlmRestrictions(sdBlmHtml, sdCaptured, async () => new Response(sdBlmOrder));
 
 const parseNwsLive = () => parseNwsAlerts(JSON.parse(nwsLive), nwsCaptured);
 const parseNwsArchive = () => parseNwsAlerts(JSON.parse(nwsArchive), new Date("2026-11-18T20:00Z"), { archive: true });
@@ -484,6 +493,8 @@ recordedInputs.push(
   ...await Promise.all(riJobs.map(async ([, source, parse]) => ({
     source, rows: await parse(riCaptured), checked: riCaptured.toISOString(),
   }))),
+  { source: sdBlackHillsPileBurning, rows: await parseSdPermitFixture(), checked: sdCaptured.toISOString() },
+  { source: sdBlmFireRestrictions, rows: await parseSdBlmFixture(), checked: sdCaptured.toISOString() },
   { source: ohSeasonal, rows: await parseOhFixture(), checked },
   { source: gaEpdNonSummer, rows: await parseGaNonSummerFixture(), checked },
   { source: azPimaWildfire, rows: await parseAzPimaFixture(), checked },
@@ -608,6 +619,8 @@ const jobs: Array<[string, () => unknown]> = [
   ["WY State Forestry county orders", parseWyCountyFixture],
   ["WY state trust lands rule", parseWyLandFixture],
   ["ND DES ArcGIS daily restrictions", parseNdFixture],
+  ["SD Wildland Fire WebForms pile conditions", parseSdPermitFixture],
+  ["SD BLM Drupal notice and signed order", parseSdBlmFixture],
   ["NV Truckee Meadows WordPress / Oxygen", parseNvTmfpdFixture],
   ["AR Faulkner County WordPress / Elementor and PDF", parseArFaulknerFixture],
   ["SC Forestry Commission custom WordPress REST", parseScDebrisFixture],
