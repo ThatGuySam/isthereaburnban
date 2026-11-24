@@ -13,6 +13,7 @@ import { azPimaWildfire } from "./az/pima";
 import { pfirs } from "./ca/pfirs";
 import { coArapahoeFire, coBoulderFire, coDouglasFire, coElPasoFire, coEstesFire, coLarimerFire } from "./co/county-status";
 import { coDenverAir } from "./co/denver-air";
+import { ctDeepFireDanger } from "./ct/fire-danger";
 import { deActionDays } from "./de/air-quality";
 import { deOpenBurning } from "./de/open-burning";
 import { gaEpdNonSummer, gaEpdSummer } from "./ga/epd";
@@ -180,6 +181,7 @@ export const SOURCES: readonly Source[] = [
   meTownPermitHolds,
   meOpenBurningPermits,
   maOpenBurning,
+  ctDeepFireDanger,
   {
     id: "ma-mass-gov-open-burning", state: "MA", scope: "state", stack: "Drupal / HTML",
     mode: "manual", cadence: null, sourceName: "Massachusetts Department of Fire Services and MassDEP",

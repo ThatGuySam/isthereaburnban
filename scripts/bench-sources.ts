@@ -24,6 +24,7 @@ import {
   parseArapahoeFire, parseBoulderFire, parseDouglasFire, parseElPasoFire, parseEstesFire, parseLarimerFire,
 } from "../src/worker/sources/co/county-status";
 import { coDenverAir, parseDenverAir } from "../src/worker/sources/co/denver-air";
+import { ctDeepFireDanger, parseCtFireDanger } from "../src/worker/sources/ct/fire-danger";
 import { deActionDays, parseDeActionDays } from "../src/worker/sources/de/air-quality";
 import { deOpenBurning, parseDeOpenBurning } from "../src/worker/sources/de/open-burning";
 import { gaEpdNonSummer, parseEpdSeasonal } from "../src/worker/sources/ga/epd";
@@ -151,6 +152,9 @@ const meClasses = utf8("me/fixtures/class-days-2026-11-24.json");
 const meStatute = utf8("me/fixtures/open-burning-2026-11-24.html");
 const parseMeClasses = () => parseMaineTownPermits(meClasses, meCaptured);
 const parseMeStatute = () => parseMaineOpenBurning(meStatute, meCaptured);
+const ctCaptured = new Date("2026-11-24T15:15:32Z");
+const ctReport = utf8("ct/fixtures/fire-danger-2026-11-24.html");
+const parseCtFireDangerFixture = () => parseCtFireDanger(ctReport, ctCaptured);
 const parseNwsLive = () => parseNwsAlerts(JSON.parse(nwsLive), nwsCaptured);
 const parseNwsArchive = () => parseNwsAlerts(JSON.parse(nwsArchive), new Date("2026-11-18T20:00Z"), { archive: true });
 const nyDecHtml = utf8("ny/fixtures/dec-open-burning-2026-11-24.html");
@@ -391,6 +395,7 @@ recordedInputs.push(
   { source: maOpenBurning, rows: await parseMaGuidance(), checked: maCaptured.toISOString() },
   { source: meTownPermitHolds, rows: parseMeClasses(), checked: meCaptured.toISOString() },
   { source: meOpenBurningPermits, rows: await parseMeStatute(), checked: meCaptured.toISOString() },
+  { source: ctDeepFireDanger, rows: await parseCtFireDangerFixture(), checked: ctCaptured.toISOString() },
   { source: ohSeasonal, rows: await parseOhFixture(), checked },
   { source: gaEpdNonSummer, rows: await parseGaNonSummerFixture(), checked },
   { source: azPimaWildfire, rows: await parseAzPimaFixture(), checked },
@@ -464,6 +469,7 @@ const jobs: Array<[string, () => unknown]> = [
   ["MA MassDEP same-day advisory RSS", () => parseMaAdvisories(new Date("2026-02-18T15:00:00Z"))],
   ["ME fire danger and town permit rules", parseMeClasses],
   ["ME open-burning statute and calendar", parseMeStatute],
+  ["CT DEEP daily fire danger", parseCtFireDangerFixture],
   ["CivicPlus News Flash", () => civicPlusNotices(parseHtml(placer, { links: true }), "https://www.placer.ca.gov/")],
   ["ASP.NET WebForms", () => webFormsPost(michigan, "https://www2.dnr.state.mi.us/burnpermits/", "ctl00$ContentPlaceHolder1$CntyName")],
   ["SharePoint list", () => sharePointListItems(parseHtml(kentucky), /current burn bans/i)],

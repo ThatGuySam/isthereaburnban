@@ -172,16 +172,28 @@
   {
     "abbr": "CT",
     "name": "Connecticut",
-    "coverage": "directory",
-    "publisher": "Connecticut DEEP",
+    "coverage": "restrictions",
+    "publisher": "Connecticut DEEP Forestry",
     "officialUrl": "https://portal.ct.gov/deep/air/open-burning/open-burning",
     "extraUrls": [
       {
-        "label": "DEEP fire danger and reporting",
-        "url": "https://portal.ct.gov/DEEP/Forestry/Forest-Fire/Fire-Danger-Weather-and-Reporting"
+        "label": "DEEP daily fire danger report",
+        "url": "https://portal.ct.gov/deep/forestry/forest-fire/forest-fire-danger-report"
+      },
+      {
+        "label": "DEEP air quality forecast",
+        "url": "https://portal.ct.gov/deep/air/forecasting/aqi/air-quality-index"
+      },
+      {
+        "label": "Connecticut city and town websites",
+        "url": "https://portal.ct.gov/government/cities-and-towns"
+      },
+      {
+        "label": "State park camping and fire rules",
+        "url": "https://ctparks.com/camping"
       }
     ],
-    "notes": "Town burning officials issue open-burning permits, and DEEP's daily fire danger rating can limit them."
+    "notes": "Town officials issue residential brush-burning permits and can impose local limits. When DEEP rates fire danger High or above, brush burning within 100 feet of woodland or grassland is restricted. Check the daily fire danger report for local differences and ask your town or land manager about current rules at your burn site."
   },
   {
     "abbr": "DE",
