@@ -24,6 +24,8 @@ import type { ArcgisResponse } from "./lib/arcgis";
 import { fetchSource } from "./lib/http";
 import { miPermits } from "./mi/permits";
 import { mnRestrictions } from "./mn/restrictions";
+import { moShowMeFireBans } from "./mo/show-me-fire";
+import { moYardWaste } from "./mo/yard-waste";
 import { mtDeqFall } from "./mt/deq-fall";
 import { mtDnrcRestrictions } from "./mt/dnrc";
 import { mtGallatinOpenBurning } from "./mt/gallatin";
@@ -131,6 +133,22 @@ export const SOURCES: readonly Source[] = [
   ncForestOrders,
   ncAirHours,
   ncPermits,
+  moShowMeFireBans,
+  moYardWaste,
+  {
+    id: "mo-sema-daily-brief", state: "MO", scope: "county", stack: "PDF map", mode: "manual", cadence: null,
+    sourceName: "Missouri State Emergency Management Agency",
+    sourceUrl: "https://sema.dps.mo.gov/newspubs/docs/dailybriefs.pdf",
+    officialUrl: "https://sema.dps.mo.gov/newspubs/docs/dailybriefs.pdf",
+    error: "SEMA republishes the Show Me Fire map as an image. Check the brief date and ask the local authority for the signed order.",
+  },
+  {
+    id: "mo-dfs-reported-orders", state: "MO", scope: "county", stack: "PHP / XLSX", mode: "manual", cadence: null,
+    sourceName: "Missouri Division of Fire Safety",
+    sourceUrl: "https://dfs.dps.mo.gov/programs/resources/county-burn-bans.php",
+    officialUrl: "https://dfs.dps.mo.gov/programs/resources/county-burn-bans.php",
+    error: "The linked September 16 workbook is a dated list of reports and inquiries. Confirm enactments, lifts and their boundaries with the local issuer.",
+  },
   {
     id: "nc-air-quality-action-days", state: "NC", scope: "part", stack: "WordPress / PHP + KML", mode: "manual", cadence: null,
     sourceName: "N.C. Division of Air Quality and Forsyth County Environmental Assistance and Protection",

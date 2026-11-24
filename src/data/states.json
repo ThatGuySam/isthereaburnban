@@ -430,10 +430,32 @@
   {
     "abbr": "MO",
     "name": "Missouri",
-    "coverage": "directory",
-    "publisher": "Missouri Division of Fire Safety",
+    "coverage": "restrictions",
+    "publisher": "Missouri Division of Fire Safety, Show Me Fire and U.S. EPA",
     "officialUrl": "https://dfs.dps.mo.gov/programs/resources/county-burn-bans.php",
-    "notes": "Missouri counties, cities and fire protection districts issue burn bans. The state's list depends on what local officials report."
+    "extraUrls": [
+      {
+        "label": "Show Me Fire’s reported county burn bans",
+        "url": "https://showmefire.org/burn-bans"
+      },
+      {
+        "label": "Missouri DNR open-burning rules",
+        "url": "https://dnr.mo.gov/document-search/facts-open-burning-under-missouri-regulations-pub2047/pub2047"
+      },
+      {
+        "label": "EPA-approved St. Louis metro yard-waste rules",
+        "url": "https://www.epa.gov/sites/default/files/2017-09/documents/10-6045.pdf"
+      },
+      {
+        "label": "St. Louis County open-burning fact sheet",
+        "url": "https://my.stlouiscountymo.gov/st-louis-county-departments/public-health/environmental-services/air-pollution-control/open-burning-information1/"
+      },
+      {
+        "label": "Wentzville Fire Protection District burning rules",
+        "url": "https://www.wentzvillefire.org/residential-burn-permit"
+      }
+    ],
+    "notes": "Missouri counties, cities and tax-supported fire protection districts can issue and lift local bans. Show Me Fire publishes reviewed reports. Unreported orders may still apply. The St. Louis metro area has separate rules for burning yard waste. Ask your local fire authority about your address and what you plan to burn."
   },
   {
     "abbr": "MT",

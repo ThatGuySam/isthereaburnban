@@ -47,6 +47,15 @@ export function parseUsDate(raw: string, defaultYear?: number): string | null {
   return year && day ? isoDay(year, month, +day) : null;
 }
 
+/** Parse an ISO timestamp with an explicit offset and reject rollover dates. */
+export function parseIsoTimestamp(value: unknown): string | null {
+  if (typeof value !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,3})?(?:Z|[+-]\d{2}:[0-5]\d)$/.test(value) ||
+    parseUsDate(value.slice(0, 10)) !== value.slice(0, 10)) return null;
+  const instant = Date.parse(value);
+  return Number.isFinite(instant) ? new Date(instant).toISOString() : null;
+}
+
 const WEEKDAYS = "sunday monday tuesday wednesday thursday friday saturday".split(" ");
 
 /** Parse a date heading that must carry a matching weekday, such as a rolling daily forecast. */

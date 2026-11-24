@@ -180,6 +180,20 @@ export const CALENDAR_RULES: Record<string, CalendarRule> = {
     label: "Seasonal daytime burning restriction", seasons: [["03-01", "05-31"], ["10-01", "11-30"]], hours: [360, 1080],
     note: "The rule covers outdoor burning of wood, brush, weeds, grass or rubbish from 6 a.m. to 6 p.m. Eastern in March–May and October–November. Ohio law excepts fires in plowed fields, gardens or on public roads at least 200 feet from woods, brush or fields with dry grass or other flammable material. Check with your local fire department about other rules.",
   },
+  MO_ST_LOUIS_YARD_WASTE_CLOSED: {
+    state: "MO", zone: US_ZONES.Central, status: "restricted", scope: "part",
+    officialUrl: "https://www.epa.gov/sites/default/files/2017-09/documents/10-6045.pdf",
+    scopeNote: "Yard-waste burning in the St. Louis metro area",
+    label: "Yard-waste burning season closed", seasons: [["04-15", "09-15"]],
+    note: "The EPA-approved Missouri air-quality rule closes the yard-waste burning season April 15 through September 15 in the St. Louis metro area. Separate rules apply to activities such as recreational fires and agricultural burning.",
+  },
+  MO_ST_LOUIS_YARD_WASTE_LIMITED: {
+    state: "MO", zone: US_ZONES.Central, status: "restricted", scope: "part",
+    officialUrl: "https://www.epa.gov/sites/default/files/2017-09/documents/10-6045.pdf",
+    scopeNote: "Yard-waste burning in the St. Louis metro area",
+    label: "Yard-waste burning limits", seasons: [["09-16", "04-14"]],
+    note: "From September 16 through April 14, the EPA-approved Missouri air-quality rule limits yard-waste burning to unincorporated areas, from 10 a.m. to 4 p.m. Central, with a maximum total base area of 16 square feet. Check local rules for your address.",
+  },
   PA: {
     state: "PA", zone: US_ZONES.Eastern, status: "restricted", scope: "part",
     scopeNote: "Fire rings and fireplaces on state forest lands within the county",

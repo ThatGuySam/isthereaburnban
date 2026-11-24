@@ -1,4 +1,4 @@
-import { parseLocalDateTime, parseUsDate, reportWindow } from "./dates";
+import { parseIsoTimestamp, parseLocalDateTime, parseUsDate, reportWindow } from "./dates";
 import { getText } from "./http";
 
 // Inventory stacks: ArcGIS FeatureServer, MapServer, Online and Experience, including the IN WebEOC export.
@@ -49,12 +49,7 @@ export function arcgisDateOnly(value: unknown): string | null {
 }
 
 /** ArcGIS esriFieldTypeTimestampOffset values carry an explicit UTC offset. */
-export function arcgisTimestampOffset(value: unknown): string | null {
-  if (typeof value !== "string" ||
-    !/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,3})?(?:Z|[+-]\d{2}:[0-5]\d)$/.test(value) ||
-    !arcgisDateOnly(value.slice(0, 10))) return null;
-  return msToIso(Date.parse(value));
-}
+export const arcgisTimestampOffset = parseIsoTimestamp;
 
 /** Bound a row's freshness by its own UTC edit date, even if other features are edited later. */
 export function arcgisEditWindow(value: unknown, now: Date, maxAgeMs: number) {

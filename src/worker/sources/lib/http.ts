@@ -161,12 +161,21 @@ export async function getText(url: string, options: Options = {}): Promise<strin
 }
 
 /** Space a publisher's sequential requests within one poll. */
-export function pacedTextReader(options: Options, intervalMs = 1_000) {
+export function pacedSourceReader(options: Options, intervalMs = 1_000) {
   let nextStart = 0;
   return async (url: string, request: Pick<RequestInit, "body"> = {}) => {
     const wait = nextStart - Date.now();
     if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
     nextStart = Date.now() + intervalMs;
-    return getText(url, { attempts: 1, ...options, ...request });
+    return fetchSource(url, { attempts: 1, ...options, ...request });
+  };
+}
+
+export function pacedTextReader(options: Options, intervalMs = 1_000) {
+  const read = pacedSourceReader(options, intervalMs);
+  return async (url: string, request: Pick<RequestInit, "body"> = {}) => {
+    const reply = await read(url, request);
+    if (reply.notModified) throw new Error("Use fetchSource to handle a conditional response");
+    return reply.response.text();
   };
 }

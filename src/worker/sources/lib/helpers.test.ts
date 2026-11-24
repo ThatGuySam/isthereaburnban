@@ -8,7 +8,7 @@ import { civicPlusAlertDetails, civicPlusNotices, civicPlusUrl } from "./civicpl
 import { localDayWindow, parseWeekdayDate, reportWindow, weekdayOnOrAfter } from "./dates";
 import { decodeFeed, parseCsv, parseDotNetJsonDate, parseFeed, parseJson } from "./feeds";
 import { blockAfterHeading, extractHtml, extractHtmlGrid, localClock, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, US_ZONES } from "./html";
-import { BlockedError, fetchSource, HttpError, pacedTextReader, USER_AGENT } from "./http";
+import { BlockedError, fetchSource, HttpError, pacedSourceReader, pacedTextReader, USER_AGENT } from "./http";
 import { manualPdf } from "./pdf";
 import { parseSharePointItems, parseSharePointPage, sharePointListItems, sharePointListUrl, sharePointRows } from "./sharepoint";
 import { ninjaTablesUrl, parseNinjaRows, parseWpItems, parseWpPage, wpRestEndpoint, wpRestUrl } from "./wordpress";
@@ -162,6 +162,17 @@ test("a paced read-only POST can send a different lookup body on each request", 
   }, 0);
   expect(await read("https://example.gov/status", { body: '{"county":1}' })).toBe('{"county":1}');
   expect(await read("https://example.gov/status", { body: '{"county":2}' })).toBe('{"county":2}');
+});
+
+test("a paced source reader keeps PDF bytes and response metadata", async () => {
+  const bytes = Uint8Array.of(37, 80, 68, 70, 45, 255);
+  const read = pacedSourceReader({ fetchImpl: async () => new Response(bytes, {
+    headers: { "content-type": "application/pdf", etag: '"pdf-1"' },
+  }) }, 0);
+  const reply = await read("https://example.gov/rule.pdf");
+  expect(reply.notModified).toBe(false);
+  expect(reply.validators.etag).toBe('"pdf-1"');
+  expect(new Uint8Array(await reply.response.arrayBuffer())).toEqual(bytes);
 });
 
 test("HTTP sends validators, retains them on 304 and retries unblocked transient GET failures", async () => {
