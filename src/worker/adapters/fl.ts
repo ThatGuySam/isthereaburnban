@@ -1,5 +1,5 @@
 import type { BanStatus, CountyStatus } from "../../shared/types";
-import { type Adapter, type ArcgisResponse, arcgisRows, arcgisUrl, completeLayer, countyByName, publisherDate, str, toStatuses } from "./common";
+import { type Adapter, type ArcgisResponse, arcgisRows, arcgisUrl, byFips, completeLayer, countyByName, publisherDate, str, toStatuses } from "./common";
 
 const LAYER = "https://services3.arcgis.com/XYg2eF8UuxZVuVmF/arcgis/rest/services/Burn_Ban_Public_View_v2_4118cfe50dba49efa3d6fa7326d5a87f/FeatureServer/0";
 const FIELDS = ["NAME", "Burn_Ban", "Fireworks_Ban", "DateUpdated"];
@@ -27,7 +27,7 @@ export function parse(json: ArcgisResponse, checked: string): CountyStatus[] {
     const decision = classify(str(a.Burn_Ban));
     if (decision.status === "unknown") throw new Error(`FL: unrecognized burn ban code ${decision.label}`);
     return {
-      county: countyByName("FL", str(a.NAME)),
+      county: str(a.NAME).toUpperCase() === "DADE" ? byFips("12086") : countyByName("FL", str(a.NAME)),
       ...decision,
       standing: decision.status === "restricted" ? true as const : undefined,
       scopeNote: decision.status === "restricted" ? "Yard debris burning" : undefined,
