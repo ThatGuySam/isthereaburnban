@@ -21,7 +21,6 @@
     "@modelcontextprotocol/server": "^2.4.0",
     "agents": "^0.34.0",
     "astro": "7",
-    "leaflet": "^1.9.4",
     "maplibre-gl": "^6.19.0",
     "preact": "^11.2.0",
     "topojson-client": "^3.1.0",
@@ -31,7 +30,6 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261123.1",
     "@types/d3-geo": "^3.1.1",
-    "@types/leaflet": "^1.9.22",
     "@types/topojson-client": "^3.1.5",
     "@types/topojson-server": "^3.0.4",
     "@types/topojson-simplify": "^3.0.3",
