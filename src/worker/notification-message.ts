@@ -1,3 +1,4 @@
+import { statusSentence } from "../shared/render";
 import type { BanStatus, CountyStatus } from "../shared/types";
 import { countyPath, COUNTY_BY_FIPS } from "./counties";
 
@@ -24,7 +25,7 @@ export function transitionNotice(t: Transition, county?: CountyStatus): Notice {
     : t.oldStatus === "ban" ? `Burn ban lifted: ${where}`
     : `Burn status changed: ${where}`;
   const body = county
-    ? `${county.label}. Source: ${county.sourceName}. Check the official page before burning.`
+    ? `${statusSentence(county)}. Source: ${county.sourceName}. Check the official page before burning.`
     : "Check the official source before burning.";
   return { kind: "live", fips: t.fips, title, body, url: countyPath(t.fips) };
 }
@@ -35,7 +36,7 @@ export function countyBulletin(county: CountyStatus): Notice {
     kind: "live",
     fips: county.fips,
     title: `Burn status update: ${county.county}, ${county.state}`,
-    body: `${county.label}. Source: ${county.sourceName}, checked ${checked} UTC. Check the official page before burning.`,
+    body: `${statusSentence(county)}. Source: ${county.sourceName}, checked ${checked} UTC. Check the official page before burning.`,
     url: countyPath(county.fips),
   };
 }

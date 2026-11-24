@@ -52,21 +52,39 @@ export function placeName(cs: Pick<CountyStatus, "county" | "state">): string {
 
 const GENERIC_BAN_LABEL = /^(county |active )?burn ban$/i;
 
+function negativeReport(cs: CountyStatus): string {
+  const place = placeName(cs);
+  switch (cs.sourceId ?? cs.state.toLowerCase()) {
+    case "fl": return `No county burn ban reported to Florida Forest Service for ${place}`;
+    case "in": return `No county burn ban reported to Indiana DHS for ${place}`;
+    case "tx": return `No county burn ban reported by Texas A&M Forest Service for ${place}`;
+    case "la": return `No parish burn ban reported by Louisiana's Department of Agriculture and Forestry for ${place}`;
+    case "ok": return `No county or governor burn ban reported by Oklahoma Forestry Services for ${place}`;
+    case "ms": return `No county burn ban listed by the Mississippi Forestry Commission for ${place}`;
+    default: return `No burn ban reported for ${place}${cs.sourceName ? ` by ${cs.sourceName}` : ""}`;
+  }
+}
+
 export function statusSentence(cs: CountyStatus): string {
   const place = placeName(cs);
   switch (cs.status) {
     case "ban": {
       const label = cs.label && !GENERIC_BAN_LABEL.test(cs.label.trim()) ? ` (${cs.label})` : "";
-      return `There is a ban in effect for ${place}${label}`;
+      if (cs.scopeNote === "Unincorporated areas") return `County burn ban in the unincorporated areas of ${place}`;
+      return `Burn ban reported for ${place}${label}`;
     }
     case "none":
-      return `There is no burn ban active for ${place}`;
+      return negativeReport(cs);
     case "restricted": {
       const label = cs.label?.trim() || "Burning restrictions";
-      return `${label} in ${place}. There is no full ban, but some burning is limited`;
+      if (cs.scope === "part") {
+        if (/^Burn ban in /i.test(label)) return label;
+        return `${label}${cs.scopeNote && !label.includes(cs.scopeNote) ? ` in ${cs.scopeNote}` : ""}`;
+      }
+      return `${label} in ${place}`;
     }
     default:
-      return `We can't confirm burn bans in ${place} yet — check the official source`;
+      return `We can't confirm the burn ban status for ${place}`;
   }
 }
 

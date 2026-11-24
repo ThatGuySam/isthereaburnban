@@ -11,22 +11,25 @@ const meta = {
 
 /** Seen values: "No Burn Ban Reported", "Countywide Burn Ban". */
 export function classify(raw: string): { status: BanStatus; label: string } {
-  const v = raw.toLowerCase();
-  if (v.startsWith("no ")) return { status: "none", label: "No burn ban reported" };
-  if (v.includes("burn ban")) return { status: "ban", label: raw };
-  if (v.includes("restrict") || v.includes("advisory")) return { status: "restricted", label: raw };
-  return { status: "unknown", label: raw || "Not reported" };
+  switch (raw.toLowerCase()) {
+    case "no burn ban reported": return { status: "none", label: "No burn ban reported" };
+    case "countywide burn ban": return { status: "ban", label: "Countywide burn ban" };
+    case "local burn ban": return { status: "restricted", label: "Local burn ban" };
+    default: return { status: "unknown", label: raw || "Not reported" };
+  }
 }
 
 export function parse(json: ArcgisResponse, checked: string): CountyStatus[] {
   // Non-county rows (e.g. "Pokagon Band") don't match a county and are dropped by toStatuses.
   const rows = arcgisRows(json).map((a) => {
+    const county = countyByName("IN", str(a.orginating_county));
     const c = classify(str(a.countyburnbanstatus));
+    const scopeNote = `part of ${county?.name ?? "the county"} (area unspecified)`;
     const reported = msToIso(a.burnbandatetime);
     return {
-      county: countyByName("IN", str(a.orginating_county)),
+      county,
       ...c,
-      since: c.status === "none" ? null : reported,
+      ...(c.status === "restricted" ? { scope: "part" as const, scopeNote, label: `Burn ban in ${scopeNote}` } : {}),
       sourceUpdated: reported,
       note: "Fire chiefs, cities and towns can issue their own restrictions.",
     };

@@ -1,4 +1,5 @@
 import type { CountyStatus, SnapshotData } from "../shared/types";
+import { countyDecision } from "./county-decision";
 import { COUNTY_BY_FIPS } from "./counties";
 import { withFireWeather } from "./fire-weather";
 import { DISCLAIMER } from "./lookup";
@@ -37,14 +38,14 @@ function prepareCounty(row: CountyStatus, format: BanFormat, bodies: string[]): 
   return entry;
 }
 
-const active = (row: CountyStatus | undefined) => row?.status === "ban" || row?.status === "restricted";
+const active = (row: Pick<CountyStatus, "status"> | undefined) => row?.status === "ban" || row?.status === "restricted";
 
 /** Serialize each state's county bodies once. Requests still evaluate freshness and weather against their own clock. */
 export function prepareBanEntries(snapshot: SnapshotData) {
   const selected: SnapshotData["counties"] = {};
   const names = new Map<string, string>();
   for (const row of Object.values(snapshot.counties)) {
-    if (active(row) || snapshot.fireWeather?.[row.fips]) {
+    if (active(row) || row.orders?.some(active) || snapshot.fireWeather?.[row.fips]) {
       selected[row.fips] = { ...row };
       names.set(row.fips, row.county);
     }
@@ -61,7 +62,8 @@ export function prepareBanEntries(snapshot: SnapshotData) {
   const ordered = [...names].sort((a, b) => a[1].localeCompare(b[1]));
   for (const [fips] of ordered) {
     const row = selected[fips];
-    if (snapshot.fireWeather?.[fips]) {
+    if (snapshot.fireWeather?.[fips] || (row.status !== "ban" && row.orders?.some((order) =>
+      order.status === "ban" || (!active(row) && active(order))))) {
       compact.push([fips]);
       pretty.push([fips]);
       if (row) weatherCounties[fips] = row;
@@ -130,7 +132,8 @@ export function formatNationalBans(projection: ActiveProjection, index: Snapshot
   for (const [id, head] of heads) if (head.lastGood && head.hash === index.sourceVersions?.[id]) good.set(id, head);
   for (const entry of projection.bans) {
     if (entry.length === 1) {
-      const row = weather.counties[entry[0]];
+      const raw = weather.counties[entry[0]];
+      const row = raw && countyDecision(raw, clock);
       if (row && active(row)) allRows.push(encodeCounty(row, format));
       continue;
     }

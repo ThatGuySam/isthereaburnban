@@ -1,8 +1,8 @@
 import type { CountyStatus, FireWeatherReport, ScopedOrder, Snapshot, SnapshotData, SourceHealth } from "../../shared/types";
+import { activeStatus, countyDecision, STALE_MS } from "../county-decision";
+export { STALE_MS } from "../county-decision";
 import type { Transition } from "../notification-message";
 import type { Source } from "./types";
-
-export const STALE_MS = 48 * 60 * 60 * 1000;
 
 export type SourceInput = {
   source: Pick<Source, "id" | "state" | "mode" | "product"> & Partial<Pick<Source, "scope" | "officialUrl" | "recurring">>;
@@ -16,7 +16,7 @@ export type SourceInput = {
 };
 
 const RANK = { unknown: 0, none: 1, restricted: 2, ban: 3 };
-const active = (row: CountyStatus) => row.status === "ban" || row.status === "restricted";
+const active = (row: CountyStatus) => activeStatus(row.status);
 
 type Candidate = { row: CountyStatus; confirmed: boolean };
 type CountyCandidates = Candidate | Candidate[];
@@ -29,8 +29,8 @@ function better(current: Candidate | undefined, candidate: Candidate) {
 }
 
 function order(row: CountyStatus): ScopedOrder {
-  const { status, label, note, since, expires, sourceId, sourceName, sourceUpdated, officialUrl, checked, validFrom, validUntil } = row;
-  return { status, label, note, since, expires, sourceId, sourceName, sourceUpdated, officialUrl, checked, validFrom, validUntil,
+  const { status, label, note, since, expires, sourceId, sourceName, sourceUpdated, sourceUrl, officialUrl, checked, validFrom, validUntil } = row;
+  return { status, label, note, since, expires, sourceId, sourceName, sourceUpdated, sourceUrl, officialUrl, checked, validFrom, validUntil,
     scope: row.scope ?? "county", scopeNote: row.scopeNote ?? row.label };
 }
 
@@ -150,20 +150,24 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
       continue;
     }
     const { row, confirmed } = result;
-    const before = prev?.counties[fips];
-    const isRecurring = recurring.has(row.sourceId ?? "");
-    const newBan = row.status === "ban" && !isRecurring;
+    const previous = prev?.counties[fips];
+    const before = previous && countyDecision(previous, Date.parse(prev.generated));
+    const decision = countyDecision(row, clock);
+    const decisionSource = Array.isArray(group) ? group.find((entry) =>
+      entry.row.sourceId === decision.sourceId && entry.row.scopeNote === decision.scopeNote) : group;
+    const isRecurring = recurring.has(decision.sourceId ?? "");
+    const newBan = decision.status === "ban" && !isRecurring;
     if (!before) {
       changed[fips] = row.since ?? row.sourceUpdated ?? at;
-    } else if (before.status !== row.status && !newBan && (isRecurring || recurring.has(before.sourceId ?? ""))) {
+    } else if (before.status !== decision.status && !newBan && (isRecurring || recurring.has(before.sourceId ?? ""))) {
       // A scheduled calendar window opened or closed: not news, no alert, no lastmod churn.
-    } else if (before.status !== row.status) {
+    } else if (before.status !== decision.status) {
       changed[fips] = at;
-      const retainedAuthority = !before.sourceId || before.sourceId === row.sourceId ||
+      const retainedAuthority = !before.sourceId || before.sourceId === decision.sourceId ||
         (Array.isArray(group) && group.some((candidate) => candidate.confirmed && candidate.row.sourceId === before.sourceId));
-      const lostAuthority = !retainedAuthority || (before.scope !== "part" && row.scope === "part");
-      if (confirmed && !lostAuthority && row.status !== "unknown") {
-        transitions.push({ fips, oldStatus: before.status, newStatus: row.status, at });
+      const lostAuthority = !retainedAuthority || (before.status === "ban" && decision.scope === "part");
+      if ((decisionSource?.confirmed ?? confirmed) && !lostAuthority && decision.status !== "unknown") {
+        transitions.push({ fips, oldStatus: before.status, newStatus: decision.status, at });
       }
     }
     if (!row.since) row.since = before?.status === row.status && before.since ? before.since : changed[fips] ?? at;

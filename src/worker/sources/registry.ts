@@ -113,14 +113,15 @@ export const SOURCES: readonly Source[] = [
     scope: "county" as const, coverage: "live" as const,
     stack: adapter.id === "ms" ? "WordPress / Ninja Tables" : adapter.id === "tx" ? "ArcGIS / UTF-16 text" : "ArcGIS",
     cadence: { kind: "hourly" } as const,
-    async fetch({ now, validators }) {
+    async fetch({ now }) {
       const parse = ARCGIS_PARSERS.get(adapter.id);
       // TX has a fallback feed. MS recalculates active orders on the local calendar.
       if (!parse) return { rows: await adapter.fetch() };
-      const reply = await fetchSource(adapter.sourceUrl, { validators, headers: { accept: "application/json" } });
-      if (reply.notModified) return reply;
+      // Full-feed JSON is small. Parse each edition so code changes take effect even when the publisher's bytes are unchanged.
+      const reply = await fetchSource(adapter.sourceUrl, { headers: { accept: "application/json" } });
+      if (reply.notModified) throw new Error(`${adapter.id}: unexpected ArcGIS 304`);
       const json = await reply.response.json<ArcgisResponse>();
-      return { rows: parse(json, now.toISOString()), validators: reply.validators };
+      return { rows: parse(json, now.toISOString()) };
     },
   } satisfies ActiveSource)),
   nwsFireWeather,

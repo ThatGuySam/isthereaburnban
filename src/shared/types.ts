@@ -38,12 +38,15 @@ export type CountyStatus = {
   sourceId?: string;
   validFrom?: string; // start instant for a dated or scheduled decision
   validUntil?: string; // instant after which short-lived decisions are unconfirmed
+  /** Broader report when a scoped order supplies the headline. */
+  countywide?: Pick<CountyStatus, "status" | "label" | "checked" | "sourceName" | "sourceUpdated" | "officialUrl">;
   orders?: ScopedOrder[];
   alerts?: FireWeatherAlert[];
 };
 
 export type ScopedOrder = Pick<CountyStatus, "status" | "label" | "note" | "since" | "expires" |
   "sourceId" | "sourceName" | "sourceUpdated" | "officialUrl" | "checked" | "validFrom" | "validUntil"> & {
+  sourceUrl?: string;
   scope: "part" | "county" | "state";
   scopeNote: string;
 };

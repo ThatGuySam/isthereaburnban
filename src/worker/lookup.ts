@@ -1,4 +1,6 @@
 import type { CountyStatus, LookupResult, SnapshotData } from "../shared/types";
+import { statusSentence, statusTheme } from "../shared/render";
+import { countyDecision } from "./county-decision";
 import { ADAPTERS } from "./adapters";
 import { COUNTY_BY_FIPS, countyPath, STATE_DIR_BY_ABBR } from "./counties";
 import type { Env } from "./env";
@@ -16,9 +18,9 @@ export class LookupError extends Error {
 const TRACKED = new Set(ADAPTERS.map((a) => a.state));
 
 /** Status for one county. Never defaults to "none": anything we can't vouch for is "unknown". */
-export function statusFor(snapshot: SnapshotData, fips: string): CountyStatus {
+export function statusFor(snapshot: SnapshotData, fips: string, now = Date.now()): CountyStatus {
   const hit = snapshot.counties[fips];
-  if (hit) return hit;
+  if (hit) return countyDecision(hit, now);
   const c = COUNTY_BY_FIPS.get(fips);
   if (!c) throw new LookupError(`unknown county FIPS ${fips}`, 404);
   const dir = STATE_DIR_BY_ABBR.get(c.state);
@@ -121,21 +123,13 @@ export function countyState(fips: string): string {
 
 /** "Yes: Tulsa County, OK has a burn ban (County Burn Ban). Source: ..., checked .... Official: ..." */
 export function resultSentence(r: CountyStatus): string {
-  const where = `${r.county}, ${r.state}`;
   const checked = /^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(r.checked) ? `${r.checked.slice(0, 16)}Z` : r.checked;
-  const head =
-    r.status === "ban"
-      ? `Yes: ${where} has a burn ban (${r.label}).`
-      : r.status === "restricted"
-        ? `Sort of: ${where} has burning restrictions (${r.label}).`
-        : r.status === "none"
-          ? `No: ${where} has no burn ban reported by the source.`
-          : `Not sure: we can't confirm the burn ban status for ${where} (${r.label}).`;
-  const src = r.sourceName ? ` Source: ${r.sourceName}, checked ${checked}.` : "";
+  const head = `${statusTheme(r.status).word}: ${statusSentence(r)}.`;
+  const src = r.sourceUrl && r.sourceName ? ` Source: ${r.sourceName}, checked ${checked}.` : "";
   const exp = r.expires ? ` Expires ${r.expires}.` : "";
   const weather = r.alerts?.map((alert) => {
     const end = alert.ends ?? alert.expires;
     return ` NWS fire weather: ${alert.event}${end ? ` until ${end}` : ""}.`;
   }).join("") ?? "";
-  return `${head}${exp}${src}${weather}${r.officialUrl ? ` Official: ${r.officialUrl}` : ""}`;
+  return `${head}${exp}${src}${weather}${r.officialUrl ? ` ${r.sourceUrl ? "Official source" : "Official directory"}: ${r.officialUrl}` : ""}`;
 }

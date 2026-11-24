@@ -1,10 +1,10 @@
 // Server side of the static pages: inject live status into prerendered county pages, and build sitemaps.
 import countiesData from "../data/counties.json";
 import cityStates from "../data/places-states.json";
-import statesData from "../data/states.json";
-import { answerMeta, escapeHtml, heroStyle, localDate, renderStatusHtml, renderStatusLine, statusTheme, unknownStatus } from "../shared/render";
+import { answerMeta, escapeHtml, heroStyle, localDate, renderStatusHtml, renderStatusLine, statusTheme } from "../shared/render";
 import { STATES, STATE_BY_ABBR } from "../shared/states-fips";
-import type { CountyStatus, SnapshotData, StateDirectoryEntry } from "../shared/types";
+import type { CountyStatus, SnapshotData } from "../shared/types";
+import { statusFor } from "./lookup";
 import type { Env } from "./env";
 import type { SnapshotReader } from "./snapshot";
 import { latest } from "./snapshot-v2";
@@ -12,13 +12,12 @@ import { latest } from "./snapshot-v2";
 type County = { fips: string; state: string; stateFips: string; name: string; slug: string };
 
 const COUNTIES = countiesData as County[];
-const STATE_DIR = new Map((statesData as StateDirectoryEntry[]).map((s) => [s.abbr, s]));
 const BY_PATH = new Map(COUNTIES.map((c) => [`${c.state.toLowerCase()}/${c.slug}`, c]));
 
 const PAGE_CACHE = "public, max-age=300";
 
 function countyStatus(snapshot: SnapshotData, c: County): CountyStatus {
-  return snapshot.counties[c.fips] ?? unknownStatus(c, STATE_DIR.get(c.state), snapshot.generated);
+  return statusFor(snapshot, c.fips);
 }
 
 /** Collects a text node across chunks and replaces it once complete. */

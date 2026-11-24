@@ -4,6 +4,7 @@ import { fetchSource } from "../sources/lib/http";
 import { countiesInState } from "../counties";
 
 const LAYER = "https://gis.tfs.tamu.edu/arcgis/rest/services/EOC/BurnBan/FeatureServer/0";
+const BAN_LABEL = "County burn ban (unincorporated areas)";
 const TXT_URL = "https://tfsfrp.tamu.edu/WILDFIRES/BURNBAN.txt";
 const meta = {
   state: "TX",
@@ -20,7 +21,8 @@ export function parse(json: ArcgisResponse, checked: string): CountyStatus[] {
     return {
       county: byFips(`48${code}`) ?? countyByName("TX", str(a.County)),
       status: yes ? ("ban" as const) : no ? ("none" as const) : ("unknown" as const),
-      label: yes ? "County burn ban" : no ? "No burn ban" : "Not reported",
+      label: yes ? BAN_LABEL : no ? "No county burn ban reported" : "Not reported",
+      scopeNote: yes ? "Unincorporated areas" : undefined,
       since: yes ? msToIso(a.StartDate) : null,
     };
   });
@@ -41,7 +43,8 @@ export function parseTxt(buf: ArrayBuffer, checked: string): CountyStatus[] {
   const rows = countiesInState("TX").map((c) => ({
     county: c,
     status: banned.has(c.fips) ? ("ban" as const) : ("none" as const),
-    label: banned.has(c.fips) ? "County burn ban" : "No burn ban",
+    label: banned.has(c.fips) ? BAN_LABEL : "No county burn ban reported",
+    scopeNote: banned.has(c.fips) ? "Unincorporated areas" : undefined,
     sourceUpdated,
   }));
   return toStatuses({ ...meta, sourceUrl: TXT_URL }, rows, checked);

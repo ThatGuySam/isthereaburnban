@@ -15,7 +15,7 @@ import type { Source } from "./types";
 // Leave room for retries, a refresh straddling midnight, and operational writes.
 export const MAX_CACHED_STATES = 32;
 // Bump when the same material revisions need a different state projection.
-const MERGE_VERSION = 2;
+const MERGE_VERSION = 3;
 
 type StateJob = { state: string; signature: string; cache: boolean };
 type RunRow = { id: string; slot: number; generated: string; plan: string; cursor: number };

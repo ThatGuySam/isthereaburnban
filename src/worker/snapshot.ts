@@ -1,6 +1,7 @@
 import type { CountyStatus, Snapshot, SnapshotData } from "../shared/types";
 import type { Adapter } from "./adapters";
 import { formatNationalBans, projectWeather, type BanFormat } from "./active-bans";
+import { countyDecision } from "./county-decision";
 import { activeBans } from "./api";
 import { SNAPSHOT_KEY, type Env } from "./env";
 import { withFireWeather } from "./fire-weather";
@@ -67,7 +68,10 @@ export function transitionInsert(db: D1Database, transitions: Transition[]) {
 export function alertNotices(transitions: Transition[], snapshot: SnapshotData) {
   return transitions
     .filter((t) => t.oldStatus === "ban" || t.newStatus === "ban" || t.oldStatus === "restricted" || t.newStatus === "restricted")
-    .map((transition) => transitionNotice(transition, snapshot.counties[transition.fips]));
+    .map((transition) => {
+      const row = snapshot.counties[transition.fips];
+      return transitionNotice(transition, row && countyDecision(row, Date.parse(snapshot.generated)));
+    });
 }
 
 export async function refresh(env: Env, adapters?: Adapter[], scheduledTime?: number): Promise<Snapshot> {

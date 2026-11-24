@@ -2,9 +2,12 @@
 import { describe, expect, test } from "bun:test";
 import type { CountyStatus } from "../shared/types";
 import type { Adapter } from "./adapters/common";
-import { buildSnapshot } from "./snapshot";
+import { alertNotices, buildSnapshot } from "./snapshot";
 import { buildResult, resultSentence, statusFor } from "./lookup";
 import { activeBans } from "./api";
+import { formatNationalBans } from "./active-bans";
+import { decodeActive, encodeActive, encodeState } from "./snapshot-v2";
+import { renderStatusHtml } from "../shared/render";
 
 const adapter = (id: string, state: string): Adapter => ({ id, state, mode: "full", sourceName: id, sourceUrl: "x", officialUrl: "y", fetch: async () => [] });
 const row = (fips: string, status: CountyStatus["status"], checked: string, extra: Partial<CountyStatus> = {}): CountyStatus => ({
@@ -69,7 +72,7 @@ describe("lookup", () => {
   });
 
   test("text sentence", () => {
-    expect(resultSentence(snap.counties["40143"])).toBe("Yes: Tulsa County, OK has a burn ban (County Burn Ban). Source: OFS, checked 2026-11-23T19:07Z. Official: y");
+    expect(resultSentence(snap.counties["40143"])).toBe("Yes: Burn ban reported for Tulsa County, OK. Source: OFS, checked 2026-11-23T19:07Z. Official source: y");
   });
 
   test("activeBans filters by state", () => {
@@ -99,4 +102,36 @@ test("official links come from current adapter code, not the stored snapshot", (
   } };
   _wcl(snap);
   expect(snap.counties["40143"].officialUrl).toBe("https://experience.arcgis.com/experience/8bdc59b2a54a4383a9a2996fb9407580/");
+});
+
+test("a district ban overrides a county-level negative in public answers and alert decisions", () => {
+  const t0 = new Date("2026-11-24T10:00:00Z");
+  const t1 = new Date("2026-11-24T11:00:00Z");
+  const expires = "2026-11-24T12:00:00.000Z";
+  const county = row("40143", "none", t0.toISOString(), { county: "Tulsa County", scope: "county" });
+  const first = buildSnapshot(null, A, [ok([county])], t0);
+  const district = row("40143", "ban", t1.toISOString(), { county: "Tulsa County", label: "Burn ban",
+    scope: "part", scopeNote: "Example Fire District", sourceName: "Example Fire District", validUntil: expires });
+  const next = buildSnapshot(first.snapshot, [...A, adapter("district", "OK")], [ok([county]), ok([district])], t1);
+  const answer = statusFor(_wcl(next.snapshot), county.fips, t1.getTime());
+  expect(answer).toMatchObject({ status: "restricted", scope: "part", scopeNote: "Example Fire District",
+    countywide: { status: "none" }, orders: [{ status: "ban", scopeNote: "Example Fire District" }] });
+  expect(resultSentence(answer)).toContain("Burn ban in Example Fire District");
+  expect(renderStatusHtml(answer)).toContain("Burn ban in Example Fire District");
+  expect(alertNotices(next.transitions, next.snapshot)[0].body).toContain("Burn ban in Example Fire District");
+  expect(activeBans(next.snapshot, "OK", t1.getTime()).counties[0]).toMatchObject({ status: "restricted", scope: "part" });
+  expect(next.transitions).toEqual([{ fips: county.fips, oldStatus: "none", newStatus: "restricted", at: t1.toISOString() }]);
+  expect(statusFor(next.snapshot, county.fips, Date.parse(expires)).status).toBe("none");
+
+  const index = { ...next.snapshot, revision: "fixture", version: 2, states: {}, orderChecks: {} };
+  const encoded = encodeState({ ...index, state: "OK" }, "signature");
+  for (const format of ["compact", "pretty"]) {
+    const projection = decodeActive(encodeActive(index.revision, [{ ...encoded, active: format === "pretty" ? encoded.pretty : encoded.active }]));
+    const bans = (now: Date) => {
+      const { body } = formatNationalBans(projection, index, new Map(), now, format);
+      return JSON.parse(format === "pretty" ? JSON.parse(body.join("")) : body.join("")).counties;
+    };
+    expect(bans(t1)).toEqual([JSON.parse(JSON.stringify(answer))]);
+    expect(bans(new Date(expires))).toEqual([]);
+  }
 });

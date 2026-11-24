@@ -27,7 +27,7 @@ describe("OK", () => {
     expect(count(rows, "none")).toBe(76);
     expect(okClassify("Ozone Alert").status).toBe("restricted");
     expect(okClassify("Governor's Burn Ban").status).toBe("ban");
-    expect(okClassify("County Burn Ban and Ozone Alert").status).toBe("ban");
+    expect(okClassify("County Burn Ban and Ozone Alert").status).toBe("unknown");
     expect(okClassify("").status).toBe("unknown");
   });
 });
@@ -119,4 +119,20 @@ describe("IA (positive-only)", () => {
     expect(rows[0]).toMatchObject({ fips: "19001", status: "ban", officialUrl: "https://example.gov/proc.pdf" });
     expect(rows[1].status).toBe("unknown");
   });
+});
+
+test("Indiana local orders retain their limited scope and do not use a report timestamp as an effective date", () => {
+  const j = fx("in.json");
+  const record = j.features.find(({ attributes }) => attributes.orginating_county === "Sullivan");
+  record.attributes.countyburnbanstatus = "Local Burn Ban";
+  const rows = parseIn(j, checked);
+  expect(rows.find((r) => r.fips === "18153")).toMatchObject({ status: "restricted", scope: "part",
+    scopeNote: expect.stringContaining("part of"), since: null, sourceUpdated: expect.any(String) });
+  record.attributes.countyburnbanstatus = "No open burning allowed";
+  expect(parseIn(j, checked).find((r) => r.fips === "18153")?.status).toBe("unknown");
+});
+
+test("unrecognized publisher codes remain unknown", () => {
+  expect(okClassify("No Burn Ban").status).toBe("unknown");
+  expect(okClassify("County Burn Ban Lifted").status).toBe("unknown");
 });
