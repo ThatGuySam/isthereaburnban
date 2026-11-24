@@ -952,3 +952,29 @@ body[data-filtering] [data-unfiltered] {
 .muted {
   color: var(--muted);
 }
+
+/* ---------- Connect your agent ---------- */
+
+.mcp-url {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  padding: 0.85rem 1rem;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+}
+.mcp-url span {
+  font-weight: 700;
+}
+.mcp-url code {
+  overflow-wrap: anywhere;
+  font-size: 1rem;
+}
+.dev pre code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.dev li + li {
+  margin-top: 0.4rem;
+}

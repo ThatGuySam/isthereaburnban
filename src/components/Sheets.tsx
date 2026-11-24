@@ -313,7 +313,7 @@ function MenuSheet({ detail }: { detail: OpenDetail }) {
           {here !== "/" && <li><a href="/">Home</a></li>}
           <li><a href="/map/">Burn ban map</a></li>
           <li><a href="/us/">Browse states</a></li>
-          <li><a href="/developers/">Developers</a></li>
+          <li><a href="/developers/">Connect your agent</a></li>
         </ul>
       </nav>
       <p className="vs-fine">Informational only. Confirm with the official source before you burn.</p>
