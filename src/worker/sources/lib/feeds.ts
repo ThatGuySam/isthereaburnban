@@ -8,6 +8,14 @@ export function parseJson<T>(text: string, accepts: (value: unknown) => value is
   return value;
 }
 
+/** Legacy .NET JSON dates carry UTC epoch milliseconds. The optional suffix describes the local offset. */
+export function parseDotNetJsonDate(text: string): Date | null {
+  const match = /^\/Date\((-?\d+)(?:[+-]\d{4})?\)\/$/.exec(text);
+  if (!match) return null;
+  const date = new Date(Number(match[1]));
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
 export function decodeFeed(bytes: ArrayBuffer, encoding?: string): string {
   const [first, second] = new Uint8Array(bytes, 0, Math.min(2, bytes.byteLength));
   const bom = first === 0xff && second === 0xfe ? "utf-16le" : first === 0xfe && second === 0xff ? "utf-16be" : undefined;

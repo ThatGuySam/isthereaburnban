@@ -549,9 +549,15 @@
     "abbr": "WI",
     "name": "Wisconsin",
     "coverage": "restrictions",
-    "publisher": "Wisconsin DNR",
+    "publisher": "Wisconsin Department of Natural Resources",
     "officialUrl": "https://apps.dnr.wi.gov/forestryapps/burnrestriction",
-    "notes": "Wisconsin DNR posts daily burn permit restrictions by county where it manages permits. Local rules are separate."
+    "notes": "The DNR posts debris-burning permit limits and suspensions for its fire protection areas. Check WisBURN after 9 a.m. Central on the day you plan to burn. Cities, villages and other areas outside DNR protection set their own rules. Ask your local fire department about your address.",
+    "extraUrls": [
+      { "label": "WisBURN restriction and protection-area map", "url": "https://apps.dnr.wi.gov/wisburn/" },
+      { "label": "Wisconsin DNR burning permits", "url": "https://dnr.wisconsin.gov/topic/forestfire/permits" },
+      { "label": "Wisconsin open burning rules by material", "url": "https://dnr.wisconsin.gov/topic/OpenBurning/BeforeYouBurn.html" },
+      { "label": "City of Madison burning rules and permits", "url": "https://www.cityofmadison.com/fire/permits-inspections/licenses-permits/burn" }
+    ]
   },
   {
     "abbr": "WY",

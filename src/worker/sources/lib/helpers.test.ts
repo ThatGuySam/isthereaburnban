@@ -5,7 +5,7 @@ import { webFormsPost } from "./aspnet";
 import { arcgisEditWindow, arcgisLocalDate, arcgisRows, codedDomains, dataLastEditDate, findOperationalLayers, queryArcgis } from "./arcgis";
 import { activeRule, CALENDAR_RULES } from "./calendar";
 import { civicPlusNotices, civicPlusUrl } from "./civicplus";
-import { decodeFeed, parseCsv, parseFeed, parseJson } from "./feeds";
+import { decodeFeed, parseCsv, parseDotNetJsonDate, parseFeed, parseJson } from "./feeds";
 import { blockAfterHeading, extractHtml, localClock, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, US_ZONES } from "./html";
 import { BlockedError, fetchSource, HttpError, USER_AGENT } from "./http";
 import { manualPdf } from "./pdf";
@@ -17,6 +17,15 @@ const data = (name) => readFileSync(new URL(`./fixtures/${name}`, import.meta.ur
 const text = (name) => data(name).toString();
 const json = (name) => JSON.parse(text(name));
 const date = (s) => new Date(s);
+
+test("legacy .NET JSON dates preserve the UTC instant regardless of the optional offset", () => {
+  expect(parseDotNetJsonDate("/Date(1795437502000)/")).toEqual(date("2026-11-23T12:38:22Z"));
+  expect(parseDotNetJsonDate("/Date(1795437502000-0600)/")).toEqual(date("2026-11-23T12:38:22Z"));
+  expect(parseDotNetJsonDate("/Date(-1+0100)/")).toEqual(date("1969-12-31T23:59:59.999Z"));
+  expect(parseDotNetJsonDate("/Date(8640000000000001)/")).toBeNull();
+  expect(parseDotNetJsonDate("/Date(1795437502000.5)/")).toBeNull();
+  expect(parseDotNetJsonDate("1795437502000")).toBeNull();
+});
 
 test("HTTP rejects publisher access-denied HTML, including HTTP 200 error documents", async () => {
   const url = "https://burnpermit.fire.ca.gov/current-burn-status/";

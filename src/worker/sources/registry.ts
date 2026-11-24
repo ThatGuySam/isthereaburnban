@@ -10,6 +10,7 @@ import { fetchSource } from "./lib/http";
 import { miPermits } from "./mi/permits";
 import { njRestrictions } from "./nj/restrictions";
 import type { ActiveSource, Source } from "./types";
+import { wiPermits } from "./wi/permits";
 
 const ARCGIS_PARSERS = new Map([
   ["fl", parseFl], ["ia", parseIa], ["in", parseIn], ["la", parseLa], ["ok", parseOk],
@@ -37,6 +38,7 @@ export const SOURCES: readonly Source[] = [
   pfirs,
   miPermits,
   njRestrictions,
+  wiPermits,
   {
     id: "ca-calfire", state: "CA", scope: "part", stack: "Sitecore / HTML table", mode: "manual", cadence: null,
     sourceName: "CAL FIRE", sourceUrl: "https://burnpermit.fire.ca.gov/current-burn-status/",
