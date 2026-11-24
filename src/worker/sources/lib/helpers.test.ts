@@ -7,7 +7,7 @@ import { activeRule, calendarDayWindows, calendarStatusRows, CALENDAR_RULES } fr
 import { civicPlusAlertDetails, civicPlusNotices, civicPlusPageParagraphs, civicPlusPageText, civicPlusUrl } from "./civicplus";
 import { localDayWindow, parseLocalIsoTimestamp, parseWeekdayDate, reportWindow, weekdayOnOrAfter } from "./dates";
 import { decodeFeed, parseCsv, parseDotNetJsonDate, parseFeed, parseJson } from "./feeds";
-import { blockAfterHeading, extractHtml, extractHtmlGrid, localClock, matchesReviewedHtmlSection, numberedRuleSection, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, statusTableRows, US_ZONES } from "./html";
+import { blockAfterHeading, blocksBetweenMarkers, extractHtml, extractHtmlGrid, localClock, matchesReviewedHtmlSection, numberedRuleSection, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, statusTableRows, US_ZONES } from "./html";
 import { sha256 } from "./hash";
 import { BlockedError, fetchSource, HttpError, pacedSourceReader, pacedTextReader, USER_AGENT } from "./http";
 import { manualPdf } from "./pdf";
@@ -59,6 +59,26 @@ test("reviewed HTML sections validate unique headings and normalized section tex
   expect(await validate(section.replace("required", "optional"))).toBe(false);
   expect(await validate(section + section)).toBe(false);
   expect(await validate("<h3>Permit rule</h3><h3>Source</h3>")).toBe(false);
+});
+
+test("HTML panels distinguish omitted markup from incomplete or ambiguous delimiters", () => {
+  const markers = {
+    start: ({ tag, text }) => tag === "p" && text === "Burn notices",
+    end: ({ tag, text }) => tag === "p" && text === "Terms",
+  };
+  const scope = (html) => blockAfterHeading(parseHtml(html).blocks, /^Air Branch$/, { requireUnique: true, headingTag: "h2" });
+  const before = "<h1>Air Branch</h1><p>Other content</p><h2>Air Branch</h2><p>Home</p>";
+  const start = "<p>Burn notices</p>";
+  const end = "<p>Terms</p>";
+  const rows = "<p>District</p><li>Active</li>";
+
+  expect(blocksBetweenMarkers(scope(before + start + rows + end + "<p>Footer</p>"), markers)).toEqual([
+    { tag: "p", text: "District" }, { tag: "li", text: "Active" },
+  ]);
+  expect(blocksBetweenMarkers(scope(before), markers)).toBeUndefined();
+  for (const changed of [start + rows, rows + end, end + start, start + start + end, start + end + end]) {
+    expect(() => blocksBetweenMarkers(scope(before + changed), markers)).toThrow("HTML panel markers");
+  }
 });
 
 test("HTML status grids extract only selected rows and keep cell data", async () => {

@@ -20,6 +20,8 @@ import { deActionDays } from "./de/air-quality";
 import { deOpenBurning } from "./de/open-burning";
 import { gaEpdNonSummer, gaEpdSummer } from "./ga/epd";
 import { gaGwinnett } from "./ga/gwinnett";
+import { hiCabNoBurnPeriods } from "./hi/no-burn-periods";
+import { hiCabOpenBurning } from "./hi/open-burning";
 import { idIdlStages } from "./id/idl-stages";
 import { idKootenaiAir } from "./id/kootenai-air";
 import { idSeasonal } from "./id/seasonal";
@@ -214,6 +216,22 @@ export const SOURCES: readonly Source[] = [
   ...Object.values(riTownSources),
   sdBlackHillsPileBurning,
   sdBlmFireRestrictions,
+  hiCabNoBurnPeriods,
+  hiCabOpenBurning,
+  {
+    id: "hi-hawaii-county-emergency-orders", state: "HI", scope: "part", stack: "Granicus Vision / HTML and signed orders",
+    mode: "manual", cadence: null, sourceName: "County of Hawaiʻi Civil Defense Agency",
+    sourceUrl: "https://www.hawaiicounty.gov/our-county/county-news",
+    officialUrl: "https://hawaii-county-civil-defense-agency-hawaiicountygis.hub.arcgis.com/",
+    error: "County news returns HTTP 403 to direct requests. Civil Defense posts local notices and the mayor issues geographically scoped orders.",
+  },
+  {
+    id: "hi-maui-emergency-orders", state: "HI", scope: "part", stack: "CivicPlus / HTML and signed PDFs",
+    mode: "manual", cadence: null, sourceName: "Maui County Mayor's Office",
+    sourceUrl: "https://www.mauicounty.gov/2006/Declarations",
+    officialUrl: "https://www.mauicounty.gov/2006/Declarations",
+    error: "The mayor’s proclamation index can return HTTP 403. The council’s public copy can lag the signed orders.",
+  },
   {
     id: "sd-meade-county-orders", state: "SD", scope: "county", stack: "Squarespace / notices and signed images",
     mode: "manual", cadence: null, sourceName: "Meade County Commission",

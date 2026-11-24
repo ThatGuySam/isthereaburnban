@@ -3,7 +3,7 @@ import { atLocalTime, localClock, localDayWindow, shiftDay, US_ZONES } from "./d
 
 // Inventory: Alabama and Jefferson County open burning, Alaska burn permits and winter air rules, AZ Area A, Idaho and Utah closed fire seasons, NY DEC Open Burning, GA EPD Summer Open Burning Ban, KY fire hazard seasons, OH DNR Open Burning Regulations,
 // PA state forest fires, VA DOF 4 PM Burning Law, WV Forestry Fire Burning Guidelines, MD DNR Burning Guidance,
-// ME, NE, NH, RI and VT open-burning rules, DE open burning, and MA residential brush burning.
+// HI, ME, NE, NH, RI and VT open-burning rules, DE open burning, and MA residential brush burning.
 export type CalendarRule = {
   state: string;
   officialUrl: string;
@@ -310,6 +310,13 @@ export const CALENDAR_RULES: Record<string, CalendarRule> = {
     scopeNote: "Essential agricultural burning under Missoula County’s permit program",
     label: "Essential agricultural burning season closed", seasons: [["11-01", "02-29"]],
     note: "Missoula Public Health’s regular essential agricultural burning season is March 1 through October 31. Check the permit system for daily decisions for other types of burning.",
+  },
+  HI: {
+    state: "HI", zone: US_ZONES.Hawaii, status: "restricted", scope: "state",
+    scopeNote: "Open burning under Hawaiʻi Administrative Rules §§ 11-60.1-52 and -53",
+    officialUrl: "https://health.hawaii.gov/cab/open-burning-and-agricultural-burning-permits-in-hawaii/",
+    label: "State open-burning rules apply year-round",
+    note: "Backyard burning of trash and yard waste is prohibited. Agricultural burning requires a Clean Air Branch permit. Campfires and bonfires generally need state approval. Attended cooking fires may qualify for an exception. Check with the local fire department or land manager for additional restrictions.",
   },
   ME: {
     state: "ME", zone: US_ZONES.Eastern, status: "restricted", scope: "state",

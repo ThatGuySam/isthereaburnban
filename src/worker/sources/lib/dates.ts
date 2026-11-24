@@ -7,6 +7,7 @@ export const US_ZONES = {
   Arizona: "America/Phoenix",
   Alaska: "America/Anchorage",
   Aleutian: "America/Adak",
+  Hawaii: "Pacific/Honolulu",
 } as const;
 
 const formatters = new Map<string, Intl.DateTimeFormat>();

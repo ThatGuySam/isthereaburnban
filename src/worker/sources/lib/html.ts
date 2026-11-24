@@ -248,13 +248,30 @@ export async function extractHtmlGrid(input: Response | string, selectors: { row
   return rows;
 }
 
-export function blockAfterHeading(blocks: Block[], pattern: RegExp, { requireUnique = false } = {}): Block[] {
+export function blockAfterHeading(
+  blocks: Block[], pattern: RegExp,
+  { requireUnique = false, headingTag }: { requireUnique?: boolean; headingTag?: `h${1 | 2 | 3 | 4 | 5 | 6}` } = {},
+): Block[] {
   const match = new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, ""));
-  const isHeading = ({ tag, text }: Block) => HEAD.test(tag) && match.test(text);
+  const isHeading = ({ tag, text }: Block) => (headingTag ? tag === headingTag : HEAD.test(tag)) && match.test(text);
   const start = blocks.findIndex(isHeading);
   if (start < 0 || (requireUnique && blocks.findLastIndex(isHeading) !== start)) return [];
   const end = blocks.findIndex(({ tag }, index) => index > start && HEAD.test(tag) && tag <= blocks[start].tag);
   return blocks.slice(start + 1, end < 0 ? undefined : end);
+}
+
+/** Read a panel without semantic headings. A missing panel is distinct from a partial or duplicate match. */
+export function blocksBetweenMarkers(
+  blocks: readonly Block[],
+  { start, end }: { start: (block: Block) => boolean; end: (block: Block) => boolean },
+): Block[] | undefined {
+  const first = blocks.findIndex(start);
+  const last = blocks.findIndex(end);
+  if (first < 0 && last < 0) return;
+  if (first < 0 || last <= first || blocks.findLastIndex(start) !== first || blocks.findLastIndex(end) !== last) {
+    throw new Error("Missing, out-of-order or duplicate HTML panel markers");
+  }
+  return blocks.slice(first + 1, last);
 }
 
 /** Verify the normalized text under a unique heading, outside surrounding navigation. */

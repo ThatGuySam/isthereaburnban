@@ -87,6 +87,8 @@ import { parseScAirQuality, scAirQuality } from "../src/worker/sources/sc/air-qu
 import { parseScfcDebris } from "../src/worker/sources/sc/debris";
 import { parseSdBlmRestrictions, sdBlmFireRestrictions } from "../src/worker/sources/sd/blm";
 import { parseBlackHillsPileBurning, sdBlackHillsPileBurning } from "../src/worker/sources/sd/pile-burning";
+import { hiCabNoBurnPeriods, parseHiNoBurnPeriods } from "../src/worker/sources/hi/no-burn-periods";
+import { hiCabOpenBurning, parseHiOpenBurning } from "../src/worker/sources/hi/open-burning";
 import { parseTennesseePermitHolds, parseTennesseePermitRoster, tnForestryPermitHolds } from "../src/worker/sources/tn/permit-holds";
 import { parseTennesseePermitSeason, tnSeasonalBurnPermits } from "../src/worker/sources/tn/seasonal";
 import { parseUtahOrders, utFfslFireOrders } from "../src/worker/sources/ut/orders";
@@ -235,6 +237,12 @@ const sdBlmHtml = utf8("sd/fixtures/blm-current-2026-11-24.html");
 const sdBlmOrder = raw("sd/fixtures/blm-stage1-2026-10-01.pdf");
 const parseSdPermitFixture = async () => parseBlackHillsPileBurning(await extractHtml(sdPermitHtml), sdCaptured);
 const parseSdBlmFixture = () => parseSdBlmRestrictions(sdBlmHtml, sdCaptured, async () => new Response(sdBlmOrder));
+
+const hiCaptured = new Date("2026-11-24T17:14:33Z");
+const hiCabNotice = utf8("hi/fixtures/cab-no-burn-2026-11-24.html");
+const hiCabRules = utf8("hi/fixtures/cab-open-burning-2026-11-24.html");
+const parseHiNoticeFixture = async () => parseHiNoBurnPeriods(await extractHtml(hiCabNotice), hiCaptured);
+const parseHiRulesFixture = () => parseHiOpenBurning(hiCabRules, hiCaptured);
 
 const parseNwsLive = () => parseNwsAlerts(JSON.parse(nwsLive), nwsCaptured);
 const parseNwsArchive = () => parseNwsAlerts(JSON.parse(nwsArchive), new Date("2026-11-18T20:00Z"), { archive: true });
@@ -495,6 +503,8 @@ recordedInputs.push(
   }))),
   { source: sdBlackHillsPileBurning, rows: await parseSdPermitFixture(), checked: sdCaptured.toISOString() },
   { source: sdBlmFireRestrictions, rows: await parseSdBlmFixture(), checked: sdCaptured.toISOString() },
+  { source: hiCabNoBurnPeriods, rows: await parseHiNoticeFixture(), checked: hiCaptured.toISOString() },
+  { source: hiCabOpenBurning, rows: await parseHiRulesFixture(), checked: hiCaptured.toISOString() },
   { source: ohSeasonal, rows: await parseOhFixture(), checked },
   { source: gaEpdNonSummer, rows: await parseGaNonSummerFixture(), checked },
   { source: azPimaWildfire, rows: await parseAzPimaFixture(), checked },
@@ -621,6 +631,8 @@ const jobs: Array<[string, () => unknown]> = [
   ["ND DES ArcGIS daily restrictions", parseNdFixture],
   ["SD Wildland Fire WebForms pile conditions", parseSdPermitFixture],
   ["SD BLM Drupal notice and signed order", parseSdBlmFixture],
+  ["HI Clean Air Branch WordPress no-burn periods", parseHiNoticeFixture],
+  ["HI Clean Air Branch WordPress open-burning rules", parseHiRulesFixture],
   ["NV Truckee Meadows WordPress / Oxygen", parseNvTmfpdFixture],
   ["AR Faulkner County WordPress / Elementor and PDF", parseArFaulknerFixture],
   ["SC Forestry Commission custom WordPress REST", parseScDebrisFixture],

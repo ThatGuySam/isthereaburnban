@@ -274,10 +274,44 @@
   {
     "abbr": "HI",
     "name": "Hawaii",
-    "coverage": "directory",
-    "publisher": "Hawaii Department of Health",
-    "officialUrl": "https://health.hawaii.gov/cab/open-burning-and-agricultural-burning-permits-in-hawaii/",
-    "notes": "State air rules require permits for most open burning. Counties can issue emergency fire orders."
+    "coverage": "restrictions",
+    "publisher": "Hawaiʻi Department of Health Clean Air Branch",
+    "officialUrl": "https://health.hawaii.gov/cab/",
+    "extraUrls": [
+      {
+        "label": "State open-burning rules and permits",
+        "url": "https://health.hawaii.gov/cab/open-burning-and-agricultural-burning-permits-in-hawaii/"
+      },
+      {
+        "label": "State emergency proclamations",
+        "url": "https://dod.hawaii.gov/hiema/active-state-emergency-proclamations/"
+      },
+      {
+        "label": "Hawaiʻi County Civil Defense",
+        "url": "https://hawaii-county-civil-defense-agency-hawaiicountygis.hub.arcgis.com/"
+      },
+      {
+        "label": "Honolulu emergency proclamations",
+        "url": "https://www.honolulu.gov/dem/emergency-proclamations/"
+      },
+      {
+        "label": "Kalawao County (Kalaupapa)",
+        "url": "https://health.hawaii.gov/kalaupapaupdates/"
+      },
+      {
+        "label": "Kauaʻi County emergency proclamations",
+        "url": "https://www.kauai.gov/Government/Departments-Agencies/Emergency-Management-Agency/Emergency-Proclamations"
+      },
+      {
+        "label": "Maui County emergency declarations",
+        "url": "https://www.mauicounty.gov/2006/Declarations"
+      },
+      {
+        "label": "State park notices",
+        "url": "https://dlnr.hawaii.gov/dsp/important-park-notices/"
+      }
+    ],
+    "notes": "Hawaiʻi prohibits backyard trash and yard-waste burning year-round. The Clean Air Branch issues agricultural permits and can temporarily stop certain burns in specific districts. Check with your local fire department or land manager for additional orders."
   },
   {
     "abbr": "ID",
