@@ -32,6 +32,10 @@ export async function parseKentuckySeasonal(response: Response, now: Date): Prom
   const document = await manualPdf(response);
   if (document.sha256 !== STATUTE_SHA256) throw new Error("Kentucky KRS 149.400 PDF changed and needs review");
 
+  return pinnedRows(now);
+}
+
+function pinnedRows(now: Date) {
   const checked = now.toISOString();
   return ZONES.flatMap(({ rule, counties }) =>
     calendarDayWindows(rule, now).filter(({ validUntil }) => validUntil > checked).flatMap((window) =>
@@ -45,7 +49,7 @@ export async function parseKentuckySeasonal(response: Response, now: Date): Prom
 
 export const kySeasonal: ActiveSource = {
   ...META,
-  recurring: true,
+  recurring: true, pinnedRows,
   mode: "positive-only",
   coverage: "restrictions",
   // After Central midnight both zones can publish windows for the same local date.

@@ -2,6 +2,7 @@ import type { CountyStatus, Snapshot, SnapshotData } from "../shared/types";
 import type { Adapter } from "./adapters";
 import { formatNationalBans, projectWeather, type BanFormat } from "./active-bans";
 import { activeBans } from "./api";
+import { compareCountyFips, pageFields, type BansPage } from "./bans-page";
 import { SNAPSHOT_KEY, type Env } from "./env";
 import { withFireWeather } from "./fire-weather";
 import { countyState } from "./lookup";
@@ -12,6 +13,7 @@ import { withPublishedChecks } from "./published-checks";
 import { loadActive, loadIndex, loadState } from "./snapshot-store";
 import { lastChangedByState, type ActiveProjection, type SnapshotIndex, type StateSnapshot } from "./snapshot-v2";
 import { withCurrentLinks } from "./source-links";
+import type { Verification } from "./sources/lib/calendar-verification";
 import { mergeSources } from "./sources/merge";
 import { SOURCES } from "./sources/registry";
 import { applyChecks, applySourceChecks, readHeads, sourceInputs, type SourceHead } from "./sources/state";
@@ -41,13 +43,14 @@ export function buildSnapshot(
 }
 
 // Parsing the core snapshot costs a few ms of CPU. Reuse it within an isolate for a minute.
-const memo = new WeakMap<KVNamespace, { at: number; snapshot: Snapshot }>();
+type LegacySnapshot = Snapshot & { verifications?: Record<string, Verification> };
+const memo = new WeakMap<KVNamespace, { at: number; snapshot: LegacySnapshot }>();
 const MEMO_MS = 60_000;
 
-export async function readSnapshot(env: Env, fresh = false): Promise<Snapshot | null> {
+export async function readSnapshot(env: Env, fresh = false): Promise<LegacySnapshot | null> {
   const cached = memo.get(env.KV);
   if (!fresh && cached && Date.now() - cached.at < MEMO_MS) return cached.snapshot;
-  const snapshot = await env.KV.get<Snapshot>(SNAPSHOT_KEY, { type: "json" });
+  const snapshot = await env.KV.get<LegacySnapshot>(SNAPSHOT_KEY, { type: "json" });
   if (!snapshot) return null;
   withCurrentLinks(snapshot);
   if (env.SOURCE_QUEUE) {
@@ -73,6 +76,7 @@ export function alertNotices(transitions: Transition[], snapshot: SnapshotData) 
 export async function refresh(env: Env, adapters?: Adapter[], scheduledTime?: number): Promise<Snapshot> {
   const prev = await readSnapshot(env, true);
   const now = new Date();
+  const verifications = { ...prev?.verifications };
   let result: ReturnType<typeof mergeSources>;
   if (adapters) {
     const results: PromiseSettledResult<CountyStatus[]>[] = [];
@@ -82,11 +86,12 @@ export async function refresh(env: Env, adapters?: Adapter[], scheduledTime?: nu
     }
     result = buildSnapshot(prev, adapters, results, now);
   } else {
-    result = mergeSources(prev, await sourceInputs(SOURCES, prev, now), now);
+    result = mergeSources(prev, await sourceInputs(SOURCES, prev, now, verifications), now);
   }
   const { snapshot, transitions } = result;
-  await env.KV.put(SNAPSHOT_KEY, JSON.stringify(snapshot));
-  memo.set(env.KV, { at: Date.now(), snapshot });
+  const stored = { ...snapshot, verifications };
+  await env.KV.put(SNAPSHOT_KEY, JSON.stringify(stored));
+  memo.set(env.KV, { at: Date.now(), snapshot: stored });
   for (const s of snapshot.sources) if (!s.ok && s.mode !== "manual") console.warn(`source ${s.id} failed: ${s.error}`);
 
   if (transitions.length) {
@@ -204,7 +209,7 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
       applySourceChecks(sources, await allHeads());
       return { generated: idx.generated, sources };
     },
-    async bans(stateQuery?: string, format: BanFormat = "compact") {
+    async bans(stateQuery?: string, format: BanFormat = "compact", page?: BansPage) {
       const idx = await catalog();
       const st = stateQuery?.trim().toUpperCase();
       if (!idx || st) {
@@ -215,11 +220,20 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
           snapshot.sources = sources;
         }
         const data = activeBans(snapshot, st);
-        const body = format === "pretty" ? JSON.stringify(JSON.stringify(data, null, 2)) : JSON.stringify(data);
-        return { body: [body], generated: data.generated, count: data.counties.length };
+        const total = data.counties.length;
+        let fields = { count: total, total, next: null as string | null };
+        if (page) {
+          const eligible = data.counties.sort((a, b) => compareCountyFips(a.fips, b.fips))
+            .filter(({ fips }) => !page.after || compareCountyFips(fips, page.after) > 0);
+          data.counties = eligible.slice(0, page.limit);
+          fields = pageFields(page, data.counties.length, total, data.counties.at(-1)?.fips, eligible.length > page.limit);
+        }
+        const result = page ? { ...data, ...fields } : data;
+        const body = format === "pretty" ? JSON.stringify(JSON.stringify(result, null, 2)) : JSON.stringify(result);
+        return { body: [body], generated: data.generated, ...fields };
       }
       const [projection, heads] = await Promise.all([active(idx, format), allHeads()]);
-      return formatNationalBans(projection, idx, heads, new Date(), format);
+      return formatNationalBans(projection, idx, heads, new Date(), format, page);
     },
     async weather() {
       const idx = await catalog();

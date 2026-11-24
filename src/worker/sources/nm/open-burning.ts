@@ -58,6 +58,11 @@ export async function parseNmOpenBurning(bytes: ArrayBuffer, jurisdiction: keyof
   if (sections.some((section) => !section.length) || await sha256(sections.flat().join("\n")) !== publisher.reviewed) {
     throw new Error(`${publisher.sourceName}: reviewed open-burning rule changed or is missing`);
   }
+  return pinnedRows(now, jurisdiction);
+}
+
+function pinnedRows(now: Date, jurisdiction: keyof typeof RULES) {
+  const publisher = RULES[jurisdiction];
   return calendarStatusRows(publisher.rule, publisher.counties, publisher, now, { includeTomorrow: true });
 }
 
@@ -66,7 +71,7 @@ function ruleSource(jurisdiction: keyof typeof RULES): ActiveSource {
   return {
     id, sourceUrl, sourceName, state: rule.state, scope: rule.scope, officialUrl: rule.officialUrl,
     stack: "Administrative code / legacy HTML and calendar", mode: "positive-only", coverage: "restrictions",
-    recurring: true,
+    recurring: true, pinnedRows: (now) => pinnedRows(now, jurisdiction),
     cadence: { kind: "daily", zone: rule.zone, hours: [hour] },
     async fetch({ now }) {
       const reply = await fetchSource(sourceUrl, {

@@ -146,6 +146,7 @@ export function buildCatalog(run: Pick<Run, "id" | "generated">, states: Publish
     if (head) {
       row.ok = !head.error;
       row.error = head.error;
+      row.warning = head.warning;
       if (head.hash && head.hash === sourceVersions[id]) index.orderChecks[id] = head.lastGood ?? head.checked;
       if (row.product === "fire-weather" && head.hash) index.weatherChecked = head.lastGood ?? head.checked;
     }

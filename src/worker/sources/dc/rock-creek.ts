@@ -27,12 +27,16 @@ export async function parseRockCreekFireRules(input: Response | string, now: Dat
       !await matchesReviewedHtmlSection(blocks, /^36 CFR 2\.13 – FIRES$/, FIRE_TERMS)) {
     throw new Error("NPS Rock Creek: reviewed fire rules, approval date or park scope changed.");
   }
+  return pinnedRows(now);
+}
+
+function pinnedRows(now: Date) {
   if (localClock(now, RULE.zone).date < REVISION) return [];
   return calendarStatusRows(RULE, COUNTIES, META, now, { includeTomorrow: true });
 }
 
 export const dcRockCreekFireRules: ActiveSource = {
-  ...META, recurring: true, mode: "positive-only", coverage: "restrictions",
+  ...META, recurring: true, pinnedRows, mode: "positive-only", coverage: "restrictions",
   cadence: { kind: "daily", zone: RULE.zone, hours: [9] },
   async fetch({ now }) {
     const reply = await fetchSource(META.sourceUrl, {

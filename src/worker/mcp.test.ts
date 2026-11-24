@@ -1,8 +1,10 @@
 // @ts-nocheck -- bun test types are not installed; this file runs under `bun test`, not the Worker build.
 import { describe, expect, test } from "bun:test";
 import { activeBans } from "./api";
+import { COUNTIES } from "./counties";
+import worker from "./index";
 import { handleMcp, subscribeAlertsTool } from "./mcp";
-import { encodeActive, encodeState, INDEX_KEY, PRETTY_ACTIVE_KEY } from "./snapshot-v2";
+import { ACTIVE_KEY, encodeActive, encodeState, INDEX_KEY, PRETTY_ACTIVE_KEY, stateKey } from "./snapshot-v2";
 import { withCurrentLinks } from "./source-links";
 
 function fakeEnv(resend?: string) {
@@ -99,7 +101,7 @@ test("national bans preserve JSON text in legacy SSE and modern JSON MCP respons
     "mcp-protocol-version": version, "mcp-method": "tools/call", "mcp-name": params.name,
   });
   expect(modern.content).toEqual(legacy.content);
-  expect(legacy.content[1].text).toBe(JSON.stringify(activeBans(withCurrentLinks(snapshot)), null, 2));
+  expect(legacy.content[1].text).toBe(JSON.stringify({ ...activeBans(withCurrentLinks(snapshot)), count: 1, total: 1, next: null }, null, 2));
 });
 
 describe("MCP metadata for directories", () => {
@@ -123,4 +125,57 @@ describe("MCP metadata for directories", () => {
     for (const name of ["check_burn_ban", "list_active_bans", "coverage"]) expect(by[name].annotations.readOnlyHint).toBe(true);
     expect(by.subscribe_email_alerts.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false, idempotentHint: true });
   });
+});
+
+test("MCP defaults to 50, follows state and national cursors, and REST keeps its full feed", async () => {
+  const generated = new Date().toISOString();
+  const makeSnapshot = (state, limit) => ({
+    version: 2, state, revision: "fixture", generated, sources: [], changed: {},
+    counties: Object.fromEntries(COUNTIES.filter((county) => county.state === state).slice(0, limit).map(({ fips, name }) => [
+      fips, { fips, state, county: name, status: "ban", label: "Ban", checked: generated, since: null, expires: null,
+        sourceUpdated: null, sourceName: "County", sourceUrl: "", officialUrl: "" },
+    ])),
+  });
+  const co = makeSnapshot("CO", 1);
+  const tx = makeSnapshot("TX", 60);
+  const shards = [co, tx].map((snapshot) => encodeState(snapshot, "fixture"));
+  const index = { version: 2, revision: "fixture", generated, sources: [], orderChecks: {},
+    states: { CO: { revision: "fixture", cached: true }, TX: { revision: "fixture", cached: true } } };
+  const values = new Map([
+    [INDEX_KEY, JSON.stringify(index)],
+    [stateKey("TX"), JSON.stringify(tx)],
+    [ACTIVE_KEY, encodeActive(index.revision, shards)],
+    [PRETTY_ACTIVE_KEY, encodeActive(index.revision, shards.map((shard) => ({ ...shard, active: shard.pretty })))],
+  ]);
+  const env = { SITE_URL: "https://isthereaburnban.com", KV: { get: async (key, type) => {
+    const value = values.get(key);
+    return type === "json" && value ? JSON.parse(value) : value ?? null;
+  } }, DB: { prepare: () => ({ all: async () => ({ results: [] }) }) } };
+  const invoke = (args) => rpc("tools/call", { name: "list_active_bans", arguments: args }, env);
+  const read = async (args) => { const result = await invoke(args); if (result.isError) throw new Error(result.content[0].text); return JSON.parse(result.content[1].text); };
+  const first = await read({});
+  expect(first).toMatchObject({ count: 50, total: 61 });
+  expect(typeof first.next).toBe("string");
+  const last = await read({ cursor: first.next });
+  expect(last).toMatchObject({ count: 11, total: 61, next: null });
+  expect(new Set([...first.counties, ...last.counties].map(({ fips }) => fips)).size).toBe(61);
+  expect((await invoke({ state: "TX", cursor: first.next })).isError).toBe(true);
+  expect((await invoke({ limit: 101 })).isError).toBe(true);
+
+  const stateFirst = await read({ state: "tx", limit: 1 });
+  const stateLast = await read({ state: "TX", limit: 100, cursor: stateFirst.next });
+  expect(stateFirst).toMatchObject({ count: 1, total: 60 });
+  expect(typeof stateFirst.next).toBe("string");
+  expect(stateLast).toMatchObject({ count: 59, total: 60, next: null });
+  expect(stateLast.counties.every(({ state }) => state === "TX")).toBe(true);
+
+  const get = (search = "") => worker.fetch(new Request(env.SITE_URL + "/api/v1/bans" + search), env, {});
+  const full = await (await get()).json();
+  expect(full.counties).toHaveLength(61);
+  expect(full.next).toBeUndefined();
+  const limited = await (await get("?limit=1")).json();
+  expect(limited).toMatchObject({ count: 1, total: 61 });
+  expect(typeof limited.next).toBe("string");
+  expect((await get("?limit=101")).status).toBe(400);
+  expect((await get("?state=TX&cursor=" + limited.next)).status).toBe(400);
 });

@@ -26,6 +26,10 @@ export function parseWyomingStateLands(data: unknown, now: Date): CountyStatus[]
       rule.state !== "Wyoming" || rule.restriction_order !== RULE_TEXT) {
     throw new Error("Wyoming state lands: expected the reviewed year-round rule");
   }
+  return pinnedRows(now);
+}
+
+function pinnedRows(now: Date) {
   const status = activeRule(RULE, now);
   if (!status) return [];
   const checked = now.toISOString();
@@ -37,7 +41,7 @@ export function parseWyomingStateLands(data: unknown, now: Date): CountyStatus[]
 }
 
 export const wyStateLands: ActiveSource = {
-  ...META, recurring: true, coverage: "restrictions", mode: "positive-only",
+  ...META, recurring: true, pinnedRows, coverage: "restrictions", mode: "positive-only",
   cadence: { kind: "daily", zone: RULE.zone, hours: [3] },
   async fetch({ now }) {
     const body = await getText(META.sourceUrl, { headers: { accept: "application/json", "cache-control": "no-cache" }, maxBytes: 40_000 });

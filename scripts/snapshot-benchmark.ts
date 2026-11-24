@@ -1,6 +1,8 @@
 import { STATES } from "../src/shared/states-fips";
 import type { CountyStatus, FireWeatherReport, SnapshotData } from "../src/shared/types";
-import { formatNationalBans, type BanFormat } from "../src/worker/active-bans";
+import { formatNationalBans, projectWeather, type BanFormat } from "../src/worker/active-bans";
+import { activeFireWeather, coverage } from "../src/worker/api";
+import { bansPage } from "../src/worker/bans-page";
 import { COUNTIES, COUNTY_BY_FIPS } from "../src/worker/counties";
 import { withFireWeather } from "../src/worker/fire-weather";
 import { statusFor } from "../src/worker/lookup";
@@ -9,7 +11,7 @@ import { decodeActive, encodeActive, type SnapshotIndex, type StateSnapshot, typ
 import { withCurrentLinks } from "../src/worker/snapshot";
 import { mergeSources, type SourceInput } from "../src/worker/sources/merge";
 import { buildCatalog, buildStatePublication } from "../src/worker/sources/publication";
-import { applyChecks, type SourceHead } from "../src/worker/sources/state";
+import { applyChecks, applySourceChecks, type SourceHead } from "../src/worker/sources/state";
 
 declare global {
   namespace NodeJS {
@@ -54,6 +56,12 @@ export function nationalFixture(now: Date, allActive = false): SourceInput[] {
   return inputs;
 }
 
+function percentiles(milliseconds: number[]) {
+  milliseconds.sort((a, b) => a - b);
+  const percentile = (p: number) => milliseconds[Math.ceil(milliseconds.length * p) - 1];
+  return { p50: percentile(0.5), p95: percentile(0.95) };
+}
+
 export function timings(run: () => unknown, samples = 120) {
   for (let i = 0; i < 20; i++) run();
   const milliseconds: number[] = [];
@@ -61,11 +69,21 @@ export function timings(run: () => unknown, samples = 120) {
     const start = process.threadCpuUsage();
     run();
     const elapsed = process.threadCpuUsage(start);
-    milliseconds.push((elapsed.user + elapsed.system) / 1000);
+    milliseconds.push((elapsed.user + elapsed.system) / 1_000);
   }
-  milliseconds.sort((a, b) => a - b);
-  const percentile = (p: number) => milliseconds[Math.ceil(milliseconds.length * p) - 1];
-  return { p50: percentile(0.5), p95: percentile(0.95) };
+  return percentiles(milliseconds);
+}
+
+export async function asyncTimings(run: () => Promise<unknown>, samples = 120) {
+  for (let i = 0; i < 20; i++) await run();
+  const milliseconds: number[] = [];
+  for (let i = 0; i < samples; i++) {
+    const start = process.threadCpuUsage();
+    await run();
+    const elapsed = process.threadCpuUsage(start);
+    milliseconds.push((elapsed.user + elapsed.system) / 1_000);
+  }
+  return percentiles(milliseconds);
 }
 
 function prepareStates(inputs: SourceInput[]) {
@@ -113,7 +131,8 @@ export function snapshotBenchmarks(inputs: SourceInput[], now: Date) {
     };
   });
   const active = encodeActive("fixture", previous);
-  const pretty = encodeActive("fixture", previous.map((entry) => ({ ...entry, active: entry.pretty })));
+  const prettyFragments = previous.map((entry) => ({ ...entry, active: entry.pretty }));
+  const pretty = encodeActive("fixture", prettyFragments);
   const whole: SnapshotData = JSON.parse(originalJson);
   const index: SnapshotIndex = { version: 2, revision: "fixture", generated: now.toISOString(),
     sources: whole.sources, sourceVersions: whole.sourceVersions, orderChecks,
@@ -125,13 +144,20 @@ export function snapshotBenchmarks(inputs: SourceInput[], now: Date) {
   const largest = previous.reduce((max, entry) => entry.snapshot.length > max.length ? entry.snapshot : max, "");
   const registry = inputs.map(({ source }) => source);
   const run = { id: "fixture", generated: now.toISOString() };
-  const readActive = (format: BanFormat, clock = now) => {
+  const publishedStates = previous.map((shard, i) => ({
+    ...shard, state: states[i].state, revision: run.id, cached: 1,
+  }));
+  const defaultPage = bansPage();
+  const largestState = states[previous.findIndex(({ snapshot }) => snapshot === largest)].state;
+  const readActive = (format: BanFormat, clock = now, page = format === "pretty" ? defaultPage : undefined) => {
     const projection = decodeActive(format === "pretty" ? pretty : active);
     const catalog: SnapshotIndex = JSON.parse(indexJson);
-    return formatNationalBans(projection, catalog, heads, clock, format);
+    return formatNationalBans(projection, catalog, heads, clock, format, page);
   };
   return {
     stateCases,
+    dataset: { index, indexJson, heads, active, pretty, largestState,
+      stateJson: new Map(publishedStates.map(({ state, snapshot }) => [state, snapshot])) },
     counts: { sources: inputs.length, counties: Object.keys(whole.counties).length, activeBytes: Buffer.byteLength(active), prettyBytes: Buffer.byteLength(pretty),
       indexBytes: Buffer.byteLength(indexJson), wholeBytes: Buffer.byteLength(originalJson),
       maxStateBytes: Math.max(...previous.map(({ snapshot }) => Buffer.byteLength(snapshot))) },
@@ -148,7 +174,19 @@ export function snapshotBenchmarks(inputs: SourceInput[], now: Date) {
         pretty: encodeActive(run.id, shards.map((shard) => ({ ...shard, active: shard.pretty }))),
       };
     },
-    joinActive: () => encodeActive("fixture", previous),
+    writeCompact: () => encodeActive(run.id, previous),
+    writePretty: () => encodeActive(run.id, prettyFragments),
+    writeCatalog: () => JSON.stringify(buildCatalog(run, publishedStates, registry, heads)),
+    readCoverage: () => {
+      const catalog: SnapshotIndex = JSON.parse(indexJson);
+      applySourceChecks(catalog.sources, heads);
+      return new Response(JSON.stringify(coverage(catalog)));
+    },
+    readWeather: () => {
+      const catalog: SnapshotIndex = JSON.parse(indexJson);
+      const snapshot = projectWeather(decodeActive(active), catalog, heads, now);
+      return new Response(JSON.stringify(activeFireWeather(snapshot)));
+    },
     readActive: () => new Response(readActive("compact").body.join("")),
     readActiveMcp: () => new Response(new Blob(['{"content":[{"type":"text","text":', ...readActive("pretty").body, '}] }'])),
     readActiveExpired: () => new Response(new Blob(['{"content":[{"type":"text","text":',

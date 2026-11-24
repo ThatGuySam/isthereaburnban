@@ -25,11 +25,15 @@ export async function parseMdSummerAir({ blocks }: HtmlParts, now: Date) {
   if (start < 0 || end <= start || await sha256(section.slice(start, end).map(({ text }) => text).join("\n")) !== REVIEWED_CLAUSE) {
     throw new Error("Maryland COMAR 26.11.07.03: reviewed summer burning clause changed or is missing");
   }
+  return pinnedRows(now);
+}
+
+function pinnedRows(now: Date) {
   return calendarStatusRows(RULE, COUNTIES, META, now, { includeTomorrow: true });
 }
 
 export const mdSummerAir: ActiveSource = {
-  ...META, recurring: true, mode: "positive-only", coverage: "restrictions",
+  ...META, recurring: true, pinnedRows, mode: "positive-only", coverage: "restrictions",
   cadence: { kind: "daily", zone: RULE.zone, hours: [0] },
   async fetch({ now }) {
     const reply = await fetchSource(META.sourceUrl, {

@@ -55,6 +55,10 @@ export async function parseKansasOpenBurning(input: Page, now: Date) {
     await sha256(text.slice(start, end).join("\n")) !== REVIEWED_STATE_TEXT) {
     throw new Error("Kansas open-burning rule: reviewed state limits changed or are missing");
   }
+  return stateRows(now);
+}
+
+function stateRows(now: Date) {
   const options = { includeTomorrow: true };
   return [
     ...calendarStatusRows(STATE_RULE, OTHER_COUNTIES, STATE_PUBLISHER, now, options),
@@ -75,6 +79,10 @@ export async function parseKansasApril(input: Page, now: Date) {
     await sha256(summary.join("\n")) !== REVIEWED_APRIL_TEXT) {
     throw new Error("Kansas April open-burning rule: reviewed limits or county table changed or are missing");
   }
+  return aprilRows(now);
+}
+
+function aprilRows(now: Date) {
   return calendarStatusRows(APRIL_RULE, APRIL_COUNTIES, APRIL_PUBLISHER, now, {
     includeTomorrow: true, includeSeasonDates: true,
   });
@@ -87,21 +95,26 @@ export async function parseFranklinPermits(input: Page, now: Date) {
     !text.includes("For current burning status, call 785-229-3501.")) {
     throw new Error("Franklin County: reviewed burn-permit guidance changed or is missing");
   }
+  return franklinRows(now);
+}
+
+function franklinRows(now: Date) {
   return calendarStatusRows(FRANKLIN_RULE, COUNTIES.filter(({ fips }) => fips === "20059"), FRANKLIN_PUBLISHER, now, {
     includeTomorrow: true,
   });
 }
 
-function standingSource({ rule, publisher, stack, hour, parse }: {
+function standingSource({ rule, publisher, stack, hour, parse, pinnedRows }: {
   rule: CalendarRule;
   publisher: typeof STATE_PUBLISHER;
   stack: string;
   hour: number;
   parse: typeof parseKansasOpenBurning;
+  pinnedRows: NonNullable<ActiveSource["pinnedRows"]>;
 }): ActiveSource {
   return {
     ...publisher, stack, state: rule.state, scope: rule.scope, officialUrl: rule.officialUrl,
-    coverage: "restrictions", mode: "positive-only", recurring: true,
+    coverage: "restrictions", mode: "positive-only", recurring: true, pinnedRows,
     cadence: { kind: "daily", zone: rule.zone, hours: [hour] },
     async fetch({ now }) {
       const reply = await fetchSource(publisher.sourceUrl, {
@@ -114,11 +127,11 @@ function standingSource({ rule, publisher, stack, hour, parse }: {
 }
 
 export const ksOpenBurning = standingSource({
-  rule: STATE_RULE, publisher: STATE_PUBLISHER, stack: "Drupal / HTML and calendar", hour: 0, parse: parseKansasOpenBurning,
+  rule: STATE_RULE, publisher: STATE_PUBLISHER, stack: "Drupal / HTML and calendar", hour: 0, parse: parseKansasOpenBurning, pinnedRows: stateRows,
 });
 export const ksAprilBurning = standingSource({
-  rule: APRIL_RULE, publisher: APRIL_PUBLISHER, stack: "WordPress / HTML and calendar", hour: 0, parse: parseKansasApril,
+  rule: APRIL_RULE, publisher: APRIL_PUBLISHER, stack: "WordPress / HTML and calendar", hour: 0, parse: parseKansasApril, pinnedRows: aprilRows,
 });
 export const ksFranklinPermits = standingSource({
-  rule: FRANKLIN_RULE, publisher: FRANKLIN_PUBLISHER, stack: "CivicPlus / HTML and calendar", hour: 1, parse: parseFranklinPermits,
+  rule: FRANKLIN_RULE, publisher: FRANKLIN_PUBLISHER, stack: "CivicPlus / HTML and calendar", hour: 1, parse: parseFranklinPermits, pinnedRows: franklinRows,
 });

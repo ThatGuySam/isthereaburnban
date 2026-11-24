@@ -149,7 +149,11 @@ export async function parseIllinoisGuidance(input: Page, jurisdiction: Jurisdict
   if (!text.length || await sha256(text.join("\n")) !== guidance.reviewed) {
     throw new Error(`${guidance.sourceName}: reviewed open-burning guidance changed or is missing`);
   }
-  const { fips, id, sourceName, sourceUrl, scope, rules, officialUrl = sourceUrl } = guidance;
+  return pinnedRows(now, jurisdiction);
+}
+
+function pinnedRows(now: Date, jurisdiction: Jurisdiction) {
+  const { fips, id, sourceName, sourceUrl, scope, rules, officialUrl = sourceUrl } : Guidance = GUIDANCE[jurisdiction];
   const counties = fips ? COUNTIES.filter((county) => fips.includes(county.fips)) : COUNTIES;
   return rules.flatMap((rule) => calendarStatusRows(
     { ...rule, state: STATE, zone: ZONE, status: "restricted", scope, officialUrl },
@@ -162,7 +166,7 @@ function guidanceSource(jurisdiction: Jurisdiction): ActiveSource {
   const { id, sourceName, sourceUrl, scope, stack, hour, officialUrl = sourceUrl }: Guidance = GUIDANCE[jurisdiction];
   return {
     id, state: STATE, sourceName, sourceUrl, officialUrl, scope, stack,
-    mode: "positive-only", coverage: "restrictions", recurring: true,
+    mode: "positive-only", coverage: "restrictions", recurring: true, pinnedRows: (now) => pinnedRows(now, jurisdiction),
     cadence: { kind: "daily", zone: ZONE, hours: [hour] },
     async fetch({ now }) {
       const reply = await fetchSource(sourceUrl, {

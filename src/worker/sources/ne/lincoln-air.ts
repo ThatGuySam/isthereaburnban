@@ -38,16 +38,20 @@ const SECTIONS = [
 
 export async function parseNeLincolnAir(input: Response | string, now: Date) {
   const { blocks } = await extractHtml(input);
-  const county = countyByName(META.state, "Lancaster");
-  if (!county) throw new Error("Missing Lancaster County mapping");
   const reviewed = await Promise.all(SECTIONS.map(({ heading, fingerprint }) =>
     matchesReviewedHtmlSection(blocks, heading, fingerprint)));
   if (!reviewed.every(Boolean)) throw new Error("Lincoln-Lancaster air quality: reviewed permit rules changed or are missing");
+  return pinnedRows(now);
+}
+
+function pinnedRows(now: Date) {
+  const county = countyByName(META.state, "Lancaster");
+  if (!county) throw new Error("Missing Lancaster County mapping");
   return SECTIONS.flatMap(({ rule }) => calendarStatusRows(rule, [county], META, now, { includeTomorrow: true }));
 }
 
 export const neLincolnLancasterAir: ActiveSource = {
-  ...META, recurring: true, mode: "positive-only", coverage: "restrictions",
+  ...META, recurring: true, pinnedRows, mode: "positive-only", coverage: "restrictions",
   cadence: { kind: "daily", zone: RULE_BASE.zone, hours: [9] },
   async fetch({ now }) {
     const reply = await fetchSource(META.sourceUrl, { headers: { accept: "text/html" }, maxBytes: 350_000 });

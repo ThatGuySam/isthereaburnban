@@ -24,11 +24,15 @@ export async function parseHiOpenBurning(input: Response | string, now: Date) {
       await sha256(paragraphs.map(({ text }) => text).join("\n")) !== REVIEWED_TEXT) {
     throw new Error("Hawaiʻi Clean Air Branch: reviewed open-burning guidance changed or is missing");
   }
+  return pinnedRows(now);
+}
+
+function pinnedRows(now: Date) {
   return calendarStatusRows(RULE, COUNTIES, META, now, { includeTomorrow: true });
 }
 
 export const hiCabOpenBurning: ActiveSource = {
-  ...META, recurring: true, mode: "positive-only", coverage: "restrictions",
+  ...META, recurring: true, pinnedRows, mode: "positive-only", coverage: "restrictions",
   cadence: { kind: "daily", zone: RULE.zone, hours: [8] },
   async fetch({ now }) {
     const reply = await fetchSource(META.sourceUrl, { headers: { accept: "text/html" }, maxBytes: 180_000 });

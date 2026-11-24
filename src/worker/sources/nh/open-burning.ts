@@ -22,11 +22,15 @@ export async function parseNhOpenBurning(input: Response | string, now: Date) {
       await sha256(section.text) !== REVIEWED_SECTION) {
     throw new Error("New Hampshire RSA 227-L:17: reviewed statute changed or is missing");
   }
+  return pinnedRows(now);
+}
+
+function pinnedRows(now: Date) {
   return calendarStatusRows(RULE, COUNTIES, META, now, { includeTomorrow: true });
 }
 
 export const nhOpenBurningPermits: ActiveSource = {
-  ...META, mode: "positive-only", coverage: "restrictions", recurring: true,
+  ...META, mode: "positive-only", coverage: "restrictions", recurring: true, pinnedRows,
   cadence: { kind: "daily", zone: RULE.zone, hours: [0] },
   async fetch({ now }) {
     const reply = await fetchSource(META.sourceUrl, { headers: { accept: "text/html" }, maxBytes: 64_000 });

@@ -8,6 +8,8 @@ import { withFireWeather } from "../fire-weather";
 import { lookup } from "../lookup";
 import { snapshotReader } from "../snapshot";
 import { ACTIVE_KEY, INDEX_KEY, PRETTY_ACTIVE_KEY, stateKey } from "../snapshot-v2";
+import { VERIFICATION_GRACE_MS, verifySource } from "./lib/calendar-verification";
+import { BlockedError } from "./lib/http";
 import { US_ZONES } from "./lib/dates";
 import { mergeSources, STALE_MS } from "./merge";
 import { nwsFireWeather, parseNwsAlerts } from "./nws/alerts";
@@ -15,6 +17,7 @@ import { MAX_CACHED_STATES } from "./publication";
 import { consumeSourceMessage, enqueueSources, isDue } from "./queue";
 import { SOURCES } from "./registry";
 import { applyChecks, readHeads } from "./state";
+import { tnSeasonalBurnPermits } from "./tn/seasonal";
 import { isActive } from "./types";
 
 const stores = [];
@@ -476,4 +479,71 @@ test("public expiration safety holds during a D1 health lookup failure", async (
   box.env.DB = { prepare: () => { throw new Error("D1 temporarily unavailable"); } };
   const result = await snapshotReader(box.env, { fresh: true }).state("OR");
   expect(result.counties["41039"]).toMatchObject({ status: "unknown", label: "Source decision expired" });
+});
+
+test("a blocked Tennessee calendar publishes fresh windows and a dated warning until the grace expires", async () => {
+  const box = sandbox();
+  const src = { ...tnSeasonalBurnPermits, fetch: async () => {
+    throw new BlockedError(tnSeasonalBurnPermits.officialUrl, 403, "Forbidden");
+  } };
+  const id = src.id;
+  await poll(box, src, initial);
+  await merge(box, [src], initial);
+  const status = (snapshot) => snapshot.counties["47025"];
+  const first = box.snapshot();
+  expect(first.sources.find((row) => row.id === id)).toMatchObject({
+    ok: true, warning: "verification stale since 2026-11-23", counties: 92,
+  });
+  expect(status(first)).toMatchObject({ status: "restricted", sourceId: id });
+
+  const stillInGrace = initial + VERIFICATION_GRACE_MS - 24 * 3_600_000;
+  await poll(box, src, stillInGrace);
+  await merge(box, [src], stillInGrace);
+  const continued = box.snapshot();
+  expect(continued.sources.find((row) => row.id === id).warning).toBe("verification stale since 2026-11-23");
+  expect(status(continued).validUntil).not.toBe(status(first).validUntil);
+  expect(box.alerts).toHaveLength(0);
+
+  const expired = initial + VERIFICATION_GRACE_MS;
+  await poll(box, src, expired);
+  await merge(box, [src], expired);
+  expect(status(box.snapshot())).toBeUndefined();
+  expect(box.snapshot().sources.find((row) => row.id === id)).toMatchObject({
+    ok: false, counties: 0, error: expect.stringContaining("30-day verification grace expired"),
+  });
+
+  const recovered = { ...src, fetch: async ({ now }) => ({ rows: src.pinnedRows(now) }) };
+  await poll(box, recovered, expired + 3_600_000);
+  await merge(box, [recovered], expired + 3_600_000);
+  expect(status(box.snapshot()).status).toBe("restricted");
+  const recoveredHealth = box.snapshot().sources.find((row) => row.id === id);
+  expect(recoveredHealth.ok).toBe(true);
+  expect(recoveredHealth.warning).toBeUndefined();
+});
+
+test("only unreachable recurring verification uses pinned rows and recovery clears stale state", async () => {
+  const now = new Date(initial);
+  const blocked = new BlockedError("https://example.gov", 403, "Forbidden");
+  const active = SOURCES.filter(isActive);
+  expect(active.filter((item) => item.recurring && !item.pinnedRows)).toEqual([]);
+  for (const item of active.filter((candidate) => candidate.pinnedRows)) {
+    const fallback = await verifySource({ ...item, fetch: async () => { throw blocked; } }, { now });
+    expect(fallback).toMatchObject({ warning: "verification stale since 2026-11-23", result: { rows: item.pinnedRows(now) } });
+  }
+
+  const src = tnSeasonalBurnPermits;
+  const withError = (reason) => ({ ...src, fetch: async () => { throw reason; } });
+  const confirmed = { lastVerified: now.toISOString() };
+  const afterLongGap = await verifySource(withError(new DOMException("Timed out", "TimeoutError")),
+    { now: new Date(initial + VERIFICATION_GRACE_MS) }, confirmed);
+  expect(afterLongGap.discard).toBe(true);
+  const changed = await verifySource(withError(new Error("rule text changed")), { now }, confirmed);
+  expect(changed).toMatchObject({ discard: true, verification: { rejected: true } });
+  expect(await verifySource(withError(blocked), { now }, changed.verification)).toMatchObject({ discard: true });
+  const recovered = await verifySource({ ...src, fetch: async () => ({ rows: [] }) }, { now }, changed.verification);
+  expect(recovered).toEqual({ result: { rows: [] }, verification: confirmed });
+  expect(await verifySource(withError(blocked), { now }, recovered.verification)).toHaveProperty("warning");
+
+  const live = { ...source("live", async () => { throw blocked; }) };
+  expect(await verifySource(live, { now })).toEqual({ reason: blocked });
 });

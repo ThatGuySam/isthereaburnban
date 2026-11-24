@@ -22,6 +22,26 @@ const TOWN_NAMES: Readonly<Record<string, string>> = {
   Altamont: "Tupper Lake", Ausable: "Au Sable", Belmont: "Bellmont", Grieg: "Greig", Luzerne: "Lake Luzerne",
 };
 
+// County and town names from the pinned Fire Town section.
+const REVIEWED_FIRE_TOWNS = [
+  "Clinton County, the towns of Altona, Ausable, Black Brook, Dannemora, Ellenburg and Saranac;",
+  "Delaware County, the towns of Andes, Colchester, Hancock and Middletown;",
+  "Essex County, all towns",
+  "Franklin County, the towns of Altamont, Belmont, Brighton, Duane, Franklin, Harrietstown, Santa Clara and Waverly;",
+  "Fulton County, the towns of Bleecker, Caroga, Mayfield, Northampton and Stratford;",
+  "Greene County, the towns of Hunter, Jewett, Lexington and Windham;",
+  "Hamilton County, all towns;",
+  "Herkimer County, the towns of Ohio, Russia, Salisbury and Webb;",
+  "Lewis County, the towns of Croghan, Diana, Grieg, Lyonsdale and Watson;",
+  "Oneida County, the towns of Forestport and Remsen;",
+  "Saratoga County, the towns of Corinth, Day, Edinburg and Hadley;",
+  "Saint Lawrence County, the towns of Clare, Clifton, Colton, Fine, Hopkinton, Parishville, Piercefield and Pitcairn;",
+  "Sullivan County, the towns of Neversink and Rockland;",
+  "Ulster County, the towns of Denning, Gardiner, Hardenburgh, Olive, Rochester, Shandaken, Shawangunk, Wawarsing and Woodstock;",
+  "Warren County, the towns of Bolton, Chester, Hague, Horicon, Johnsburgh, Lake George, Luzerne, Queensbury, Stoney Creek, Thurman and Warrensburg;",
+  "Washington County, the towns of Dresden, Fort Ann and Putnam.",
+];
+
 export async function parseDecBrushBurning({ blocks }: HtmlParts, now: Date): Promise<CountyStatus[]> {
   const brush = blockAfterHeading(blocks, /^What Can I Burn\?$/)
     .filter(({ tag, text }) => tag === "li" && text.startsWith("For most of the year,"));
@@ -37,7 +57,11 @@ export async function parseDecBrushBurning({ blocks }: HtmlParts, now: Date): Pr
     throw new Error("NY DEC: the brush-burning rules or Fire Town permit list changed or are missing");
   }
 
-  const places = fireTowns.filter(({ tag }) => tag === "li").flatMap(({ text }) => {
+  return pinnedRows(now);
+}
+
+function pinnedRows(now: Date) {
+  const places = REVIEWED_FIRE_TOWNS.flatMap((text) => {
     const entry = /^(.+ County), (all towns|the towns of .+?)[;.]?$/.exec(text);
     const rawCounty = entry?.[1];
     const county = rawCounty && countyByName(SPRING.state, rawCounty.replace(/^Saint Lawrence/, "St. Lawrence"));
@@ -54,7 +78,7 @@ export async function parseDecBrushBurning({ blocks }: HtmlParts, now: Date): Pr
 }
 
 export const nyDecBrushBurning: ActiveSource = {
-  ...META, recurring: true, keepRowLinks: true, mode: "positive-only", coverage: "restrictions",
+  ...META, recurring: true, pinnedRows, keepRowLinks: true, mode: "positive-only", coverage: "restrictions",
   cadence: { kind: "daily", zone: SPRING.zone, hours: [0] },
   async fetch({ now }) {
     const reply = await fetchSource(META.sourceUrl, { headers: { accept: "text/html" }, maxBytes: 256_000 });

@@ -2,6 +2,7 @@ import type { Env } from "../env";
 import { CHANNELS } from "../notification-audience";
 import type { Notice } from "../notification-message";
 import { notify } from "../notify";
+import { nudgePushRetries, retryPendingPush } from "../push-outbox";
 import { localClock } from "./lib/dates";
 import { advancePublication, currentRun, planPublication } from "./publication";
 import { SOURCES } from "./registry";
@@ -11,7 +12,8 @@ import { isActive, type ActiveSource, type Source } from "./types";
 export type SourceMessage =
   | { kind: "source"; id: string; slot: number }
   | { kind: "merge"; slot: number; due: string[] }
-  | { kind: "publish"; id: string };
+  | { kind: "publish"; id: string }
+  | { kind: "push-retry" };
 
 const MERGE_DELAY = 120; // Let one poll per source finish and new KV revisions propagate.
 const READINESS_TIMEOUT_MS = 15 * 60_000;
@@ -62,6 +64,11 @@ async function sendCronNotices(env: Env, runId: string, notices: Notice[]) {
 export async function consumeSourceMessage(env: Env, message: SourceMessage, {
   sources = SOURCES, now = new Date(), sendNotices = sendCronNotices,
 }: Dependencies = {}): Promise<"done" | "waiting"> {
+  if (message.kind === "push-retry") {
+    const delay = await retryPendingPush(env, now.getTime());
+    if (delay !== null) await nudgePushRetries(env, delay);
+    return "done";
+  }
   if (message.kind === "source") {
     const source = sources.find((entry) => entry.id === message.id);
     if (source && isActive(source)) {

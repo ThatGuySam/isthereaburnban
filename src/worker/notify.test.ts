@@ -8,6 +8,7 @@ import { testNotice, transitionNotice } from "./notification-message";
 import { notify, runCanary } from "./notify";
 import { handleOps, validToken } from "./ops";
 import { subscribePush } from "./push";
+import { retryPendingPush } from "./push-outbox";
 import { refresh } from "./snapshot";
 
 const FIPS = "40143";
@@ -32,7 +33,7 @@ const publicKey = async (key) => Buffer.from(await crypto.subtle.exportKey("raw"
 const receiverKey = await publicKey(receiver.publicKey);
 const authSecret = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString("base64url");
 
-const migrations = ["0001_init.sql", "0002_notification_ops.sql", "0003_source_refresh.sql", "0004_state_snapshots.sql"].map((file) =>
+const migrations = ["0001_init.sql", "0002_notification_ops.sql", "0003_source_refresh.sql", "0004_state_snapshots.sql", "0005_push_delivery_outbox.sql"].map((file) =>
   readFileSync(new URL("../../migrations/" + file, import.meta.url), "utf8"));
 let sqlite: Database;
 let kv: Map<string, string>;
@@ -414,4 +415,77 @@ describe("dashboard boundary", () => {
     expect((await limited.json()).status).toBe("rate-limited");
     expect(requests.map((r) => r.body.to[0]).sort()).toEqual([firstEmail, secondEmail]);
   });
+});
+
+test("a push interrupted before transport is reclaimed after its lease, once across concurrent retries", async () => {
+  const endpoint = addPush("crash-before-push", { test: true });
+  const runId = crypto.randomUUID();
+  const req = { mode: "send", origin: "test", runId, audience: { kind: "test" }, channels: ["push"], notices: [testMessage] };
+  const prepare = env.DB.prepare;
+  env.DB.prepare = (sql) => {
+    const statement = prepare(sql);
+    if (!sql.startsWith("UPDATE notification_push_deliveries SET available_at = ?, lease = ?")) return statement;
+    return { bind: (...args) => ({ run: async () => {
+      await statement.bind(...args).run();
+      throw new Error("Worker died after the claim");
+    } }) };
+  };
+  await expect(notify(env, req)).rejects.toThrow("Worker died after the claim");
+  expect(requests).toHaveLength(0);
+  env.DB.prepare = prepare;
+  const { available_at: due } = sqlite.query("SELECT available_at FROM notification_push_deliveries").get();
+  expect(await retryPendingPush(env, due - 1)).toBe(1);
+  expect(requests).toHaveLength(0);
+  expect((await notify(env, req)).status).toBe("duplicate");
+
+  await Promise.all([retryPendingPush(env, due), retryPendingPush(env, due)]);
+  expect(requests.map((request) => request.url)).toEqual([endpoint]);
+  expect(sqlite.query("SELECT sent_at, available_at, lease FROM notification_push_deliveries").get())
+    .toMatchObject({ sent_at: expect.any(Number), available_at: null, lease: null });
+  expect(await retryPendingPush(env, due + 120_000)).toBeNull();
+  expect(requests).toHaveLength(1);
+});
+
+test("retry after lost acceptance uses the same topic and commits one accepted log", async () => {
+  addPush("crash-after-push", { test: true });
+  const batch = env.DB.batch;
+  env.DB.batch = async (statements) => {
+    if (requests.length) throw new Error("Worker died after provider acceptance");
+    return batch(statements);
+  };
+  await expect(notify(env, {
+    mode: "send", origin: "test", runId: crypto.randomUUID(), audience: { kind: "test" }, channels: ["push"], notices: [testMessage],
+  })).rejects.toThrow("Worker died after provider acceptance");
+  expect(requests).toHaveLength(1);
+  env.DB.batch = batch;
+
+  const { available_at: due } = sqlite.query("SELECT available_at FROM notification_push_deliveries").get();
+  await retryPendingPush(env, due);
+  expect(requests).toHaveLength(2);
+  expect(requests[0].headers.get("topic")).toEqual(requests[1].headers.get("topic"));
+  expect(sqlite.query("SELECT result FROM notification_delivery_log").all()).toEqual([{ result: "accepted" }]);
+});
+
+test("retryable push failures remain pending, and an operator pause invalidates pending sends", async () => {
+  addPush("temporarily-unavailable", { test: true });
+  const dispatch = () => notify(env, {
+    mode: "send", origin: "test", runId: crypto.randomUUID(), audience: { kind: "test" }, channels: ["push"], notices: [testMessage],
+  });
+  pushResponse = 503;
+  expect(await dispatch()).toMatchObject({ error: 1 });
+  const due = sqlite.query("SELECT available_at FROM notification_push_deliveries WHERE available_at IS NOT NULL");
+  const first = due.get().available_at;
+  pushResponse = 201;
+  await retryPendingPush(env, first);
+  expect(requests).toHaveLength(2);
+  expect(due.get()).toBeNull();
+
+  pushResponse = 503;
+  await dispatch();
+  const second = due.get().available_at;
+  await setAlertsPaused(env, true);
+  expect(await retryPendingPush(env, second)).toBeNull();
+  await setAlertsPaused(env, false);
+  expect(await retryPendingPush(env, second)).toBeNull();
+  expect(requests).toHaveLength(3);
 });

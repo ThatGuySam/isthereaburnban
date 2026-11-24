@@ -35,6 +35,10 @@ export async function parseAdemOpenBurning(input: Page, now: Date) {
   if (await sha256(section.map(({ text }) => text).join("\n")) !== ADEM_TEXT_HASH) {
     throw new Error("Alabama ADEM: reviewed open-burning rule changed or is missing");
   }
+  return ademRows(now);
+}
+
+function ademRows(now: Date) {
   // County-level summer rows take precedence over the statewide baseline when both apply.
   return [
     ...calendarStatusRows(ADEM, COUNTIES, ADEM_PUBLISHER, now, { includeTomorrow: true }),
@@ -50,6 +54,10 @@ export async function parseJeffersonOpenBurning(input: Page, now: Date) {
   if (section[0]?.tag !== "p" || section[0].text !== JEFFERSON_SUMMARY) {
     throw new Error("Jefferson County: reviewed open-burning seasons changed or are missing");
   }
+  return jeffersonRows(now);
+}
+
+function jeffersonRows(now: Date) {
   return [JEFFERSON, JEFFERSON_SUMMER].flatMap((rule) =>
     calendarStatusRows(rule, COUNTIES, JEFFERSON_PUBLISHER, now, {
       includeTomorrow: true, includeSeasonDates: true,
@@ -62,10 +70,11 @@ function airRuleSource(
   stack: string,
   hour: number,
   parse: typeof parseAdemOpenBurning,
+  pinnedRows: NonNullable<ActiveSource["pinnedRows"]>,
 ): ActiveSource {
   return {
     ...publisher, stack, state: rule.state, scope: rule.scope, officialUrl: rule.officialUrl,
-    coverage: "restrictions", mode: "positive-only", recurring: true,
+    coverage: "restrictions", mode: "positive-only", recurring: true, pinnedRows,
     cadence: { kind: "daily", zone: rule.zone, hours: [hour] },
     async fetch({ now }) {
       const reply = await fetchSource(publisher.sourceUrl, { headers: { accept: "text/html" }, maxBytes: 150_000 });
@@ -75,5 +84,5 @@ function airRuleSource(
   };
 }
 
-export const alAdemOpenBurning = airRuleSource(ADEM, ADEM_PUBLISHER, "Administrative code / ASP.NET HTML and calendar", 2, parseAdemOpenBurning);
-export const alJeffersonOpenBurning = airRuleSource(JEFFERSON, JEFFERSON_PUBLISHER, "ASP.NET MVC / HTML and calendar", 0, parseJeffersonOpenBurning);
+export const alAdemOpenBurning = airRuleSource(ADEM, ADEM_PUBLISHER, "Administrative code / ASP.NET HTML and calendar", 2, parseAdemOpenBurning, ademRows);
+export const alJeffersonOpenBurning = airRuleSource(JEFFERSON, JEFFERSON_PUBLISHER, "ASP.NET MVC / HTML and calendar", 0, parseJeffersonOpenBurning, jeffersonRows);

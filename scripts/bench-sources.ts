@@ -1,7 +1,9 @@
 import { readFileSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
-import { nationalFixture, snapshotBenchmarks, timings } from "./snapshot-benchmark";
+import { asyncTimings, nationalFixture, snapshotBenchmarks, timings } from "./snapshot-benchmark";
 import { SOURCES } from "../src/worker/sources/registry";
+import { isActive } from "../src/worker/sources/types";
+import { workerBenchmarks } from "./worker-benchmark";
 import type { CountyStatus } from "../src/shared/types";
 import { ADAPTERS } from "../src/worker/adapters";
 import { parse as parseFl } from "../src/worker/adapters/fl";
@@ -11,7 +13,7 @@ import { parse as parseLa } from "../src/worker/adapters/la";
 import { parse as parseMs } from "../src/worker/adapters/ms";
 import { parse as parseOk } from "../src/worker/adapters/ok";
 import { parse as parseTx, parseTxt } from "../src/worker/adapters/tx";
-import { COUNTIES } from "../src/worker/counties";
+
 import { parseAlaskaPermitZones } from "../src/worker/sources/ak/permits";
 import { akDecWinterBurning, parseAlaskaFireSeason, parseAlaskaWinterBurning } from "../src/worker/sources/ak/seasonal";
 import { arFaulknerCountyOrders, parseFaulknerBan } from "../src/worker/sources/ar/faulkner";
@@ -52,7 +54,7 @@ import { sharePointListItems } from "../src/worker/sources/lib/sharepoint";
 import { parseNinjaRows, parseWpItems } from "../src/worker/sources/lib/wordpress";
 import { maAirAdvisories, parseMassDepAdvisories } from "../src/worker/sources/ma/air-advisories";
 import { maOpenBurning, parseMaOpenBurning } from "../src/worker/sources/ma/open-burning";
-import { mergeSources, type SourceInput } from "../src/worker/sources/merge";
+import type { SourceInput } from "../src/worker/sources/merge";
 import { mdSummerAir, parseMdSummerAir } from "../src/worker/sources/md/summer-air";
 import { mdDnrWoodland, parseMdWoodland } from "../src/worker/sources/md/woodland";
 import { meOpenBurningPermits, parseMaineOpenBurning } from "../src/worker/sources/me/open-burning";
@@ -555,22 +557,6 @@ recordedInputs.push(
   { source: nwsFireWeather, rows: [], fireWeather: parseNwsLive(), checked: nwsCaptured.toISOString() },
 );
 
-const states = new Map<string, CountyStatus[]>();
-for (const { state, fips, name } of COUNTIES) {
-  const row: CountyStatus = {
-    fips, state, county: name, status: "none", label: "No burn ban", checked, since: null,
-    expires: null, sourceUpdated: null, sourceName: "Example forestry office",
-    sourceUrl: "https://example.gov/feed", officialUrl: "https://example.gov/",
-  };
-  const rows = states.get(state);
-  if (rows) rows.push(row);
-  else states.set(state, [row]);
-}
-const fullInputs: SourceInput[] = [...states].map(([state, rows]) => ({
-  source: { id: state.toLowerCase(), state, mode: "full", scope: "county" }, checked, rows,
-}));
-const serializedFull = fullInputs.map(({ rows }) => JSON.stringify(rows));
-
 const jobs: Array<[string, () => unknown]> = [
   ["HTTP challenge sniff", async () => {
     try { await fetchSource("https://burnpermit.fire.ca.gov/", { fetchImpl: async () => new Response(akamai) }); }
@@ -687,9 +673,7 @@ const jobs: Array<[string, () => unknown]> = [
   ["AK DEC winter open-burning rule", parseAkWinter],
   ["NWS live fire-weather GeoJSON", parseNwsLive],
   ["NWS archived RFW GeoJSON", parseNwsArchive],
-  ["Merge and encode current sources", () => JSON.stringify(mergeSources(null, recordedInputs, now).snapshot)],
-  ["Parse, merge, encode 51-area projection", () => JSON.stringify(mergeSources(null,
-    fullInputs.map((input, index) => ({ ...input, rows: JSON.parse(serializedFull[index]) })), now).snapshot)],
+
 ];
 
 console.log("Fixture timings in ms (Bun wall time, no network, 20 warmups and 120 samples per row).");
@@ -727,14 +711,39 @@ for (const [label, inputs] of [
     const state = benchmark.stateCases.map((entry) => ({ state: entry.state, ...timings(entry[key]) })).sort((a, b) => b.p95 - a.p95)[0];
     console.log(`${`${name} (${state.state}, max p95)`.padEnd(55)} p50 ${state.p50.toFixed(3)}  p95 ${state.p95.toFixed(3)}`);
   }
-  measure("Cold rebuild incl. state jobs and catalog", benchmark.coldRebuild);
-  measure("Join the active projection", benchmark.joinActive);
-  measure("Legacy parse, merge and encode", benchmark.wholeMerge);
-  measure("Parse the catalog", benchmark.parseIndex);
-  measure("Parse the largest shard", benchmark.parseLargestState);
-  measure("Parse the legacy aggregate", benchmark.parseWhole);
-  measure("Legacy aggregate read and lookup", benchmark.wholeRead);
+  measure("Publish compact active list", benchmark.writeCompact);
+  measure("Publish pretty active list", benchmark.writePretty);
+  measure("Publish catalog", benchmark.writeCatalog);
+  measure("Cold coverage API read and encode", benchmark.readCoverage);
+  measure("Cold national weather API read and encode", benchmark.readWeather);
   measure("Cold national bans API read and encode", benchmark.readActive);
-  measure("Cold national bans MCP read and encode", benchmark.readActiveMcp);
-  measure("Cold MCP when scoped orders just expired", benchmark.readActiveExpired);
+  measure("Cold national MCP page read and encode", benchmark.readActiveMcp);
+  measure("Cold MCP page after scoped orders expire", benchmark.readActiveExpired);
+
+  console.log("Informational only (legacy v1 or multiple queue invocations):");
+  measure("Full rebuild across 51+ invocations", benchmark.coldRebuild);
+  measure("Legacy parse, merge and encode", benchmark.wholeMerge);
+  measure("Legacy aggregate read and lookup", benchmark.wholeRead);
+}
+
+const txSource = SOURCES.find((source) => source.id === "tx");
+if (!txSource || !isActive(txSource)) throw new Error("Missing TX benchmark source");
+
+for (const [label, inputs, clock] of [
+  ["current fixture inventory", currentInputs, now],
+  ["all 3,143 counties active", nationalFixture(new Date(), true), new Date()],
+] as const) {
+  const benchmark = workerBenchmarks(snapshotBenchmarks(inputs, clock).dataset);
+  const invocations = label === "current fixture inventory"
+    ? [...benchmark.fetches, ...benchmark.jobs,
+      ["Queue poll TX county list", benchmark.poll(txSource, async () => ({ rows: parseTx(JSON.parse(tx), checked) }))],
+      ["Queue poll national NWS alerts", benchmark.poll(nwsFireWeather, async () => ({ fireWeather: parseNwsLive() }))],
+      ["Queue poll NC order archive", benchmark.poll(ncForestOrders, async () => ({ rows: await parseNcOrderFixtures() }))],
+    ] as const
+    : benchmark.fetches.filter(([name]) => name.includes("active list"));
+  console.log(`\nWorker entry points, ${label} (Bun thread CPU, fixture bindings, no network)`);
+  for (const [name, run] of invocations) {
+    const { p50, p95 } = await asyncTimings(run);
+    console.log(`${name.padEnd(46)} p50 ${p50.toFixed(3)}  p95 ${p95.toFixed(3)}`);
+  }
 }

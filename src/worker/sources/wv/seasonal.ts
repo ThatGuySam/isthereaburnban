@@ -32,12 +32,16 @@ export async function parseWestVirginiaSeasonal(data: unknown, now: Date): Promi
       await sha256(section.map(({ text }) => text).join("\n")) !== SEASON_TEXT_HASH) {
     throw new Error("West Virginia Forestry: seasonal burning guidance changed or is missing");
   }
-  return calendarStatusRows(RULE, COUNTIES, META, now, { includeTomorrow: true })
+  return pinnedRows(now)
     .map((row) => ({ ...row, sourceUpdated: modified }));
 }
 
+function pinnedRows(now: Date) {
+  return calendarStatusRows(RULE, COUNTIES, META, now, { includeTomorrow: true });
+}
+
 export const wvForestryFireSeason: ActiveSource = {
-  ...META, recurring: true, mode: "positive-only", coverage: "restrictions",
+  ...META, recurring: true, pinnedRows, mode: "positive-only", coverage: "restrictions",
   cadence: { kind: "daily", zone: RULE.zone, hours: [0] },
   async fetch({ now }) {
     const reply = await fetchSource(META.sourceUrl, {

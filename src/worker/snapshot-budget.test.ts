@@ -13,3 +13,21 @@ test("every projected state fits the merge and cold shard read CPU budgets", () 
     expect(timings(read).p95, `${state} cold shard read p95 (ms)`).toBeLessThanOrEqual(2);
   }
 }, 30_000);
+
+test("national v2 publication and read invocations fit the CPU budget with all counties active", () => {
+  const now = new Date("2026-11-24T11:07:00.000Z");
+  const benchmark = snapshotBenchmarks(nationalFixture(now, true), now);
+  const invocations = [
+    ["compact publication", benchmark.writeCompact],
+    ["pretty publication", benchmark.writePretty],
+    ["catalog publication", benchmark.writeCatalog],
+    ["coverage", benchmark.readCoverage],
+    ["fire weather", benchmark.readWeather],
+    ["legacy-compatible REST active feed", benchmark.readActive],
+    ["MCP first page", benchmark.readActiveMcp],
+    ["MCP first page with expired orders", benchmark.readActiveExpired],
+  ];
+  for (const [name, invoke] of invocations) {
+    expect(timings(invoke).p95, `${name} p95 (ms)`).toBeLessThanOrEqual(10);
+  }
+}, 30_000);

@@ -26,6 +26,10 @@ export async function parseArizonaAreaA(parts: HtmlParts, now: Date): Promise<Co
     throw new Error("A.R.S. § 49-501: reviewed subsections (A) and (B) changed or are missing");
   }
 
+  return pinnedRows(now);
+}
+
+function pinnedRows(now: Date) {
   const checked = now.toISOString();
   return calendarDayWindows(RULE, now).flatMap((window) => COUNTIES.map(({ fips, name }) => ({
     ...window, state: META.state, scope: META.scope, sourceId: META.id, county: name, fips,
@@ -37,7 +41,7 @@ export async function parseArizonaAreaA(parts: HtmlParts, now: Date): Promise<Co
 
 export const azAreaASummer: ActiveSource = {
   ...META,
-  recurring: true, coverage: "restrictions", mode: "positive-only",
+  recurring: true, pinnedRows, coverage: "restrictions", mode: "positive-only",
   cadence: { kind: "daily", zone: RULE.zone, hours: [0] },
   async fetch({ now }) {
     const reply = await fetchSource(META.sourceUrl, { headers: { accept: "text/html" } });

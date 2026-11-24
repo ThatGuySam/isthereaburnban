@@ -31,6 +31,10 @@ export async function parsePaStateForestSpring(parts: HtmlParts, now: Date): Pro
     throw new Error("Pennsylvania State Forest rule: § 21.118 text changed or is missing");
   }
 
+  return pinnedRows(now);
+}
+
+function pinnedRows(now: Date) {
   const checked = now.toISOString();
   return calendarDayWindows(RULE, now).flatMap((window) =>
     COUNTIES.map(({ fips, name }) => ({
@@ -42,7 +46,7 @@ export async function parsePaStateForestSpring(parts: HtmlParts, now: Date): Pro
 }
 
 export const paStateForestSpring: ActiveSource = {
-  ...META, recurring: true, coverage: "restrictions", mode: "positive-only",
+  ...META, recurring: true, pinnedRows, coverage: "restrictions", mode: "positive-only",
   cadence: { kind: "daily", zone: RULE.zone, hours: [0] },
   async fetch({ now }) {
     const reply = await fetchSource(META.sourceUrl, { headers: { accept: "text/html" }, maxBytes: 100_000 });

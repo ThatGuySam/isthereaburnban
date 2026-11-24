@@ -20,11 +20,15 @@ export async function parseMaineOpenBurning(input: Response | string, now: Date)
   if (await sha256(JSON.stringify(subsections)) !== REVIEWED_SECTION) {
     throw new Error("Maine §9325: reviewed open-burning statute changed or is missing");
   }
+  return pinnedRows(now);
+}
+
+function pinnedRows(now: Date) {
   return calendarStatusRows(RULE, COUNTIES, META, now, { includeTomorrow: true });
 }
 
 export const meOpenBurningPermits: ActiveSource = {
-  ...META, mode: "positive-only", coverage: "restrictions", recurring: true,
+  ...META, mode: "positive-only", coverage: "restrictions", recurring: true, pinnedRows,
   cadence: { kind: "daily", zone: RULE.zone, hours: [0] },
   async fetch({ now }) {
     const reply = await fetchSource(META.sourceUrl, { headers: { accept: "text/html" }, maxBytes: 64_000 });

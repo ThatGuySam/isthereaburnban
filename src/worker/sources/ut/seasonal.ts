@@ -21,6 +21,10 @@ export function parseUtahSeasonal(html: string, now: Date): CountyStatus[] {
     throw new Error("Utah Code § 65A-8-211: current edition changed or is missing");
   }
 
+  return pinnedRows(now);
+}
+
+function pinnedRows(now: Date) {
   const checked = now.toISOString();
   return calendarDayWindows(RULE, now).flatMap((window) =>
     COUNTIES.map(({ fips, name }) => ({
@@ -32,7 +36,7 @@ export function parseUtahSeasonal(html: string, now: Date): CountyStatus[] {
 }
 
 export const utClosedFireSeason: ActiveSource = {
-  ...META, recurring: true, coverage: "restrictions", mode: "positive-only",
+  ...META, recurring: true, pinnedRows, coverage: "restrictions", mode: "positive-only",
   cadence: { kind: "daily", zone: RULE.zone, hours: [0] },
   async fetch({ now }) {
     const html = await getText(META.sourceUrl, { headers: { accept: "text/html" }, maxBytes: 100_000 });

@@ -38,14 +38,18 @@ export async function parseDeOpenBurning(data: unknown, now: Date) {
     throw new Error("Delaware DNREC: reviewed open-burning guidance changed or is missing");
   }
 
-  const rules = [[OZONE, ozone.modified], [RESIDENTIAL, residential.modified]] as const;
+  return pinnedRows(now, ozone.modified, residential.modified);
+}
+
+function pinnedRows(now: Date, ozoneModified: string | null = null, residentialModified: string | null = null) {
+  const rules = [[OZONE, ozoneModified], [RESIDENTIAL, residentialModified]] as const;
   return rules.flatMap(([rule, modified]) =>
     calendarStatusRows(rule, COUNTIES, META, now, { includeTomorrow: true, includeSeasonDates: true })
       .map((row) => ({ ...row, sourceUpdated: modified })));
 }
 
 export const deOpenBurning: ActiveSource = {
-  ...META, recurring: true, mode: "positive-only", coverage: "restrictions",
+  ...META, recurring: true, pinnedRows, mode: "positive-only", coverage: "restrictions",
   cadence: { kind: "daily", zone: OZONE.zone, hours: [0] },
   async fetch({ now }) {
     const reply = await fetchSource(META.sourceUrl, {

@@ -27,11 +27,15 @@ export function parseTennesseePermitSeason({ blocks }: HtmlParts, now: Date): Co
     /^From October 15 through May 15, a burn permit from the Tennessee Division of Forestry \(TDF\) is required for debris pile fires and prescribed fires\.$/i.test(text));
   if (!hasHeading || !hasRule) throw new Error("Tennessee Forestry: the seasonal permit guidance changed or is missing");
 
+  return pinnedRows(now);
+}
+
+function pinnedRows(now: Date) {
   return ZONES.flatMap(({ rule, counties }) => calendarStatusRows(rule, counties, META, now, { includeTomorrow: true }));
 }
 
 export const tnSeasonalBurnPermits: ActiveSource = {
-  ...META, recurring: true, mode: "positive-only", coverage: "restrictions",
+  ...META, recurring: true, pinnedRows, mode: "positive-only", coverage: "restrictions",
   cadence: { kind: "daily", zone: US_ZONES.Eastern, hours: [0] },
   async fetch({ now }) {
     const reply = await fetchSource(META.sourceUrl, { headers: { accept: "text/html" }, maxBytes: 256_000 });

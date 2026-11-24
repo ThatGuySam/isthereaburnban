@@ -18,6 +18,10 @@ export function parseMissoulaSeasons(parts: HtmlParts, now: Date): CountyStatus[
     throw new Error("Missoula County: published outdoor burning seasons changed or are missing");
   }
 
+  return pinnedRows(now);
+}
+
+function pinnedRows(now: Date) {
   const checked = now.toISOString();
   return RULES.flatMap((rule) => calendarDayWindows(rule, now).map((window) => ({
     ...window, fips: "30063", county: "Missoula County", state: META.state, sourceId: META.id,
@@ -28,7 +32,7 @@ export function parseMissoulaSeasons(parts: HtmlParts, now: Date): CountyStatus[
 }
 
 export const mtMissoulaSeasons: ActiveSource = {
-  ...META, coverage: "restrictions", mode: "positive-only", recurring: true,
+  ...META, coverage: "restrictions", mode: "positive-only", recurring: true, pinnedRows,
   cadence: { kind: "daily", zone: RULES[0].zone, hours: [0] },
   async fetch({ now }) {
     const reply = await fetchSource(META.sourceUrl, { headers: { accept: "text/html" }, maxBytes: 350_000 });

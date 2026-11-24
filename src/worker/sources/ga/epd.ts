@@ -21,47 +21,75 @@ const SEASONS = {
     heading: /^Summer Legal Burn Map$/,
     intro: "During summer (May 1 - September 30)",
     groups: [
-      { codes: "2, 3, 5, 6, 10, and 12", count: 19, extra: " The summer rule also restricts prescribed burning here." },
-      { codes: "2, 3, 4, 5, 6, 10, and 12", count: 35, extra: "" },
+      {
+        codes: "2, 3, 5, 6, 10, and 12", counties: new Set([
+          "Bartow", "Carroll", "Cherokee", "Clayton", "Cobb", "Coweta", "DeKalb", "Douglas",
+          "Fayette", "Forsyth", "Fulton", "Gwinnett", "Hall", "Henry", "Newton", "Paulding",
+          "Rockdale", "Spalding", "Walton",
+        ]),
+        extra: " The summer rule also restricts prescribed burning here.",
+      },
+      {
+        codes: "2, 3, 4, 5, 6, 10, and 12", counties: new Set([
+          "Banks", "Barrow", "Bibb", "Butts", "Catoosa", "Chattooga", "Clarke", "Crawford",
+          "Columbia", "Dawson", "Floyd", "Gordon", "Haralson", "Heard", "Houston", "Jackson",
+          "Jasper", "Jones", "Lamar", "Lumpkin", "Madison", "Meriwether", "Monroe", "Morgan",
+          "Oconee", "Peach", "Pickens", "Pike", "Polk", "Putnam", "Richmond", "Troup",
+          "Twiggs", "Upson", "Walker",
+        ]),
+        extra: "",
+      },
     ],
   },
   nonSummer: {
     id: "ga-epd-non-summer", rule: NON_SUMMER, url: NON_SUMMER.officialUrl,
     heading: /^Non-Summer Legal Burn Types$/,
     intro: "During non-summer time (October 1 - April 30)",
-    groups: [{ codes: "1, 2, 3, 4, 5, 6, 7, 10, 12, and 13", count: 27, extra: "" }],
+    groups: [{
+        codes: "1, 2, 3, 4, 5, 6, 7, 10, 12, and 13", counties: new Set([
+          "Barrow", "Bartow", "Bibb", "Carroll", "Cherokee", "Clarke", "Clayton", "Cobb",
+          "Columbia", "Coweta", "DeKalb", "Douglas", "Fayette", "Floyd", "Forsyth", "Fulton",
+          "Gwinnett", "Hall", "Henry", "Houston", "Newton", "Paulding", "Richmond", "Rockdale",
+          "Troup", "Walker", "Walton",
+        ]),
+        extra: "",
+      }],
   },
 };
 type Season = keyof typeof SEASONS;
 const OTHER_COUNTIES = "All other counties allow burn types 1-13.";
 
 export function parseEpdSeasonal(parts: HtmlParts, now: Date, season: Season): CountyStatus[] {
-  const { rule, id, url, heading, intro, groups } = SEASONS[season];
+  const { heading, intro, groups } = SEASONS[season];
   const blocks = blockAfterHeading(parts.blocks, heading);
   const markers = blocks.flatMap(({ tag, text }, index) =>
     tag === "p" && (/^During .*following counties/i.test(text) || text === OTHER_COUNTIES) ? [index] : []);
   if (markers.length !== groups.length + 1 || blocks[markers[groups.length]]?.text !== OTHER_COUNTIES) {
     throw new Error(`GA EPD ${season}: expected burn type sections changed or missing`);
   }
-  const counties = new Map<string, { name: string; extra: string }>();
-  for (const [i, { codes, count, extra }] of groups.entries()) {
+  for (const [i, { codes, counties }] of groups.entries()) {
     const start = markers[i];
     if (blocks[start]?.text !== `${intro}, the following counties allow only allow burn types ${codes}:`) {
       throw new Error(`GA EPD ${season}: expected dates or burn type codes changed`);
     }
-    const names = blocks.slice(start + 1, markers[i + 1]).filter(({ tag }) => tag === "li");
-    if (names.length !== count) throw new Error(`GA EPD ${season}: expected ${count} counties in burn type group`);
-    for (const { text } of names) {
-      const county = countyByName("GA", text);
-      if (!county || !SUMMER.counties?.has(text.toLowerCase()) || counties.has(county.fips)) {
-        throw new Error(`GA EPD ${season}: unexpected or duplicate county ${text}`);
-      }
-      counties.set(county.fips, { name: county.name, extra });
+    const names = blocks.slice(start + 1, markers[i + 1]).filter(({ tag }) => tag === "li").map(({ text }) => text);
+    const unique = new Set(names);
+    if (names.length !== counties.size || unique.size !== counties.size || names.some((name) => !counties.has(name))) {
+      throw new Error(`GA EPD ${season}: reviewed county group changed`);
     }
   }
+  return pinnedRows(now, season);
+}
 
+function pinnedRows(now: Date, season: Season) {
+  const { rule, id, url, groups } = SEASONS[season];
+  const counties = groups.flatMap(({ counties, extra }) => [...counties].map((name) => {
+    const county = countyByName("GA", name);
+    if (!county) throw new Error(`GA EPD ${season}: unmapped county ${name}`);
+    return { ...county, extra };
+  }));
   const checked = now.toISOString();
-  return calendarDayWindows(rule, now).flatMap((window) => Array.from(counties, ([fips, { name, extra }]) => ({
+  return calendarDayWindows(rule, now).flatMap((window) => counties.map(({ fips, name, extra }) => ({
     ...window, fips, county: name, state: rule.state, status: rule.status, label: rule.label,
     scope: rule.scope, scopeNote: rule.scopeNote, note: rule.note + extra, sourceId: id,
     sourceName: "Georgia Environmental Protection Division", sourceUrl: url, officialUrl: rule.officialUrl,
@@ -74,10 +102,9 @@ function epdSource(season: Season): ActiveSource {
   return {
     id, state: rule.state, scope: rule.scope, stack: "Drupal / HTML lists and calendar",
     sourceName: "Georgia Environmental Protection Division", sourceUrl: url, officialUrl: rule.officialUrl,
-    coverage: "restrictions", mode: "positive-only", recurring: true,
+    coverage: "restrictions", mode: "positive-only", recurring: true, pinnedRows: (now) => pinnedRows(now, season),
     cadence: { kind: "daily", zone: rule.zone, hours: [0] },
     async fetch({ now }) {
-      if (!calendarDayWindows(rule, now).length) return { rows: [] };
       const reply = await fetchSource(url, { headers: { accept: "text/html" } });
       if (reply.notModified) throw new Error("Unexpected GA EPD 304");
       return { rows: parseEpdSeasonal(await extractHtml(reply.response), now, season) };

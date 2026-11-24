@@ -51,12 +51,16 @@ export async function parseMaOpenBurning(data: unknown, now: Date) {
     .flatMap(({ text }) => MUNICIPAL_LIST.exec(text)?.[1] ?? []);
   const names = lists[0]?.split(", ") ?? [];
   const towns = new Set(names);
-  if (lists.length !== 1 || towns.size !== MUNICIPAL_COUNTY.size || names.length !== towns.size) {
+  if (lists.length !== 1 || towns.size !== MUNICIPAL_COUNTY.size || names.length !== towns.size ||
+      names.some((town) => !MUNICIPAL_COUNTY.has(town))) {
     throw new Error("Massachusetts: missing or incomplete year-round municipality list");
   }
-  const places = [...towns].map((town) => {
-    const fips = MUNICIPAL_COUNTY.get(town);
-    const county = fips && COUNTY_BY_FIPS.get(fips);
+  return pinnedRows(now);
+}
+
+function pinnedRows(now: Date) {
+  const places = [...MUNICIPAL_COUNTY].map(([town, fips]) => {
+    const county = COUNTY_BY_FIPS.get(fips);
     if (!county || county.state !== OFF_SEASON.state) throw new Error(`Massachusetts: unmapped municipality: ${town}`);
     return { ...county, scopeNote: `Municipality of ${town}, ${county.name}` };
   });
@@ -68,7 +72,7 @@ export async function parseMaOpenBurning(data: unknown, now: Date) {
 }
 
 export const maOpenBurning: ActiveSource = {
-  ...META, recurring: true, mode: "positive-only", coverage: "restrictions",
+  ...META, recurring: true, pinnedRows, mode: "positive-only", coverage: "restrictions",
   cadence: { kind: "daily", zone: OFF_SEASON.zone, hours: [0] },
   async fetch({ now }) {
     // Re-evaluate local dates and hours even when the standing guidance has not changed.

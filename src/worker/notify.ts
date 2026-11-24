@@ -1,12 +1,12 @@
 import { createHmac } from "node:crypto";
 import { COUNTY_BY_FIPS } from "./counties";
-import type { DeliveryOutcome } from "./delivery";
 import { sendAlertEmail } from "./email";
 import type { Env } from "./env";
 import { maskTarget, planAudience, type Audience, type AudienceWindow, type Channel, type Delivery } from "./notification-audience";
 import { alertsPaused, alertsPausedInDb, MANUAL_LIMIT } from "./notification-controls";
 import { testNotice, type Notice } from "./notification-message";
-import { pushVapid, sendPush } from "./push";
+import { pushVapid } from "./push";
+import { attemptPushDelivery, nudgePushRetries, PUSH_RETRY_SECONDS, seedPushDeliveries } from "./push-outbox";
 
 const PAGE_SIZE = 20;
 const PREVIEW_MS = 5 * 60_000;
@@ -60,7 +60,7 @@ function fingerprint(env: Env, deliveries: Delivery[], dispatch: Dispatch, at: n
 }
 
 async function writeLog(
-  env: Env, runId: string, req: Dispatch, mode: "dry-run" | "send", rows: LogRow[], changes: D1PreparedStatement[] = [],
+  env: Env, runId: string, req: Dispatch, mode: "dry-run" | "send", rows: LogRow[],
 ) {
   if (!rows.length) return;
   const stmt = env.DB.prepare(
@@ -69,10 +69,10 @@ async function writeLog(
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
   const at = new Date().toISOString();
-  await env.DB.batch([...rows.map((row) => stmt.bind(
+  await env.DB.batch(rows.map((row) => stmt.bind(
     runId, at, row.channel, req.audience.kind, mode, row.fips, row.masked ?? null, row.result,
     row.providerId ?? null, row.error ?? null,
-  )), ...changes]);
+  )));
 }
 
 function fipsList(notices: Notice[]): string {
@@ -107,18 +107,24 @@ async function preview(env: Env, req: DryRun) {
   };
 }
 
-async function claim(env: Env, req: Send, now: number): Promise<"claimed" | "duplicate" | "rate-limited"> {
+async function claim(env: Env, req: Send, now: number, deliveries: Delivery[]): Promise<"claimed" | "duplicate" | "rate-limited"> {
   const fips = fipsList(req.notices);
-  const result = await env.DB.prepare(
-    `INSERT OR IGNORE INTO notification_runs (id, at, origin, audience, fips)
-     SELECT ?, ?, ?, ?, ?
+  const token = crypto.randomUUID();
+  const run = env.DB.prepare(
+    `INSERT OR IGNORE INTO notification_runs (id, at, origin, audience, fips, push_seed_token)
+     SELECT ?, ?, ?, ?, ?, ?
      WHERE ? <> 'broadcast' OR NOT EXISTS (
        SELECT 1 FROM notification_runs WHERE origin = 'broadcast' AND
        (at > ? OR (fips = ? AND at > ?))
      )`,
-  ).bind(req.runId, now, req.origin, req.audience.kind, fips, req.origin,
-    now - PREVIEW_MS, fips, now - COUNTY_COOLDOWN_MS).run();
-  if (result.meta.changes) return "claimed";
+  ).bind(req.runId, now, req.origin, req.audience.kind, fips, token, req.origin,
+    now - PREVIEW_MS, fips, now - COUNTY_COOLDOWN_MS);
+  const pending = seedPushDeliveries(env.DB, req.runId, token, now, deliveries);
+  const [result] = await env.DB.batch([run, ...pending]);
+  if (result.meta.changes) {
+    if (pending.length) await nudgePushRetries(env, PUSH_RETRY_SECONDS).catch((error) => console.warn("Push retry enqueue failed", error));
+    return "claimed";
+  }
   const exists = await env.DB.prepare("SELECT id FROM notification_runs WHERE id = ?").bind(req.runId).first("id");
   return exists ? "duplicate" : "rate-limited";
 }
@@ -129,12 +135,6 @@ function validateSend(req: Send) {
     : req.origin === "canary" ? req.audience.kind === "canary" && req.notices.every((n) => n.kind === "canary")
     : ["test", "push-devices", "sandbox"].includes(req.audience.kind) && req.notices.every((n) => n.kind === "test");
   if (!isValid) throw new NotificationError("This notice and audience cannot be sent together.", 400);
-}
-
-async function deliver(env: Env, d: Delivery, runId: string): Promise<DeliveryOutcome> {
-  return d.channel === "push"
-    ? sendPush(env, d.target, d.notices[0])
-    : sendAlertEmail(env, d.target, d.notices, `alerts/${runId}/${d.target.id}`);
 }
 
 async function send(env: Env, req: Send) {
@@ -175,12 +175,10 @@ async function send(env: Env, req: Send) {
   }
   if (!deliveries.length && req.origin !== "canary") return { ...counts, status: "empty" };
 
-  const claimed = await claim(env, req, Date.now());
+  const claimed = await claim(env, req, Date.now(), deliveries);
   if (claimed !== "claimed") return { ...counts, status: claimed };
   if (!deliveries.length) await writeLog(env, req.runId, req, "send", describe(channels.length ? "no audience" : "unconfigured"));
 
-  const gone = new Set<string>();
-  const remove = env.DB.prepare("DELETE FROM push_subscriptions WHERE endpoint = ? AND p256dh = ? AND auth = ?");
   for (let offset = 0; offset < deliveries.length; offset += DELIVERY_BATCH_SIZE) {
     if (await alertsPausedInDb(env)) {
       counts.skipped += deliveries.length - offset;
@@ -188,21 +186,18 @@ async function send(env: Env, req: Send) {
       break;
     }
     const batch = deliveries.slice(offset, offset + DELIVERY_BATCH_SIZE);
-    const expired: D1PreparedStatement[] = [];
-    const rows = await Promise.all(batch.map(async (d): Promise<LogRow> => {
-      if (d.channel === "push" && gone.has(d.target.endpoint)) {
-        counts.skipped++;
-        return { channel: d.channel, fips: fipsList(d.notices), masked: maskTarget(d), result: "skipped", error: "Push subscription is gone" };
+    const rows = await Promise.all(batch.map(async (d): Promise<LogRow | null> => {
+      if (d.channel === "push") {
+        const outcome = await attemptPushDelivery(env, req.runId, d);
+        if (outcome) counts[outcome.result]++;
+        else counts.skipped++;
+        return null;
       }
-      const outcome = await deliver(env, d, req.runId);
+      const outcome = await sendAlertEmail(env, d.target, d.notices, `alerts/${req.runId}/${d.target.id}`);
       counts[outcome.result]++;
-      if (outcome.result === "gone" && d.channel === "push") {
-        gone.add(d.target.endpoint);
-        expired.push(remove.bind(d.target.endpoint, d.target.p256dh, d.target.auth));
-      }
       return { ...outcome, channel: d.channel, fips: fipsList(d.notices), masked: maskTarget(d) };
     }));
-    await writeLog(env, req.runId, req, "send", rows, expired);
+    await writeLog(env, req.runId, req, "send", rows.filter((row) => row !== null));
   }
   await env.DB.prepare("UPDATE notification_runs SET completed_at = ? WHERE id = ?").bind(Date.now(), req.runId).run();
   return { ...counts, status: deliveries.length ? "finished" : "empty" };

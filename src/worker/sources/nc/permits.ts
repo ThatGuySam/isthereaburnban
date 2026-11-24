@@ -22,17 +22,24 @@ const REVIEWED_SECTIONS = [
 ] as const;
 
 export async function parseNcPermits({ blocks }: HtmlParts, now: Date): Promise<CountyStatus[]> {
-  const sections = await Promise.all(REVIEWED_SECTIONS.map(async ([section, hash]) => {
+  await Promise.all(REVIEWED_SECTIONS.map(async ([section, hash]) => {
     const start = blocks.findIndex(({ text }) => text.startsWith(`§ 106-${section}.`));
     const end = blocks.findIndex(({ text }, index) => index > start && /^§ 106-\d+\./.test(text));
     const text = blocks.slice(start, end < 0 ? undefined : end).map((block) => block.text).join("\n");
     if (start < 0 || await sha256(text) !== hash) throw new Error(`N.C. General Statutes § 106-${section} changed or is missing`);
-    return text;
   }));
 
-  const names = /apply only to the counties of (.+?) which are classified/.exec(sections[0])?.[1];
-  if (!names) throw new Error("N.C. General Statutes § 106-942: missing high-hazard counties");
-  const highHazard = new Set(names.replace(/, and /, ", ").split(", ").map((name) => {
+  return pinnedRows(now);
+}
+
+const HIGH_HAZARD_COUNTIES = [
+  "Beaufort", "Bladen", "Brunswick", "Camden", "Carteret", "Chowan", "Craven",
+  "Currituck", "Dare", "Duplin", "Gates", "Hyde", "Jones", "New Hanover",
+  "Onslow", "Pamlico", "Pasquotank", "Pender", "Perquimans", "Tyrrell", "Washington",
+];
+
+function pinnedRows(now: Date) {
+  const highHazard = new Set(HIGH_HAZARD_COUNTIES.map((name) => {
     const county = countyByName(META.state, name);
     if (!county) throw new Error(`Unknown N.C. high-hazard county: ${name}`);
     return county.fips;
@@ -48,7 +55,7 @@ export async function parseNcPermits({ blocks }: HtmlParts, now: Date): Promise<
 }
 
 export const ncPermits: ActiveSource = {
-  ...META, recurring: true, coverage: "restrictions", mode: "positive-only",
+  ...META, recurring: true, pinnedRows, coverage: "restrictions", mode: "positive-only",
   cadence: { kind: "daily", zone: HIGH_HAZARD.zone, hours: [0] },
   async fetch({ now }) {
     const reply = await fetchSource(META.sourceUrl, { headers: { accept: "text/html" } });

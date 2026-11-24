@@ -25,11 +25,15 @@ export async function parseVirginiaSeasonal({ blocks }: HtmlParts, now: Date): P
   if (start < 0 || end <= start || await sha256(clauses.slice(start, end).join("\n")) !== RULE_TEXT_HASH) {
     throw new Error("Virginia Code § 10.1-1142: seasonal burning clauses changed or are missing");
   }
+  return pinnedRows(now);
+}
+
+function pinnedRows(now: Date) {
   return calendarStatusRows(RULE, COUNTIES, META, now, { includeTomorrow: true });
 }
 
 export const vaSeasonal: ActiveSource = {
-  ...META, recurring: true, mode: "positive-only", coverage: "restrictions",
+  ...META, recurring: true, pinnedRows, mode: "positive-only", coverage: "restrictions",
   cadence: { kind: "daily", zone: RULE.zone, hours: [0] },
   async fetch({ now }) {
     const reply = await fetchSource(META.sourceUrl, { headers: { accept: "text/html" }, maxBytes: 128_000 });

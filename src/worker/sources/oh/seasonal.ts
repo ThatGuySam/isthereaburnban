@@ -24,6 +24,10 @@ export async function parseOhioSeasonal(parts: HtmlParts, now: Date): Promise<Co
     throw new Error("Ohio Revised Code § 1503.18: expected (C) and (D) text changed or missing");
   }
 
+  return pinnedRows(now);
+}
+
+function pinnedRows(now: Date) {
   const checked = now.toISOString();
   return calendarDayWindows(RULE, now).filter(({ validUntil }) => validUntil > checked).flatMap((window) =>
     COUNTIES.map(({ fips, name }) => ({
@@ -36,7 +40,7 @@ export async function parseOhioSeasonal(parts: HtmlParts, now: Date): Promise<Co
 
 export const ohSeasonal: ActiveSource = {
   ...META,
-  recurring: true,
+  recurring: true, pinnedRows,
   mode: "positive-only",
   coverage: "restrictions",
   cadence: { kind: "daily", zone: RULE.zone, hours: [0] },

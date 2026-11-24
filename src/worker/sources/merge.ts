@@ -12,6 +12,7 @@ export type SourceInput = {
   checked: string;
   staleMs?: number;
   error?: string;
+  warning?: string;
   version?: string;
 };
 
@@ -89,7 +90,7 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
   const transitions: Transition[] = [];
   const recurring = new Set(inputs.filter((i) => i.source.recurring).map((i) => i.source.id));
 
-  for (const { source, rows, fireWeather: reports, checked, lastGood, staleMs = STALE_MS, error, version } of inputs) {
+  for (const { source, rows, fireWeather: reports, checked, lastGood, staleMs = STALE_MS, error, warning, version } of inputs) {
     if (version) sourceVersions[source.id] = version;
     const mapped = new Set<string>();
     const bans = new Set<string>();
@@ -102,7 +103,7 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
         mapped.add(fips);
       }
       sources.push({ id: source.id, state: source.state, mode: source.mode, product: source.product,
-        officialUrl: source.officialUrl, checked, ok: !error, error, counties: mapped.size, bans: 0 });
+        officialUrl: source.officialUrl, checked, ok: !error, error, warning, counties: mapped.size, bans: 0 });
       continue;
     }
     for (const value of rows) {
@@ -126,7 +127,7 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
       else groups.set(row.fips, group ? [group, entry] : entry);
     }
     sources.push({ id: source.id, state: source.state, mode: source.mode, scope: source.scope,
-      officialUrl: source.officialUrl, checked, ok: !error, error, counties: mapped.size, bans: bans.size });
+      officialUrl: source.officialUrl, checked, ok: !error, error, warning, counties: mapped.size, bans: bans.size });
   }
 
   // A verified standing rule can run until local midnight after a warning ends.

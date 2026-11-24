@@ -63,6 +63,7 @@ export type SourceHealth = {
   ok: boolean;
   checked: string; // ISO
   error?: string;
+  warning?: string;
   counties: number; // distinct counties with a mapped report
   bans: number;
   /** "full" = negatives are trustworthy; "positive-only" = absence means unknown, not none */

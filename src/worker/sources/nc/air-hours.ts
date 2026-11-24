@@ -20,11 +20,15 @@ export async function parseNcAirHours({ blocks }: HtmlParts, now: Date) {
   if (!hours || await sha256(hours.text) !== REVIEWED_GUIDANCE) {
     throw new Error("NC DEQ: open-burning hours guidance changed or is missing");
   }
+  return pinnedRows(now);
+}
+
+function pinnedRows(now: Date) {
   return calendarStatusRows(RULE, COUNTIES, META, now);
 }
 
 export const ncAirHours: ActiveSource = {
-  ...META, recurring: true, coverage: "restrictions", mode: "positive-only",
+  ...META, recurring: true, pinnedRows, coverage: "restrictions", mode: "positive-only",
   cadence: { kind: "daily", zone: RULE.zone, hours: [0] },
   async fetch({ now }) {
     const reply = await fetchSource(META.sourceUrl, { headers: { accept: "text/html" } });

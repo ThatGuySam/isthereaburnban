@@ -31,7 +31,11 @@ export type ActiveSource = Metadata & {
   /** Default 48 hours. Use a shorter window and row validity for daily permit decisions. */
   staleMs?: number;
   fetch(context: { now: Date; validators?: Validators }): Promise<SourceResult>;
-};
+} & (
+  // Standing rows computed locally when verification is temporarily unreachable.
+  | { recurring: true; pinnedRows: (now: Date) => CountyStatus[] }
+  | { recurring?: false; pinnedRows?: never }
+);
 
 export type ManualSource = Metadata & {
   mode: "manual";

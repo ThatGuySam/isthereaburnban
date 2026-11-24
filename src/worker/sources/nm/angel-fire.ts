@@ -19,18 +19,23 @@ export async function parseAngelFirePermits(input: Response | string, now: Date)
   if (!date || date > localClock(now, ZONE).date) {
     throw new Error("Angel Fire: expected a dated lift with the village's ongoing permit requirement");
   }
+  return pinnedRows(now, date);
+}
+
+function pinnedRows(now: Date, liftDate?: string) {
   const colfax = COUNTY_BY_FIPS.get("35007")!;
   const rule: CalendarRule = {
     state: META.state, officialUrl: URL, zone: ZONE, scope: META.scope, status: "restricted",
     scopeNote: "Village of Angel Fire",
     label: "Angel Fire outdoor burning permits",
-    note: `The village lifted its temporary ban on ${date}. Outdoor burning still requires a permit and inspection, with an exception for personal-use campfires. Check the Fire Department for short-term No Burn Days.`,
+    note: (liftDate ? `The village lifted its temporary ban on ${liftDate}. ` : "") +
+      "Outdoor burning requires a permit and inspection, with an exception for personal-use campfires. Check the Fire Department for short-term No Burn Days.",
   };
   return calendarStatusRows(rule, [colfax], META, now, { includeTomorrow: true });
 }
 
 export const nmAngelFirePermits: ActiveSource = {
-  ...META, mode: "positive-only", coverage: "restrictions", recurring: true,
+  ...META, mode: "positive-only", coverage: "restrictions", recurring: true, pinnedRows,
   cadence: { kind: "daily", zone: ZONE, hours: [6] },
   async fetch({ now }) {
     const reply = await fetchSource(URL, {

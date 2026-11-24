@@ -64,6 +64,10 @@ const WINTER_COUNTIES = COUNTIES.flatMap((county) => {
 export async function parseAlaskaFireSeason(statute: string, permits: string, now: Date): Promise<CountyStatus[]> {
   await verifyLaw(statute, ["Sec. 41.15.050."], "15e4362b6b949ca30e2c5dfc2d15b205426f582a3a0e12615ebc9f26d9ce223b");
   await verifyLaw(permits, ["11 AAC 95.412."], "0542834c4c4130554bd17ca3cc25c4d43535b3eb1226f011073027ef066f23dc");
+  return permitRows(now);
+}
+
+function permitRows(now: Date) {
   return [
     ...calendarRows(PERMITS, PERMIT_SOURCE, MAIN_PERMIT_AREAS, now),
     ...calendarRows({ ...PERMITS, zone: US_ZONES.Aleutian }, PERMIT_SOURCE, WESTERN_ALEUTIAN_AREAS, now),
@@ -73,6 +77,10 @@ export async function parseAlaskaFireSeason(statute: string, permits: string, no
 export async function parseAlaskaWinterBurning(regulation: string, areas: string, now: Date): Promise<CountyStatus[]> {
   await verifyLaw(regulation, ["18 AAC 50.065."], "f0f36531d9cef1c1afa67ffd88597ac66680b98d03ef5d9b234a13d02725b473");
   await verifyLaw(areas, ["18 AAC 50.015.", "18 AAC 50.025."], "6b4da765638b194ad9192a30b0fa1d06c460da165e6dc5694e348354321fce04");
+  return winterRows(now);
+}
+
+function winterRows(now: Date) {
   return calendarRows(WINTER, WINTER_SOURCE, WINTER_COUNTIES, now);
 }
 
@@ -80,21 +88,18 @@ const recurring = { state: "AK", scope: "part", coverage: "restrictions", mode: 
 const options = { headers: { accept: "text/html" }, maxBytes: 64_000 };
 
 export const akDnrFireSeason: ActiveSource = {
-  ...PERMIT_SOURCE, ...recurring,
+  ...PERMIT_SOURCE, ...recurring, pinnedRows: permitRows,
   cadence: { kind: "daily", zone: US_ZONES.Alaska, hours: [0, 1] },
   async fetch({ now }) {
-    if (!calendarDayWindows(PERMITS, now).length &&
-        !calendarDayWindows({ ...PERMITS, zone: US_ZONES.Aleutian }, now).length) return { rows: [] };
     const read = pacedTextReader(options);
     return { rows: await parseAlaskaFireSeason(await read(PERMIT_SOURCE.sourceUrl), await read(PERMIT_REGULATION), now) };
   },
 };
 
 export const akDecWinterBurning: ActiveSource = {
-  ...WINTER_SOURCE, ...recurring,
+  ...WINTER_SOURCE, ...recurring, pinnedRows: winterRows,
   cadence: { kind: "daily", zone: US_ZONES.Alaska, hours: [0] },
   async fetch({ now }) {
-    if (!calendarDayWindows(WINTER, now).length) return { rows: [] };
     const read = pacedTextReader(options);
     return { rows: await parseAlaskaWinterBurning(await read(WINTER_SOURCE.sourceUrl), await read(AIR_AREAS), now) };
   },

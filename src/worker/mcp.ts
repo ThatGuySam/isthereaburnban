@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp/server";
 import { z } from "zod";
 import { coverage } from "./api";
+import { bansPage, DEFAULT_BANS_LIMIT, MAX_BANS_LIMIT } from "./bans-page";
 import { countyPath } from "./counties";
 import { subscribeEmail } from "./email";
 import type { Env } from "./env";
@@ -80,13 +81,18 @@ export function createServer(env: Env, banText: (wireText: string[]) => string =
     {
       title: "List active burn bans",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      description: "List counties with a reported active burn ban or burning restriction, optionally for one state (2-letter code). Use the coverage tool for source availability.",
-      inputSchema: z.object({ state: z.string().length(2).optional().describe("2-letter state code, e.g. TX") }),
+      description: "List counties with an active burn ban or restriction. Filter by state when possible. Returns up to 50 counties by default, up to 100 with limit. Pass next as cursor with the same state filter for the next page. The result includes count (this page) and total (all matches). Use coverage for source availability.",
+      inputSchema: z.object({
+        state: z.string().length(2).optional().describe("2-letter state code, e.g. TX"),
+        limit: z.number().int().min(1).max(MAX_BANS_LIMIT).optional().describe(`Page size, default ${DEFAULT_BANS_LIMIT}`),
+        cursor: z.string().max(9).optional().describe("The previous page’s next value"),
+      }),
     },
-    async ({ state }) => {
-      const { count, body, generated } = await snapshots().bans(state, "pretty");
+    async ({ state, limit, cursor }) => {
+      const page = bansPage(state, limit, cursor);
+      const { count, total, body, generated } = await snapshots().bans(page.state, "pretty", page);
       return { content: [
-        { type: "text" as const, text: `${count} counties with a ban or restriction${state ? ` in ${state.toUpperCase()}` : ""} as of ${generated}.` },
+        { type: "text" as const, text: `${count} of ${total} counties with a ban or restriction${page.state ? ` in ${page.state}` : ""} as of ${generated}.` },
         { type: "text" as const, text: banText(body) },
       ] };
     },

@@ -48,7 +48,7 @@ function publisher(regulation: Regulation) {
 }
 
 export async function parseRiDemRule(input: Response | string, now: Date, regulation: Regulation) {
-  const { code, revision, sections, fingerprint, rules } = REGULATIONS[regulation];
+  const { code, revision, sections, fingerprint } = REGULATIONS[regulation];
   const parts = await extractHtml(input);
   const activeHeading = `${code} ACTIVE RULE`;
   const headers = parts.blocks.filter(({ tag, text }) => tag === "h3" && text === activeHeading);
@@ -62,6 +62,11 @@ export async function parseRiDemRule(input: Response | string, now: Date, regula
     throw new Error(`${code}: active rule text or effective date changed or missing`);
   }
 
+  return pinnedRows(now, regulation);
+}
+
+function pinnedRows(now: Date, regulation: Regulation) {
+  const { rules, revision } = REGULATIONS[regulation];
   if (localClock(now, rules[0].zone).date < revision) return [];
   return rules.flatMap((rule) => calendarStatusRows(rule, COUNTIES, publisher(regulation), now, {
     includeTomorrow: true, includeSeasonDates: true,
@@ -71,7 +76,7 @@ export async function parseRiDemRule(input: Response | string, now: Date, regula
 function makeSource(regulation: Regulation): ActiveSource {
   const meta = publisher(regulation);
   return {
-    ...meta, recurring: true, mode: "positive-only", coverage: "restrictions",
+    ...meta, recurring: true, pinnedRows: (now) => pinnedRows(now, regulation), mode: "positive-only", coverage: "restrictions",
     cadence: { kind: "daily", zone: REGULATIONS[regulation].rules[0].zone, hours: [regulation === "forest" ? 9 : 10] },
     async fetch({ now }) {
       const reply = await fetchSource(meta.sourceUrl, { headers: { accept: "text/html" } });

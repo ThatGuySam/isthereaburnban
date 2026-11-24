@@ -1,4 +1,5 @@
 import { activeFireWeather, coverage } from "./api";
+import { bansPage } from "./bans-page";
 import { confirmEmail, subscribeEmail, unsubscribeEmail } from "./email";
 import type { Env } from "./env";
 import { DISCLAIMER, lookup, LookupError, resultSentence, statusFor } from "./lookup";
@@ -6,7 +7,8 @@ import { handleMcp } from "./mcp";
 import { handleOps } from "./ops";
 import { CANARY_CRON, runCanary } from "./notify";
 import { handlePage, handleSitemap } from "./pages";
-import { subscribePush, unsubscribePush } from "./push";
+import { pushVapid, subscribePush, unsubscribePush } from "./push";
+import { nudgePushRetries } from "./push-outbox";
 import { refresh, snapshotReader } from "./snapshot";
 import { consumeSourceQueue, enqueueSources, type SourceMessage } from "./sources/queue";
 import { peekMcp, recordUsage, type McpCall } from "./usage";
@@ -88,7 +90,12 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
       if (p.get("format") === "text") return text(result.results.map(resultSentence).join("\n") + `\n${DISCLAIMER}\n`);
       return json(result, 200, here ? "private, max-age=300" : undefined);
     }
-    if (path === "/api/v1/bans") return jsonResponse((await snapshots.bans(p.get("state") ?? undefined)).body.join(""));
+    if (path === "/api/v1/bans") {
+      const state = p.get("state") ?? undefined;
+      const page = p.has("limit") || p.has("cursor")
+        ? bansPage(state, p.has("limit") ? Number(p.get("limit")) : undefined, p.get("cursor") ?? undefined) : undefined;
+      return jsonResponse((await snapshots.bans(state, "compact", page)).body.join(""));
+    }
     if (path === "/api/v1/fire-weather") return json(activeFireWeather(await snapshots.weather(), p.get("state") ?? undefined));
     if (path === "/api/v1/coverage") return json(coverage(await snapshots.coverage()));
     const m = path.match(/^\/api\/v1\/counties\/(\d{5})$/);
@@ -139,8 +146,8 @@ export default {
     ctx.waitUntil(controller.cron === CANARY_CRON
       ? runCanary(env, controller.scheduledTime)
       : env.SOURCE_QUEUE
-        ? enqueueSources(env, controller.scheduledTime)
-        : refresh(env, undefined, controller.scheduledTime));
+        ? Promise.all([enqueueSources(env, controller.scheduledTime), pushVapid(env) && nudgePushRetries(env, 0)])
+        : refresh(env, undefined, controller.scheduledTime).then(() => undefined));
   },
   queue: consumeSourceQueue,
 } satisfies ExportedHandler<Env, SourceMessage>;

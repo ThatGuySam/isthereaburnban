@@ -17,6 +17,10 @@ const REGULATION_SHA256 = "b204f802759a4421de320c50f94fec3b25807c8375887986d6ec2
 
 function regulationRows(document: { sha256: string }, now: Date): CountyStatus[] {
   if (document.sha256 !== REGULATION_SHA256) throw new Error("SC Regulation 61-62.2 PDF changed and needs review");
+  return pinnedRows(now);
+}
+
+function pinnedRows(now: Date): CountyStatus[] {
   const checked = now.toISOString();
   return RULES.flatMap((rule) =>
     calendarDayWindows(rule, now).filter(({ validUntil }) => validUntil > checked).flatMap((window) =>
@@ -33,7 +37,7 @@ export async function parseScAirQuality(pdf: Response, now: Date): Promise<Count
 }
 
 export const scAirQuality: ActiveSource = {
-  ...META, recurring: true, coverage: "restrictions", mode: "positive-only",
+  ...META, recurring: true, pinnedRows, coverage: "restrictions", mode: "positive-only",
   cadence: { kind: "daily", zone: US_ZONES.Eastern, hours: [0] },
   async fetch({ now }) {
     // Recompute the Eastern calendar even when the publisher's bytes are unchanged.

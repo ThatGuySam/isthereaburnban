@@ -12,7 +12,7 @@ See the coverage endpoint for each state's burn restriction sources. NWS fire-we
 - [Status by city](https://isthereaburnban.com/api/v1/status?city=Tulsa&state=OK): every county the city touches, plus a `place` object with its page.
 - [Plain-text answer](https://isthereaburnban.com/api/v1/status?zip=74103&format=text)
 - [One county](https://isthereaburnban.com/api/v1/counties/40143)
-- [All active bans](https://isthereaburnban.com/api/v1/bans) and [by state](https://isthereaburnban.com/api/v1/bans?state=TX)
+- [All active bans](https://isthereaburnban.com/api/v1/bans), [by state](https://isthereaburnban.com/api/v1/bans?state=TX), or [paged](https://isthereaburnban.com/api/v1/bans?limit=50). The unpaged list remains available.
 - [NWS fire-weather alerts by county](https://isthereaburnban.com/api/v1/fire-weather), optionally [filtered by state](https://isthereaburnban.com/api/v1/fire-weather?state=OK). Includes the national source's check time and health.
 - [Coverage and source health](https://isthereaburnban.com/api/v1/coverage)
 - [OpenAPI spec](https://isthereaburnban.com/openapi.json)
@@ -23,7 +23,8 @@ County, status, and MCP `check_burn_ban` results can include `alerts` entries wi
 
 ## MCP
 
-- Streamable HTTP endpoint: https://isthereaburnban.com/mcp (stateless, no auth). Tools: `check_burn_ban` ({zip} | {lat, lon} | {fips} | {city, state}), `list_active_bans` ({state?}), `coverage`, `subscribe_email_alerts` ({email, fips[]}; double opt-in, nothing is sent until the user confirms by email). Every tool has a `title` and annotations; `subscribe_email_alerts` is the only one that writes (`readOnlyHint: false`, not destructive).
+- Streamable HTTP endpoint: https://isthereaburnban.com/mcp (stateless, no auth). Tools: `check_burn_ban` ({zip} | {lat, lon} | {fips} | {city, state}), `list_active_bans` ({state?, limit?, cursor?}), `coverage`, `subscribe_email_alerts` ({email, fips[]}; double opt-in, nothing is sent until the user confirms by email). Every tool has a `title` and annotations; `subscribe_email_alerts` is the only one that writes (`readOnlyHint: false`, not destructive).
+- Filter by state when possible. MCP returns 50 counties by default and accepts limits from 1 through 100. Paged REST and MCP results include `count` for the page, `total` for all current matches, and `next`. Pass `next` as `cursor` with the same state filter, until `next` is null.
 - Setup for Claude, ChatGPT, Cursor and VS Code: https://isthereaburnban.com/developers/
 
 ## Pages

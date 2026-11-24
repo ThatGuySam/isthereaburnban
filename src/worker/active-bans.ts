@@ -1,5 +1,5 @@
 import type { CountyStatus, SnapshotData } from "../shared/types";
-import { COUNTY_BY_FIPS } from "./counties";
+import { compareCountyFips, pageFields, type BansPage } from "./bans-page";
 import { withFireWeather } from "./fire-weather";
 import { DISCLAIMER } from "./lookup";
 import { publishedOrders, withPublishedChecks } from "./published-checks";
@@ -42,15 +42,12 @@ const active = (row: CountyStatus | undefined) => row?.status === "ban" || row?.
 /** Serialize each state's county bodies once. Requests still evaluate freshness and weather against their own clock. */
 export function prepareBanEntries(snapshot: SnapshotData) {
   const selected: SnapshotData["counties"] = {};
-  const names = new Map<string, string>();
+  const candidates = new Set(Object.keys(snapshot.fireWeather ?? {}));
   for (const row of Object.values(snapshot.counties)) {
     if (active(row) || snapshot.fireWeather?.[row.fips]) {
       selected[row.fips] = { ...row };
-      names.set(row.fips, row.county);
+      candidates.add(row.fips);
     }
-  }
-  for (const fips of Object.keys(snapshot.fireWeather ?? {})) {
-    if (!names.has(fips)) names.set(fips, COUNTY_BY_FIPS.get(fips)?.name ?? fips);
   }
   withCurrentLinks({ counties: selected });
   const compact: BanEntry[] = [];
@@ -58,8 +55,8 @@ export function prepareBanEntries(snapshot: SnapshotData) {
   const compactBodies: string[] = [];
   const prettyBodies: string[] = [];
   const weatherCounties: SnapshotData["counties"] = {};
-  const ordered = [...names].sort((a, b) => a[1].localeCompare(b[1]));
-  for (const [fips] of ordered) {
+  const ordered = [...candidates].sort(compareCountyFips);
+  for (const fips of ordered) {
     const row = selected[fips];
     if (snapshot.fireWeather?.[fips]) {
       compact.push([fips]);
@@ -120,34 +117,53 @@ function patchChecks(raw: string, start: number, end: number, checked: string, s
   return updated + raw.slice(cursor, end);
 }
 
-export function formatNationalBans(projection: ActiveProjection, index: SnapshotIndex, heads: Map<string, SourceHead>, now: Date, format: BanFormat) {
+export function formatNationalBans(projection: ActiveProjection, index: SnapshotIndex, heads: Map<string, SourceHead>, now: Date, format: BanFormat, page?: BansPage) {
   const weather = projectWeather(projection, index, heads, now);
   const clock = now.getTime();
   const parsedDates = new Map<string, number>();
   const allRows: string[] = [];
   let cursor = projection.bodyStart;
+  let total = 0;
+  let lastFips: string | undefined;
+  let hasMore = false;
+  const afterFips = page?.after;
+  let pastCursor = !afterFips;
+  const include = (fips: string) => {
+    total++;
+    if (!page) return true;
+    if (!pastCursor && afterFips) {
+      if (compareCountyFips(fips, afterFips) <= 0) return false;
+      pastCursor = true;
+    }
+    if (allRows.length === page.limit) {
+      hasMore = true;
+      return false;
+    }
+    lastFips = fips;
+    return true;
+  };
   const good = new Map<string, SourceHead>();
   for (const [id, head] of heads) if (head.lastGood && head.hash === index.sourceVersions?.[id]) good.set(id, head);
   for (const entry of projection.bans) {
     if (entry.length === 1) {
       const row = weather.counties[entry[0]];
-      if (row && active(row)) allRows.push(encodeCounty(row, format));
+      if (row && active(row) && include(entry[0])) allRows.push(encodeCounty(row, format));
       continue;
     }
-    const [, id, checked, expires, ordersExpire, body, after] = entry;
+    const [fips, id, checked, expires, ordersExpire, body, after] = entry;
     const beforeStart = cursor;
     const beforeEnd = beforeStart + body[1];
     cursor = beforeEnd + (after?.[1][1] ?? 0);
+    if (expires !== null && expires <= clock) continue;
     if (!id) {
-      allRows.push(projection.raw.slice(beforeStart, beforeEnd));
+      if (include(fips)) allRows.push(projection.raw.slice(beforeStart, beforeEnd));
       continue;
     }
-    if (expires !== null && expires <= clock) continue;
     const head = good.get(id);
     const stamp = head?.lastGood ?? checked;
     let checkedAt = parsedDates.get(stamp);
     if (checkedAt === undefined) parsedDates.set(stamp, checkedAt = Date.parse(stamp));
-    if (clock - checkedAt > STALE_MS) continue;
+    if (clock - checkedAt > STALE_MS || !include(fips)) continue;
     if (after && clock >= after[0]) {
       const [offset, , orders] = after[1];
       allRows.push(patchChecks(projection.raw, beforeEnd, cursor, checked, stamp, offset, orders, index.orderChecks));
@@ -162,10 +178,15 @@ export function formatNationalBans(projection: ActiveProjection, index: Snapshot
   const { generated, sources } = weather;
   const time = JSON.stringify(generated);
   const disclaimer = JSON.stringify(DISCLAIMER);
+  const fields = page ? pageFields(page, allRows.length, total, lastFips, hasMore) : { count: allRows.length, total, next: null };
+  const trailer = page ? `,
+  "count": ${fields.count},
+  "total": ${fields.total},
+  "next": ${JSON.stringify(fields.next)}` : "";
   let body: string[];
   if (format === "pretty") {
     const prefix = escapeText(`{\n  "generated": ${time},\n  "counties": [${allRows.length ? "\n    " : ""}`);
-    const suffix = escapeText(`${allRows.length ? "\n  " : ""}],\n  "sources": ${JSON.stringify(sources, null, 2).replaceAll("\n", "\n  ")},\n  "disclaimer": ${disclaimer}\n}`);
+    const suffix = escapeText(`${allRows.length ? "\n  " : ""}],\n  "sources": ${JSON.stringify(sources, null, 2).replaceAll("\n", "\n  ")},\n  "disclaimer": ${disclaimer}${trailer}\n}`);
     body = [`"${prefix}`];
     const separator = String.raw`,\n    `;
     // Keep response parts small so Blob can encode them without flattening a second national-sized string.
@@ -173,6 +194,6 @@ export function formatNationalBans(projection: ActiveProjection, index: Snapshot
       body.push((i ? separator : "") + allRows.slice(i, i + 128).join(separator));
     }
     body.push(`${suffix}"`);
-  } else body = [`{"generated":${time},"counties":[${allRows.join(",")}],"sources":${JSON.stringify(sources)},"disclaimer":${disclaimer}}`];
-  return { body, generated, count: allRows.length };
+  } else body = [`{"generated":${time},"counties":[${allRows.join(",")}],"sources":${JSON.stringify(sources)},"disclaimer":${disclaimer}${trailer}}`];
+  return { body, generated, ...fields };
 }

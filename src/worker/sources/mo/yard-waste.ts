@@ -47,11 +47,15 @@ export async function parseMoYardWaste(
       throw new Error(`Missouri SIP: ${rule} PDF changed and needs review`);
     }
   }
+  return pinnedRows(now);
+}
+
+function pinnedRows(now: Date) {
   return RULES.flatMap((rule) => calendarStatusRows(rule, COUNTIES, META, now));
 }
 
 export const moYardWaste: ActiveSource = {
-  ...META, recurring: true, coverage: "restrictions", mode: "positive-only",
+  ...META, recurring: true, pinnedRows, coverage: "restrictions", mode: "positive-only",
   cadence: { kind: "daily", zone: US_ZONES.Central, hours: [0] },
   async fetch({ now }) {
     const read = pacedSourceReader({ headers: { accept: "text/html, application/pdf" } });

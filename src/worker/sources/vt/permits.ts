@@ -23,11 +23,15 @@ export async function parseVermontPermits(parts: HtmlParts, now: Date) {
   if (start < 0 || end <= start || await sha256(paragraphs.slice(start, end + 1).join("\n")) !== REVIEWED_SECTION) {
     throw new Error("Vermont § 2645: reviewed open-burning statute changed or is missing");
   }
+  return pinnedRows(now);
+}
+
+function pinnedRows(now: Date) {
   return calendarStatusRows(RULE, COUNTIES, META, now, { includeTomorrow: true });
 }
 
 export const vtOpenBurningPermits: ActiveSource = {
-  ...META, recurring: true, coverage: "restrictions", mode: "positive-only",
+  ...META, recurring: true, pinnedRows, coverage: "restrictions", mode: "positive-only",
   cadence: { kind: "daily", zone: RULE.zone, hours: [0] },
   async fetch({ now }) {
     const reply = await fetchSource(META.sourceUrl, {

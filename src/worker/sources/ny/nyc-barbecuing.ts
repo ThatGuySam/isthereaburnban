@@ -23,11 +23,15 @@ export function parseNycBarbecuing({ blocks }: HtmlParts, now: Date): CountyStat
     .some(({ tag, text }) => tag === "p" && text ===
       "Barbecuing is only allowed in designated areas of certain City parks. Even within these areas, you may not barbecue under a tree.");
   if (!title || !residential || !parks) throw new Error("NYC 311: barbecuing rules changed or are missing");
+  return pinnedRows(now);
+}
+
+function pinnedRows(now: Date) {
   return calendarStatusRows(RULE, COUNTIES, META, now, { includeTomorrow: true });
 }
 
 export const nyNycBarbecuing: ActiveSource = {
-  ...META, recurring: true, mode: "positive-only", coverage: "restrictions",
+  ...META, recurring: true, pinnedRows, mode: "positive-only", coverage: "restrictions",
   cadence: { kind: "daily", zone: RULE.zone, hours: [0] },
   async fetch({ now }) {
     const reply = await fetchSource(META.sourceUrl, { headers: { accept: "text/html" }, maxBytes: 512_000 });

@@ -721,3 +721,18 @@ test("Link checker reads external anchors and separates access walls from missin
   expect(await checkLink(url, async () => { throw Object.assign(new Error("TLS verification failed"), { code: "CERT_HAS_EXPIRED" }); }))
     .toMatchObject({ kind: "failed", detail: expect.stringContaining("CERT_HAS_EXPIRED") });
 });
+
+test("known link failures report their reason and expire without concealing other errors", async () => {
+  const arkansas = "https://mip.agri.arkansas.gov/agtools/Forestry/Fire_Info/Burn_Bans";
+  const tennessee = "https://www.tn.gov/tnwildlandfire/prevention/safe-debris-burning/permits.html";
+  const failing = (code: string) => async () => { throw Object.assign(new Error("network error"), { code }); };
+  const today = "2026-11-24";
+  expect(await checkLink(arkansas, failing("UNABLE_TO_VERIFY_LEAF_SIGNATURE"), today))
+    .toMatchObject({ kind: "knownFlaky", detail: expect.stringContaining("Sectigo OV R36 intermediate (expires 2026-12-24)") });
+  expect(await checkLink(tennessee, failing("ECONNRESET"), today))
+    .toMatchObject({ kind: "knownFlaky", detail: expect.stringContaining("intermittently resets HTTPS connections") });
+  expect(await checkLink(arkansas, failing("UNABLE_TO_VERIFY_LEAF_SIGNATURE"), "2026-12-24"))
+    .toMatchObject({ kind: "failed", detail: expect.stringContaining("allowlist expired 2026-12-24") });
+  expect(await checkLink(arkansas, failing("CERT_HAS_EXPIRED"), today)).toMatchObject({ kind: "failed" });
+  expect(await checkLink(tennessee, async () => new Response(null, { status: 404 }), today)).toMatchObject({ kind: "failed" });
+});

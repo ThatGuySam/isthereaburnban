@@ -1,6 +1,7 @@
 import type { CountyStatus, FireWeatherReport, SnapshotData } from "../../shared/types";
 import { COUNTY_BY_FIPS } from "../counties";
 import type { Env } from "../env";
+import { verifySource, type Verification } from "./lib/calendar-verification";
 import { sha256 } from "./lib/hash";
 import { BlockedError, type Validators } from "./lib/http";
 import { STALE_MS, type SourceInput } from "./merge";
@@ -10,6 +11,8 @@ type Health = {
   checked: string;
   lastGood?: string;
   error?: string;
+  warning?: string;
+  verification?: Verification;
   blocked?: boolean;
   validators?: Validators;
   boundaries?: string[];
@@ -122,11 +125,23 @@ export async function pollSource(env: Env, source: ActiveSource, slot: number, n
   let incoming: ReturnType<typeof normalize> | undefined;
 
   try {
-    const result = await source.fetch({ now, validators: hash ? health.validators : undefined });
+    const outcome = await verifySource(source, { now, validators: hash ? health.validators : undefined },
+      previous?.verification ?? (previous?.lastGood ? { lastVerified: previous.lastGood } : undefined));
+    health.verification = outcome.verification;
+    if ("reason" in outcome) {
+      if (outcome.discard) {
+        hash = null;
+        health.lastGood = undefined;
+        health.validators = undefined;
+        health.boundaries = undefined;
+      }
+      throw outcome.reason;
+    }
+    const { result, warning } = outcome;
     if ("notModified" in result) {
       if (!hash) throw new Error("Source returned 304 before its first successful fetch");
     } else incoming = normalize(source, result);
-    health = { ...health, lastGood: checked, validators: result.validators };
+    health = { ...health, lastGood: checked, validators: result.validators, warning };
   } catch (reason) {
     health.error = errorText(reason);
     health.blocked = reason instanceof BlockedError;
@@ -166,7 +181,7 @@ export function materialRevisions(sources: readonly Source[], heads: Map<string,
     if (!head) return [...identity, "pending"];
     const stale = head.lastGood ? time - Date.parse(head.lastGood) > (source.staleMs ?? STALE_MS) : false;
     const reached = head.boundaries?.filter((boundary) => Date.parse(boundary) <= time).length ?? 0;
-    return [...identity, weatherHashes?.get(source.id) ?? head.hash, head.error ? head.blocked ? "blocked" : "failed" : "ok", stale, reached];
+    return [...identity, weatherHashes?.get(source.id) ?? head.hash, head.error ? head.blocked ? "blocked" : "failed" : "ok", head.warning, stale, reached];
   });
 }
 
@@ -204,7 +219,7 @@ export async function readSourceInputs(
     }
     const head = heads.get(source.id);
     if (!head?.hash) {
-      inputs.push({ source, rows: fallback(source, prev), checked: head?.checked ?? checked, error: head?.error ?? "Awaiting first source refresh" });
+      inputs.push({ source, rows: head?.verification ? [] : fallback(source, prev), checked: head?.checked ?? checked, error: head?.error ?? "Awaiting first source refresh" });
       continue;
     }
     const stored = revisions.get(source.id);
@@ -215,13 +230,15 @@ export async function readSourceInputs(
       throw new Error(`D1 source revision missing: ${source.id}`);
     }
     const lastGood = head.lastGood ?? head.checked;
-    inputs.push({ source, version: head.hash, checked: head.checked, lastGood, error: head.error,
+    inputs.push({ source, version: head.hash, checked: head.checked, lastGood, error: head.error, warning: head.warning,
       staleMs: source.staleMs, ...("fireWeather" in data ? { rows: [], fireWeather: data.fireWeather } : { rows: data.rows }) });
   }
   return inputs;
 }
 
-export async function sourceInputs(sources: readonly Source[], prev: SnapshotData | null, now: Date): Promise<SourceInput[]> {
+export async function sourceInputs(
+  sources: readonly Source[], prev: SnapshotData | null, now: Date, verifications: Record<string, Verification>,
+): Promise<SourceInput[]> {
   const inputs: SourceInput[] = [];
   for (const source of sources) {
     const checked = now.toISOString();
@@ -230,11 +247,18 @@ export async function sourceInputs(sources: readonly Source[], prev: SnapshotDat
       continue;
     }
     try {
-      const result = await source.fetch({ now });
+      const outcome = await verifySource(source, { now }, verifications[source.id]);
+      if (outcome.verification) verifications[source.id] = outcome.verification;
+      if ("reason" in outcome) {
+        inputs.push({ source, rows: outcome.discard ? [] : fallback(source, prev), checked,
+          error: errorText(outcome.reason), staleMs: source.staleMs });
+        continue;
+      }
+      const { result, warning } = outcome;
       if ("notModified" in result) throw new Error("Unexpected 304 without stored validators");
       const { field, serialized } = normalize(source, result);
       const data = JSON.parse(`{"${field}":[${serialized}]}`) as SourcePayload;
-      inputs.push({ source, checked, lastGood: checked, staleMs: source.staleMs,
+      inputs.push({ source, checked, lastGood: checked, staleMs: source.staleMs, warning,
         ...("fireWeather" in data ? { rows: [], fireWeather: data.fireWeather } : { rows: data.rows }) });
     } catch (reason) {
       inputs.push({ source, rows: fallback(source, prev), checked, error: errorText(reason), staleMs: source.staleMs });
@@ -250,6 +274,7 @@ export function applySourceChecks(sources: SnapshotData["sources"], heads: Map<s
     source.checked = head.checked;
     source.ok = !head.error;
     source.error = head.error;
+    source.warning = head.warning;
   }
 }
 

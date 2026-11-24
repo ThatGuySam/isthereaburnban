@@ -147,6 +147,7 @@
       "get": {
         "operationId": "listBans",
         "summary": "Counties with an active ban or restriction",
+        "description": "Returns the full matching list when limit and cursor are omitted. For a bounded response, set limit or pass a previous page’s next cursor with the same state filter. The cursor is exclusive and reflects live data.",
         "parameters": [
           {
             "name": "state",
@@ -157,6 +158,18 @@
               "maxLength": 2
             },
             "example": "TX"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100 },
+            "description": "Page size. Defaults to 50 when a cursor is supplied without a limit."
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": { "type": "string", "maxLength": 9 },
+            "description": "Use the previous page’s next cursor with the same state filter."
           }
         ],
         "responses": {
@@ -183,6 +196,18 @@
                         "$ref": "#/components/schemas/SourceHealth"
                       }
                     },
+                    "count": {
+                      "type": "integer",
+                      "description": "Number of counties on this page. Included when paginated."
+                    },
+                    "total": {
+                      "type": "integer",
+                      "description": "Number of current matches across all pages. Included when paginated."
+                    },
+                    "next": {
+                      "type": ["string", "null"],
+                      "description": "Cursor for the next page, or null at the end. Included when paginated."
+                    },
                     "disclaimer": {
                       "type": "string",
                       "examples": [
@@ -193,7 +218,8 @@
                 }
               }
             }
-          }
+          },
+          "400": { "description": "Invalid limit or cursor" }
         }
       }
     },
@@ -462,7 +488,7 @@
           "checked": {
             "type": "string",
             "format": "date-time",
-            "description": "When we last fetched this source successfully"
+            "description": "When this county decision was last confirmed or evaluated from a pinned recurring rule"
           },
           "sourceName": {
             "type": "string"
@@ -557,6 +583,10 @@
           },
           "error": {
             "type": "string"
+          },
+          "warning": {
+            "type": "string",
+            "description": "A pinned recurring rule is still being evaluated while the official page is unreachable, for up to 30 days without verification."
           },
           "counties": {
             "type": "integer"

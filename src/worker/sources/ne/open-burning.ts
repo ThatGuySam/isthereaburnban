@@ -26,13 +26,17 @@ export async function parseNeOpenBurning(input: Response | string, now: Date) {
     throw new Error("Neb. Rev. Stat. § 81-520.01: reviewed statute or effective date changed or is missing");
   }
 
+  return pinnedRows(now);
+}
+
+function pinnedRows(now: Date) {
   // The date is for this text revision. The underlying restriction predates it.
   if (localClock(now, RULE.zone).date < REVISION) return [];
   return calendarStatusRows(RULE, COUNTIES, META, now, { includeTomorrow: true });
 }
 
 export const neOpenBurningLaw: ActiveSource = {
-  ...META, recurring: true, mode: "positive-only", coverage: "restrictions",
+  ...META, recurring: true, pinnedRows, mode: "positive-only", coverage: "restrictions",
   cadence: { kind: "daily", zone: RULE.zone, hours: [9] },
   async fetch({ now }) {
     const reply = await fetchSource(META.sourceUrl, { headers: { accept: "text/html" }, maxBytes: 64_000 });

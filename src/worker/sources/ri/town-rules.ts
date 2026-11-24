@@ -47,12 +47,17 @@ function publisher(town: Town) {
 }
 
 export async function parseRiTownRule(input: Response | string, now: Date, town: Town) {
-  const { title, name, fingerprint, url, label, note } = TOWNS[town];
+  const { title, name, fingerprint } = TOWNS[town];
   const blocks = await civicPlusPageText(input, title, ["h2", "h3", "p", "li"]);
   if (await sha256(blocks.join("\n")) !== fingerprint) {
     throw new Error(`${name}: reviewed open-burning rules changed or missing`);
   }
 
+  return pinnedRows(now, town);
+}
+
+function pinnedRows(now: Date, town: Town) {
+  const { name, url, label, note } = TOWNS[town];
   const rule = { ...BASE, scopeNote: `Town of ${name}`, officialUrl: url, label, note };
   const meta = publisher(town);
   const options = { includeTomorrow: true, includeSeasonDates: true };
@@ -71,7 +76,7 @@ export async function parseRiTownRule(input: Response | string, now: Date, town:
 function makeSource(town: Town): ActiveSource {
   const meta = publisher(town);
   return {
-    ...meta, recurring: true, mode: "positive-only", coverage: "restrictions",
+    ...meta, recurring: true, pinnedRows: (now) => pinnedRows(now, town), mode: "positive-only", coverage: "restrictions",
     cadence: { kind: "daily", zone: BASE.zone, hours: [9] },
     async fetch({ now }) {
       const reply = await fetchSource(meta.sourceUrl, { headers: { accept: "text/html" } });

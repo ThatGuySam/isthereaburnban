@@ -26,6 +26,10 @@ export async function parseIdahoSeasonal(input: Response | string, now: Date): P
     throw new Error("Idaho Code § 38-115: closed season or extension provisions changed or are missing");
   }
 
+  return pinnedRows(now);
+}
+
+function pinnedRows(now: Date) {
   const checked = now.toISOString();
   const rows: CountyStatus[] = [];
   for (const zone of [US_ZONES.Mountain, US_ZONES.Pacific]) {
@@ -49,7 +53,7 @@ export async function parseIdahoSeasonal(input: Response | string, now: Date): P
 }
 
 export const idSeasonal: ActiveSource = {
-  ...META, recurring: true, coverage: "restrictions", mode: "positive-only",
+  ...META, recurring: true, pinnedRows, coverage: "restrictions", mode: "positive-only",
   cadence: { kind: "daily", zone: US_ZONES.Mountain, hours: [0, 1] },
   async fetch({ now }) {
     const reply = await fetchSource(META.sourceUrl, { headers: { accept: "text/html" }, maxBytes: 500_000 });

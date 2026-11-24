@@ -15,6 +15,13 @@ export class HttpError extends Error {
   }
 }
 
+export class SourceNetworkError extends Error {
+  constructor(url: string, cause: unknown) {
+    super(`${url} -> ${cause instanceof Error ? cause.message : String(cause)}`, { cause });
+    this.name = "SourceNetworkError";
+  }
+}
+
 export type Validators = { etag?: string; lastModified?: string };
 type SourceReply =
   | { notModified: true; validators: Validators }
@@ -54,7 +61,9 @@ async function checkedBody(response: Response, url: string, maxBytes: number): P
   let size = 0;
   let ended = false;
   const read = async () => {
-    const chunk = await reader.read();
+    const chunk = await reader.read().catch((reason: unknown) => {
+      throw new SourceNetworkError(url, reason);
+    });
     if (!chunk.done && (size += chunk.value.byteLength) > maxBytes) {
       await reader.cancel();
       throw new Error(`${url} exceeded ${maxBytes} bytes`);
@@ -124,7 +133,12 @@ export async function fetchSource(url: string, options: Options = {}): Promise<S
     try {
       const timeout = AbortSignal.timeout(timeoutMs);
       const signal = init.signal ? AbortSignal.any([init.signal, timeout]) : timeout;
-      response = await fetchImpl(url, { ...init, headers, signal });
+      try {
+        response = await fetchImpl(url, { ...init, headers, signal });
+      } catch (reason) {
+        if (init.signal?.aborted) throw reason;
+        throw new SourceNetworkError(url, reason);
+      }
       const finalUrl = response.url || url;
       const blocked = blockedReason(response.status, response.headers);
       if (blocked) throw new BlockedError(finalUrl, response.status, blocked);

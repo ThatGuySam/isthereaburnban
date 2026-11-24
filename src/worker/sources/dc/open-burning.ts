@@ -38,11 +38,15 @@ export async function parseDcOpenBurning(
   if (await sha256(await document.arrayBuffer()) !== REVIEWED_DOCUMENT) {
     throw new Error("DCRegs: reviewed § 604 document changed. Review the rule's scope and terms.");
   }
+  return pinnedRows(now);
+}
+
+function pinnedRows(now: Date) {
   return calendarStatusRows(RULE, COUNTIES, META, now, { includeTomorrow: true });
 }
 
 export const dcOpenBurning: ActiveSource = {
-  ...META, recurring: true, mode: "positive-only", coverage: "restrictions",
+  ...META, recurring: true, pinnedRows, mode: "positive-only", coverage: "restrictions",
   cadence: { kind: "daily", zone: RULE.zone, hours: [9] },
   async fetch({ now }) {
     const read = pacedSourceReader({ maxBytes: 96_000, maxResponseAgeMs: 24 * 3_600_000 });

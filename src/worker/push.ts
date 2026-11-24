@@ -74,8 +74,9 @@ export async function sendPush(env: Env, target: PushTarget, notice: Notice): Pr
     const res = await fetch(target.endpoint, { ...payload, redirect: "error", signal: AbortSignal.timeout(10_000) });
     if (res.ok) return { result: "accepted" };
     const error = `Push HTTP ${res.status}`;
-    return { result: res.status === 404 || res.status === 410 ? "gone" : "error", error };
+    if (res.status === 404 || res.status === 410) return { result: "gone", error };
+    return { result: "error", error, retry: res.status === 408 || res.status === 429 || res.status >= 500 };
   } catch {
-    return { result: "error", error: "Push request failed" };
+    return { result: "error", error: "Push request failed", retry: true };
   }
 }
