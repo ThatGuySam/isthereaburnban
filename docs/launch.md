@@ -42,6 +42,36 @@ Not in the repo, on purpose: `public/.well-known/mcp-registry-auth`. It holds th
 8. `[Sam]` Google Search Console: Domain property, submit `https://isthereaburnban.com/sitemap.xml`. Bing Webmaster Tools: import from Search Console. Rich Results Test on `/data/`.
 9. `[Sam]` Anthropic Connectors Directory: [claude.ai/directory/manage](https://claude.ai/directory/manage) → Submit new → MCP connector. Test it as a custom connector in Claude first. Docs URL `https://isthereaburnban.com/developers/`, privacy URL `https://isthereaburnban.com/privacy/`, support contact the mailbox from step 1, icon `public/icons/icon-512.png`, auth "none", data handling "third party's API you don't control".
 
+## Beta domain
+
+Since 2026-11-24 the Worker also answers on `https://beta.isthereaburnban.com` (Workers Custom Domain in `wrangler.jsonc` `routes`). The apex and `www` still point at Vercel. Canonical URLs still use `SITE_URL` (the workers.dev preview), so beta pages are not indexed as a second copy. At cutover, add the apex and `www` as custom domains, then delete the old Vercel DNS records in the same change, and keep or drop `beta`.
+
+## Contact mailbox (Cloudflare Email Routing)
+
+Email Routing forwards `hello@` (and any other address Sam picks) to his own inbox. It needs a Wrangler token with the `email_routing:write` scope (`npx wrangler login`), then:
+
+```sh
+npx wrangler email routing enable isthereaburnban.com          # adds MX/SPF records
+npx wrangler email routing addresses create <Sam's inbox>      # Cloudflare emails a verification link
+npx wrangler email routing rules create isthereaburnban.com ...  # hello@ -> that inbox
+```
+
+Check first that the zone has no other MX records (the old site had none we know of).
+
+## Shut down Vercel and the old site's paid services
+
+Do this after the apex serves from Cloudflare and has been checked for a day. The old site (`master` branch: Next.js 9, `api/check.js`, `vercel.json`) used these, any of which may bill on its own:
+
+| Service | Used for | Shut down |
+| --- | --- | --- |
+| Vercel project for isthereaburnban.com | Hosting and the `api/check.js` function | Vercel dashboard → project → Settings → Domains: remove the domains; then Settings → Advanced → Delete Project. Check Team → Settings → Billing for a Pro plan or add-ons on this project and downgrade if nothing else uses them. |
+| ipstack (`IPSTACK_KEY`) | IP geolocation (the new site does not use IP location) | Log in at ipstack.com, cancel any paid plan, revoke the key. |
+| Google API key (`GOOGLE_KEY`) | Geocoding via node-geocoder | Google Cloud console → APIs & Services → Credentials: delete the key or restrict it; check Billing for Geocoding charges. |
+| Facebook app (`FACEBOOK_APP_ID`) | Share meta tag | No billing; delete or leave. |
+| Google Sheet (`SETTINGS_SHEET_KEY`) and `OK_DATA_URL` / `TX_DATA_URL` | Settings and data URLs | No billing; nothing to do. |
+
+Keep the GitHub repo. `master` stays as the history of the old site.
+
 ## MCP Registry key and publish
 
 This mirrors how `com.samcarlton.ecosystem/tulsa-ecosystem-map` was published (HTTP domain auth, raw API, no `mcp-publisher` binary). Needs OpenSSL 3. The private key never enters the repo.
