@@ -6,6 +6,7 @@ import { parse as parseLa } from "../adapters/la";
 import { parse as parseOk } from "../adapters/ok";
 import { akDnrPermitZones } from "./ak/permits";
 import { akDecWinterBurning, akDnrFireSeason } from "./ak/seasonal";
+import { arFaulknerCountyOrders } from "./ar/faulkner";
 import { azAreaASummer } from "./az/area-a";
 import { azGrandCanyonFire } from "./az/grand-canyon";
 import { azPimaWildfire } from "./az/pima";
@@ -107,6 +108,7 @@ export const SOURCES: readonly Source[] = [
   idSeasonal,
   akDnrPermitZones,
   akDnrFireSeason,
+  arFaulknerCountyOrders,
   akDecWinterBurning,
   utFfslFireOrders,
   utClosedFireSeason,
@@ -119,6 +121,20 @@ export const SOURCES: readonly Source[] = [
   ndDesRestrictions,
   nvTmfpdPileBurning,
   nvUsfsSpringMountains,
+  {
+    id: "ar-forestry-county-bans", state: "AR", scope: "county", stack: "ASP.NET Core / AgTools HTML",
+    mode: "manual", cadence: null, sourceName: "Arkansas Forestry Division",
+    sourceUrl: "https://mip.agri.arkansas.gov/agtools/Forestry/Fire_Info/Burn_Bans",
+    officialUrl: "https://agriculture.arkansas.gov/forests/",
+    error: "The AgTools server omits a TLS intermediate certificate. Check the Forestry map and the county judge for the signed order and area covered.",
+  },
+  {
+    id: "ar-benton-county-burn-bans", state: "AR", scope: "county", stack: "WordPress / Cloudflare",
+    mode: "manual", cadence: null, sourceName: "Benton County Fire Marshal",
+    sourceUrl: "https://bentoncountyar.gov/fire-marshal/burn-ban-information/",
+    officialUrl: "https://bentoncountyar.gov/fire-marshal/burn-ban-information/",
+    error: "The Fire Marshal's burn-ban information returned a Cloudflare challenge (HTTP 403) on 2026-11-24.",
+  },
   {
     id: "nv-interagency-fire-restrictions", state: "NV", scope: "part", stack: "ArcGIS FeatureServer / Squarespace order index",
     mode: "manual", cadence: null, sourceName: "Nevada Fire Info interagency partners",

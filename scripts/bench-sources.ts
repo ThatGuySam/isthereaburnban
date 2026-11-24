@@ -11,6 +11,7 @@ import { parse as parseTx, parseTxt } from "../src/worker/adapters/tx";
 import { COUNTIES } from "../src/worker/counties";
 import { parseAlaskaPermitZones } from "../src/worker/sources/ak/permits";
 import { akDecWinterBurning, parseAlaskaFireSeason, parseAlaskaWinterBurning } from "../src/worker/sources/ak/seasonal";
+import { arFaulknerCountyOrders, parseFaulknerBan } from "../src/worker/sources/ar/faulkner";
 import { parseArizonaAreaA } from "../src/worker/sources/az/area-a";
 import { azGrandCanyonFire, parseGrandCanyonFire } from "../src/worker/sources/az/grand-canyon";
 import { azPimaWildfire, parsePimaWildfire } from "../src/worker/sources/az/pima";
@@ -175,6 +176,10 @@ const parseNvTmfpdFixture = () => parseTmfpdPileBurning(nvTmfpdHtml, nvCaptured)
 const nvForestCaptured = new Date("2026-11-24T10:21:34Z");
 const nvForestHtml = utf8("nv/fixtures/usfs-current-fire-restrictions-2026-11-24.html");
 const parseNvForestFixture = async () => parseSpringMountainsOrder(await extractHtml(nvForestHtml, { links: true }), nvForestCaptured);
+const arCaptured = new Date("2026-11-24T10:31:53Z");
+const arBanner = utf8("ar/fixtures/faulkner-banner-2026-11-24.html");
+const arOrder = raw("ar/fixtures/faulkner-order-26-204-2026-11-24.pdf");
+const parseArFaulknerFixture = () => parseFaulknerBan(arBanner, arCaptured, () => manualPdf(new Response(arOrder)));
 const akPermitLayer = utf8("ak/fixtures/permit-layer-2026-11-24.json");
 const akPermitZones = utf8("ak/fixtures/permit-zones-2026-11-24.json");
 const akFireSeason = utf8("ak/fixtures/as-41-15-050-2026-11-24.html");
@@ -262,6 +267,7 @@ recordedInputs.push(
   { source: ndDesRestrictions, rows: parseNdFixture(), checked: ndCaptured.toISOString() },
   { source: nvTmfpdPileBurning, rows: await parseNvTmfpdFixture(), checked: nvCaptured.toISOString() },
   { source: nvUsfsSpringMountains, rows: await parseNvForestFixture(), checked: nvForestCaptured.toISOString() },
+  { source: arFaulknerCountyOrders, rows: await parseArFaulknerFixture(), checked: arCaptured.toISOString() },
   { source: nwsFireWeather, rows: [], fireWeather: parseNwsLive(), checked: nwsCaptured.toISOString() },
 );
 
@@ -332,6 +338,7 @@ const jobs: Array<[string, () => unknown]> = [
   ["WY state trust lands rule", parseWyLandFixture],
   ["ND DES ArcGIS daily restrictions", parseNdFixture],
   ["NV Truckee Meadows WordPress / Oxygen", parseNvTmfpdFixture],
+  ["AR Faulkner County WordPress / Elementor and PDF", parseArFaulknerFixture],
   ["NV Spring Mountains Drupal order table", parseNvForestFixture],
   ["UT FFSL fire order polygons", parseUtOrders],
   ["UT closed fire season and calendar", parseUtStatute],

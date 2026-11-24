@@ -187,9 +187,9 @@ export async function extractHtml(input: Response | string, options: HtmlOptions
   return out.finish();
 }
 
-/** Read a CSS-selected status grid whose rows and cells use ordinary elements instead of table tags. */
+/** Read CSS-selected status cells, including the href of a selected link. */
 export async function extractHtmlGrid(input: Response | string, selectors: { row: string; cell: string }) {
-  const rows: { text: string; className: string }[][] = [];
+  const rows: { text: string; className: string; href?: string }[][] = [];
   let row: (typeof rows)[number] | undefined;
   let cell: (typeof rows)[number][number] | undefined;
   const rewriter = new HTMLRewriter()
@@ -206,6 +206,8 @@ export async function extractHtmlGrid(input: Response | string, selectors: { row
         if (!row) return;
         if (cell) throw new Error("Nested status grid cells");
         cell = { text: "", className: element.getAttribute("class") ?? "" };
+        const href = element.tagName === "a" ? element.getAttribute("href") : null;
+        if (href) cell.href = decodeEntities(href);
         row.push(cell);
         element.onEndTag(() => {
           if (cell) cell.text = cleanText(decodeEntities(cell.text));
