@@ -6,7 +6,7 @@
 // on every zoomend/moveend). Colors live in feature-state, so recoloring never rebuilds geometry.
 //
 // Geometry: public/data/map.topo.json from scripts/build-map.ts, AlbersUSA stored as planar lon/lat.
-import { Map as MapLibre, Marker, setWorkerCount, setWorkerUrl, type MapMouseEvent, type StyleSpecification } from "maplibre-gl";
+import { Map as MapLibre, Marker, setWorkerCount, setWorkerUrl, type MapLayerMouseEvent, type MapMouseEvent, type StyleSpecification } from "maplibre-gl";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import { feature } from "topojson-client";
 import type { Topology, GeometryCollection } from "topojson-specification";
@@ -22,6 +22,8 @@ type County = Feature<Geometry, { n: string }> & { id: number };
 const COLOR = { ban: "#f34f49", restricted: "#f5a623", none: "#2a9d70", unknown: "#8fa3ad", untracked: "#e4e4e4" };
 const LONG_PRESS_MS = 500;
 const TAP_SLOP = 10;
+/** A rebuilt map that loses its context again this soon is left alone, so a GPU that keeps dropping it can't loop. */
+const REBUILD_COOLDOWN_MS = 30_000;
 
 const fipsOf = (id: number) => String(id).padStart(5, "0");
 
@@ -94,46 +96,113 @@ export async function initMap(): Promise<void> {
     ],
   };
 
-  const map = new MapLibre({
-    container: host,
-    style,
-    bounds: all,
-    fitBoundsOptions: { padding: chromePadding() },
-    minZoom: 0,
-    maxZoom: 9,
-    maxPitch: 0,
-    dragRotate: false,
-    pitchWithRotate: false,
-    touchPitch: false,
-    renderWorldCopies: false,
-    attributionControl: false,
-    fadeDuration: 0,
-  });
-  map.touchZoomRotate.disableRotation();
-  map.keyboard.disableRotation();
-  map.getCanvas().setAttribute("aria-label", "County burn ban map. Arrow keys pan, plus and minus zoom.");
+  let map!: MapLibre;
+  let minZoom = 0;
+  let rebuiltAt = -Infinity;
+  let rebuildPending = false;
 
-  map.once("load", () => {
-    // No maxBounds: on a tall phone it would force a zoom where the viewport fits inside it, which
-    // crops the country and locks vertical panning. Instead: can't zoom out much past the whole
-    // country, and a pan that leaves the country mostly off screen eases back.
-    map.setMinZoom(map.getZoom() - 0.75);
-    map.on("moveend", () => {
-      const w = host.clientWidth;
-      const h = host.clientHeight;
-      const nw = map.project([all[0][0], all[1][1]]);
-      const se = map.project([all[1][0], all[0][1]]);
-      const x = Math.min(Math.max(w / 2, nw.x - w * 0.35), se.x + w * 0.35);
-      const y = Math.min(Math.max(h / 2, nw.y - h * 0.35), se.y + h * 0.35);
-      if (x !== w / 2 || y !== h / 2) map.easeTo({ center: map.unproject([x, y]), duration: ms(300) });
+  /**
+   * Creates the MapLibre instance. Called again with the current view when the WebGL context dies:
+   * iOS Safari drops it while the page is hidden or parked in the back-forward cache (memory
+   * pressure), and returning to /map/ then showed an empty canvas under the chrome. MapLibre's own
+   * restore is not trusted there (Safari can hand back a context that rejects the old buffers), so
+   * the map is rebuilt on a fresh canvas instead.
+   */
+  function build(view?: { center: [number, number]; zoom: number }) {
+    map = new MapLibre({
+      container: host,
+      style,
+      ...(view ? view : { bounds: all, fitBoundsOptions: { padding: chromePadding() } }),
+      minZoom: view ? minZoom : 0,
+      maxZoom: 9,
+      maxPitch: 0,
+      dragRotate: false,
+      pitchWithRotate: false,
+      touchPitch: false,
+      renderWorldCopies: false,
+      attributionControl: false,
+      fadeDuration: 0,
     });
-    host.dataset.ready = "";
-    document.querySelector("[data-map-loading]")?.remove();
+    map.touchZoomRotate.disableRotation();
+    map.keyboard.disableRotation();
+    map.getCanvas().setAttribute("aria-label", "County burn ban map. Arrow keys pan, plus and minus zoom.");
+
+    map.once("load", () => {
+      // No maxBounds: on a tall phone it would force a zoom where the viewport fits inside it, which
+      // crops the country and locks vertical panning. Instead: can't zoom out much past the whole
+      // country, and a pan that leaves the country mostly off screen eases back.
+      if (!view) minZoom = map.getZoom() - 0.75;
+      map.setMinZoom(minZoom);
+      map.on("moveend", keepCountryInView);
+      host.dataset.ready = "";
+      document.querySelector("[data-map-loading]")?.remove();
+      restoreState();
+    });
+    // Feature-state (colors, selection) is not part of the style, so MapLibre's restore paths drop it:
+    // a restored context, and the worker restart it does when iOS killed the worker in the background.
+    map.on("webglcontextrestored", () => (map.isStyleLoaded() ? restoreState() : map.once("style.load", restoreState)));
+    map.on("webglcontextlost", (e) => {
+      // A worker restart fires a synthetic event while the context is fine; only a real loss needs a new canvas.
+      if (e.originalEvent instanceof WebGLContextEvent) scheduleRebuild();
+    });
+    map.on("click", onClick);
+    map.on("mousemove", "fill", onHover);
+    map.on("mouseleave", "fill", onLeave);
+    map.on("contextmenu", onContextMenu);
+    pin?.addTo(map);
+  }
+
+  function scheduleRebuild() {
+    if (rebuildPending || performance.now() - rebuiltAt < REBUILD_COOLDOWN_MS) return;
+    rebuildPending = true;
+    const run = () => {
+      if (!rebuildPending || document.visibilityState !== "visible") return;
+      document.removeEventListener("visibilitychange", run);
+      rebuildPending = false;
+      rebuiltAt = performance.now();
+      const c = map.getCenter();
+      const view = { center: [c.lng, c.lat] as [number, number], zoom: map.getZoom() };
+      hovered = null;
+      try {
+        map.remove();
+      } catch {
+        // A dead context can make teardown throw; the new map replaces the container's contents either way.
+      }
+      build(view);
+    };
+    document.addEventListener("visibilitychange", run);
+    // Next frame, not now: the loss can arrive mid-frame inside MapLibre.
+    requestAnimationFrame(run);
+    setTimeout(run, 250); // rAF doesn't run in a hidden page; this covers a loss that lands right before showing
+  }
+
+  // Back-forward cache restore: the page resumes as it was left, so check the context is still alive
+  // (Safari can drop it without an event while frozen) and that the canvas matches the viewport.
+  addEventListener("pageshow", (e) => {
+    if (!e.persisted || !map) return;
+    const gl = map.getCanvas().getContext("webgl2") ?? map.getCanvas().getContext("webgl");
+    if (!gl || gl.isContextLost()) scheduleRebuild();
+    else {
+      map.resize();
+      map.triggerRepaint();
+    }
+  });
+
+  function keepCountryInView() {
+    const w = host.clientWidth;
+    const h = host.clientHeight;
+    const nw = map.project([all[0][0], all[1][1]]);
+    const se = map.project([all[1][0], all[0][1]]);
+    const x = Math.min(Math.max(w / 2, nw.x - w * 0.35), se.x + w * 0.35);
+    const y = Math.min(Math.max(h / 2, nw.y - h * 0.35), se.y + h * 0.35);
+    if (x !== w / 2 || y !== h / 2) map.easeTo({ center: map.unproject([x, y]), duration: ms(300) });
+  }
+
+  /** Re-applies everything kept in feature-state. Runs on first load and after every rebuild or restore. */
+  function restoreState() {
     void bansPromise.then(paint);
-  });
-  map.once("idle", () => {
-    document.documentElement.dataset.mapReady = "";
-  });
+    if (selected !== null) map.setFeatureState({ source: "counties", id: selected }, { sel: true });
+  }
 
   // ---------- colors ----------
 
@@ -261,27 +330,27 @@ export async function initMap(): Promise<void> {
   // ---------- taps, long-press pins ----------
 
   let suppressClickUntil = 0;
-  map.on("click", (e: MapMouseEvent) => {
+  function onClick(e: MapMouseEvent) {
     if (performance.now() < suppressClickUntil) return;
     const hit = map.queryRenderedFeatures(e.point, { layers: ["fill"] })[0];
     if (hit && typeof hit.id === "number") selectCounty(hit.id);
     else if (app.dataset.card) closeCard();
-  });
+  }
 
   let hovered: number | null = null;
-  map.on("mousemove", "fill", (e) => {
+  function onHover(e: MapLayerMouseEvent) {
     const id = e.features?.[0]?.id;
     if (typeof id !== "number" || id === hovered) return;
     if (hovered !== null) map.setFeatureState({ source: "counties", id: hovered }, { hover: false });
     hovered = id;
     map.setFeatureState({ source: "counties", id }, { hover: true });
     host.dataset.hover = "";
-  });
-  map.on("mouseleave", "fill", () => {
+  }
+  function onLeave() {
     if (hovered !== null) map.setFeatureState({ source: "counties", id: hovered }, { hover: false });
     hovered = null;
     delete host.dataset.hover;
-  });
+  }
 
   async function dropPin(lngLat: { lng: number; lat: number }) {
     suppressClickUntil = performance.now() + 700;
@@ -338,11 +407,11 @@ export async function initMap(): Promise<void> {
   host.addEventListener("touchend", cancelPress, { passive: true });
   host.addEventListener("touchcancel", cancelPress, { passive: true });
   // Mouse: right-click drops a pin. (Android also fires contextmenu on long-press; the timer covers it.)
-  map.on("contextmenu", (e) => {
+  function onContextMenu(e: MapMouseEvent) {
     e.preventDefault();
     if ((e.originalEvent as PointerEvent).pointerType === "touch" || performance.now() < suppressClickUntil) return;
     void dropPin(e.lngLat);
-  });
+  }
 
   // ---------- controls ----------
 
@@ -410,6 +479,11 @@ export async function initMap(): Promise<void> {
 
   addEventListener("keydown", (e) => {
     if (e.key === "Escape" && legend.classList.contains("is-open")) setLegend(false);
+  });
+
+  build();
+  map.once("idle", () => {
+    document.documentElement.dataset.mapReady = "";
   });
 }
 
