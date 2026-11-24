@@ -1,4 +1,4 @@
-import { parseLocalDateTime } from "./dates";
+import { parseLocalDateTime, reportWindow } from "./dates";
 import { getText } from "./http";
 
 // Inventory stacks: ArcGIS FeatureServer, MapServer, Online and Experience, including the IN WebEOC export.
@@ -40,14 +40,7 @@ export function msToIso(v: unknown): string | null {
 
 /** Bound a row's freshness by its own UTC edit date, even if other features are edited later. */
 export function arcgisEditWindow(value: unknown, now: Date, maxAgeMs: number) {
-  const sourceUpdated = msToIso(value);
-  if (!sourceUpdated) return;
-  const edited = Date.parse(sourceUpdated);
-  const deadline = edited + maxAgeMs;
-  const checked = now.getTime();
-  if (edited > checked || deadline <= checked) return;
-  const validUntil = msToIso(deadline);
-  if (validUntil) return { sourceUpdated, validUntil };
+  return reportWindow(msToIso(value), now, maxAgeMs);
 }
 
 /** For layers verified to encode local wall-clock time as epoch milliseconds. */

@@ -281,7 +281,21 @@
     "coverage": "restrictions",
     "publisher": "Minnesota Department of Natural Resources",
     "officialUrl": "https://www.dnr.state.mn.us/forestry/fire/firerating_restrictions.html",
-    "notes": "The DNR sets burning restrictions and permit rules by county. Local ordinances can be stricter."
+    "extraUrls": [
+      {
+        "label": "DNR burning permit rules and exceptions",
+        "url": "https://www.dnr.state.mn.us/forestry/fire/questions.html"
+      },
+      {
+        "label": "Permit offices and area maps by county",
+        "url": "https://apps.dnr.state.mn.us/burning-permits/admin_areas"
+      },
+      {
+        "label": "Superior National Forest alerts and orders",
+        "url": "https://www.fs.usda.gov/r09/superior/alerts"
+      }
+    ],
+    "notes": "The DNR can suspend permits and restrict open burning in designated areas, including parts of counties. Counties and cities can have their own rules, and Tribal and federal land managers issue separate orders. Check the map for your address and follow the rules of the local authority."
   },
   {
     "abbr": "MS",

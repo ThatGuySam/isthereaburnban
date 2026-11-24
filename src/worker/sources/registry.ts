@@ -8,6 +8,7 @@ import { pfirs } from "./ca/pfirs";
 import type { ArcgisResponse } from "./lib/arcgis";
 import { fetchSource } from "./lib/http";
 import { miPermits } from "./mi/permits";
+import { mnRestrictions } from "./mn/restrictions";
 import { njRestrictions } from "./nj/restrictions";
 import type { ActiveSource, Source } from "./types";
 import { wiPermits } from "./wi/permits";
@@ -39,6 +40,7 @@ export const SOURCES: readonly Source[] = [
   miPermits,
   njRestrictions,
   wiPermits,
+  mnRestrictions,
   {
     id: "ca-calfire", state: "CA", scope: "part", stack: "Sitecore / HTML table", mode: "manual", cadence: null,
     sourceName: "CAL FIRE", sourceUrl: "https://burnpermit.fire.ca.gov/current-burn-status/",

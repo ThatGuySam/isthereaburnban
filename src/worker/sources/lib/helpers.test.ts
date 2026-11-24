@@ -5,6 +5,7 @@ import { webFormsPost } from "./aspnet";
 import { arcgisEditWindow, arcgisLocalDate, arcgisRows, codedDomains, dataLastEditDate, findOperationalLayers, queryArcgis } from "./arcgis";
 import { activeRule, CALENDAR_RULES } from "./calendar";
 import { civicPlusNotices, civicPlusUrl } from "./civicplus";
+import { reportWindow } from "./dates";
 import { decodeFeed, parseCsv, parseDotNetJsonDate, parseFeed, parseJson } from "./feeds";
 import { blockAfterHeading, extractHtml, localClock, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, US_ZONES } from "./html";
 import { BlockedError, fetchSource, HttpError, USER_AGENT } from "./http";
@@ -114,6 +115,18 @@ test("ArcGIS UTC edit windows expire at the configured row age", () => {
   expect(arcgisEditWindow(edited, new Date(edited - 1), hour)).toBeUndefined();
   expect(arcgisEditWindow(edited, new Date(edited + hour), hour)).toBeUndefined();
   expect(arcgisEditWindow(String(edited), new Date(edited), hour)).toBeUndefined();
+});
+
+test("report windows use the publisher time and reject invalid, future, or expired reports", () => {
+  const now = date("2026-11-24T06:00:00Z");
+  const publish = "2026-11-24T05:59:00.000Z";
+  expect(reportWindow(publish, now, 120_000)).toEqual({
+    sourceUpdated: publish, validUntil: "2026-11-24T06:01:00.000Z",
+  });
+  expect(reportWindow(publish, now, 60_000)).toBeUndefined();
+  expect(reportWindow("2026-11-24T06:01:00.000Z", now, 120_000)).toBeUndefined();
+  expect(reportWindow("not a timestamp", now, 120_000)).toBeUndefined();
+  expect(reportWindow(null, now, 120_000)).toBeUndefined();
 });
 
 test("ArcGIS follows the Southwest dashboard's embedded Experience and finds AZ DFFM's layer", async () => {

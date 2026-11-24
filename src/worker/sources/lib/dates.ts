@@ -84,3 +84,13 @@ export function parseLocalDateTime(raw: string, zone: string, defaultYear?: numb
 export function shiftDay(date: string, days: number): string {
   return new Date(Date.parse(date + "T00:00:00Z") + days * 86_400_000).toISOString().slice(0, 10);
 }
+
+/** Expire a report from its publisher timestamp, independently of when it was fetched. */
+export function reportWindow(sourceUpdated: string | null, now: Date, maxAgeMs: number) {
+  if (!sourceUpdated) return;
+  const updated = Date.parse(sourceUpdated);
+  const deadline = new Date(updated + maxAgeMs);
+  const checked = now.getTime();
+  if (!Number.isFinite(deadline.getTime()) || updated > checked || deadline.getTime() <= checked) return;
+  return { sourceUpdated, validUntil: deadline.toISOString() };
+}
