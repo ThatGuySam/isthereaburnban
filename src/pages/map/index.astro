@@ -1,5 +1,6 @@
 ---
 import Base from "../../layouts/Base.astro";
+import Mark from "../../components/Mark.astro";
 import { states } from "../../components/site-data";
 import { STATE_BY_ABBR } from "../../shared/states-fips";
 
@@ -11,10 +12,10 @@ const coverage = Object.fromEntries(
 <Base title="Burn ban map · Is There a Burn Ban?" description="Map of current county burn bans and restrictions across the US, from official state sources." path="/map/" sheets footer={false}>
   <main id="content" class="map-page">
     <header class="map-bar">
-      <h1><a href="/">Is There a Burn Ban?</a> <span>Map</span></h1>
+      <h1><a href="/" aria-label="Is There a Burn Ban? Home"><Mark /><span class="map-site">Is There a Burn Ban?</span></a> <span class="map-label">Map</span></h1>
       <div class="map-actions">
         <button type="button" class="map-btn" data-pin-toggle aria-pressed="false">Drop a pin</button>
-        <a class="map-btn" href="/us/"><span class="map-btn-long">Browse by </span>state</a>
+        <a class="map-btn" href="/us/"><span class="map-btn-long">Browse by state</span><span class="map-btn-short">States</span></a>
       </div>
     </header>
     <div class="map-wrap">
@@ -47,8 +48,11 @@ const coverage = Object.fromEntries(
   .map-page { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
   .map-bar { display: flex; flex-wrap: nowrap; gap: 0.75rem; align-items: center; justify-content: space-between; padding-block: max(0.5rem, env(safe-area-inset-top)) 0.5rem; padding-inline: max(1rem, env(safe-area-inset-left)) max(1rem, env(safe-area-inset-right)); border-bottom: 1px solid var(--line); }
   .map-bar h1 { font-size: 1.05rem; font-weight: 800; margin: 0; white-space: nowrap; overflow: clip; text-overflow: ellipsis; min-width: 0; }
-  .map-bar h1 a { color: inherit; text-decoration: none; }
-  .map-bar h1 span { color: var(--muted); font-weight: 600; }
+  .map-bar h1 { display: flex; align-items: center; gap: 0.4rem; }
+  .map-bar h1 a { color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; min-height: 2.75rem; }
+  .map-bar h1 .mark-svg { color: #f34f49; width: 1.4rem; height: 1.4rem; flex: none; }
+  .map-label { color: var(--muted); font-weight: 600; }
+  .map-btn-short { display: none; }
   .map-actions { display: flex; gap: 0.4rem; flex: none; }
   .map-btn { font: inherit; font-weight: 700; font-size: 0.85rem; min-height: 2.25rem; padding: 0.3rem 0.8rem; border-radius: 999px; border: 2px solid #1a1a1a; background: #fff; color: #1a1a1a; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; }
   .map-btn[aria-pressed="true"] { background: #1a1a1a; color: #fff; }
@@ -69,8 +73,9 @@ const coverage = Object.fromEntries(
   .map-panel .hero-links { margin-top: 0.25rem; }
   .map-close { position: absolute; top: 0.5rem; right: 0.5rem; display: grid; place-items: center; background: rgb(0 0 0 / 0.2); color: inherit; border: 0; border-radius: 999px; width: 2.25rem; height: 2.25rem; cursor: pointer; }
   @media (max-width: 640px) {
-    .map-btn-long { display: none; }
-    .map-bar h1 { font-size: 0.95rem; }
+    .map-btn-long, .map-site { display: none; }
+    .map-btn-short { display: inline; }
+    .map-label { color: var(--ink); font-weight: 800; }
     .map-panel { top: auto; left: 0.75rem; right: 0.75rem; width: auto; bottom: max(1.75rem, env(safe-area-inset-bottom)); }
     /* The panel takes the bottom of the map; the legend steps aside while it is open. */
     .map-wrap:has(.map-panel:not([hidden])) .legend { display: none; }

@@ -139,6 +139,9 @@ html:has(.hero[data-mode="home"]) {
 .status-note {
   margin-top: 0.25rem;
 }
+.status-meta > span {
+  white-space: nowrap;
+}
 .status-meta a {
   color: inherit;
   text-decoration-thickness: 1px;
@@ -147,8 +150,12 @@ html:has(.hero[data-mode="home"]) {
 
 /* Map panel only: link to the county page. */
 .status-more {
-  margin: 0.75rem 0 0;
+  margin: 0.5rem 0 0;
+  font-size: 0.95rem;
   font-weight: 700;
+}
+.status-more a {
+  color: var(--meta) !important;
 }
 
 /* First visit: one primary action and one quiet one. */
@@ -403,6 +410,10 @@ pre {
     bottom: 1rem;
     border-radius: 20px;
     --initial-transform: calc(100% + 1rem);
+  }
+  /* Vaul extends the sheet below the screen for overscroll; a floating card doesn't need it. */
+  .vs::after {
+    display: none;
   }
 }
 
