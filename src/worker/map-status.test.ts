@@ -1,5 +1,5 @@
 // @ts-nocheck -- bun test types aren't installed.
-import { expect, test } from "bun:test";
+import { expect, setSystemTime, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { ADAPTERS } from "./adapters";
 import { parse as fl } from "./adapters/fl";
@@ -57,4 +57,43 @@ test("the map and county API agree for every county in every full-feed state", a
   expect(map.counties["40003"]).toBe("none");
   expect(map.counties["40005"]).toBe("restricted");
   expect(JSON.stringify(map).length).toBeLessThan(20_000);
+});
+
+test("a warm shard cannot keep a negative after its evidence expires", async () => {
+  const start = new Date("2026-11-24T20:00:00Z");
+  const deadline = new Date(start.getTime() + 20_000);
+  const checked = start.toISOString();
+  const county = {
+    fips: "40143", state: "OK", county: "Tulsa County", status: "none", label: "None",
+    since: null, expires: null, sourceUpdated: null, checked, validUntil: deadline.toISOString(),
+    sourceId: "ok", sourceName: "OFS", sourceUrl: "https://example.gov/feed", officialUrl: "https://example.gov/",
+  };
+  const shard = { version: 2, revision: "warm", state: "OK", checked, counties: { [county.fips]: county }, sources: [], changed: {} };
+  const keys = new Map([
+    [INDEX_KEY, { version: 2, revision: "warm", generated: checked, sources: [], orderChecks: {},
+      states: { OK: { revision: "warm", cached: true } } }],
+    [stateKey("OK"), shard],
+  ]);
+  const env = {
+    KV: { get: async (key) => Array.isArray(key) ? new Map(key.map((entry) => [entry, keys.get(entry)])) : keys.get(key) },
+    DB: { prepare: () => ({ all: async () => ({ results: [] }) }) },
+  };
+  const get = async (route) => {
+    const response = await worker.fetch(new Request(`https://burn.example/api/v1/${route}`), env, {});
+    expect(response.ok).toBe(true);
+    return response.json();
+  };
+
+  try {
+    setSystemTime(start);
+    const map = await get("map-status");
+    expect(map.counties[county.fips]).toBe("none");
+    expect(map.expiresAt).toBe(deadline.getTime());
+
+    setSystemTime(deadline);
+    expect((await get("map-status")).counties[county.fips]).toBeUndefined();
+    expect((await get(`counties/${county.fips}`)).status).toBe("unknown");
+  } finally {
+    setSystemTime();
+  }
 });
