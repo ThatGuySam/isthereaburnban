@@ -124,7 +124,7 @@ export function createServer(env: Env, banText: (wireText: string[]) => string =
 export async function handleMcp(request: Request, env: Env, ctx: ExecutionContext, hint?: McpCall): Promise<Response> {
   const site = new URL(env.SITE_URL).hostname;
   const host = new URL(request.url).hostname;
-  const hosts = [site, "isthereaburnban.com", "www.isthereaburnban.com", "localhost", "127.0.0.1"];
+  const hosts = [site, "isthereaburnban.com", "www.isthereaburnban.com", "beta.isthereaburnban.com", "localhost", "127.0.0.1"];
   if (host.endsWith(".workers.dev")) hosts.push(host);
   const call = hint ?? await peekMcp(request);
   const banCall = request.method === "POST" && call?.method === "tools/call" && call.tool === "list_active_bans";
