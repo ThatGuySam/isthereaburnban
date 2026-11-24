@@ -40,11 +40,15 @@
     "name": "Arkansas",
     "coverage": "directory",
     "publisher": "Arkansas Department of Agriculture, Forestry Division",
-    "officialUrl": "https://mip.agri.arkansas.gov/agtools/Forestry/Fire_Info",
+    "officialUrl": "https://portal.arkansas.gov/service/wildfire-danger-burn-bans-prescribed-burns/",
     "extraUrls": [
       {
         "label": "Arkansas.gov wildfire and burn ban info",
         "url": "https://portal.arkansas.gov/service/wildfire-danger-burn-bans-prescribed-burns/"
+      },
+      {
+        "label": "Arkansas Forestry Division",
+        "url": "https://agriculture.arkansas.gov/forests/"
       }
     ],
     "notes": "County judges issue burn bans, and the Forestry Division collects them on a statewide map."
@@ -386,8 +390,14 @@
     "name": "Ohio",
     "coverage": "directory",
     "publisher": "Ohio State Fire Marshal",
-    "officialUrl": "https://com.ohio.gov/divisions-and-programs/state-fire-marshal/fire-prevention/fire-safety-guides/outdoor-burning-rules",
-    "notes": "Ohio bans most open burning outside towns from 6 a.m. to 6 p.m. in March, April, May, October and November. Towns and temporary orders add other rules."
+    "officialUrl": "https://dam.assets.ohio.gov/image/upload/com.ohio.gov/documents/fire_ForestryLaws.pdf",
+    "notes": "Ohio bans most open burning outside towns from 6 a.m. to 6 p.m. in March, April, May, October and November. Towns and temporary orders add other rules.",
+    "extraUrls": [
+      {
+        "label": "Ohio Revised Code 1503.18",
+        "url": "https://codes.ohio.gov/ohio-revised-code/section-1503.18"
+      }
+    ]
   },
   {
     "abbr": "OK",
