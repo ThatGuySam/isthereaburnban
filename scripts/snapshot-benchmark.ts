@@ -4,7 +4,6 @@ import { formatNationalBans, type BanFormat } from "../src/worker/active-bans";
 import { COUNTIES, COUNTY_BY_FIPS } from "../src/worker/counties";
 import { withFireWeather } from "../src/worker/fire-weather";
 import { statusFor } from "../src/worker/lookup";
-import { withPublishedChecks } from "../src/worker/published-checks";
 import { decodeActive, encodeActive, type SnapshotIndex, type StateSnapshot, type StateSummary } from "../src/worker/snapshot-v2";
 import { withCurrentLinks } from "../src/worker/snapshot";
 import { mergeSources, type SourceInput } from "../src/worker/sources/merge";
@@ -97,8 +96,8 @@ export function snapshotBenchmarks(inputs: SourceInput[], now: Date) {
   for (const head of heads.values()) head.lastGood = checkedAgain;
   const read = (snapshot: SnapshotData, scoped = false) => {
     withCurrentLinks(snapshot);
-    applyChecks(snapshot, heads, now);
-    return withFireWeather(scoped ? withPublishedChecks(snapshot, orderChecks) : snapshot, now.getTime());
+    applyChecks(snapshot, heads, now, scoped ? orderChecks : undefined);
+    return withFireWeather(snapshot, now.getTime());
   };
   const stateCases = states.map(({ state, decode }, i) => {
     const json = previous[i].snapshot;

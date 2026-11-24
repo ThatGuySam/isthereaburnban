@@ -1,108 +1,56 @@
-import type { CountyStatus, FireWeatherReport, ScopedOrder, Snapshot, SnapshotData, SourceHealth } from "../../shared/types";
-import { activeStatus, countyDecision, isScopedBan, STALE_MS } from "../county-decision";
+import type { CountyStatus, FireWeatherReport, Snapshot, SnapshotData, SourceHealth } from "../../shared/types";
+import { countyDecision, isScopedBan, storeCountyReports } from "../county-decision";
+import { checkDeadline, evidenceInEffect } from "../../shared/evidence";
 export { STALE_MS } from "../county-decision";
 import type { Transition } from "../notification-message";
-import type { Source } from "./types";
+import type { ActiveSource, Source } from "./types";
 
 export type SourceInput = {
-  source: Pick<Source, "id" | "state" | "mode" | "product"> & Partial<Pick<Source, "scope" | "officialUrl" | "recurring">>;
+  source: Pick<Source, "id" | "state" | "mode" | "product"> & Partial<Pick<ActiveSource, "scope" | "officialUrl" | "recurring" | "staleMs">>;
   rows: (Omit<CountyStatus, "checked"> & Partial<Pick<CountyStatus, "checked">>)[];
   fireWeather?: FireWeatherReport[];
   lastGood?: string;
   checked: string;
   staleMs?: number;
   error?: string;
+  failedSince?: string;
   version?: string;
 };
-
-const RANK = { unknown: 0, none: 1, restricted: 2, ban: 3 };
-const active = (row: CountyStatus) => activeStatus(row.status);
-
-type CheckedCounty = CountyStatus & { checked: string };
-type Candidate = { row: CheckedCounty; confirmed: boolean };
-type CountyCandidates = Candidate | Candidate[];
-function better(current: Candidate | undefined, candidate: Candidate) {
-  if (!current) return candidate;
-  const rank = RANK[candidate.row.status] - RANK[current.row.status];
-  if (rank) return rank > 0 ? candidate : current;
-  if (candidate.confirmed !== current.confirmed) return candidate.confirmed ? candidate : current;
-  return candidate.row.scope === "county" && current.row.scope === "state" ? candidate : current;
-}
-
-function order(row: CheckedCounty): ScopedOrder {
-  const { status, label, note, since, expires, sourceId, sourceName, sourceUpdated, sourceUrl, officialUrl, checked, validFrom, validUntil, standing, scopedBan } = row;
-  return { status, label, note, since, expires, sourceId, sourceName, sourceUpdated, sourceUrl, officialUrl, checked, validFrom, validUntil, standing, scopedBan,
-    scope: row.scope ?? "county", scopeNote: row.scopeNote ?? row.label };
-}
-
-function summarize(group: CountyCandidates, now: number): Candidate | undefined {
-  if (!Array.isArray(group) && group.row.scope !== "part" && !group.row.standing) {
-    const row = group.row;
-    if ((row.validFrom && Date.parse(row.validFrom) > now) || (row.validUntil && Date.parse(row.validUntil) <= now)) return;
-    return group;
-  }
-  const entries = Array.isArray(group) ? group : [group];
-  let broad: Candidate | undefined;
-  let local: Candidate | undefined;
-  let upcoming: Candidate | undefined;
-  const orders: ScopedOrder[] = [];
-  const localNotes = new Set<string>();
-  for (const entry of entries) {
-    const { row } = entry;
-    if (row.validUntil && Date.parse(row.validUntil) <= now) continue;
-    const future = row.validFrom && Date.parse(row.validFrom) > now;
-    if (row.scope === "part" || row.standing) {
-      orders.push(order(row));
-      if (row.status !== "unknown") {
-        const text = `${row.label} (${row.scopeNote ?? row.sourceName})`;
-        localNotes.add(future ? `Upcoming ${text}` : text);
-      }
-      if (future) upcoming ??= { row, confirmed: false };
-      else local = better(local, entry);
-    } else if (!future) broad = better(broad, entry);
-  }
-  const selected = broad && broad.row.status !== "unknown" ? broad : local && active(local.row) ? local : broad ?? local ?? upcoming;
-  if (!selected) return;
-  const row = selected.row;
-  if (row.scope === "part") {
-    row.scopedBan = selected !== upcoming && isScopedBan(row) ? true : undefined;
-    row.status = selected !== upcoming && active(row) ? "restricted" : "unknown";
-    if (row.status === "unknown") row.label = "Countywide status unconfirmed";
-    else if (row.scopeNote && !row.label.includes(row.scopeNote)) row.label += ` (${row.scopeNote})`;
-  }
-  if (orders.length) {
-    row.orders = orders;
-    const others = [...localNotes].filter((note) => note !== row.label);
-    if (others.length) row.note = [row.note, `Local reports include ${others.join(". ")}.`].filter(Boolean).join(" ");
-  }
-  return { row, confirmed: selected.confirmed };
-}
 
 /** Merge independently scoped reports before comparing any county status with its previous value. */
 export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], now: Date) {
   const at = now.toISOString();
   const clock = now.getTime();
-  const counties: Record<string, CountyStatus> = {};
+  const counties: SnapshotData["counties"] = {};
   const changed = { ...prev?.changed };
+  const answers: Record<string, CountyStatus> = {};
+  const previousTime = Date.parse(prev?.generated ?? "");
+  const previousClock = Number.isFinite(previousTime) ? previousTime : clock;
   const sources: SourceHealth[] = [];
   const sourceVersions: Record<string, string> = {};
-  const groups = new Map<string, CountyCandidates>();
+  const groups = new Map<string, CountyStatus | CountyStatus[]>();
+  const ended = new Set<string>();
   const fireWeather: NonNullable<Snapshot["fireWeather"]> = {};
+  let weatherChecked: string | undefined;
   const transitions: Transition[] = [];
   const recurring = new Set(inputs.filter((i) => i.source.recurring).map((i) => i.source.id));
 
-  for (const { source, rows, fireWeather: reports, checked, lastGood, staleMs = STALE_MS, error, version } of inputs) {
+  for (const { source, rows, fireWeather: reports, checked, lastGood, staleMs = source.staleMs, error, failedSince, version } of inputs) {
     if (version) sourceVersions[source.id] = version;
     const mapped = new Set<string>();
     const bans = new Set<string>();
-    const health = { checked, lastAttemptedAt: source.mode === "manual" ? null : checked,
-      lastSuccessfulAt: lastGood ?? (error ? null : checked), ok: !error, error };
-    const defaultChecked = lastGood ?? checked;
-    const defaultStale = clock - Date.parse(defaultChecked) > staleMs;
+    const successful = lastGood ?? (error ? null : checked);
+    const attempted = source.mode !== "manual" && error !== "Awaiting first source refresh";
+    const outage = error && attempted ? failedSince ?? checked : undefined;
+    const health = { checked, lastAttemptedAt: attempted ? checked : null,
+      lastSuccessfulAt: successful, ok: !error, error, failedSince: outage, staleMs };
+    const timing = { ...(staleMs === undefined ? {} : { staleMs }),
+      ...(outage ? { sourceCheckFailed: true as const, sourceFailedSince: outage, lastAttemptedAt: checked } : {}) };
     if (source.product === "fire-weather") {
+      weatherChecked = successful ?? undefined;
       for (const { fips, alerts, orders } of reports ?? []) {
-        if (defaultStale || !alerts?.length) continue;
-        fireWeather[fips] = { alerts, orders: orders?.map((entry) => ({ ...entry, checked: defaultChecked })) };
+        if (!successful || clock >= checkDeadline(successful, staleMs) || !alerts?.length) continue;
+        fireWeather[fips] = { alerts, orders: orders?.map((entry) => ({ ...entry, checked: successful, ...timing })) };
         mapped.add(fips);
       }
       sources.push({ id: source.id, state: source.state, mode: source.mode, product: source.product,
@@ -110,25 +58,17 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
       continue;
     }
     for (const value of rows) {
-      const seen = lastGood ?? value.checked ?? defaultChecked;
-      const stale = seen === defaultChecked ? defaultStale : clock - Date.parse(seen) > staleMs;
-      const row: CheckedCounty = { ...value, checked: seen, scope: value.scope ?? source.scope, sourceId: source.id };
-      if (stale) {
-        row.since = null;
-        row.status = "unknown";
-        row.label = `Source unavailable. Our last good data is over ${staleMs / 3_600_000} hours old`;
-        row.note = undefined;
+      if (value.validUntil && Date.parse(value.validUntil) <= clock) {
+        ended.add(value.fips);
+        continue;
       }
-      if (!row.validUntil || Date.parse(row.validUntil) > clock) {
-        mapped.add(row.fips);
-        if (row.status === "ban" && row.scope !== "part" && (!row.validFrom || Date.parse(row.validFrom) <= clock)) {
-          bans.add(row.fips);
-        }
-      }
-      const entry = { row, confirmed: !error && !stale };
+      const row: CountyStatus = { ...value, ...timing, checked: lastGood ?? value.checked ?? successful,
+        scope: value.scope ?? source.scope, sourceId: source.id };
+      mapped.add(row.fips);
+      if (row.status === "ban" && row.scope !== "part" && evidenceInEffect(row, clock)) bans.add(row.fips);
       const group = groups.get(row.fips);
-      if (Array.isArray(group)) group.push(entry);
-      else groups.set(row.fips, group ? [group, entry] : entry);
+      if (Array.isArray(group)) group.push(row);
+      else groups.set(row.fips, group ? [group, row] : row);
     }
     sources.push({ id: source.id, state: source.state, mode: source.mode, scope: source.scope,
       officialUrl: source.officialUrl, ...health, counties: mapped.size, bans: bans.size });
@@ -136,7 +76,7 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
 
   // A verified standing rule can run until local midnight after a warning ends.
   // An earlier disappearance (such as cancellation) drops the derived order.
-  if (sources.some((source) => source.product === "fire-weather")) {
+  if (sources.some((source) => source.product === "fire-weather" && source.ok)) {
     for (const [fips, report] of Object.entries(prev?.fireWeather ?? {})) {
       for (const prior of report.orders ?? []) {
         if (!prior.retainAfter || prior.retainAfter > at || !prior.validUntil || prior.validUntil <= at) continue;
@@ -149,19 +89,11 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
   }
 
   for (const [fips, group] of groups) {
-    const result = summarize(group, clock);
-    if (!result) {
-      if (prev?.counties[fips]) changed[fips] = at;
-      continue;
-    }
-    const { row, confirmed } = result;
+    const { row, answer: decision } = storeCountyReports(group, clock);
     const previous = prev?.counties[fips];
     row.firstSeenAt = previous?.firstSeenAt ?? at;
     row.statusChangedAt = previous?.statusChangedAt ?? null;
-    const before = previous && countyDecision(previous, Date.parse(prev.generated));
-    const decision = countyDecision(row, clock);
-    const decisionSource = Array.isArray(group) ? group.find((entry) =>
-      entry.row.sourceId === decision.sourceId && entry.row.scopeNote === decision.scopeNote) : group;
+    const before = previous && countyDecision(previous, previousClock);
     const isRecurring = recurring.has(decision.sourceId ?? "");
     const newScopedBan = before && before.status !== "ban" && isScopedBan(decision) &&
       (!isScopedBan(before) || before.sourceId !== decision.sourceId || before.scopeNote !== decision.scopeNote ||
@@ -176,16 +108,20 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
     } else if (statusChanged || newScopedBan) {
       changed[fips] = at;
       const retainedAuthority = !before.sourceId || before.sourceId === decision.sourceId ||
-        (Array.isArray(group) && group.some((candidate) => candidate.confirmed && candidate.row.sourceId === before.sourceId));
+        (Array.isArray(group) && group.some((candidate) => !candidate.sourceCheckFailed && candidate.sourceId === before.sourceId));
       const lostAuthority = !newScopedBan && (!retainedAuthority || (before.status === "ban" && decision.scope === "part"));
-      if ((decisionSource?.confirmed ?? confirmed) && !lostAuthority && decision.status !== "unknown") {
+      if (!decision.sourceCheckFailed && !lostAuthority && decision.status !== "unknown") {
         transitions.push({ fips, oldStatus: before.status, newStatus: decision.status, at });
       }
     }
     counties[fips] = row;
+    decision.firstSeenAt = row.firstSeenAt;
+    decision.statusChangedAt = row.statusChangedAt;
+    answers[fips] = decision;
   }
+  for (const fips of ended) if (!counties[fips] && prev?.counties[fips]) changed[fips] = at;
 
   const snapshot: Snapshot = { version: 1, generated: at, counties, sources, changed, sourceVersions,
-    ...(Object.keys(fireWeather).length ? { fireWeather } : {}) };
-  return { snapshot, transitions };
+    ...(Object.keys(fireWeather).length ? { fireWeather, weatherChecked } : {}) };
+  return { snapshot, transitions, answers };
 }

@@ -2,7 +2,6 @@
 import { expect, test } from "bun:test";
 import { formatNationalBans } from "./active-bans";
 import { activeBans } from "./api";
-import { withPublishedChecks } from "./published-checks";
 import { decodeActive, encodeActive, encodeState } from "./snapshot-v2";
 import { applyChecks } from "./sources/state";
 
@@ -26,8 +25,8 @@ test("prepared bans retain the public JSON for partial and complete scoped-order
   for (const instant of [generated, first, last]) {
     const now = new Date(instant);
     const old = structuredClone(snapshot);
-    applyChecks(old, heads, now);
-    const expected = activeBans(withPublishedChecks(old, index.orderChecks));
+    applyChecks(old, heads, now, index.orderChecks);
+    const expected = activeBans(old, undefined, now.getTime());
     for (const format of ["compact", "pretty"]) {
       const projection = decodeActive(encodeActive(index.revision, [{ ...pub, active: format === "pretty" ? pub.pretty : pub.active }]));
       const body = formatNationalBans(projection, index, heads, now, format).body.join("");

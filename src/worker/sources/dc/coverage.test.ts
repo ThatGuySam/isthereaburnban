@@ -82,7 +82,7 @@ test("DC calendar rules retain the park order and suppress scheduled transitions
   });
   expect(transitions).toEqual([]);
   const expired = mergeSources(snapshot, inputs, new Date("2026-11-26T05:00:00Z")).snapshot;
-  expect(statusFor(expired, "11001").status).toBe("unknown");
+  expect(statusFor(expired, "11001", Date.parse(expired.generated)).status).toBe("unknown");
 });
 
 test("DC fixtures stay below 4 ms p95 thread CPU", async () => {

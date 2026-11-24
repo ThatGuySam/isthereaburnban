@@ -122,6 +122,12 @@ function timeTag(iso: string, text: string): string {
   return `<time datetime="${escapeHtml(iso)}" data-relative>${escapeHtml(text)}</time>`;
 }
 
+function failedCheckText(report: Pick<CountyStatus, "sourceCheckFailed" | "sourceFailedSince" | "lastAttemptedAt">): string {
+  const since = report.sourceFailedSince ?? report.lastAttemptedAt;
+  if (!report.sourceCheckFailed || !since || !shortDate(since)) return "";
+  return `couldn't check since ${shortDate(since)} at ${new Date(since).toISOString().slice(11, 16)} UTC`;
+}
+
 /** Hero markup: big word, sentence, and one quiet official-source / checked line. All text escaped. */
 export function renderStatusHtml(cs: CountyStatus, opts: RenderOptions = {}): string {
   const theme = statusTheme(opts.lastKnown ? "unknown" : cs.status);
@@ -134,6 +140,8 @@ export function renderStatusHtml(cs: CountyStatus, opts: RenderOptions = {}): st
   if (official) meta.push(official);
   // A county with no feed (sourceUrl empty) was never "checked"; don't imply it was.
   if (cs.checked && cs.sourceUrl) meta.push(`<span>checked ${timeTag(cs.checked, relativeTime(cs.checked, base))}</span>`);
+  const failure = failedCheckText(cs);
+  if (failure) meta.push(`<span>${escapeHtml(failure)}</span>`);
 
   const sentence = opts.lastKnown ? `Last known on ${shortDate(cs.checked)} · ${statusSentence(cs)}` : statusSentence(cs);
   const lines: string[] = [
@@ -267,7 +275,8 @@ export function renderCityHtml(list: (CountyStatus & { url?: string })[], city: 
       ? `<a href="${escapeHtml(row.officialUrl)}" target="_blank" rel="noopener">${row.sourceUrl ? "Official source" : "Official directory"}</a>` : "";
     const checked = row.sourceUrl && row.checked ? `<span>checked ${timeTag(row.checked, relativeTime(row.checked, now))}</span>` : "";
     const details = row.url ? `<a href="${escapeHtml(row.url)}">County details</a>` : "";
-    const meta = [official, checked, details].filter(Boolean).join('<span aria-hidden="true"> · </span>');
+    const failure = failedCheckText(row);
+    const meta = [official, checked, failure && `<span>${escapeHtml(failure)}</span>`, details].filter(Boolean).join('<span aria-hidden="true"> · </span>');
     return `<li><strong>${escapeHtml(statusTheme(row.status).word)}</strong> · ${escapeHtml(statusSentence(row))}.${meta ? ` <span class="status-meta">${meta}</span>` : ""}</li>`;
   }).join("");
   return `<div class="status" data-status="${status}">
@@ -318,8 +327,9 @@ function renderReportDates(report: ReportDates): string {
 
 function renderOrder(order: ScopedOrder): string {
   const source = order.officialUrl ? `<a href="${escapeHtml(order.officialUrl)}" target="_blank" rel="noopener">${escapeHtml(order.sourceName)}</a>` : escapeHtml(order.sourceName);
+  const failure = failedCheckText(order);
   return `<li><strong>${escapeHtml(order.label)}</strong><p>${escapeHtml(order.scopeNote)}</p>
-    ${order.note ? `<p>${escapeHtml(order.note)}</p>` : ""}<p>${source}</p>${renderReportDates(order)}</li>`;
+    ${order.note ? `<p>${escapeHtml(order.note)}</p>` : ""}${failure ? `<p>${escapeHtml(failure)}</p>` : ""}<p>${source}</p>${renderReportDates(order)}</li>`;
 }
 
 export function renderReportDetailsHtml(row: CountyStatus, now = Date.now()): string {
@@ -331,7 +341,7 @@ export function renderReportDetailsHtml(row: CountyStatus, now = Date.now()): st
     ${row.scopeNote ? `<p>${escapeHtml(row.scopeNote)}</p>` : ""}
     ${row.note ? `<p>${escapeHtml(row.note)}</p>` : ""}
     ${countywide}
-    ${row.sourceCheckFailed ? "<p>The latest source check failed.</p>" : ""}
+    ${failedCheckText(row) ? `<p>${escapeHtml(failedCheckText(row))}</p>` : ""}
     ${renderReportDates(row)}
     ${orders?.length ? `<h3>Reported orders and rules</h3><ul class="report-orders">${orders.map(renderOrder).join("")}</ul>` : ""}
     ${renderAlertLineHtml(row, now)}

@@ -2,8 +2,9 @@
 // lookups, and the two DOM events they use to talk (`itabb:open` opens a sheet, `itabb:resolved`
 // hands a looked-up county back to the page).
 import type { CountyStatus, LookupResult } from "../shared/types";
+import { evidenceDeadline } from "../shared/evidence";
 
-export type Result = CountyStatus & { url?: string };
+export type Result = CountyStatus & { url?: string; nextChangeAt?: number };
 
 export type StoredPlace = { fips: string; label: string; url?: string };
 type StoredAnswer = { result: Result; savedAt: number; expiresAt: number };
@@ -50,8 +51,8 @@ export function readLastAnswer(fips: string): Result | undefined {
 }
 
 export function saveAnswer(result: Result, now = Date.now()): number {
-  const deadline = result.validUntil ? Date.parse(result.validUntil) : NaN;
-  const expiresAt = Number.isFinite(deadline) ? Math.min(now + HOME_ANSWER_TTL_MS, deadline) : now + HOME_ANSWER_TTL_MS;
+  const deadline = result.status === "unknown" ? Infinity : evidenceDeadline(result);
+  const expiresAt = Math.min(now + HOME_ANSWER_TTL_MS, deadline, result.nextChangeAt ?? Infinity);
   const answer: StoredAnswer = { result, savedAt: now, expiresAt };
   try {
     localStorage.setItem(ANSWER_KEY, JSON.stringify(answer));
@@ -61,14 +62,15 @@ export function saveAnswer(result: Result, now = Date.now()): number {
   return expiresAt;
 }
 
-export async function lookupStatus(params: Record<string, string>): Promise<LookupResult> {
+export async function lookupStatus(params: Record<string, string>): Promise<LookupResult & { results: (Result & { url: string })[] }> {
   const res = await fetch(`/api/v1/status?${new URLSearchParams(params)}`, {
     headers: { accept: "application/json" },
     cache: "no-store",
     signal: AbortSignal.timeout(10_000),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return (await res.json()) as LookupResult;
+  const result = (await res.json()) as LookupResult;
+  return { ...result, results: result.results.map((row) => ({ ...row, nextChangeAt: result.nextChangeAt })) };
 }
 
 /** Ask the browser for a rough position. Only ever called from a tap. */

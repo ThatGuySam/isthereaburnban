@@ -1,4 +1,4 @@
-import type { SnapshotData, SourceHealth } from "../shared/types";
+import type { CountyStatus, SnapshotData, SourceHealth } from "../shared/types";
 import { COUNTY_BY_FIPS } from "./counties";
 import { prepareBanEntries, type BanEntry } from "./active-bans";
 
@@ -52,10 +52,10 @@ export function lastChangedByState(changed: SnapshotData["changed"]) {
 
 type ActiveFragments = { active: string; weatherCounties: string; weather: string };
 
-export function encodeState(snapshot: StateSnapshot, signature: string) {
+export function encodeState(snapshot: StateSnapshot, signature: string, answers?: Record<string, CountyStatus>) {
   const { sources, sourceVersions, fireWeather, changed } = snapshot;
   const summary: StateSummary = { signature, reportDates: true, sources, sourceVersions, lastChanged: latest(Object.values(changed)) };
-  const { compact, pretty, weatherCounties } = prepareBanEntries(snapshot);
+  const { compact, pretty, weatherCounties } = prepareBanEntries(snapshot, answers);
   return {
     snapshot: JSON.stringify(snapshot), summary: JSON.stringify(summary),
     active: compact, pretty,

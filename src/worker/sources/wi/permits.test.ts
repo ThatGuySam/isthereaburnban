@@ -20,7 +20,7 @@ test("the Wisconsin DNR fixture reports permit limits and seasonal exceptions on
   expect(rows.filter(({ status }) => status === "unknown")).toHaveLength(7);
   expect(rows).toHaveLength(20);
   expect(snapshot.sources[0]).toMatchObject({ counties: 20, bans: 0 });
-  expect(statusFor(snapshot, "55017")).toMatchObject({
+  expect(statusFor(snapshot, "55017", Date.parse(snapshot.generated))).toMatchObject({
     status: "restricted",
     scope: "part",
     scopeNote: "DNR fire protection areas outside incorporated cities and villages",
@@ -28,17 +28,17 @@ test("the Wisconsin DNR fixture reports permit limits and seasonal exceptions on
     validUntil: midnight.toISOString(),
     note: expect.stringContaining("Parts of this county are not regulated by the DNR"),
   });
-  expect(statusFor(snapshot, "55125")).toMatchObject({
+  expect(statusFor(snapshot, "55125", Date.parse(snapshot.generated))).toMatchObject({
     status: "restricted",
     scopeNote: "DNR fire protection areas with partial or no snow cover",
     note: expect.stringContaining("completely snow-covered"),
   });
-  expect(statusFor(snapshot, "55025")).toMatchObject({
+  expect(statusFor(snapshot, "55025", Date.parse(snapshot.generated))).toMatchObject({
     status: "unknown",
     orders: [{ status: "unknown", label: "DNR seasonal permit exception" }],
   });
   for (const fips of ["55059", "55109", "55005", "55083"]) {
-    expect(statusFor(snapshot, fips).status).toBe("unknown");
+    expect(statusFor(snapshot, fips, Date.parse(snapshot.generated)).status).toBe("unknown");
     expect(snapshot.counties[fips]).toBeUndefined();
   }
 });
@@ -47,7 +47,7 @@ test("Oconto's template limits the report to DNR protection areas in the north",
   const data = feed();
   county(data, "Oconto").LAST_UPDATE_DATE = county(data, "Vilas").LAST_UPDATE_DATE;
   const snapshot = merge(parseWisconsinPermits(JSON.stringify(data), captured));
-  const result = statusFor(snapshot, "55083");
+  const result = statusFor(snapshot, "55083", Date.parse(snapshot.generated));
   expect(result).toMatchObject({
     status: "restricted",
     scope: "part",
@@ -61,7 +61,7 @@ test("an explicit DNR suspension maps to a scoped order and a restricted county 
   const data = feed();
   county(data, "Ashland").PERMIT_RESTRICTIONS = "Due to fire weather conditions, burning is not allowed today.";
   const snapshot = merge(parseWisconsinPermits(JSON.stringify(data), captured));
-  expect(statusFor(snapshot, "55003")).toMatchObject({
+  expect(statusFor(snapshot, "55003", Date.parse(snapshot.generated))).toMatchObject({
     status: "restricted",
     orders: [{ status: "ban", label: "DNR debris burning suspended", scope: "part" }],
   });
@@ -75,10 +75,10 @@ test("unrecognized text or scope, future timestamps and missing counties leave s
   county(data, "Chippewa").LAST_UPDATE_DATE = `/Date(${captured.getTime() + 1})/`;
   const snapshot = merge(parseWisconsinPermits(JSON.stringify(data), captured));
   for (const fips of ["55003", "55007", "55081", "55017"]) {
-    expect(statusFor(snapshot, fips).status).toBe("unknown");
+    expect(statusFor(snapshot, fips, Date.parse(snapshot.generated)).status).toBe("unknown");
     expect(snapshot.counties[fips]).toBeUndefined();
   }
-  expect(statusFor(snapshot, "55125").status).toBe("restricted");
+  expect(statusFor(snapshot, "55125", Date.parse(snapshot.generated)).status).toBe("restricted");
 });
 
 test("the parser rejects changed and stale feeds and rows expire at Central midnight", () => {
@@ -90,7 +90,7 @@ test("the parser rejects changed and stale feeds and rows expire at Central midn
   expect(() => parseWisconsinPermits(fixture, new Date("2026-11-24T15:07:00Z"))).toThrow("dated today");
   const expired = merge(parseWisconsinPermits(fixture, captured), midnight);
   expect(expired.sources[0].counties).toBe(0);
-  expect(statusFor(expired, "55125").status).toBe("unknown");
+  expect(statusFor(expired, "55125", Date.parse(expired.generated)).status).toBe("unknown");
 });
 
 test("Wisconsin parses its full JSON fixture within the Worker CPU budget", () => {

@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { COUNTIES, STATES_DIR } from "../counties";
 import { SNAPSHOT_KEY } from "../env";
 import { withFireWeather } from "../fire-weather";
-import { lookup } from "../lookup";
+import { lookup, statusFor } from "../lookup";
 import { snapshotReader } from "../snapshot";
 import { ACTIVE_KEY, INDEX_KEY, PRETTY_ACTIVE_KEY, stateKey } from "../snapshot-v2";
 import { US_ZONES } from "./lib/dates";
@@ -378,7 +378,7 @@ test("v1 KV remains readable and the first v2 merge preserves history and resume
   ]);
 });
 
-test("unchanged scoped orders take the published check time without rewriting their shard", async () => {
+test("unchanged scoped orders take the latest matching check without rewriting their shard", async () => {
   const box = sandbox();
   const start = Date.now() - 7_200_000;
   const next = start + 3_600_000;
@@ -393,15 +393,15 @@ test("unchanged scoped orders take the published check time without rewriting th
   const previous = box.catalog().states.OR;
   await poll(box, or, next);
   const reader = () => snapshotReader(box.env, { fresh: true });
-  expect((await reader().state("OR")).counties["41039"].orders[0].checked).toBe(new Date(start).toISOString());
+  expect((await reader().state("OR")).counties["41039"].orders[0].checked).toBe(new Date(next).toISOString());
   status = "ban";
   await poll(box, tx, next);
   await merge(box, [or, tx], next);
   expect(box.catalog().states.OR).toEqual(previous);
-  const county = (await reader().state("OR")).counties["41039"];
+  const { lastAttemptedAt: _attempt, ...county } = statusFor(await reader().state("OR"), "41039");
   expect(county.orders[0].checked).toBe(new Date(next).toISOString());
-  expect(JSON.parse((await reader().bans()).body.join("")).counties[0]).toEqual(county);
-  expect(JSON.parse(JSON.parse((await reader().bans(undefined, "pretty")).body.join(""))).counties[0]).toEqual(county);
+  expect(JSON.parse((await reader().bans()).body.join("")).counties[0]).toEqual(JSON.parse(JSON.stringify(county)));
+  expect(JSON.parse(JSON.parse((await reader().bans(undefined, "pretty")).body.join(""))).counties[0]).toEqual(JSON.parse(JSON.stringify(county)));
 });
 
 test("out-of-order merge replay leaves a newer incomplete hourly refresh unpublished", async () => {
@@ -492,5 +492,5 @@ test("public expiration safety holds during a D1 health lookup failure", async (
   expect(box.snapshot().counties["41039"].status).toBe("ban");
   box.env.DB = { prepare: () => { throw new Error("D1 temporarily unavailable"); } };
   const result = await snapshotReader(box.env, { fresh: true }).state("OR");
-  expect(result.counties["41039"]).toMatchObject({ status: "unknown", label: "Source decision expired" });
+  expect(statusFor(result, "41039")).toMatchObject({ status: "unknown", label: "Source decision expired" });
 });

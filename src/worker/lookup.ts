@@ -23,12 +23,12 @@ export function statusFor(snapshot: SnapshotData, fips: string, now = Date.now()
     const decision = countyDecision(withReportDates(hit), now);
     const checked = decision.sourceUrl ? decision.checked : null;
     const health = decision.sourceId ? snapshot.sources.find((s) => s.id === decision.sourceId) : undefined;
-    return { ...decision, checked, lastAttemptedAt: health?.lastAttemptedAt ?? undefined,
-      sourceCheckFailed: health?.lastAttemptedAt && !health.ok ? true : undefined };
+    return { ...decision, checked, lastAttemptedAt: decision.lastAttemptedAt ?? health?.lastAttemptedAt ?? undefined };
   }
   const c = COUNTY_BY_FIPS.get(fips);
   if (!c) throw new LookupError(`unknown county FIPS ${fips}`, 404);
   const dir = STATE_DIR_BY_ABBR.get(c.state);
+  const unavailable = snapshot.sources.find((source) => source.state === c.state && source.mode === "full" && !source.ok && source.lastAttemptedAt);
   return {
     fips,
     state: c.state,
@@ -45,6 +45,9 @@ export function statusFor(snapshot: SnapshotData, fips: string, now = Date.now()
     sourceUrl: "",
     officialUrl: dir?.officialUrl ?? "",
     note: dir?.notes,
+    lastAttemptedAt: unavailable?.lastAttemptedAt ?? undefined,
+    sourceCheckFailed: unavailable ? true : undefined,
+    sourceFailedSince: unavailable?.failedSince ?? unavailable?.lastAttemptedAt ?? undefined,
   };
 }
 
@@ -107,7 +110,9 @@ export async function lookup(
 ): Promise<LookupResult> {
   const result = async (query: LookupResult["query"], fips: string[]) => {
     const states = await snapshots.forCounties(fips);
-    return buildResult(query, fips, (id) => states.get(countyState(id))!);
+    const answer = buildResult(query, fips, (id) => states.get(countyState(id))!);
+    const nextChangeAt = snapshots.nextBoundary();
+    return Number.isFinite(nextChangeAt) ? { ...answer, nextChangeAt } : answer;
   };
   if (q.zip) {
     const query = { zip: q.zip.trim() };
@@ -151,7 +156,7 @@ export function resultSentence(r: CountyStatus): string {
   const head = `${statusTheme(r.status).word}: ${statusSentence(r)}.`;
   const src = r.sourceUrl && r.sourceName ? ` Source: ${r.sourceName}${checked ? `, checked ${checked}` : ""}.` : "";
   const dates = [
-    r.sourceCheckFailed && r.lastAttemptedAt && `Latest source check failed at ${r.lastAttemptedAt}.`,
+    r.sourceCheckFailed && (r.sourceFailedSince ?? r.lastAttemptedAt) && `Couldn't check since ${r.sourceFailedSince ?? r.lastAttemptedAt}.`,
     r.since && `Effective ${r.since}.`,
     r.firstSeenAt && `First recorded ${r.firstSeenAt}.`,
     r.statusChangedAt && `Published status changed ${r.statusChangedAt}.`,
@@ -162,7 +167,7 @@ export function resultSentence(r: CountyStatus): string {
     const end = alert.ends ?? alert.expires;
     return ` NWS fire weather: ${alert.event}${end ? ` until ${end}` : ""}.`;
   }).join("") ?? "";
-  return `${head}${exp}${src}${dates ? ` ${dates}` : ""}${weather}${r.officialUrl ? ` ${r.sourceUrl ? "Official source" : "Official directory"}: ${r.officialUrl}` : ""}`;
+  return `${head}${exp}${src}${dates ? ` ${dates}` : ""}${weather}${r.note ? ` ${r.note}` : ""}${r.officialUrl ? ` ${r.sourceUrl ? "Official source" : "Official directory"}: ${r.officialUrl}` : ""}`;
 }
 
 /** Share the place qualifier and county answers across the text API and MCP. */

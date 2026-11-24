@@ -19,7 +19,17 @@ export type FireWeatherAlert = {
   sender: string;
 };
 
-export type CountyStatus = {
+export type EvidenceTiming = {
+  checked: string | null; // last successful source check, if known
+  staleMs?: number; // publisher-specific maximum time since that check
+  validFrom?: string; // start instant for a dated or scheduled decision
+  validUntil?: string; // exclusive end instant for that decision
+  lastAttemptedAt?: string;
+  sourceCheckFailed?: true;
+  sourceFailedSince?: string;
+};
+
+export type CountyStatus = EvidenceTiming & {
   fips: string; // 5-digit county FIPS, string with leading zeros
   state: string; // "OK"
   county: string; // "Tulsa County"
@@ -30,9 +40,6 @@ export type CountyStatus = {
   statusChangedAt?: string | null; // when we last observed a change to the published answer
   expires: string | null; // ISO date if the source gives one (MS)
   sourceUpdated: string | null; // ISO, source's own update/edit time if exposed
-  checked: string | null; // last successful source check, if known
-  lastAttemptedAt?: string; // latest attempt for this report's source, when available
-  sourceCheckFailed?: true; // a failed latest attempt can coexist with an earlier report
   sourceName: string; // "Oklahoma Forestry Services"
   sourceUrl: string; // retrieved publication, when available
   officialUrl: string; // issuing order, agency report, or official directory
@@ -42,16 +49,17 @@ export type CountyStatus = {
   standing?: true; // ongoing, activity-specific rule
   scopedBan?: true; // explicit ban in part of the county
   sourceId?: string;
-  validFrom?: string; // start instant for a dated or scheduled decision
-  validUntil?: string; // instant after which short-lived decisions are unconfirmed
   /** Broader report when a scoped order supplies the headline. */
   countywide?: Pick<CountyStatus, "status" | "label" | "checked" | "sourceId" | "sourceName" | "sourceUpdated" | "officialUrl">;
   orders?: ScopedOrder[];
   alerts?: FireWeatherAlert[];
 };
 
+export type CountyReport = Omit<CountyStatus, "fips" | "state" | "county" | "firstSeenAt" | "statusChangedAt" | "countywide" | "orders" | "alerts">;
+export type StoredCountyStatus = CountyStatus & { candidates?: CountyReport[] };
+
 export type ScopedOrder = Pick<CountyStatus, "status" | "label" | "note" | "since" | "expires" |
-  "sourceId" | "sourceName" | "sourceUpdated" | "officialUrl" | "validFrom" | "validUntil" | "standing" | "scopedBan"> & {
+  "sourceId" | "sourceName" | "sourceUpdated" | "officialUrl" | "standing" | "scopedBan"> & EvidenceTiming & {
   sourceUrl?: string;
   checked: string;
   scope: "part" | "county" | "state";
@@ -74,6 +82,8 @@ export type SourceHealth = {
   checked: string; // compatibility alias for the source check time
   lastAttemptedAt?: string | null;
   lastSuccessfulAt?: string | null;
+  failedSince?: string;
+  staleMs?: number;
   error?: string;
   counties: number; // distinct counties with a mapped report
   bans: number;
@@ -87,7 +97,7 @@ export type SourceHealth = {
 export type SnapshotData = {
   generated: string; // ISO
   /** keyed by 5-digit FIPS; counties missing here are "unknown" */
-  counties: Record<string, CountyStatus>;
+  counties: Record<string, StoredCountyStatus>;
   sources: SourceHealth[];
   /** fips -> ISO time the status last changed (persisted across snapshots, used for sitemap lastmod) */
   changed: Record<string, string>;
@@ -95,6 +105,9 @@ export type SnapshotData = {
   sourceVersions?: Record<string, string>;
   /** Weather evidence used to decorate county results at read time. */
   fireWeather?: Record<string, { alerts: FireWeatherAlert[]; orders?: FireWeatherOrder[] }>;
+  weatherChecked?: string;
+  /** Read-time boundary of evidence replaced by a weather projection. */
+  nextBoundary?: number;
 };
 
 /** Legacy aggregate and the merge engine's working shape. */
@@ -123,6 +136,7 @@ export type PlaceStatus = BanStatus | "depends";
 
 export type LookupResult = {
   answer: PlaceStatus;
+  nextChangeAt?: number; // next known decision boundary, UTC epoch milliseconds
   generated: string | null; // publication time, if we looked up county status
   query: { zip?: string; lat?: number; lon?: number; fips?: string; city?: string; state?: string; here?: true };
   /** set for city= lookups: the matched incorporated place and its page (or its county page when it has none) */

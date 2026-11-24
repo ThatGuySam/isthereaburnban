@@ -1,16 +1,19 @@
 import { withReportDates } from "../report-dates";
-import type { CountyStatus, FireWeatherReport, SnapshotData } from "../../shared/types";
+import { checkDeadline } from "../../shared/evidence";
+import type { CountyStatus, EvidenceTiming, FireWeatherReport, SnapshotData, StoredCountyStatus } from "../../shared/types";
 import { COUNTY_BY_FIPS, countiesInState } from "../counties";
 import type { Env } from "../env";
 import { sha256 } from "./lib/hash";
 import { BlockedError, type Validators } from "./lib/http";
-import { STALE_MS, type SourceInput } from "./merge";
+import type { SourceInput } from "./merge";
+import { SOURCES } from "./registry";
 import { isActive, type ActiveSource, type Source, type SourceResult } from "./types";
 
 type Health = {
   checked: string;
   lastGood?: string;
   error?: string;
+  failedSince?: string;
   blocked?: boolean;
   validators?: Validators;
   boundaries?: string[];
@@ -139,6 +142,7 @@ export async function pollSource(env: Env, source: ActiveSource, slot: number, n
     health = { ...health, lastGood: checked, validators: result.validators };
   } catch (reason) {
     health.error = errorText(reason);
+    health.failedSince = previous?.error ? previous.failedSince ?? previous.checked : checked;
     health.blocked = reason instanceof BlockedError;
     console.warn(`source ${source.id} failed: ${health.error}`);
   }
@@ -174,7 +178,7 @@ export function materialRevisions(sources: readonly Source[], heads: Map<string,
     if (!isActive(source)) return [...identity, source.error];
     if (source.product === "fire-weather" && weatherHashes && !weatherHashes.has(source.id)) return identity;
     if (!head) return [...identity, "pending"];
-    const stale = head.lastGood ? time - Date.parse(head.lastGood) > (source.staleMs ?? STALE_MS) : false;
+    const stale = head.lastGood ? time >= checkDeadline(head.lastGood, source.staleMs) : false;
     const reached = head.boundaries?.filter((boundary) => Date.parse(boundary) <= time).length ?? 0;
     return [...identity, weatherHashes?.get(source.id) ?? head.hash, head.error ? head.blocked ? "blocked" : "failed" : "ok", stale, reached];
   });
@@ -185,6 +189,13 @@ function fallback(source: Source, prev: SnapshotData | null): CountyStatus[] {
   const rows: CountyStatus[] = [];
   for (const county of Object.values(prev?.counties ?? {})) {
     if (county.state !== source.state) continue;
+    if (county.candidates) {
+      const { candidates, orders, ...base } = county;
+      for (const report of [...candidates, ...(orders ?? [])]) {
+        if (report.sourceId === source.id) rows.push({ ...base, ...report, sourceUrl: report.sourceUrl ?? source.sourceUrl });
+      }
+      continue;
+    }
     const ownOrders = county.orders?.filter((order) => order.sourceId === source.id) ?? [];
     const selected = county.sourceId ? county.sourceId === source.id : source.id === source.state.toLowerCase();
     if (selected && ((county.scope !== "part" && !county.standing) || !ownOrders.length)) {
@@ -214,7 +225,8 @@ export async function readSourceInputs(
     }
     const head = heads.get(source.id);
     if (!head?.hash) {
-      inputs.push({ source, rows: fallback(source, prev), checked: head?.checked ?? checked, error: head?.error ?? "Awaiting first source refresh" });
+      inputs.push({ source, rows: fallback(source, prev), checked: head?.checked ?? checked, staleMs: source.staleMs,
+        error: head?.error ?? "Awaiting first source refresh", failedSince: head?.failedSince });
       continue;
     }
     const stored = revisions.get(source.id);
@@ -225,7 +237,7 @@ export async function readSourceInputs(
       throw new Error(`D1 source revision missing: ${source.id}`);
     }
     const lastGood = head.lastGood ?? head.checked;
-    inputs.push({ source, version: head.hash, checked: head.checked, lastGood, error: head.error,
+    inputs.push({ source, version: head.hash, checked: head.checked, lastGood, error: head.error, failedSince: head.failedSince,
       staleMs: source.staleMs, ...("fireWeather" in data ? { rows: [], fireWeather: data.fireWeather } : { rows: data.rows }) });
   }
   return inputs;
@@ -247,7 +259,9 @@ export async function sourceInputs(sources: readonly Source[], prev: SnapshotDat
       inputs.push({ source, checked, lastGood: checked, staleMs: source.staleMs,
         ...("fireWeather" in data ? { rows: [], fireWeather: data.fireWeather } : { rows: data.rows }) });
     } catch (reason) {
-      inputs.push({ source, rows: fallback(source, prev), checked, error: errorText(reason), staleMs: source.staleMs });
+      const last = prev?.sources.find(({ id }) => id === source.id);
+      inputs.push({ source, rows: fallback(source, prev), checked, error: errorText(reason), staleMs: source.staleMs,
+        failedSince: last && !last.ok ? last.failedSince ?? last.lastAttemptedAt ?? undefined : undefined });
     }
   }
   return inputs;
@@ -261,33 +275,58 @@ export function applySourceChecks(sources: SnapshotData["sources"], heads: Map<s
     source.lastSuccessfulAt = head.lastGood ?? null;
     source.ok = !head.error;
     source.error = head.error;
+    source.failedSince = head.error ? head.failedSince ?? head.checked : undefined;
   }
 }
 
-export function applyChecks(snapshot: SnapshotData, heads: Map<string, SourceHead>, now: Date) {
+const STALE_BY_SOURCE = new Map(SOURCES.filter(isActive).map(({ id, staleMs }) => [id, staleMs]));
+
+export function reportChecks(snapshot: Pick<SnapshotData, "sources" | "sourceVersions">, heads: Map<string, SourceHead>,
+  published: Record<string, string> = {}) {
+  const health = new Map(snapshot.sources.map((source) => [source.id, source]));
+  const policies = new Map<string, Partial<EvidenceTiming>>();
+  return (id: string | undefined) => {
+    if (!id) return;
+    const cached = policies.get(id);
+    if (cached) return cached;
+    const head = heads.get(id);
+    const source = health.get(id);
+    const latest = head?.hash && head.hash === snapshot.sourceVersions?.[id] ? head.lastGood : undefined;
+    const failedAt = head
+      ? head.error ? head.failedSince ?? head.checked : undefined
+      : source && !source.ok ? source.failedSince ?? source.lastAttemptedAt ?? undefined : undefined;
+    const policy: Partial<EvidenceTiming> = { staleMs: source?.staleMs ?? STALE_BY_SOURCE.get(id) };
+    const checked = latest ?? published[id];
+    if (checked) policy.checked = checked;
+    if (failedAt) {
+      policy.sourceCheckFailed = true;
+      policy.sourceFailedSince = failedAt;
+      policy.lastAttemptedAt = head?.checked ?? source?.lastAttemptedAt ?? failedAt;
+    } else if (latest) {
+      policy.sourceCheckFailed = undefined;
+      policy.sourceFailedSince = undefined;
+      policy.lastAttemptedAt = undefined;
+    }
+    policies.set(id, policy);
+    return policy;
+  };
+}
+
+export function applyCountyEvidence(row: StoredCountyStatus, policy: ReturnType<typeof reportChecks>) {
+  const timing = policy(row.sourceId ?? row.state.toLowerCase());
+  if (timing) Object.assign(row, { ...timing, staleMs: timing.staleMs ?? row.staleMs });
+  if (row.candidates) row.candidates = row.candidates.map((report) => {
+    const timing = policy(report.sourceId);
+    return timing ? { ...report, ...timing, staleMs: timing.staleMs ?? report.staleMs } : report;
+  });
+  if (row.orders) row.orders = row.orders.map((report) => {
+    const timing = policy(report.sourceId);
+    return timing ? { ...report, ...timing, checked: timing.checked ?? report.checked, staleMs: timing.staleMs ?? report.staleMs } : report;
+  });
+}
+
+export function applyChecks(snapshot: SnapshotData, heads: Map<string, SourceHead>, _now: Date, published?: Record<string, string>) {
+  const policy = reportChecks(snapshot, heads, published);
+  for (const row of Object.values(snapshot.counties)) applyCountyEvidence(row, policy);
   applySourceChecks(snapshot.sources, heads);
-  const clock = now.getTime();
-  for (const row of Object.values(snapshot.counties)) {
-    applyCountyCheck(row, row.sourceId ? heads.get(row.sourceId) : undefined,
-      row.sourceId ? snapshot.sourceVersions?.[row.sourceId] : undefined, clock);
-  }
-}
-
-export function applyCountyCheck(row: CountyStatus, head: SourceHead | undefined, version: string | undefined, clock: number) {
-  if (head?.lastGood && head.hash === version) row.checked = head.lastGood;
-  if (row.validUntil && Date.parse(row.validUntil) <= clock) {
-    row.status = "unknown";
-    row.label = "Source decision expired";
-    row.note = undefined;
-    row.since = row.expires = null;
-  } else if ((!row.checked || clock - Date.parse(row.checked) >= STALE_MS) && row.status !== "unknown") {
-    row.status = "unknown";
-    row.label = "Source unavailable. Our last good data is over 48 hours old";
-    row.note = undefined;
-  }
-  if (row.orders?.some((order) => order.validUntil && Date.parse(order.validUntil) <= clock)) {
-    row.orders = row.orders.filter((order) => !order.validUntil || Date.parse(order.validUntil) > clock);
-    // The merge rebuilds the human-readable summary of remaining orders.
-    row.note = undefined;
-  }
 }
