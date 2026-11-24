@@ -114,3 +114,33 @@ export function bindSheetTriggers(): void {
     openSheet({ sheet: sheet as SheetName, fips: fips || undefined, place: place || undefined, url: url || undefined });
   });
 }
+
+// ---------- county sheet (map page) ----------
+
+/** The detached, non-modal county card on /map/. `null` closes it. */
+export type CountyDetail = {
+  fips: string;
+  /** "Tulsa County, OK" (or "that spot" for a dropped pin before the lookup lands) */
+  place: string;
+  state: "checking" | "ready" | "error";
+  result?: Result;
+  message?: string;
+};
+
+type CountyWindow = Window & { __itabbCounty?: CountyDetail | null };
+
+/** Show, update or close (null) the county card. Picked up on mount if the island hasn't hydrated yet. */
+export function showCounty(detail: CountyDetail | null): void {
+  (window as CountyWindow).__itabbCounty = detail;
+  document.dispatchEvent(new CustomEvent<CountyDetail | null>("itabb:county", { detail }));
+}
+
+export function takePendingCounty(): CountyDetail | null | undefined {
+  const w = window as CountyWindow;
+  const d = w.__itabbCounty;
+  delete w.__itabbCounty;
+  return d;
+}
+
+/** Fired by the island when the reader dismisses the county card (swipe, close button, Escape). */
+export const COUNTY_CLOSED = "itabb:county-closed";
