@@ -1,0 +1,17 @@
+[{
+  "document": {
+    "name": "projects/georgiaburnpermits/databases/(default)/documents/counties/BARROW/excludedDates/yhccPd6yxb6u0WLeSnUS",
+    "fields": {
+      "date": {
+        "timestampValue": "2026-10-25T16:00:00Z"
+      },
+      "reason": {
+        "stringValue": "Low humidity and wind gusts above 20mph."
+      }
+    },
+    "createTime": "2026-10-23T17:47:14.553387Z",
+    "updateTime": "2026-10-23T17:47:14.553387Z"
+  },
+  "readTime": "2026-11-24T21:07:04.410095Z"
+}
+]

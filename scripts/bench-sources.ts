@@ -29,6 +29,9 @@ import { deActionDays, parseDeActionDays } from "../src/worker/sources/de/air-qu
 import { deOpenBurning, parseDeOpenBurning } from "../src/worker/sources/de/open-burning";
 import { gaEpdNonSummer, parseEpdSeasonal } from "../src/worker/sources/ga/epd";
 import { parseGwinnett } from "../src/worker/sources/ga/gwinnett";
+import { hinesvilleFormLink, parseHinesvilleClosure } from "../src/worker/sources/ga/hinesville";
+import { GA_LOCAL_RULES, gaLocalRuleKeys, gaLocalRuleSources, parseGaLocalRule } from "../src/worker/sources/ga/local-rules";
+import { parsePermitCalendar } from "../src/worker/sources/ga/permit-calendar";
 import { idIdlStages, parseIdlStages } from "../src/worker/sources/id/idl-stages";
 import { idKootenaiAir, parseKootenaiAir } from "../src/worker/sources/id/kootenai-air";
 import { idSeasonal, parseIdahoSeasonal } from "../src/worker/sources/id/seasonal";
@@ -278,6 +281,20 @@ const ohStatute = utf8("oh/fixtures/section-1503.18-2026-11-24.html");
 const gaGwinnettHtml = utf8("ga/fixtures/gwinnett-2026-11-24.html");
 const gaSummerHtml = utf8("ga/fixtures/epd-summer-2026-11-24.html");
 const gaNonSummerHtml = utf8("ga/fixtures/epd-non-summer-2026-11-24.html");
+const gaHinesvillePage = utf8("ga/fixtures/hinesville-permit-page-2026-11-24.html");
+const gaHinesvilleForm = utf8("ga/fixtures/hinesville-closed-form-2026-11-24.html");
+const gaPermitCalendar = utf8("ga/fixtures/permit-habersham-closed-2026-11-24.json");
+const gaPermitDay = new Date("2026-11-18T19:00:00Z");
+const gaRuleJobs = gaLocalRuleKeys.map((key, index) => {
+  const site = GA_LOCAL_RULES[key];
+  const name = key === "hinesville" ? "hinesville-permit-page" : `rule-${key}`;
+  const path = `ga/fixtures/${name}-2026-11-24`;
+  const body = site.kind === "scan" ? new Uint8Array(gunzipSync(raw(path + ".html.gz"))) : raw(`${path}.${site.kind}`);
+  return {
+    source: gaLocalRuleSources[index],
+    parse: () => parseGaLocalRule(new Response(body), now, key),
+  };
+});
 const azPimaHtml = utf8("az/fixtures/pima-wildfire-2026-11-24.html");
 const azGrandCanyonHtml = utf8("az/fixtures/grand-canyon-fire-2026-11-24.html");
 const azStatute = utf8("az/fixtures/section-49-501-2026-11-24.html");
@@ -518,6 +535,7 @@ recordedInputs.push(
   { source: dcRockCreekFireRules, rows: await parseDcParkFixture(), checked: dcCaptured.toISOString() },
   { source: ohSeasonal, rows: await parseOhFixture(), checked },
   { source: gaEpdNonSummer, rows: await parseGaNonSummerFixture(), checked },
+  ...await Promise.all(gaRuleJobs.map(async ({ source, parse }) => ({ source, rows: await parse(), checked }))),
   { source: azPimaWildfire, rows: await parseAzPimaFixture(), checked },
   { source: azGrandCanyonFire, rows: await parseAzGrandCanyonFixture(), checked },
   { source: waEcologyAir, rows: await parseWaEcologyFixture(), checked },
@@ -622,6 +640,12 @@ const jobs: Array<[string, () => unknown]> = [
   ["GA Gwinnett daily decision", parseGwinnettFixture],
   ["GA EPD summer rules", parseGaSummerFixture],
   ["GA EPD October–April rules", parseGaNonSummerFixture],
+  ["GA Firestore permit calendar", () => parsePermitCalendar(JSON.parse(gaPermitCalendar), "Habersham", gaPermitDay)],
+  ["GA Hinesville CivicPlus permit form", async () => {
+    await hinesvilleFormLink(gaHinesvillePage);
+    return parseHinesvilleClosure(gaHinesvilleForm, now);
+  }],
+  ...gaRuleJobs.map(({ source, parse }): [string, () => unknown] => [source.id, parse]),
   ["AZ Pima wildfire bulletin", parseAzPimaFixture],
   ["AZ Grand Canyon fire bulletin", parseAzGrandCanyonFixture],
   ["AZ Area A statute and calendar", parseAzAreaAFixture],

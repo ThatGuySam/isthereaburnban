@@ -282,6 +282,30 @@ export async function matchesReviewedHtmlSection(blocks: Block[], heading: RegEx
   return section.length > 0 && await sha256(section.map(({ text }) => text).join("\n")) === fingerprint;
 }
 
+/** Fingerprint one reviewed rule region so changed wording requires a fresh review. */
+export async function reviewedHtmlDigest(input: Response | string, selector: string, startsWith = ""): Promise<string> {
+  const regions: string[] = [];
+  let text: string | undefined;
+  const rewriter = new HTMLRewriter()
+    .on("script, style, template, noscript", { element(element) { element.remove(); } })
+    .on(selector, {
+      element(element) {
+        if (text !== undefined) throw new Error("Nested reviewed HTML rule regions");
+        text = "";
+        element.onEndTag(() => {
+          const normalized = cleanText(decodeEntities(text ?? ""));
+          if (normalized && normalized.startsWith(startsWith)) regions.push(normalized);
+          text = undefined;
+        });
+      },
+      text(chunk) { if (text !== undefined) text += chunk.text; },
+    });
+  const response = rewriter.transform(typeof input === "string" ? new Response(input) : input);
+  if (response.body) await response.body.pipeTo(new WritableStream({ write() {} }));
+  if (regions.length !== 1 || text !== undefined) throw new Error("Expected one reviewed HTML rule region");
+  return sha256(regions[0]);
+}
+
 /** Read a numbered section whose heading is published as a paragraph. */
 export function numberedRuleSection(
   { blocks }: HtmlParts, section: string, { compact = false } = {},

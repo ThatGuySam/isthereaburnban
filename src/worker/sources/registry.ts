@@ -22,6 +22,9 @@ import { deActionDays } from "./de/air-quality";
 import { deOpenBurning } from "./de/open-burning";
 import { gaEpdNonSummer, gaEpdSummer } from "./ga/epd";
 import { gaGwinnett } from "./ga/gwinnett";
+import { gaHinesvilleClosure } from "./ga/hinesville";
+import { gaLocalRuleSources } from "./ga/local-rules";
+import { gaPermitCalendars } from "./ga/permit-calendar";
 import { hiCabNoBurnPeriods } from "./hi/no-burn-periods";
 import { hiCabOpenBurning } from "./hi/open-burning";
 import { idIdlStages } from "./id/idl-stages";
@@ -130,6 +133,9 @@ export const SOURCES: readonly Source[] = [
   gaGwinnett,
   gaEpdSummer,
   gaEpdNonSummer,
+  gaHinesvilleClosure,
+  ...gaPermitCalendars,
+  ...gaLocalRuleSources,
   azPimaWildfire,
   azGrandCanyonFire,
   azAreaASummer,

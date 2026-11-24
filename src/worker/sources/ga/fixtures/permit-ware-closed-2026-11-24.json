@@ -1,0 +1,17 @@
+[{
+  "document": {
+    "name": "projects/georgiaburnpermits/databases/(default)/documents/counties/WARE/excludedDates/uHhnN1D5P7Ow7OAarqM0",
+    "fields": {
+      "date": {
+        "timestampValue": "2026-09-18T16:00:00Z"
+      },
+      "reason": {
+        "stringValue": "no burning allowed"
+      }
+    },
+    "createTime": "2026-09-18T14:09:51.401719Z",
+    "updateTime": "2026-09-18T14:09:51.401719Z"
+  },
+  "readTime": "2026-11-24T21:07:05.772828Z"
+}
+]

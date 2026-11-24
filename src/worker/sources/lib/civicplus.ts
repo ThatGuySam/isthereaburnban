@@ -34,6 +34,19 @@ export function civicPlusPageParagraphs(input: Response | string, title: string)
   return civicPlusPageText(input, title);
 }
 
+/** Read the CivicPlus Form Center heading and its public instruction fields. */
+export async function civicPlusFormInstructions(input: Response | string) {
+  const [form, ...extra] = await extractHtmlGrid(input, {
+    row: "#formWrap",
+    cell: "#formWrap .formHeader h2, #formWrap li.HeaderInstructions > .label",
+  });
+  const [title, ...instructions] = form ?? [];
+  if (extra.length || !title?.text || !instructions.length || instructions.some(({ text }) => !text)) {
+    throw new Error("CivicPlus Form Center: expected a heading and public instructions");
+  }
+  return { title: title.text, instructions: instructions.map(({ text }) => text) };
+}
+
 /** Read the visible details of a CivicPlus emergency alert widget below its unique title. */
 export function civicPlusAlertDetails(parts: HtmlParts, heading: RegExp): string[] {
   const title = new RegExp(heading.source, heading.flags.replace(/[gy]/g, ""));

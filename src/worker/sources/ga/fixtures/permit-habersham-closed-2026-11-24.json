@@ -1,0 +1,17 @@
+[{
+  "document": {
+    "name": "projects/georgiaburnpermits/databases/(default)/documents/counties/HABERSHAM/excludedDates/JUcQ3lOGrC6BNkQLlMYR",
+    "fields": {
+      "date": {
+        "timestampValue": "2026-11-18T17:00:00Z"
+      },
+      "reason": {
+        "stringValue": "no burning allowed"
+      }
+    },
+    "createTime": "2026-11-18T11:53:56.028397Z",
+    "updateTime": "2026-11-18T11:53:56.028397Z"
+  },
+  "readTime": "2026-11-24T20:55:12.061779Z"
+}
+]
