@@ -38,6 +38,18 @@ export function msToIso(v: unknown): string | null {
   return typeof v === "number" && Number.isFinite(v) && Math.abs(v) <= 8.64e15 ? new Date(v).toISOString() : null;
 }
 
+/** Bound a row's freshness by its own UTC edit date, even if other features are edited later. */
+export function arcgisEditWindow(value: unknown, now: Date, maxAgeMs: number) {
+  const sourceUpdated = msToIso(value);
+  if (!sourceUpdated) return;
+  const edited = Date.parse(sourceUpdated);
+  const deadline = edited + maxAgeMs;
+  const checked = now.getTime();
+  if (edited > checked || deadline <= checked) return;
+  const validUntil = msToIso(deadline);
+  if (validUntil) return { sourceUpdated, validUntil };
+}
+
 /** For layers verified to encode local wall-clock time as epoch milliseconds. */
 export function arcgisLocalDate(value: unknown, zone: string): string | null {
   const iso = msToIso(value);

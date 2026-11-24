@@ -2,7 +2,7 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { webFormsPost } from "./aspnet";
-import { arcgisLocalDate, arcgisRows, codedDomains, dataLastEditDate, findOperationalLayers, queryArcgis } from "./arcgis";
+import { arcgisEditWindow, arcgisLocalDate, arcgisRows, codedDomains, dataLastEditDate, findOperationalLayers, queryArcgis } from "./arcgis";
 import { activeRule, CALENDAR_RULES } from "./calendar";
 import { civicPlusNotices, civicPlusUrl } from "./civicplus";
 import { decodeFeed, parseCsv, parseFeed, parseJson } from "./feeds";
@@ -94,6 +94,17 @@ test("ArcGIS legacy wall-clock dates use the supplied zone and its DST offset", 
   expect(arcgisLocalDate(summer, US_ZONES.Eastern)).toBe("2026-07-25T03:50:02.321Z");
   expect(arcgisLocalDate(winter, US_ZONES.Eastern)).toBe("2026-11-24T04:50:02.000Z");
   expect(arcgisLocalDate("unpublished", US_ZONES.Eastern)).toBeNull();
+});
+
+test("ArcGIS UTC edit windows expire at the configured row age", () => {
+  const edited = Date.parse("2026-11-24T04:50:02.321Z");
+  const hour = 3_600_000;
+  expect(arcgisEditWindow(edited, new Date(edited), hour)).toEqual({
+    sourceUpdated: "2026-11-24T04:50:02.321Z", validUntil: "2026-11-24T05:50:02.321Z",
+  });
+  expect(arcgisEditWindow(edited, new Date(edited - 1), hour)).toBeUndefined();
+  expect(arcgisEditWindow(edited, new Date(edited + hour), hour)).toBeUndefined();
+  expect(arcgisEditWindow(String(edited), new Date(edited), hour)).toBeUndefined();
 });
 
 test("ArcGIS follows the Southwest dashboard's embedded Experience and finds AZ DFFM's layer", async () => {

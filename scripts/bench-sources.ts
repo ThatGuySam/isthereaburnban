@@ -22,6 +22,7 @@ import { sharePointListItems } from "../src/worker/sources/lib/sharepoint";
 import { parseNinjaRows, parseWpItems } from "../src/worker/sources/lib/wordpress";
 import { mergeSources, type SourceInput } from "../src/worker/sources/merge";
 import { miPermits, parseMichiganPermits } from "../src/worker/sources/mi/permits";
+import { njRestrictions, parseNjRestrictions } from "../src/worker/sources/nj/restrictions";
 
 const sourceUrl = new URL("../src/worker/sources/", import.meta.url);
 const from = (path: string) => readFileSync(new URL(path, sourceUrl));
@@ -35,6 +36,8 @@ const [ok, tx, fl, ind, la, ms, ia] = ["ok", "tx", "fl", "in", "la", "ms", "ia"]
 const txText = raw("../adapters/fixtures/tx.txt");
 const pfirsHtml = utf8("ca/fixtures/pfirs.html");
 const miMap = utf8("mi/fixtures/permits-2026-11-24.json");
+const njDivisions = utf8("nj/fixtures/divisions-2026-11-24.json");
+const njCounties = utf8("nj/fixtures/counties-2026-11-24.json");
 const michigan = fixture("michigan-form.html");
 const kentucky = fixture("kentucky-list.html");
 const placer = fixture("placer-newsflash.html");
@@ -49,6 +52,7 @@ const rss = raw("lib/fixtures/texas-rss.xml");
 const pdf = raw("lib/fixtures/faulkner-rescind.pdf");
 const parseCaFixture = () => parsePfirs(parseHtml(pfirsHtml), now);
 const parseMiFixture = () => parseMichiganPermits(JSON.parse(miMap), now);
+const parseNjFixture = () => parseNjRestrictions(JSON.parse(njDivisions), JSON.parse(njCounties), now);
 
 const adapters: Array<[string, () => CountyStatus[]]> = [
   ["OK ArcGIS", () => parseOk(JSON.parse(ok), checked)],
@@ -67,6 +71,7 @@ const recordedInputs: SourceInput[] = ADAPTERS.map((source, index) => ({
 recordedInputs.push(
   { source: pfirs, rows: parseCaFixture(), checked },
   { source: miPermits, rows: parseMiFixture(), checked },
+  { source: njRestrictions, rows: parseNjFixture(), checked },
 );
 
 const states = new Map<string, CountyStatus[]>();
@@ -110,6 +115,7 @@ const jobs: Array<[string, () => unknown]> = [
   ...adapters,
   ["CA PFIRS", parseCaFixture],
   ["MI DNR ArcGIS", parseMiFixture],
+  ["NJ Forest Fire Service ArcGIS", parseNjFixture],
   ["Merge and encode current sources", () => JSON.stringify(mergeSources(null, recordedInputs, now).snapshot)],
   ["Parse, merge, encode 51-area projection", () => JSON.stringify(mergeSources(null,
     fullInputs.map((input, index) => ({ ...input, rows: JSON.parse(serializedFull[index]) })), now).snapshot)],
