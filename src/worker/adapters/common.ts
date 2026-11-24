@@ -1,3 +1,4 @@
+import { getText } from "../sources/lib/http";
 import type { BanStatus, CountyStatus } from "../../shared/types";
 import { COUNTY_BY_FIPS, countyByName, type County } from "../counties";
 
@@ -26,34 +27,11 @@ export type Row = {
   note?: string;
 };
 
-const UA = { "user-agent": "isthereaburnban.com status checker", accept: "application/json, text/plain, */*" };
-
-export async function getText(url: string): Promise<string> {
-  const res = await fetch(url, { headers: UA, signal: AbortSignal.timeout(15000) });
-  if (!res.ok) throw new Error(`${url} -> HTTP ${res.status}`);
-  return res.text();
-}
+export { getText };
+export { arcgisRows, arcgisUrl, msToIso, type ArcgisResponse } from "../sources/lib/arcgis";
 
 export async function getJson<T = unknown>(url: string): Promise<T> {
   return JSON.parse(await getText(url)) as T;
-}
-
-export type ArcgisResponse = { features?: { attributes: Record<string, unknown> }[]; error?: { message?: string } };
-
-/** Query every row of an ArcGIS FeatureServer layer, attributes only. */
-export function arcgisUrl(layer: string, fields: string[]): string {
-  const q = new URLSearchParams({ where: "1=1", outFields: fields.join(","), returnGeometry: "false", f: "json" });
-  return `${layer}/query?${q}`;
-}
-
-export function arcgisRows(json: ArcgisResponse): Record<string, unknown>[] {
-  if (json.error) throw new Error(`ArcGIS error: ${json.error.message ?? "unknown"}`);
-  if (!Array.isArray(json.features) || json.features.length === 0) throw new Error("ArcGIS returned no features");
-  return json.features.map((f) => f.attributes);
-}
-
-export function msToIso(v: unknown): string | null {
-  return typeof v === "number" && Number.isFinite(v) ? new Date(v).toISOString() : null;
 }
 
 export function str(v: unknown): string {

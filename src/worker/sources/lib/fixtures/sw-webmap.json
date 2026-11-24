@@ -1,0 +1,10 @@
+{
+  "operationalLayers": [
+    {
+      "title": "AZ Department of Forestry and Fire Management Fire Restrictions",
+      "url": "https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/AZ_DFFM_Fire_Restrictions_2_view/FeatureServer/0",
+      "id": "AZ_DFFM_Fire_Restrictions_2_view_966",
+      "itemId": "fba0365cdefa4c63a608d5dcd9b78f81"
+    }
+  ]
+}

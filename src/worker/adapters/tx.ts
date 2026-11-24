@@ -1,5 +1,6 @@
 import type { CountyStatus } from "../../shared/types";
 import { type Adapter, type ArcgisResponse, arcgisRows, arcgisUrl, byFips, countyByName, getJson, msToIso, str, toStatuses } from "./common";
+import { fetchSource } from "../sources/lib/http";
 import { countiesInState } from "../counties";
 
 const LAYER = "https://gis.tfs.tamu.edu/arcgis/rest/services/EOC/BurnBan/FeatureServer/0";
@@ -55,9 +56,9 @@ export const tx: Adapter = {
     try {
       return parse(await getJson(meta.sourceUrl), checked);
     } catch (err) {
-      const res = await fetch(TXT_URL, { signal: AbortSignal.timeout(15000) });
-      if (!res.ok) throw new Error(`TX FeatureServer failed (${String(err)}); txt HTTP ${res.status}`);
-      return parseTxt(await res.arrayBuffer(), checked);
+      const reply = await fetchSource(TXT_URL, { headers: { accept: "text/plain" } });
+      if (reply.notModified) throw new Error(`TX FeatureServer failed (${String(err)}); unexpected TXT 304`);
+      return parseTxt(await reply.response.arrayBuffer(), checked);
     }
   },
 };

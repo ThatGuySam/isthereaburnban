@@ -1,6 +1,9 @@
+import type { SourceMessage } from "./sources/queue";
+
 export interface Env {
   ASSETS: Fetcher;
   KV: KVNamespace; // key "snapshot:v1" -> Snapshot JSON (src/shared/types.ts)
+  SOURCE_QUEUE?: Queue<SourceMessage>;
   DB: D1Database; // subscriptions, transitions (migrations/)
   SITE_URL: string;
   VAPID_PUBLIC_KEY: string;

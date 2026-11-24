@@ -1,0 +1,11 @@
+{
+  "dataSources": {
+    "dataSource_1": {
+      "id": "dataSource_1",
+      "type": "WEB_MAP",
+      "sourceLabel": "SWCG Fire Restrictions - Seasonal Restrictions Map (Public)",
+      "itemId": "3cc937c423e44a678da007a70a8f8598",
+      "portalUrl": "https://nifc.maps.arcgis.com"
+    }
+  }
+}

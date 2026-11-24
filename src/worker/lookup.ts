@@ -21,7 +21,7 @@ export function statusFor(snapshot: Snapshot, fips: string): CountyStatus {
   const c = COUNTY_BY_FIPS.get(fips);
   if (!c) throw new LookupError(`unknown county FIPS ${fips}`, 404);
   const dir = STATE_DIR_BY_ABBR.get(c.state);
-  const tracked = TRACKED.has(c.state);
+  const tracked = TRACKED.has(c.state) || snapshot.sources.some((source) => source.state === c.state && source.mode !== "manual");
   return {
     fips,
     state: c.state,

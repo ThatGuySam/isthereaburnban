@@ -1,0 +1,34 @@
+{
+  "desktopView": {
+    "widgets": [
+      {
+        "accessibleName": "Map showing fire restriction status for southwest government agencies",
+        "id": "82773413-72ea-4929-9e46-4bc5232970dd",
+        "name": "Seasonal Fire Restrictions Map",
+        "showLastUpdate": false,
+        "noDataState": {
+          "verticalAlignment": "middle",
+          "showTopCaption": true,
+          "showBottomCaption": true
+        },
+        "noFilterState": {
+          "verticalAlignment": "middle",
+          "showTopCaption": true,
+          "showBottomCaption": true
+        },
+        "datasets": [],
+        "type": "embeddedContentWidget",
+        "url": "https://experience.arcgis.com/experience/48b5a9c2048b4464aaaf2d943e96cd1b/",
+        "contentType": "document",
+        "imageRefreshInterval": 0,
+        "videoSettings": {
+          "controls": true,
+          "autoplay": false,
+          "loop": false,
+          "muted": false,
+          "controlsList": "nodownload"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,246 @@
+// @ts-nocheck -- bun test types are not installed.
+import { expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { webFormsPost } from "./aspnet";
+import { arcgisRows, codedDomains, dataLastEditDate, findOperationalLayers, queryArcgis } from "./arcgis";
+import { activeRule, CALENDAR_RULES } from "./calendar";
+import { civicPlusNotices, civicPlusUrl } from "./civicplus";
+import { decodeFeed, parseCsv, parseFeed, parseJson } from "./feeds";
+import { blockAfterHeading, extractHtml, localClock, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, US_ZONES } from "./html";
+import { BlockedError, fetchSource, HttpError, USER_AGENT } from "./http";
+import { manualPdf } from "./pdf";
+import { parseSharePointItems, sharePointListItems, sharePointListUrl, sharePointRows } from "./sharepoint";
+import { ninjaTablesUrl, parseNinjaRows, parseWpItems, wpRestUrl } from "./wordpress";
+import { checkLink, htmlLinks } from "../../../../scripts/check-links";
+
+const data = (name) => readFileSync(new URL(`./fixtures/${name}`, import.meta.url));
+const text = (name) => data(name).toString();
+const json = (name) => JSON.parse(text(name));
+const date = (s) => new Date(s);
+
+test("HTTP rejects publisher access-denied HTML, including HTTP 200 error documents", async () => {
+  const url = "https://burnpermit.fire.ca.gov/current-burn-status/";
+  await expect(fetchSource(url, { fetchImpl: async () => new Response(text("akamai.html"), { status: 200 }) })).rejects.toBeInstanceOf(BlockedError);
+  await expect(fetchSource(url, { fetchImpl: async () => new Response("?", { status: 403 }) })).rejects.toBeInstanceOf(BlockedError);
+  await expect(fetchSource(url, { fetchImpl: async () => new Response("<title>Just a moment...</title>", {
+    headers: { "cf-mitigated": "challenge" },
+  }) })).rejects.toBeInstanceOf(BlockedError);
+  await expect(fetchSource(url, { fetchImpl: async () => new Response(
+    '<script src="/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1"></script>', { status: 503 },
+  ) })).rejects.toBeInstanceOf(BlockedError);
+  await expect(fetchSource(url, { fetchImpl: async () => new Response("missing", { status: 404 }) })).rejects.toBeInstanceOf(HttpError);
+});
+
+test("HTTP sends validators, retains them on 304 and retries unblocked transient GET failures", async () => {
+  const url = "https://example.gov/burn-bans";
+  const lastModified = "Mon, 23 Nov 2026 13:00:00 GMT";
+  const validators = { etag: '"1"', lastModified };
+  let calls = 0;
+  const result = await fetchSource(url, { validators, fetchImpl: async (_url, { headers }) => {
+    expect(headers.get("if-none-match")).toBe('"1"');
+    expect(headers.get("if-modified-since")).toBe(lastModified);
+    expect(headers.get("user-agent")).toBe(USER_AGENT);
+    return ++calls === 1 ? new Response("busy", { status: 503 }) : new Response(null, { status: 304 });
+  } });
+  expect(calls).toBe(2);
+  expect(result).toEqual({ notModified: true, validators });
+});
+
+test("HTTP reliably peeks at a split challenge, preserves a normal body and caps bytes", async () => {
+  const url = "https://example.gov/burn-bans";
+  const stream = (chunks) => new ReadableStream({
+    start(controller) {
+      const encoder = new TextEncoder();
+      for (const chunk of chunks) controller.enqueue(encoder.encode(chunk));
+      controller.close();
+    },
+  });
+  await expect(fetchSource(url, { fetchImpl: async () => new Response(stream(["<h1>Acc", "ess Denied</h1>"])) }))
+    .rejects.toBeInstanceOf(BlockedError);
+  const reply = await fetchSource(url, { fetchImpl: async () => new Response(stream(["burn ", "ban"])) });
+  expect(await reply.response.text()).toBe("burn ban");
+  await expect(fetchSource(url, { attempts: 1, fetchImpl: async () => new Response("burn ban"), maxBytes: 5 }))
+    .rejects.toThrow("exceeded 5 bytes");
+});
+
+test("ArcGIS reads real coded values and traverses a Dashboard to its WebMap", async () => {
+  const meta = json("alaska-layer.json");
+  expect(codedDomains(meta).get("Status")?.get(4)).toMatch(/open/i);
+  expect(dataLastEditDate(meta)).toMatch(/^2026-/);
+  const ids = [];
+  const layers = await findOperationalLayers("1f6572c92f8d41ec860f461ea433819b", { read: async (url) => {
+    const id = new URL(url).pathname.split("/")[5];
+    ids.push(id);
+    if (id === "1f6572c92f8d41ec860f461ea433819b") return json("fl-dashboard.json");
+    if (id === "577458dcce5c4906947e427a3246ad20") return json("fl-webmap.json");
+    throw new Error("Unrecognized document " + id);
+  } });
+  expect(ids).toHaveLength(2);
+  expect(layers.some(({ title, url }) => title === "Burn Bans*" && /FeatureServer\/0$/.test(url))).toBe(true);
+  expect(() => arcgisRows({ error: { message: "Invalid query" } })).toThrow("Invalid query");
+});
+
+test("ArcGIS follows the Southwest dashboard's embedded Experience and finds AZ DFFM's layer", async () => {
+  const documents = new Map([
+    ["aa9ff369dd414b74b69b696b40a1d057", "sw-dashboard.json"],
+    ["48b5a9c2048b4464aaaf2d943e96cd1b", "sw-experience.json"],
+    ["3cc937c423e44a678da007a70a8f8598", "sw-webmap.json"],
+  ]);
+  const seen = [];
+  const layers = await findOperationalLayers("aa9ff369dd414b74b69b696b40a1d057", { read: async (url) => {
+    const id = new URL(url).pathname.split("/")[5];
+    seen.push(id);
+    return json(documents.get(id));
+  } });
+  expect(seen).toEqual([...documents.keys()]);
+  expect(layers[0].url).toMatch(/AZ_DFFM_Fire_Restrictions_2_view\/FeatureServer\/0$/);
+});
+
+test("ArcGIS follows stable offsets or ID batches and rejects partial pages", async () => {
+  const layer = "https://example.gov/FeatureServer/0";
+  const feature = (OBJECTID) => ({ attributes: { OBJECTID } });
+  const fixtures = new Map([
+    ["0", { features: [feature(1), feature(2)], exceededTransferLimit: true }],
+    ["2", { features: [feature(3)], exceededTransferLimit: false }],
+  ]);
+  const paged = await queryArcgis(layer, ["OBJECTID"], {
+    objectIdField: "OBJECTID", maxRecordCount: 2, advancedQueryCapabilities: { supportsPagination: true },
+  }, { read: async (url) => {
+    const q = new URL(url).searchParams;
+    expect(q.get("orderByFields")).toBe("OBJECTID ASC");
+    return fixtures.get(q.get("resultOffset"));
+  } });
+  expect(paged.map((row) => row.OBJECTID)).toEqual([1, 2, 3]);
+  const read = async (url) => {
+    const q = new URL(url).searchParams;
+    if (q.get("returnIdsOnly")) return { objectIds: [1, 2, 3] };
+    return { features: q.get("objectIds").split(",").map((id) => feature(+id)) };
+  };
+  expect(await queryArcgis(layer, ["OBJECTID"], { maxRecordCount: 2 }, { read })).toEqual(paged);
+  await expect(queryArcgis(layer, ["OBJECTID"], { maxRecordCount: 2 }, {
+    read: async (url) => new URL(url).searchParams.has("returnIdsOnly") ? { objectIds: [1, 2] } : { features: [feature(1)] },
+  })).rejects.toThrow("Incomplete");
+});
+
+test("HTML finds heading blocks and extracts table cells through optional end tags", async () => {
+  const html = text("kentucky-list.html");
+  const parts = parseHtml(html);
+  const block = blockAfterHeading(parts.blocks, /^Current Burn Bans$/i);
+  expect(block.map(({ text }) => text).slice(-2)).toEqual(["Edmonson", "Grayson"]);
+  expect(await extractHtml(new Response(html))).toEqual(parts);
+  const table = parseHtml('<h2>Open Burning</h2><table id="t"><tr><th>County<th>Status<tr><td>A &amp; B<td>Burn<br>Ban</table>');
+  expect(table.tables).toEqual([{ heading: "Open Burning", id: "t", rows: [["County", "Status"], ["A & B", "Burn Ban"]] }]);
+  expect(blockAfterHeading(parseHtml("<h2>Burn Ban</h2><p>First</p><h3>Scope</h3><li>One</li><h2>Other</h2><p>Skip</p>").blocks,
+    /burn ban/gi).map(({ text }) => text)).toEqual(["First", "Scope", "One"]);
+});
+
+test("US dates validate calendar values and use the publisher's clock", () => {
+  expect(parseUsDate("Tue Nov. 24", 2026)).toBe("2026-11-24");
+  expect(parseUsDate("2/29/24")).toBe("2024-02-29");
+  expect(parseUsDate("5/14/2026")).toBe("2026-05-14");
+  expect(parseUsDate("May 14th, 2026")).toBe("2026-05-14");
+  expect(parseUsDate("2/29/2026")).toBeNull();
+  expect(parseUsDate("Marching 20 2026")).toBeNull();
+  expect(parseEndDate("Until further notice")).toEqual({ kind: "open-ended" });
+  expect(parseEndDate("unreadable")).toEqual({ kind: "unknown" });
+  expect(parseLocalDateTime("Nov. 23, 2026 at 10:52:12 AM", US_ZONES.Central)).toBe("2026-11-23T16:52:12.000Z");
+  expect(parseLocalDateTime("2026-03-08 02:30", US_ZONES.Pacific)).toBeNull();
+  expect(parseLocalDateTime("2026-11-01 01:30", US_ZONES.Pacific)).toBe("2026-11-01T08:30:00.000Z");
+  const now = date("2026-07-01T06:10Z");
+  expect(localClock(now, US_ZONES.Eastern)).toEqual({ date: "2026-07-01", minute: 130 });
+  expect(localClock(now, US_ZONES.Central)).toEqual({ date: "2026-07-01", minute: 70 });
+  expect(localClock(now, US_ZONES.Mountain)).toEqual({ date: "2026-07-01", minute: 10 });
+  expect(localClock(now, US_ZONES.Pacific)).toEqual({ date: "2026-06-30", minute: 1390 });
+});
+
+test("WordPress parses Faulkner's REST search and Mississippi's Ninja Tables rows", () => {
+  expect(parseWpItems(json("faulkner-search.json"))[0]).toMatchObject({ id: 4320, title: "04/04/2026 Burn Ban Lifted" });
+  expect(new URL(wpRestUrl("https://county.gov/site", "search", { search: "burn ban" })).pathname).toBe("/site/wp-json/wp/v2/search");
+  const url = new URL(ninjaTablesUrl("https://www.mfc.ms.gov", 1775));
+  expect(url.pathname).toBe("/wp-admin/admin-ajax.php");
+  expect(url.searchParams.get("table_id")).toBe("1775");
+  const ms = JSON.parse(readFileSync(new URL("../../adapters/fixtures/ms.json", import.meta.url), "utf8"));
+  expect(parseNinjaRows(ms)[0]).toEqual(ms[0].value);
+  expect(() => parseWpItems({ code: "rest_forbidden" })).toThrow();
+});
+
+test("CivicPlus recognizes related links in Placer mobile News Flash, and both desktop families", () => {
+  const page = "https://www.placer.ca.gov/m/newsflash/Home/Detail/1898";
+  const html = text("placer-newsflash.html");
+  expect(civicPlusNotices(parseHtml(html, { links: true }), page).map(({ url }) => url)).toContain("https://www.placer.ca.gov/m/newsflash/Home/Detail/1915");
+  expect(civicPlusUrl(page, "alerts")).toBe("https://www.placer.ca.gov/AlertCenter.aspx");
+  const links = parseHtml('<a href="/AlertCenter.aspx?AID=15">Active</a><a href="/CivicAlerts.aspx?AID=12">News</a><a href="https://different.gov/AlertCenter.aspx?AID=3">Cross-origin</a>', { links: true });
+  expect(civicPlusNotices(links, page).map(({ title }) => title)).toEqual(["Active", "News"]);
+});
+
+test("WebForms posts Michigan's actual hidden values to the same origin", () => {
+  const url = "https://www2.dnr.state.mi.us/burnpermits/";
+  const { url: action, body } = webFormsPost(text("michigan-form.html"), url, "ctl00$ContentPlaceHolder1$CntyName", "", {
+    "ctl00$ContentPlaceHolder1$CntyName": "Alcona",
+  });
+  expect(new URL(action).origin).toBe(new URL(url).origin);
+  expect(body.get("__VIEWSTATE")?.length).toBeGreaterThan(50);
+  expect(body.get("__EVENTVALIDATION")?.length).toBeGreaterThan(50);
+  expect(body.get("__EVENTTARGET")).toBe("ctl00$ContentPlaceHolder1$CntyName");
+  expect(body.get("ctl00$ContentPlaceHolder1$CntyName")).toBe("Alcona");
+  expect(() => webFormsPost('<form action="https://other.gov"><input type=hidden name=__VIEWSTATE value=abc></form>', url, "ctl")).toThrow("Cross-origin");
+});
+
+test("SharePoint normalizes a rendered list and both public REST envelopes", () => {
+  expect(sharePointListItems(parseHtml(text("kentucky-list.html")), /current burn bans/i).slice(-2)).toEqual(["Edmonson", "Grayson"]);
+  const path = sharePointListUrl("https://agency.gov/sites/Forestry", "County's Bans", { $top: "20" });
+  expect(new URL(path).pathname).toBe("/sites/Forestry/_api/web/lists/getbytitle('County%27%27s%20Bans')/items");
+  const rows = [{ Title: "Edmonson" }];
+  expect(parseSharePointItems({ value: rows, "@odata.nextLink": "next" })).toEqual({ rows, next: "next" });
+  expect(parseSharePointItems({ d: { results: rows } }).rows).toEqual(rows);
+  expect(sharePointRows(parseHtml("<table><tr><td>County<td>Status<tr><td>Edmonson<td>Ban</table>"), ["status", "county"]))
+    .toEqual([["Ban", "Edmonson"]]);
+});
+
+test("Feeds parse Wisconsin's real CSV and JSON plus Texas's UTF-16LE RSS", () => {
+  const rows = parseCsv(text("wisconsin.csv"));
+  expect(rows[1][1]).toBe("Adams");
+  expect(rows[1][8]).toContain("DNR annual burning permit");
+  expect(parseCsv('a,b\r\n"x,y","line 1\nline 2 ""quoted"""\r\n')).toEqual([["a", "b"], ["x,y", 'line 1\nline 2 "quoted"']]);
+  expect(() => parseCsv('"unfinished')).toThrow();
+  const wi = parseJson(text("wisconsin.json"), Array.isArray);
+  expect(wi[0]).toMatchObject({ COUNTY_NAME: "Adams" });
+  const rss = parseFeed(decodeFeed(Uint8Array.from(data("texas-rss.xml")).buffer));
+  expect(rss[0].title).toContain("Texas Burn Bans");
+  expect(rss[0].text).toContain("ARCHER");
+  expect(parseFeed('<feed><entry><id>1</id><title>Burn &amp; Smoke</title><link rel="alternate" href="https://county.gov/order"/><updated>2026-11-23T02:00Z</updated></entry></feed>')[0])
+    .toMatchObject({ id: "1", title: "Burn & Smoke", url: "https://county.gov/order", published: "2026-11-23T02:00:00.000Z" });
+});
+
+test("Manual PDF records the signed Faulkner order's hash and Last-Modified", async () => {
+  const stamp = "Mon, 23 Nov 2026 12:00:00 GMT";
+  const pdf = await manualPdf(new Response(data("faulkner-rescind.pdf"), { headers: { "last-modified": stamp } }));
+  expect(pdf).toEqual({ mode: "manual", sha256: "d9dc49bc427429701782efee2a23cf05389706e5aaf03ffff8735fe61595366e", lastModified: stamp });
+  await expect(manualPdf(new Response("not a pdf"))).rejects.toThrow("Expected a PDF");
+});
+
+test("Calendar restrictions respect local windows, covered counties, and narrow activities", () => {
+  const { NY, OH, GA, VA, WV, MD } = CALENDAR_RULES;
+  expect(activeRule(NY, date("2026-03-16T03:59Z"))).toBeUndefined();
+  expect(activeRule(NY, date("2026-03-16T04:00Z"))?.label).toContain("brush");
+  expect(activeRule(NY, date("2026-05-15T04:00Z"))).toBeUndefined();
+  expect(activeRule(OH, date("2026-11-23T11:00Z"))).toMatchObject({ scope: "part", status: "restricted" });
+  expect(activeRule(OH, date("2026-11-23T23:00Z"))).toBeUndefined();
+  expect(activeRule(GA, date("2026-07-01T12:00Z"), "Gwinnett County")?.status).toBe("restricted");
+  expect(activeRule(GA, date("2026-07-01T12:00Z"), "Chatham County")).toBeUndefined();
+  expect(GA.counties.size).toBe(54);
+  expect(activeRule(VA, date("2026-02-15T20:59Z"))?.scopeNote).toContain("300 feet");
+  expect(activeRule(VA, date("2026-02-15T21:00Z"))).toBeUndefined();
+  expect(activeRule(WV, date("2026-03-02T12:00Z"))?.status).toBe("restricted");
+  expect(activeRule(MD, date("2026-06-01T12:00Z"))?.note).toContain("Snow cover");
+});
+
+test("Link checker reads external anchors and separates access walls from missing links and TLS", async () => {
+  expect(htmlLinks('<a href="/us/ca/">local</a><a href="https://example.gov?a=1&amp;b=2">ext</a><iframe src="//example.gov/table">'))
+    .toEqual(["https://example.gov?a=1&b=2", "https://example.gov/table"]);
+  const url = "https://example.gov/order";
+  expect((await checkLink(url, async () => new Response("", { status: 403 }))).kind).toBe("blocked");
+  expect((await checkLink(url, async () => new Response("", { status: 404 }))).kind).toBe("failed");
+  expect(await checkLink(url, async () => { throw Object.assign(new Error("TLS verification failed"), { code: "CERT_HAS_EXPIRED" }); }))
+    .toMatchObject({ kind: "failed", detail: expect.stringContaining("CERT_HAS_EXPIRED") });
+});

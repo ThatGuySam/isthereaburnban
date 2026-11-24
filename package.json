@@ -10,7 +10,9 @@
     "deploy": "bun run build && wrangler deploy",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
-    "places": "bun scripts/build-places.ts"
+    "places": "bun scripts/build-places.ts",
+    "check-links": "bun scripts/check-links.ts",
+    "bench:sources": "bun scripts/bench-sources.ts"
   },
   "dependencies": {
     "@astrojs/preact": "^6.1.6",

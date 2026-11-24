@@ -8,6 +8,7 @@ import { CANARY_CRON, runCanary } from "./notify";
 import { handlePage, handleSitemap } from "./pages";
 import { subscribePush, unsubscribePush } from "./push";
 import { getSnapshot, refresh } from "./snapshot";
+import { consumeSourceQueue, enqueueSources, type SourceMessage } from "./sources/queue";
 
 const CORS = {
   "access-control-allow-origin": "*",
@@ -121,7 +122,10 @@ export default {
   scheduled(controller, env, ctx) {
     ctx.waitUntil(controller.cron === CANARY_CRON
       ? runCanary(env, controller.scheduledTime)
-      : refresh(env, undefined, controller.scheduledTime));
+      : env.SOURCE_QUEUE
+        ? enqueueSources(env, controller.scheduledTime)
+        : refresh(env, undefined, controller.scheduledTime));
   },
-} satisfies ExportedHandler<Env>;
+  queue: consumeSourceQueue,
+} satisfies ExportedHandler<Env, SourceMessage>;
 

@@ -1,11 +1,12 @@
 import type { CountyStatus } from "../../shared/types";
+import { ninjaTablesUrl } from "../sources/lib/wordpress";
 import { countiesInState } from "../counties";
 import { type Adapter, countyByName, getJson, toStatuses } from "./common";
 
 const meta = {
   state: "MS",
   sourceName: "Mississippi Forestry Commission",
-  sourceUrl: "https://www.mfc.ms.gov/wp-admin/admin-ajax.php?action=wp_ajax_ninja_tables_public_action&table_id=1775&target_action=get-all-data",
+  sourceUrl: ninjaTablesUrl("https://www.mfc.ms.gov", 1775),
   officialUrl: "https://www.mfc.ms.gov/burning-info/burn-bans/",
 };
 

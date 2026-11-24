@@ -1,0 +1,86 @@
+// Date-only values follow the publisher's local calendar. Keep them separate from UTC instants.
+export const US_ZONES = {
+  Eastern: "America/New_York",
+  Central: "America/Chicago",
+  Mountain: "America/Denver",
+  Pacific: "America/Los_Angeles",
+  Arizona: "America/Phoenix",
+} as const;
+
+const formatters = new Map<string, Intl.DateTimeFormat>();
+export function localClock(now: Date, zone: string): { date: string; minute: number } {
+  let formatter = formatters.get(zone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat("sv-SE", {
+      timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+    });
+    formatters.set(zone, formatter);
+  }
+  const [date, clock] = formatter.format(now).split(" ");
+  const [hour, minute] = clock.split(":").map(Number);
+  return { date, minute: hour * 60 + minute };
+}
+
+const MONTHS = "january february march april may june july august september october november december".split(" ");
+const monthNumber = (month: string) => MONTHS.findIndex((name) =>
+  month === name || month === name.slice(0, 3) || (name === "september" && month === "sept")) + 1;
+export function isoDay(year: number, month: number, day: number): string | null {
+  if (year < 1000 || year > 9999 || month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCDate() === day ? date.toISOString().slice(0, 10) : null;
+}
+
+/** US numeric, ISO, or month-name dates. A missing year requires an explicit default. */
+export function parseUsDate(raw: string, defaultYear?: number): string | null {
+  const value = raw.trim().replace(/^(?:mon|tue|wed|thu|fri|sat|sun)[a-z]*\.?[\s,]+/i, "");
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (iso) return isoDay(+iso[1], +iso[2], +iso[3]);
+  const date = /^(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2}|\d{4}))?$/.exec(value);
+  const named = /^([a-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:[\s,]+(\d{4}))?$/i.exec(value);
+  if (!date && !named) return null;
+  const rawYear = (date ?? named)?.[3];
+  const year = rawYear ? +rawYear + (rawYear.length === 2 ? 2000 : 0) : defaultYear;
+  const month = date ? +date[1] : monthNumber(named?.[1].toLowerCase() ?? "");
+  const day = (date ?? named)?.[2];
+  return year && day ? isoDay(year, month, +day) : null;
+}
+
+export function parseEndDate(raw: string, defaultYear?: number) {
+  if (/^until\s+(?:further notice|rescinded|lifted)\b/i.test(raw.trim())) return { kind: "open-ended" } as const;
+  const date = parseUsDate(raw, defaultYear);
+  return date ? { kind: "date", date } as const : { kind: "unknown" } as const;
+}
+
+/** Interpret a local timestamp using the applicable DST offset. Ambiguous hours use the earlier instant. */
+export function atLocalTime(day: string, minute: number, zone: string): string | null {
+  if (!Number.isInteger(minute) || minute < 0 || minute >= 1440 || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+  const midnight = Date.parse(day + "T00:00:00Z");
+  if (!Number.isFinite(midnight) || new Date(midnight).toISOString().slice(0, 10) !== day) return null;
+  const utc = midnight + minute * 60_000;
+  const candidates: number[] = [];
+  for (const probe of [utc - 12 * 3_600_000, utc + 12 * 3_600_000]) {
+    const local = localClock(new Date(probe), zone);
+    const offset = Date.parse(local.date + "T00:00:00Z") + local.minute * 60_000 - probe;
+    const instant = utc - offset;
+    const roundTrip = localClock(new Date(instant), zone);
+    if (roundTrip.date === day && roundTrip.minute === minute) candidates.push(instant);
+  }
+  return candidates.length ? new Date(Math.min(...candidates)).toISOString() : null;
+}
+
+export function parseLocalDateTime(raw: string, zone: string, defaultYear?: number): string | null {
+  const clock = /^(.*?)(?:\s+at)?[ T]+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([ap]\.?m\.?)?$/i.exec(raw.trim());
+  if (!clock) return null;
+  const day = parseUsDate(clock[1], defaultYear);
+  const hour = +clock[2];
+  const minute = +clock[3];
+  const seconds = +(clock[4] ?? 0);
+  if (!day || minute > 59 || seconds > 59 || (clock[5] ? hour < 1 || hour > 12 : hour > 23)) return null;
+  const hour24 = clock[5] ? hour % 12 + (clock[5].toLowerCase().startsWith("p") ? 12 : 0) : hour;
+  const instant = atLocalTime(day, hour24 * 60 + minute, zone);
+  return instant ? new Date(Date.parse(instant) + seconds * 1000).toISOString() : null;
+}
+
+export function shiftDay(date: string, days: number): string {
+  return new Date(Date.parse(date + "T00:00:00Z") + days * 86_400_000).toISOString().slice(0, 10);
+}

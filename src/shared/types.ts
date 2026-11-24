@@ -23,6 +23,18 @@ export type CountyStatus = {
   sourceUrl: string; // machine endpoint we read
   officialUrl: string; // human official page to link ("Read the official order/map")
   note?: string; // scope caveat, e.g. "County bans cover unincorporated areas"
+  scope?: "county" | "part" | "state";
+  scopeNote?: string;
+  sourceId?: string;
+  validFrom?: string; // start instant for a dated or scheduled decision
+  validUntil?: string; // instant after which short-lived decisions are unconfirmed
+  orders?: ScopedOrder[];
+};
+
+export type ScopedOrder = Pick<CountyStatus, "status" | "label" | "note" | "since" | "expires" |
+  "sourceId" | "sourceName" | "sourceUpdated" | "officialUrl" | "checked" | "validFrom" | "validUntil"> & {
+  scope: "part" | "county" | "state";
+  scopeNote: string;
 };
 
 export type SourceHealth = {
@@ -31,10 +43,12 @@ export type SourceHealth = {
   ok: boolean;
   checked: string; // ISO
   error?: string;
-  counties: number; // rows mapped
+  counties: number; // distinct counties with a mapped report
   bans: number;
   /** "full" = negatives are trustworthy; "positive-only" = absence means unknown, not none */
-  mode: "full" | "positive-only";
+  mode: "full" | "positive-only" | "manual";
+  scope?: CountyStatus["scope"];
+  officialUrl?: string;
 };
 
 export type Snapshot = {
@@ -45,6 +59,8 @@ export type Snapshot = {
   sources: SourceHealth[];
   /** fips -> ISO time the status last changed (persisted across snapshots, used for sitemap lastmod) */
   changed: Record<string, string>;
+  /** Normalized source revisions used to publish this snapshot. */
+  sourceVersions?: Record<string, string>;
 };
 
 export type Coverage = "live" | "restrictions" | "directory";

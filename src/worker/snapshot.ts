@@ -1,101 +1,64 @@
-import type { CountyStatus, Snapshot, SourceHealth } from "../shared/types";
+import type { CountyStatus, Snapshot } from "../shared/types";
 import { ADAPTERS, type Adapter } from "./adapters";
 import { SNAPSHOT_KEY, type Env } from "./env";
 import { CHANNELS } from "./notification-audience";
 import { transitionNotice, type Transition } from "./notification-message";
 import { notify } from "./notify";
+import { mergeSources } from "./sources/merge";
+import { SOURCES } from "./sources/registry";
+import { applyChecks, readHeads, sourceInputs } from "./sources/state";
+import { isActive } from "./sources/types";
 
 export type { Transition } from "./notification-message";
+export { STALE_MS } from "./sources/merge";
 
-export const STALE_MS = 48 * 60 * 60 * 1000;
+function errorText(reason: unknown): string {
+  return (reason instanceof Error ? reason.message : String(reason)).slice(0, 300);
+}
 
-/**
- * Pure: merge this run's adapter results into the previous snapshot.
- * - A failed source keeps its previous rows (health ok:false); rows older than 48h turn "unknown".
- * - `changed` records when each county's status last changed.
- * - Transitions only come from sources that succeeded this run, and never on first import.
- */
 export function buildSnapshot(
   prev: Snapshot | null,
   adapters: Adapter[],
   results: PromiseSettledResult<CountyStatus[]>[],
   now: Date,
 ): { snapshot: Snapshot; transitions: Transition[] } {
-  const at = now.toISOString();
-  const counties: Record<string, CountyStatus> = {};
-  const changed: Record<string, string> = { ...(prev?.changed ?? {}) };
-  const sources: SourceHealth[] = [];
-  const transitions: Transition[] = [];
-
-  adapters.forEach((a, i) => {
-    const r = results[i];
-    let rows: CountyStatus[];
-    let health: Pick<SourceHealth, "ok" | "error">;
-
-    if (r.status === "fulfilled") {
-      rows = r.value;
-      health = { ok: true };
-      for (const row of rows) {
-        const old = prev?.counties[row.fips];
-        if (!old) {
-          changed[row.fips] ??= row.since ?? row.sourceUpdated ?? at;
-        } else if (old.status !== row.status) {
-          changed[row.fips] = at;
-          transitions.push({ fips: row.fips, oldStatus: old.status, newStatus: row.status, at });
-        }
-        // Keep "since" stable: source date if given, else when we first saw this status.
-        if (!row.since) row.since = old && old.status === row.status && old.since ? old.since : changed[row.fips];
-      }
-    } else {
-      const error = r.reason instanceof Error ? r.reason.message : String(r.reason);
-      health = { ok: false, error: error.slice(0, 300) };
-      rows = Object.values(prev?.counties ?? {})
-        .filter((c) => c.state === a.state)
-        .map((c) => {
-          if (now.getTime() - Date.parse(c.checked) <= STALE_MS || c.status === "unknown") return c;
-          changed[c.fips] = at;
-          return { ...c, status: "unknown" as const, label: "Source unavailable; our last good data is over 48 hours old" };
-        });
-    }
-
-    for (const row of rows) counties[row.fips] = row;
-    sources.push({
-      id: a.id,
-      state: a.state,
-      mode: a.mode,
-      checked: at,
-      counties: rows.length,
-      bans: rows.filter((c) => c.status === "ban").length,
-      ...health,
-    });
-  });
-
-  return { snapshot: { version: 1, generated: at, counties, sources, changed }, transitions };
+  return mergeSources(prev, adapters.map((source, i) => {
+    const result = results[i];
+    if (result.status === "fulfilled") return { source, rows: result.value, checked: now.toISOString() };
+    const rows = Object.values(prev?.counties ?? {}).filter((row) =>
+      row.sourceId ? row.sourceId === source.id : row.state === source.state);
+    return { source, rows, checked: now.toISOString(), error: errorText(result.reason) };
+  }), now);
 }
 
-// Parsing the ~450 KB snapshot costs a few ms of CPU, so reuse it within an isolate for a minute.
-let memo: { at: number; snapshot: Snapshot } | undefined;
+// Parsing the core snapshot costs a few ms of CPU. Reuse it within an isolate for a minute.
+const memo = new WeakMap<KVNamespace, { at: number; snapshot: Snapshot }>();
 const MEMO_MS = 60_000;
+const BY_ID = new Map(SOURCES.map((source) => [source.id, source]));
+const LEGACY_BY_STATE = new Map(ADAPTERS.map((source) => [source.state, source]));
 
 export async function readSnapshot(env: Env, fresh = false): Promise<Snapshot | null> {
-  if (!fresh && memo && Date.now() - memo.at < MEMO_MS) return memo.snapshot;
-  const snapshot = await env.KV.get<Snapshot>(SNAPSHOT_KEY, { type: "json", cacheTtl: 60 });
-  if (snapshot) {
-    withCurrentLinks(snapshot);
-    memo = { at: Date.now(), snapshot };
+  const cached = memo.get(env.KV);
+  if (!fresh && cached && Date.now() - cached.at < MEMO_MS) return cached.snapshot;
+  const snapshot = await env.KV.get<Snapshot>(SNAPSHOT_KEY, { type: "json" });
+  if (!snapshot) return null;
+  withCurrentLinks(snapshot);
+  if (env.SOURCE_QUEUE) {
+    const heads = await readHeads(env.DB).catch((error) => {
+      console.warn("Source check times unavailable", errorText(error));
+      return new Map();
+    });
+    applyChecks(snapshot, heads, new Date());
   }
+  memo.set(env.KV, { at: Date.now(), snapshot });
   return snapshot;
 }
 
-/**
- * Official links come from the deployed adapter code, not from the stored snapshot,
- * so a link fix takes effect on deploy instead of waiting for the next cron run.
- * Adapters that link per-county documents (keepRowLinks) keep their row links.
- */
-export function withCurrentLinks(snapshot: Snapshot, adapters: Adapter[] = ADAPTERS): Snapshot {
-  const byState = new Map(adapters.map((a) => [a.state, a]));
+/** Apply current links without replacing a scoped or per-order link with a state directory link. */
+export function withCurrentLinks(snapshot: Snapshot, adapters?: Adapter[]): Snapshot {
+  const legacy = adapters ? new Map(adapters.map((a) => [a.state, a])) : LEGACY_BY_STATE;
   for (const row of Object.values(snapshot.counties)) {
-    const a = byState.get(row.state);
+    const a = row.sourceId && !adapters ? BY_ID.get(row.sourceId) : legacy.get(row.state);
     if (!a) continue;
     row.sourceName = a.sourceName;
     row.sourceUrl = a.sourceUrl;
@@ -104,27 +67,45 @@ export function withCurrentLinks(snapshot: Snapshot, adapters: Adapter[] = ADAPT
   return snapshot;
 }
 
-export async function refresh(env: Env, adapters: Adapter[] = ADAPTERS, scheduledTime?: number): Promise<Snapshot> {
+export function transitionInsert(db: D1Database, transitions: Transition[]) {
+  return db.prepare(`INSERT INTO transitions (fips, old_status, new_status, at)
+    SELECT value ->> 'fips', value ->> 'oldStatus', value ->> 'newStatus', value ->> 'at' FROM json_each(?)`)
+    .bind(JSON.stringify(transitions));
+}
+
+export function alertNotices(transitions: Transition[], snapshot: Snapshot) {
+  return transitions
+    .filter((t) => t.oldStatus === "ban" || t.newStatus === "ban" || t.oldStatus === "restricted" || t.newStatus === "restricted")
+    .map((transition) => transitionNotice(transition, snapshot.counties[transition.fips]));
+}
+
+export async function refresh(env: Env, adapters?: Adapter[], scheduledTime?: number): Promise<Snapshot> {
   const prev = await readSnapshot(env, true);
-  const results = await Promise.allSettled(adapters.map((a) => a.fetch()));
-  const { snapshot, transitions } = buildSnapshot(prev, adapters, results, new Date());
+  const now = new Date();
+  let result: ReturnType<typeof mergeSources>;
+  if (adapters) {
+    const results: PromiseSettledResult<CountyStatus[]>[] = [];
+    for (const adapter of adapters) {
+      try { results.push({ status: "fulfilled", value: await adapter.fetch() }); }
+      catch (reason) { results.push({ status: "rejected", reason }); }
+    }
+    result = buildSnapshot(prev, adapters, results, now);
+  } else {
+    result = mergeSources(prev, await sourceInputs(SOURCES, prev, now), now);
+  }
+  const { snapshot, transitions } = result;
   await env.KV.put(SNAPSHOT_KEY, JSON.stringify(snapshot));
-  memo = { at: Date.now(), snapshot };
-  for (const s of snapshot.sources) if (!s.ok) console.warn(`source ${s.id} failed: ${s.error}`);
+  memo.set(env.KV, { at: Date.now(), snapshot });
+  for (const s of snapshot.sources) if (!s.ok && s.mode !== "manual") console.warn(`source ${s.id} failed: ${s.error}`);
 
   if (transitions.length) {
     try {
-      const stmt = env.DB.prepare("INSERT INTO transitions (fips, old_status, new_status, at) VALUES (?, ?, ?, ?)");
-      await env.DB.batch(transitions.map((t) => stmt.bind(t.fips, t.oldStatus, t.newStatus, t.at)));
-      const alerts = transitions.filter((t) => t.oldStatus === "ban" || t.newStatus === "ban" || t.oldStatus === "restricted" || t.newStatus === "restricted");
-      if (alerts.length) {
+      await transitionInsert(env.DB, transitions).run();
+      const notices = alertNotices(transitions, snapshot);
+      if (notices.length) {
         await notify(env, {
-          mode: "send",
-          origin: "cron",
-          runId: `cron-${scheduledTime ?? snapshot.generated}`,
-          audience: { kind: "all" },
-          channels: CHANNELS,
-          notices: alerts.map((transition) => transitionNotice(transition, snapshot.counties[transition.fips])),
+          mode: "send", origin: "cron", runId: `cron-${scheduledTime ?? snapshot.generated}`,
+          audience: { kind: "all" }, channels: CHANNELS, notices,
         });
       }
     } catch (err) {
@@ -134,7 +115,13 @@ export async function refresh(env: Env, adapters: Adapter[] = ADAPTERS, schedule
   return snapshot;
 }
 
-/** Snapshot for a request; on a fresh deployment with an empty KV, build one inline. */
 export async function getSnapshot(env: Env): Promise<Snapshot> {
-  return (await readSnapshot(env)) ?? refresh(env);
+  const snapshot = await readSnapshot(env);
+  if (snapshot) return snapshot;
+  if (!env.SOURCE_QUEUE) return refresh(env);
+  // A fresh deployment starts serving coverage immediately. The hourly queue fills in status.
+  const now = new Date();
+  return mergeSources(null, SOURCES.map((source) => ({
+    source, rows: [], checked: now.toISOString(), error: isActive(source) ? "Awaiting first source refresh" : source.error,
+  })), now).snapshot;
 }
