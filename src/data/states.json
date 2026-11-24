@@ -262,14 +262,18 @@
     "name": "Michigan",
     "coverage": "restrictions",
     "publisher": "Michigan Department of Natural Resources",
-    "officialUrl": "https://www.michigan.gov/dnr/managing-resources/forestry/fire/burn-permit",
+    "officialUrl": "https://www2.dnr.state.mi.us/burnpermits/",
     "extraUrls": [
       {
-        "label": "Daily burn permit status",
-        "url": "https://www.dnr.state.mi.us/burnpermits/default.aspx"
+        "label": "DNR burn permit rules",
+        "url": "https://www.michigan.gov/dnr/managing-resources/forestry/fire/burn-permit"
+      },
+      {
+        "label": "EGLE open burning rules",
+        "url": "https://www.michigan.gov/egle/faqs/air-quality/burning"
       }
     ],
-    "notes": "The DNR posts daily debris-burning permit status by township in the northern Lower and Upper Peninsula. Local governments issue permits elsewhere."
+    "notes": "The DNR reports debris-burning permit conditions in 49 counties in the Upper Peninsula and northern Lower Peninsula. Use the county dropdown on the DNR map for township details. Contact your local fire department or local government wherever the map refers you to a local issuer. Local ordinances and state air quality rules also apply."
   },
   {
     "abbr": "MN",

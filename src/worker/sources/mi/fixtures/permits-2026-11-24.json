@@ -1,0 +1,610 @@
+{
+  "displayFieldName": "REG_NAME",
+  "fieldAliases": {
+    "FIPS2": "FIPS2",
+    "STATUS": "STATUS",
+    "PullStamp": "PullStamp"
+  },
+  "fields": [
+    {
+      "name": "FIPS2",
+      "type": "esriFieldTypeString",
+      "alias": "FIPS2",
+      "length": 3
+    },
+    {
+      "name": "STATUS",
+      "type": "esriFieldTypeSmallInteger",
+      "alias": "STATUS"
+    },
+    {
+      "name": "PullStamp",
+      "type": "esriFieldTypeDate",
+      "alias": "PullStamp",
+      "length": 8
+    }
+  ],
+  "features": [
+    {
+      "attributes": {
+        "FIPS2": "083",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "061",
+        "STATUS": 2,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "131",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "103",
+        "STATUS": 2,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "013",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "053",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "095",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "153",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "003",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "071",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "043",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "033",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "109",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "097",
+        "STATUS": 2,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "041",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "031",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "047",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "141",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "089",
+        "STATUS": 2,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "029",
+        "STATUS": 2,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "119",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "137",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "007",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "009",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "001",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "135",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "055",
+        "STATUS": 2,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "039",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "079",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "019",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "069",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "129",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "143",
+        "STATUS": 2,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "101",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "113",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "165",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "105",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "051",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "035",
+        "STATUS": 2,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "133",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "085",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "063",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "011",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "111",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "017",
+        "STATUS": 2,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "073",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "127",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "107",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "123",
+        "STATUS": 1,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "151",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "157",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "145",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "057",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "121",
+        "STATUS": 2,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "117",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "087",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "081",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "049",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "139",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "155",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "037",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "067",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "099",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "125",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "093",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "065",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "045",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "015",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "005",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "147",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "161",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "075",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "025",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "077",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "159",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "021",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "163",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "091",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "059",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "023",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "149",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "027",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    },
+    {
+      "attributes": {
+        "FIPS2": "115",
+        "STATUS": 3,
+        "PullStamp": 1795478404000
+      }
+    }
+  ]
+}

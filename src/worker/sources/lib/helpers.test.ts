@@ -2,7 +2,7 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { webFormsPost } from "./aspnet";
-import { arcgisRows, codedDomains, dataLastEditDate, findOperationalLayers, queryArcgis } from "./arcgis";
+import { arcgisLocalDate, arcgisRows, codedDomains, dataLastEditDate, findOperationalLayers, queryArcgis } from "./arcgis";
 import { activeRule, CALENDAR_RULES } from "./calendar";
 import { civicPlusNotices, civicPlusUrl } from "./civicplus";
 import { decodeFeed, parseCsv, parseFeed, parseJson } from "./feeds";
@@ -78,6 +78,22 @@ test("ArcGIS reads real coded values and traverses a Dashboard to its WebMap", a
   expect(ids).toHaveLength(2);
   expect(layers.some(({ title, url }) => title === "Burn Bans*" && /FeatureServer\/0$/.test(url))).toBe(true);
   expect(() => arcgisRows({ error: { message: "Invalid query" } })).toThrow("Invalid query");
+});
+
+test("ArcGIS rejects malformed attributes and can require a complete response", () => {
+  const partial = { features: [{ attributes: { FIPS: "26083" } }], exceededTransferLimit: true };
+  expect(arcgisRows(partial)).toEqual([{ FIPS: "26083" }]);
+  expect(() => arcgisRows(partial, { requireComplete: true })).toThrow("Incomplete");
+  expect(() => arcgisRows({ features: [{ attributes: [] }] })).toThrow("attributes");
+  expect(() => arcgisRows(null)).toThrow("JSON");
+});
+
+test("ArcGIS legacy wall-clock dates use the supplied zone and its DST offset", () => {
+  const summer = Date.parse("2026-07-24T23:50:02.321Z");
+  const winter = Date.parse("2026-11-23T23:50:02Z");
+  expect(arcgisLocalDate(summer, US_ZONES.Eastern)).toBe("2026-07-25T03:50:02.321Z");
+  expect(arcgisLocalDate(winter, US_ZONES.Eastern)).toBe("2026-11-24T04:50:02.000Z");
+  expect(arcgisLocalDate("unpublished", US_ZONES.Eastern)).toBeNull();
 });
 
 test("ArcGIS follows the Southwest dashboard's embedded Experience and finds AZ DFFM's layer", async () => {

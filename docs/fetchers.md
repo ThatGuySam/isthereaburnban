@@ -78,7 +78,7 @@ bunx wrangler d1 migrations apply isthereaburnban --remote
 bun run deploy
 ```
 
-The current cadence schedules 170 polls and 24 merges on a normal day. If every poll changes, that is 364 KV writes and about 582 queue operations before retries. Registry tests budget two KV writes per changed poll and one per hourly publication, so future registrations need cadences that fit the free allocation. Keep an eye on the 2 MB D1 checkpoint size as the snapshot gains scoped orders. The 51-area timing exceeds the 7 ms review threshold in the benchmark. Recheck the production merge CPU before enabling that much coverage. [Workers limits](https://developers.cloudflare.com/workers/platform/limits/), [Queues limits](https://developers.cloudflare.com/queues/platform/limits/), [D1 limits](https://developers.cloudflare.com/d1/platform/limits/).
+The current cadence schedules 194 polls and 24 merges on a normal day. If every poll changes, that is 412 KV writes and about 654 queue operations before retries. Registry tests budget two KV writes per changed poll and one per hourly publication, so future registrations need cadences that fit the free allocation. Keep an eye on the 2 MB D1 checkpoint size as the snapshot gains scoped orders. The 51-area timing exceeds the 7 ms review threshold in the benchmark. Recheck the production merge CPU before enabling that much coverage. [Workers limits](https://developers.cloudflare.com/workers/platform/limits/), [Queues limits](https://developers.cloudflare.com/queues/platform/limits/), [D1 limits](https://developers.cloudflare.com/d1/platform/limits/).
 
 ### California verification
 

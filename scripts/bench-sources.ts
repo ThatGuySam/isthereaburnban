@@ -21,6 +21,7 @@ import { manualPdf } from "../src/worker/sources/lib/pdf";
 import { sharePointListItems } from "../src/worker/sources/lib/sharepoint";
 import { parseNinjaRows, parseWpItems } from "../src/worker/sources/lib/wordpress";
 import { mergeSources, type SourceInput } from "../src/worker/sources/merge";
+import { miPermits, parseMichiganPermits } from "../src/worker/sources/mi/permits";
 
 const sourceUrl = new URL("../src/worker/sources/", import.meta.url);
 const from = (path: string) => readFileSync(new URL(path, sourceUrl));
@@ -28,11 +29,12 @@ const utf8 = (path: string) => from(path).toString("utf8");
 const fixture = (name: string) => utf8(`lib/fixtures/${name}`);
 const adapter = (name: string) => utf8(`../adapters/fixtures/${name}.json`);
 const raw = (path: string) => Uint8Array.from(from(path)).buffer;
-const now = new Date("2026-11-24T16:07:00.000Z");
+const now = new Date("2026-11-24T05:00:52Z");
 const checked = now.toISOString();
 const [ok, tx, fl, ind, la, ms, ia] = ["ok", "tx", "fl", "in", "la", "ms", "ia"].map(adapter);
 const txText = raw("../adapters/fixtures/tx.txt");
 const pfirsHtml = utf8("ca/fixtures/pfirs.html");
+const miMap = utf8("mi/fixtures/permits-2026-11-24.json");
 const michigan = fixture("michigan-form.html");
 const kentucky = fixture("kentucky-list.html");
 const placer = fixture("placer-newsflash.html");
@@ -45,6 +47,8 @@ const csv = fixture("wisconsin.csv");
 const json = fixture("wisconsin.json");
 const rss = raw("lib/fixtures/texas-rss.xml");
 const pdf = raw("lib/fixtures/faulkner-rescind.pdf");
+const parseCaFixture = () => parsePfirs(parseHtml(pfirsHtml), now);
+const parseMiFixture = () => parseMichiganPermits(JSON.parse(miMap), now);
 
 const adapters: Array<[string, () => CountyStatus[]]> = [
   ["OK ArcGIS", () => parseOk(JSON.parse(ok), checked)],
@@ -55,13 +59,15 @@ const adapters: Array<[string, () => CountyStatus[]]> = [
   ["LA ArcGIS", () => parseLa(JSON.parse(la), checked)],
   ["MS Ninja Tables", () => parseMs(JSON.parse(ms), checked)],
   ["IA ArcGIS", () => parseIa(JSON.parse(ia), checked)],
-  ["CA PFIRS", () => parsePfirs(parseHtml(pfirsHtml), now)],
 ];
 
 const recordedInputs: SourceInput[] = ADAPTERS.map((source, index) => ({
   source, rows: adapters[index < 2 ? index : index + 1][1](), checked,
 }));
-recordedInputs.push({ source: pfirs, rows: adapters.at(-1)![1](), checked });
+recordedInputs.push(
+  { source: pfirs, rows: parseCaFixture(), checked },
+  { source: miPermits, rows: parseMiFixture(), checked },
+);
 
 const states = new Map<string, CountyStatus[]>();
 for (const { state, fips, name } of COUNTIES) {
@@ -102,6 +108,8 @@ const jobs: Array<[string, () => unknown]> = [
   ["Manual PDF hash", () => manualPdf(new Response(pdf))],
   ["Calendar rules", () => Object.values(CALENDAR_RULES).map((rule) => activeRule(rule, now, "Gwinnett County"))],
   ...adapters,
+  ["CA PFIRS", parseCaFixture],
+  ["MI DNR ArcGIS", parseMiFixture],
   ["Merge and encode current sources", () => JSON.stringify(mergeSources(null, recordedInputs, now).snapshot)],
   ["Parse, merge, encode 51-area projection", () => JSON.stringify(mergeSources(null,
     fullInputs.map((input, index) => ({ ...input, rows: JSON.parse(serializedFull[index]) })), now).snapshot)],

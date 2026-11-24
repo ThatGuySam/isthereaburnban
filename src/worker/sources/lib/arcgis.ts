@@ -1,3 +1,4 @@
+import { parseLocalDateTime } from "./dates";
 import { getText } from "./http";
 
 // Inventory stacks: ArcGIS FeatureServer, MapServer, Online and Experience, including the IN WebEOC export.
@@ -13,19 +14,36 @@ export function arcgisUrl(layer: string, fields: string[], extra: Record<string,
   return `${layer.replace(/\/$/, "")}/query?${q}`;
 }
 
-export function arcgisRows(json: ArcgisResponse, allowEmpty = false): Attributes[] {
-  if (json.error) throw new Error(`ArcGIS error: ${json.error.message ?? "unknown"}`);
+function isRecord(value: unknown): value is Attributes {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+export function arcgisRows(json: unknown, { allowEmpty = false, requireComplete = false } = {}): Attributes[] {
+  if (!isRecord(json)) throw new Error("Unexpected ArcGIS JSON");
+  if (json.error) {
+    const message = isRecord(json.error) && typeof json.error.message === "string" ? json.error.message : "unknown";
+    throw new Error(`ArcGIS error: ${message}`);
+  }
+  if (requireComplete && json.exceededTransferLimit === true) throw new Error("Incomplete ArcGIS response");
   if (!Array.isArray(json.features) || (!allowEmpty && !json.features.length)) {
     throw new Error("ArcGIS returned no features");
   }
-  return json.features.map((feature) => {
-    if (!feature.attributes || typeof feature.attributes !== "object") throw new Error("ArcGIS feature has no attributes");
+  return json.features.map((feature: unknown) => {
+    if (!isRecord(feature) || !isRecord(feature.attributes)) throw new Error("ArcGIS feature has no attributes");
     return feature.attributes;
   });
 }
 
 export function msToIso(v: unknown): string | null {
   return typeof v === "number" && Number.isFinite(v) && Math.abs(v) <= 8.64e15 ? new Date(v).toISOString() : null;
+}
+
+/** For layers verified to encode local wall-clock time as epoch milliseconds. */
+export function arcgisLocalDate(value: unknown, zone: string): string | null {
+  const iso = msToIso(value);
+  if (!iso) return null;
+  const local = parseLocalDateTime(iso.slice(0, 19), zone);
+  return local && local.slice(0, -5) + iso.slice(-5);
 }
 
 export type LayerMetadata = {
@@ -75,7 +93,7 @@ export async function queryArcgis(layer: string, fields: string[], meta: LayerMe
     for (let start = 0; start < result.objectIds.length; start += size) {
       const ids = result.objectIds.slice(start, start + size);
       const data = checked<ArcgisResponse>(await read(arcgisUrl(layer, fields, { where, objectIds: ids.join(",") })));
-      const page = arcgisRows(data, true);
+      const page = arcgisRows(data, { allowEmpty: true });
       if (data.exceededTransferLimit || page.length !== ids.length) throw new Error("Incomplete ArcGIS ID page");
       rows.push(...page);
     }
@@ -86,7 +104,7 @@ export async function queryArcgis(layer: string, fields: string[], meta: LayerMe
       where, orderByFields: `${oid} ASC`, resultOffset: String(rows.length), resultRecordCount: String(size),
     });
     const data = checked<ArcgisResponse>(await read(url));
-    const chunk = arcgisRows(data, true);
+    const chunk = arcgisRows(data, { allowEmpty: true });
     rows.push(...chunk);
     if (data.exceededTransferLimit === false || (data.exceededTransferLimit == null && chunk.length < size)) return rows;
     if (chunk.length === 0) throw new Error("ArcGIS returned an empty page with more rows");
