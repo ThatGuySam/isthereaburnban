@@ -20,6 +20,7 @@ import { dcOpenBurning } from "./dc/open-burning";
 import { dcRockCreekFireRules } from "./dc/rock-creek";
 import { deActionDays } from "./de/air-quality";
 import { deOpenBurning } from "./de/open-burning";
+import { flMiamiDadeResidentialBurning } from "./fl/miami-dade-burning";
 import { gaEpdNonSummer, gaEpdSummer } from "./ga/epd";
 import { gaGwinnett } from "./ga/gwinnett";
 import { gaHinesvilleClosure } from "./ga/hinesville";
@@ -32,6 +33,7 @@ import { idKootenaiAir } from "./id/kootenai-air";
 import { idSeasonal } from "./id/seasonal";
 import { ilCrawfordCountyOrders } from "./il/crawford";
 import { illinoisGuidanceSources } from "./il/guidance";
+import { inIdemResidentialBurning } from "./in/residential-burning";
 import { ksDickinsonDistricts } from "./ks/dickinson";
 import { ksAprilBurning, ksFranklinPermits, ksOpenBurning } from "./ks/open-burning";
 import { kyForestryCountyBans } from "./ky/county-bans";
@@ -125,6 +127,8 @@ export const SOURCES: readonly Source[] = [
     },
   } satisfies ActiveSource)),
   nwsFireWeather,
+  flMiamiDadeResidentialBurning,
+  inIdemResidentialBurning,
   pfirs,
   miPermits,
   njRestrictions,

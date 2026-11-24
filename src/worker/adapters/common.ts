@@ -27,6 +27,7 @@ export type Row = {
   note?: string;
   scope?: CountyStatus["scope"];
   scopeNote?: string;
+  standing?: true;
 };
 
 export { getText };
@@ -71,6 +72,7 @@ export function toStatuses(meta: Meta, rows: Row[], checked: string): CountyStat
     if (r.note) s.note = r.note;
     if (r.scope) s.scope = r.scope;
     if (r.scopeNote) s.scopeNote = r.scopeNote;
+    if (r.standing) s.standing = true;
     out.push(s);
   }
   if (out.length === 0) throw new Error(`${meta.state}: no rows matched known counties`);

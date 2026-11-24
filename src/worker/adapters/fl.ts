@@ -22,9 +22,12 @@ export function classify(raw: string): { status: BanStatus; label: string } {
 export function parse(json: ArcgisResponse, checked: string): CountyStatus[] {
   const rows = arcgisRows(json).map((a) => {
     const fireworks = str(a.Fireworks_Ban).toUpperCase() === "YES";
+    const decision = classify(str(a.Burn_Ban));
     return {
       county: countyByName("FL", str(a.NAME)),
-      ...classify(str(a.Burn_Ban)),
+      ...decision,
+      standing: decision.status === "restricted" ? true as const : undefined,
+      scopeNote: decision.status === "restricted" ? "Yard debris burning" : undefined,
       sourceUpdated: msToIso(a.DateUpdated),
       note: fireworks ? "This county also has a fireworks ban." : undefined,
     };

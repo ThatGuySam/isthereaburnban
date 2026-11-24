@@ -35,6 +35,7 @@ export type CountyStatus = {
   note?: string; // scope caveat, e.g. "County bans cover unincorporated areas"
   scope?: "county" | "part" | "state";
   scopeNote?: string;
+  standing?: true; // ongoing, activity-specific rule
   sourceId?: string;
   validFrom?: string; // start instant for a dated or scheduled decision
   validUntil?: string; // instant after which short-lived decisions are unconfirmed
@@ -45,7 +46,7 @@ export type CountyStatus = {
 };
 
 export type ScopedOrder = Pick<CountyStatus, "status" | "label" | "note" | "since" | "expires" |
-  "sourceId" | "sourceName" | "sourceUpdated" | "officialUrl" | "checked" | "validFrom" | "validUntil"> & {
+  "sourceId" | "sourceName" | "sourceUpdated" | "officialUrl" | "checked" | "validFrom" | "validUntil" | "standing"> & {
   sourceUrl?: string;
   scope: "part" | "county" | "state";
   scopeNote: string;

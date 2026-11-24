@@ -29,13 +29,13 @@ function better(current: Candidate | undefined, candidate: Candidate) {
 }
 
 function order(row: CountyStatus): ScopedOrder {
-  const { status, label, note, since, expires, sourceId, sourceName, sourceUpdated, sourceUrl, officialUrl, checked, validFrom, validUntil } = row;
-  return { status, label, note, since, expires, sourceId, sourceName, sourceUpdated, sourceUrl, officialUrl, checked, validFrom, validUntil,
+  const { status, label, note, since, expires, sourceId, sourceName, sourceUpdated, sourceUrl, officialUrl, checked, validFrom, validUntil, standing } = row;
+  return { status, label, note, since, expires, sourceId, sourceName, sourceUpdated, sourceUrl, officialUrl, checked, validFrom, validUntil, standing,
     scope: row.scope ?? "county", scopeNote: row.scopeNote ?? row.label };
 }
 
 function summarize(group: CountyCandidates, now: number): Candidate | undefined {
-  if (!Array.isArray(group) && group.row.scope !== "part") {
+  if (!Array.isArray(group) && group.row.scope !== "part" && !group.row.standing) {
     const row = group.row;
     if ((row.validFrom && Date.parse(row.validFrom) > now) || (row.validUntil && Date.parse(row.validUntil) <= now)) return;
     return group;
@@ -50,7 +50,7 @@ function summarize(group: CountyCandidates, now: number): Candidate | undefined 
     const { row } = entry;
     if (row.validUntil && Date.parse(row.validUntil) <= now) continue;
     const future = row.validFrom && Date.parse(row.validFrom) > now;
-    if (row.scope === "part") {
+    if (row.scope === "part" || row.standing) {
       orders.push(order(row));
       if (row.status !== "unknown") {
         const text = `${row.label} (${row.scopeNote ?? row.sourceName})`;

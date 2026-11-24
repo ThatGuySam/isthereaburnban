@@ -135,3 +135,17 @@ test("a district ban overrides a county-level negative in public answers and ale
     expect(bans(new Date(expires))).toEqual([]);
   }
 });
+
+test("standing activity rules are reported separately from the temporary county feed", () => {
+  const now = new Date("2026-11-24T11:00:00Z");
+  const checked = now.toISOString();
+  const county = row("40143", "none", checked, { scope: "county" });
+  const standing = row("40143", "restricted", checked, { scope: "county", standing: true,
+    label: "Residential yard debris burning prohibited", scopeNote: "Residential properties", sourceName: "Local authority" });
+  const { snapshot } = buildSnapshot(null, [...A, adapter("standing", "OK")], [ok([county]), ok([standing])], now);
+  expect(statusFor(snapshot, county.fips, now.getTime())).toMatchObject({
+    status: "restricted", scope: "county", standing: true, sourceName: "Local authority",
+    countywide: { status: "none" },
+    orders: [{ standing: true, scopeNote: "Residential properties" }],
+  });
+});
