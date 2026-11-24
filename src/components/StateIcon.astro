@@ -1,0 +1,14 @@
+---
+// A state's outline, drawn at build time (state-shapes.ts). Decorative: the name is always beside it.
+import { ICON_BOX, stateOutline } from "./state-shapes";
+
+interface Props {
+  abbr: string;
+  class?: string;
+}
+const { abbr, class: cls = "st-icon" } = Astro.props;
+const d = stateOutline(abbr);
+---
+<svg class={cls} viewBox={`0 0 ${ICON_BOX} ${ICON_BOX}`} aria-hidden="true" focusable="false">
+  {d ? <path d={d} /> : <path d="M12 6.5l1.6 3.5 3.9.4-2.9 2.6.8 3.8L12 14.9l-3.4 1.9.8-3.8-2.9-2.6 3.9-.4z" />}
+</svg>

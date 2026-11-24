@@ -1,5 +1,6 @@
 ---
 import Base from "../../../layouts/Base.astro";
+import StateIcon from "../../../components/StateIcon.astro";
 import { SITE, COVERAGE_LABEL, countiesIn, countyPath, states, statePath } from "../../../components/site-data";
 import type { StateDirectoryEntry } from "../../../shared/types";
 
@@ -10,6 +11,14 @@ export function getStaticPaths() {
 const { s } = Astro.props as { s: StateDirectoryEntry };
 const list = countiesIn(s.abbr);
 const unit = s.abbr === "LA" ? "parishes" : s.abbr === "AK" ? "boroughs and census areas" : "counties";
+const unitOne = s.abbr === "LA" ? "parish" : s.abbr === "AK" ? "borough or census area" : "county";
+const findLabel = s.abbr === "LA" ? "Find your parish" : s.abbr === "AK" ? "Find your borough" : "Find your county";
+// Long lists get a letter index and a filter; Delaware's three counties need neither.
+const useIndex = list.length > 30;
+const useFilter = list.length > 12;
+const groups = useIndex
+  ? [...new Set(list.map((c) => c.name[0].toUpperCase()))].map((letter) => ({ letter, list: list.filter((c) => c.name[0].toUpperCase() === letter) }))
+  : [{ letter: "", list }];
 const title = `Burn bans in ${s.name}`;
 const description = `Who issues burn bans in ${s.name}, the official source, and current status for all ${list.length} ${unit}.`;
 const jsonLd = [
@@ -25,7 +34,7 @@ const jsonLd = [
 ];
 ---
 <Base title={title} description={description} path={statePath(s.abbr)} jsonLd={jsonLd}>
-  <main id="content" class="page">
+  <main id="content" class="page browse">
     <nav class="crumbs" aria-label="Breadcrumb">
       <ol>
         <li><a href="/">Home</a></li>
@@ -33,15 +42,53 @@ const jsonLd = [
         <li aria-current="page">{s.name}</li>
       </ol>
     </nav>
-    <h1>{title}</h1>
-    <p><span class={`badge badge--${s.coverage}`}>{COVERAGE_LABEL[s.coverage]}</span></p>
+    <div class={`state-head row--${s.coverage}`}>
+      <StateIcon abbr={s.abbr} class="st-icon st-icon--lg" />
+      <div>
+        <h1>{title}</h1>
+        <p class="state-badge"><span class={`badge badge--${s.coverage}`}>{COVERAGE_LABEL[s.coverage]}</span></p>
+      </div>
+    </div>
 
     {s.coverage === "live" && (
-      <p data-ban-count data-state={s.abbr} aria-live="polite"><strong>Checking current bans…</strong></p>
+      <details class="banned" data-banned>
+        <summary><span data-ban-count data-state={s.abbr} aria-live="polite"><strong>Checking current bans…</strong></span></summary>
+        <ul class="rows rows--places rows--cols" role="list"></ul>
+      </details>
     )}
     {s.coverage !== "live" && (
-      <p class="callout">We can't confirm county burn bans in {s.name} yet. Use the official source below.</p>
+      <p class="callout">We can't confirm county burn bans in {s.name} yet. Check the <a href={s.officialUrl} target="_blank" rel="noopener">{s.publisher}</a> first.</p>
     )}
+
+    <h2 id="places">All {list.length} {unit}</h2>
+    {useFilter && (
+      <form class="finder" data-finder role="search" action={statePath(s.abbr)}>
+        <label class="finder-label" for="q">{findLabel}</label>
+        <input id="q" name="q" type="search" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="go" placeholder={`Start typing a ${unitOne.split(" ")[0]} name`} />
+        <p class="finder-status" data-finder-status role="status"></p>
+      </form>
+    )}
+    {useIndex && (
+      <nav class="az" aria-label="Jump to a letter" data-unfiltered>
+        <ul role="list">
+          {groups.map((g) => <li><a href={`#letter-${g.letter.toLowerCase()}`}>{g.letter}</a></li>)}
+        </ul>
+      </nav>
+    )}
+    <div class="az-list az-list--places" data-county-list data-unit={unit} data-unit-one={unitOne}>
+      {groups.map((g) => (
+        <section class="az-group" data-group aria-labelledby={g.letter ? `letter-${g.letter.toLowerCase()}` : undefined}>
+          {g.letter && <h3 class="az-head" id={`letter-${g.letter.toLowerCase()}`}>{g.letter}</h3>}
+          <ul class="rows rows--places" role="list">
+            {g.list.map((c) => (
+              <li data-row={c.name} data-fips={c.fips}>
+                <a class="row" href={countyPath(c)}><span class="row-name">{c.name}</span></a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
 
     <h2>Who issues bans</h2>
     <p>{s.notes}</p>
@@ -52,30 +99,11 @@ const jsonLd = [
       {s.extraUrls?.map((x) => <li><a href={x.url} target="_blank" rel="noopener">{x.label} ↗︎</a></li>)}
     </ul>
 
-    <h2>All {list.length} {unit}</h2>
-    <ul class="county-list">
-      {list.map((c) => <li><a href={countyPath(c)}>{c.name}</a></li>)}
-    </ul>
+    <p class="back"><a href="/us/">All states</a></p>
   </main>
 </Base>
 
 <script>
-  const el = document.querySelector<HTMLElement>("[data-ban-count]");
-  if (el) {
-    fetch(`/api/v1/bans?state=${el.dataset.state}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((d: { counties: { status: string; county: string }[] }) => {
-        const bans = d.counties.filter((c) => c.status === "ban").length;
-        const restricted = d.counties.filter((c) => c.status === "restricted").length;
-        const parts = [`${bans} ${bans === 1 ? "county" : "counties"} under a burn ban right now`];
-        if (restricted) parts.push(`${restricted} with restrictions`);
-        el.innerHTML = "";
-        const strong = document.createElement("strong");
-        strong.textContent = parts.join(", ") + ".";
-        el.appendChild(strong);
-      })
-      .catch(() => {
-        el.textContent = "Live counts are unavailable right now.";
-      });
-  }
+  import { initCountyFinder } from "../../../client/browse";
+  initCountyFinder();
 </script>
