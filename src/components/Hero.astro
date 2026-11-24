@@ -9,8 +9,10 @@ interface Props {
   place?: string;
   /** county page path, for the menu's links */
   url?: string;
+  /** quiet line under the answer, e.g. "Tulsa is in Tulsa County." (the Worker keeps it when it injects status) */
+  note?: string;
 }
-const { mode, fips, place, url } = Astro.props;
+const { mode, fips, place, url, note } = Astro.props;
 const home = mode === "home";
 // Keep this markup in sync with src/worker/pages.ts, which rewrites [data-hero] and [data-status-slot].
 const ask = `<div class="status" data-status="checking"><p class="status-word status-word--long">Where?</p><p class="status-sentence">Is there a burn ban near you?</p></div>`;
@@ -25,7 +27,7 @@ const ask = `<div class="status" data-status="checking"><p class="status-word st
   style={heroStyle("checking")}
 >
   <div class="hero-inner">
-    <div data-status-slot data-fips={fips} aria-live="polite" set:html={home ? ask : renderCheckingHtml(place)} />
+    <div data-status-slot data-fips={fips} data-note={note} aria-live="polite" set:html={home ? ask : renderCheckingHtml(place)} />
     {home && (
       <div class="hero-ask">
         <button type="button" class="hero-cta" data-locate>

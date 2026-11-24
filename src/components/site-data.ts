@@ -5,6 +5,7 @@ import { neighbors } from "topojson-client";
 import type { Topology, GeometryCollection } from "topojson-specification";
 import countiesJson from "../data/counties.json";
 import statesJson from "../data/states.json";
+import placesJson from "../data/places.json";
 import type { StateDirectoryEntry } from "../shared/types";
 
 export type County = { fips: string; state: string; stateFips: string; name: string; slug: string };
@@ -62,4 +63,77 @@ export function countyNeighbors(fips: string): County[] {
     .map((id) => countyByFips[id])
     .filter((c): c is County => Boolean(c) && c.fips !== fips)
     .sort((a, b) => (a.state === b.state ? a.name.localeCompare(b.name) : a.state.localeCompare(b.state)));
+}
+
+// ---------- Places (cities, towns, villages); see scripts/build-places.ts ----------
+
+
+export type Place = {
+  geoid: string;
+  name: string;
+  lsad: string;
+  state: string;
+  slug: string;
+  counties: string[];
+  pop: number;
+  lat: number;
+  lon: number;
+  seatOf?: string[];
+};
+
+export const places = placesJson as Place[];
+
+export function placePath(p: Pick<Place, "state" | "slug">): string {
+  return `/us/${p.state.toLowerCase()}/city/${p.slug}/`;
+}
+
+export function stateCitiesPath(abbr: string): string {
+  return `/us/${abbr.toLowerCase()}/city/`;
+}
+
+let byCounty: Map<string, Place[]> | null = null;
+
+/** Places with a page that touch this county, largest first. */
+export function placesInCounty(fips: string): Place[] {
+  if (!byCounty) {
+    byCounty = new Map();
+    for (const p of places) for (const f of p.counties) (byCounty.get(f) ?? byCounty.set(f, []).get(f)!).push(p);
+    for (const list of byCounty.values()) list.sort((a, b) => b.pop - a.pop);
+  }
+  return byCounty.get(fips) ?? [];
+}
+
+export function placesInState(abbr: string): Place[] {
+  return places.filter((p) => p.state === abbr).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function km(a: Place, b: Place): number {
+  const r = Math.PI / 180;
+  const x = (b.lon - a.lon) * r * Math.cos(((a.lat + b.lat) / 2) * r);
+  const y = (b.lat - a.lat) * r;
+  return Math.sqrt(x * x + y * y) * 6371;
+}
+
+let grid: Map<string, Place[]> | null = null;
+const cell = (lat: number, lon: number) => `${Math.floor(lat * 2)}:${Math.floor(lon * 2)}`;
+
+/** Up to `n` other places with pages within `maxKm`, nearest first. Half-degree grid keeps the build fast. */
+export function nearbyPlaces(p: Place, n = 6, maxKm = 50): Place[] {
+  if (!grid) {
+    grid = new Map();
+    for (const q of places) {
+      const k = cell(q.lat, q.lon);
+      (grid.get(k) ?? grid.set(k, []).get(k)!).push(q);
+    }
+  }
+  const [la, lo] = [Math.floor(p.lat * 2), Math.floor(p.lon * 2)];
+  const out: { q: Place; d: number }[] = [];
+  for (let i = -1; i <= 1; i++)
+    for (let j = -1; j <= 1; j++)
+      for (const q of grid.get(`${la + i}:${lo + j}`) ?? []) {
+        if (q.geoid === p.geoid) continue;
+        const d = km(p, q);
+        if (d <= maxKm) out.push({ q, d });
+      }
+  return out.sort((a, b) => a.d - b.d).slice(0, n).map((x) => x.q);
 }
