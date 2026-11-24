@@ -73,15 +73,23 @@ export function buildSnapshot(
   return { snapshot: { version: 1, generated: at, counties, sources, changed }, transitions };
 }
 
-export async function readSnapshot(env: Env): Promise<Snapshot | null> {
-  return env.KV.get<Snapshot>(SNAPSHOT_KEY, "json");
+// Parsing the ~450 KB snapshot costs a few ms of CPU, so reuse it within an isolate for a minute.
+let memo: { at: number; snapshot: Snapshot } | undefined;
+const MEMO_MS = 60_000;
+
+export async function readSnapshot(env: Env, fresh = false): Promise<Snapshot | null> {
+  if (!fresh && memo && Date.now() - memo.at < MEMO_MS) return memo.snapshot;
+  const snapshot = await env.KV.get<Snapshot>(SNAPSHOT_KEY, { type: "json", cacheTtl: 60 });
+  if (snapshot) memo = { at: Date.now(), snapshot };
+  return snapshot;
 }
 
 export async function refresh(env: Env, adapters: Adapter[] = ADAPTERS): Promise<Snapshot> {
-  const prev = await readSnapshot(env);
+  const prev = await readSnapshot(env, true);
   const results = await Promise.allSettled(adapters.map((a) => a.fetch()));
   const { snapshot, transitions } = buildSnapshot(prev, adapters, results, new Date());
   await env.KV.put(SNAPSHOT_KEY, JSON.stringify(snapshot));
+  memo = { at: Date.now(), snapshot };
   for (const s of snapshot.sources) if (!s.ok) console.warn(`source ${s.id} failed: ${s.error}`);
 
   if (transitions.length) {

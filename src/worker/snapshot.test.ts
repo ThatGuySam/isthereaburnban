@@ -77,3 +77,17 @@ describe("lookup", () => {
     expect(activeBans(snap, "TX").counties.length).toBe(0);
   });
 });
+
+describe("zipToFips", () => {
+  const { zipToFips } = require("./lookup");
+  const env = { ASSETS: { fetch: async (r: Request) => (new URL(r.url).pathname === "/zip/741.json" ? Response.json({ "74103": ["40143"], "74106": ["40143", "40113"], "74110": ["40143"] }) : new Response("", { status: 404 })) } };
+  test("exact ZIP", async () => {
+    expect(await zipToFips(env, "74106")).toEqual({ fips: ["40143", "40113"], approximate: false, matched: "74106" });
+  });
+  test("missing ZIP uses the nearest one in the shard", async () => {
+    expect(await zipToFips(env, "74109")).toEqual({ fips: ["40143"], approximate: true, matched: "74110" });
+  });
+  test("unknown shard is a 404", async () => {
+    await expect(zipToFips(env, "00001")).rejects.toThrow("no counties");
+  });
+});
