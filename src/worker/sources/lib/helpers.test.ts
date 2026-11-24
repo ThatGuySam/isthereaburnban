@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { webFormsPost } from "./aspnet";
 import { arcgisEditWindow, arcgisLocalDate, arcgisRows, codedDomains, dataLastEditDate, findOperationalLayers, queryArcgis } from "./arcgis";
 import { activeRule, calendarDayWindows, CALENDAR_RULES } from "./calendar";
-import { civicPlusNotices, civicPlusUrl } from "./civicplus";
+import { civicPlusAlertDetails, civicPlusNotices, civicPlusUrl } from "./civicplus";
 import { localDayWindow, reportWindow } from "./dates";
 import { decodeFeed, parseCsv, parseDotNetJsonDate, parseFeed, parseJson } from "./feeds";
 import { blockAfterHeading, extractHtml, localClock, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, US_ZONES } from "./html";
@@ -183,6 +183,16 @@ test("HTML finds heading blocks and extracts table cells through optional end ta
     /burn ban/gi).map(({ text }) => text)).toEqual(["First", "Scope", "One"]);
 });
 
+test("streamed HTML keeps text inside captured elements and ignores unrelated content", async () => {
+  const html = '<script>' + 'large &amp; uncollected text '.repeat(2048) +
+    '</script><div>outside<h2>Fire &amp; <em>weather</em></h2><p>Effective<br>today.</p>' +
+    '<a href="/order">Official &amp; current</a>outside</div>';
+  expect(await extractHtml(new Response(html), { links: true })).toEqual({
+    blocks: [{ tag: "h2", text: "Fire & weather" }, { tag: "p", text: "Effective today." }],
+    tables: [], links: [{ href: "/order", text: "Official & current" }],
+  });
+});
+
 test("US dates validate calendar values and use the publisher's clock", () => {
   expect(parseUsDate("Tue Nov. 24", 2026)).toBe("2026-11-24");
   expect(parseUsDate("2/29/24")).toBe("2024-02-29");
@@ -220,6 +230,15 @@ test("CivicPlus recognizes related links in Placer mobile News Flash, and both d
   expect(civicPlusUrl(page, "alerts")).toBe("https://www.placer.ca.gov/AlertCenter.aspx");
   const links = parseHtml('<a href="/AlertCenter.aspx?AID=15">Active</a><a href="/CivicAlerts.aspx?AID=12">News</a><a href="https://different.gov/AlertCenter.aspx?AID=3">Cross-origin</a>', { links: true });
   expect(civicPlusNotices(links, page).map(({ title }) => title)).toEqual(["Active", "News"]);
+});
+
+test("CivicPlus extracts a unique emergency widget without mixing in other headings", () => {
+  const widget = "<h2>Current Alert</h2><h3>Alert Type<!-- -->:</h3><p>Stage 1 is active.</p>";
+  const read = (html: string) => civicPlusAlertDetails(parseHtml(html), /^Current Alert$/gi);
+  expect(read("<h3>Current Alert</h3><p>Menu copy</p>" + widget + "<h2>Other</h2><p>Evergreen rules</p>"))
+    .toEqual(["Stage 1 is active."]);
+  expect(read(widget + widget)).toEqual([]);
+  expect(read(widget.replace("Alert Type", "Example Type"))).toEqual([]);
 });
 
 test("WebForms posts Michigan's actual hidden values to the same origin", () => {

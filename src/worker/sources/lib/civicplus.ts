@@ -1,9 +1,19 @@
-import type { HtmlParts } from "./html";
+import { blockAfterHeading, type HtmlParts } from "./html";
 
 // Inventory: CivicPlus/CivicEngage, including AlertCenter, CivicAlerts and mobile News Flash
 // in Pima, Angel Fire, Greenwich, Placer, and Puget Sound Clean Air's embedded status table.
 export function civicPlusUrl(site: string, channel: "alerts" | "news" | "mobile"): string {
   return new URL({ alerts: "/AlertCenter.aspx", news: "/CivicAlerts.aspx", mobile: "/m/newsflash" }[channel], site).href;
+}
+
+/** Read the visible details of a CivicPlus emergency alert widget below its unique title. */
+export function civicPlusAlertDetails(parts: HtmlParts, heading: RegExp): string[] {
+  const title = new RegExp(heading.source, heading.flags.replace(/[gy]/g, ""));
+  const titles = parts.blocks.filter(({ tag, text }) => tag === "h2" && title.test(text));
+  if (titles.length !== 1) return [];
+  const blocks = blockAfterHeading(parts.blocks.slice(parts.blocks.indexOf(titles[0])), title);
+  if (blocks[0]?.tag !== "h3" || blocks[0].text !== "Alert Type:") return [];
+  return blocks.filter(({ tag }) => tag === "p").map(({ text }) => text);
 }
 
 export function civicPlusNotices(parts: HtmlParts, pageUrl: string): { title: string; url: string }[] {

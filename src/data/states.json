@@ -25,15 +25,39 @@
     "abbr": "AZ",
     "name": "Arizona",
     "coverage": "restrictions",
-    "publisher": "Arizona Department of Forestry and Fire Management",
+    "publisher": "Arizona Department of Forestry and Fire Management, Pima County, and National Park Service",
     "officialUrl": "https://dffm.az.gov/newsroom/fire-restrictions",
     "extraUrls": [
       {
         "label": "Southwest interagency restrictions dashboard",
         "url": "https://nifc.maps.arcgis.com/apps/dashboards/aa9ff369dd414b74b69b696b40a1d057"
+      },
+      {
+        "label": "Pima County wildfire restrictions",
+        "url": "https://www.pima.gov/wildfire-warnings"
+      },
+      {
+        "label": "Grand Canyon National Park fire restrictions",
+        "url": "https://www.nps.gov/grca/learn/management/fireinformation.htm"
+      },
+      {
+        "label": "Maricopa County air quality burning rules and No Burn Days",
+        "url": "https://www.maricopa.gov/1830/Burning-Activities"
+      },
+      {
+        "label": "Arizona open burn permits",
+        "url": "https://azdeq.gov/OpenBurn"
+      },
+      {
+        "label": "Arizona summer open-burning law",
+        "url": "https://www.azleg.gov/ars/49/00501.htm"
+      },
+      {
+        "label": "Area A boundaries in Maricopa, Pinal and Yavapai counties",
+        "url": "https://www.azleg.gov/ars/49/00541.htm"
       }
     ],
-    "notes": "DFFM, counties, tribes and federal land managers each issue staged fire restrictions for the land they manage."
+    "notes": "The state forestry department covers State Trust lands, and counties, cities, fire districts, tribes and federal agencies issue restrictions for their own areas. Air quality rules also apply, including Maricopa County No Burn Days and summer open-burning limits in parts of Maricopa, Pinal and Yavapai counties."
   },
   {
     "abbr": "AR",

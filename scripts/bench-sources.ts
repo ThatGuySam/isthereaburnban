@@ -9,6 +9,9 @@ import { parse as parseMs } from "../src/worker/adapters/ms";
 import { parse as parseOk } from "../src/worker/adapters/ok";
 import { parse as parseTx, parseTxt } from "../src/worker/adapters/tx";
 import { COUNTIES } from "../src/worker/counties";
+import { parseArizonaAreaA } from "../src/worker/sources/az/area-a";
+import { azGrandCanyonFire, parseGrandCanyonFire } from "../src/worker/sources/az/grand-canyon";
+import { azPimaWildfire, parsePimaWildfire } from "../src/worker/sources/az/pima";
 import { parsePfirs, pfirs } from "../src/worker/sources/ca/pfirs";
 import { gaEpdNonSummer, parseEpdSeasonal } from "../src/worker/sources/ga/epd";
 import { parseGwinnett } from "../src/worker/sources/ga/gwinnett";
@@ -49,6 +52,9 @@ const ohStatute = utf8("oh/fixtures/section-1503.18-2026-11-24.html");
 const gaGwinnettHtml = utf8("ga/fixtures/gwinnett-2026-11-24.html");
 const gaSummerHtml = utf8("ga/fixtures/epd-summer-2026-11-24.html");
 const gaNonSummerHtml = utf8("ga/fixtures/epd-non-summer-2026-11-24.html");
+const azPimaHtml = utf8("az/fixtures/pima-wildfire-2026-11-24.html");
+const azGrandCanyonHtml = utf8("az/fixtures/grand-canyon-fire-2026-11-24.html");
+const azStatute = utf8("az/fixtures/section-49-501-2026-11-24.html");
 const michigan = fixture("michigan-form.html");
 const kentucky = fixture("kentucky-list.html");
 const placer = fixture("placer-newsflash.html");
@@ -72,6 +78,9 @@ const summerDay = new Date("2026-07-01T14:00:00Z");
 const parseGwinnettFixture = async () => parseGwinnett(await extractHtml(gaGwinnettHtml), gwinnettDecisionDay);
 const parseGaSummerFixture = async () => parseEpdSeasonal(await extractHtml(gaSummerHtml), summerDay, "summer");
 const parseGaNonSummerFixture = async () => parseEpdSeasonal(await extractHtml(gaNonSummerHtml), now, "nonSummer");
+const parseAzPimaFixture = async () => parsePimaWildfire(await extractHtml(azPimaHtml), now);
+const parseAzGrandCanyonFixture = async () => parseGrandCanyonFire(await extractHtml(azGrandCanyonHtml), now);
+const parseAzAreaAFixture = async () => parseArizonaAreaA(await extractHtml(azStatute), summerDay);
 
 const adapters: Array<[string, () => CountyStatus[]]> = [
   ["OK ArcGIS", () => parseOk(JSON.parse(ok), checked)],
@@ -95,6 +104,8 @@ recordedInputs.push(
   { source: mnRestrictions, rows: parseMnFixture(), checked },
   { source: ohSeasonal, rows: await parseOhFixture(), checked },
   { source: gaEpdNonSummer, rows: await parseGaNonSummerFixture(), checked },
+  { source: azPimaWildfire, rows: await parseAzPimaFixture(), checked },
+  { source: azGrandCanyonFire, rows: await parseAzGrandCanyonFixture(), checked },
 );
 
 const states = new Map<string, CountyStatus[]>();
@@ -145,6 +156,9 @@ const jobs: Array<[string, () => unknown]> = [
   ["GA Gwinnett daily decision", parseGwinnettFixture],
   ["GA EPD summer rules", parseGaSummerFixture],
   ["GA EPD October–April rules", parseGaNonSummerFixture],
+  ["AZ Pima wildfire bulletin", parseAzPimaFixture],
+  ["AZ Grand Canyon fire bulletin", parseAzGrandCanyonFixture],
+  ["AZ Area A statute and calendar", parseAzAreaAFixture],
   ["Merge and encode current sources", () => JSON.stringify(mergeSources(null, recordedInputs, now).snapshot)],
   ["Parse, merge, encode 51-area projection", () => JSON.stringify(mergeSources(null,
     fullInputs.map((input, index) => ({ ...input, rows: JSON.parse(serializedFull[index]) })), now).snapshot)],

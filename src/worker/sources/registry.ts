@@ -4,6 +4,9 @@ import { parse as parseIa } from "../adapters/ia";
 import { parse as parseIn } from "../adapters/in";
 import { parse as parseLa } from "../adapters/la";
 import { parse as parseOk } from "../adapters/ok";
+import { azAreaASummer } from "./az/area-a";
+import { azGrandCanyonFire } from "./az/grand-canyon";
+import { azPimaWildfire } from "./az/pima";
 import { pfirs } from "./ca/pfirs";
 import { gaEpdNonSummer, gaEpdSummer } from "./ga/epd";
 import { gaGwinnett } from "./ga/gwinnett";
@@ -48,6 +51,23 @@ export const SOURCES: readonly Source[] = [
   gaGwinnett,
   gaEpdSummer,
   gaEpdNonSummer,
+  azPimaWildfire,
+  azGrandCanyonFire,
+  azAreaASummer,
+  {
+    id: "az-dffm-trust-lands", state: "AZ", scope: "part", stack: "ArcGIS FeatureServer", mode: "manual", cadence: null,
+    sourceName: "Arizona Department of Forestry and Fire Management",
+    sourceUrl: "https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/AZ_DFFM_Fire_Restrictions_2_view/FeatureServer/0",
+    officialUrl: "https://dffm.az.gov/newsroom/fire-restrictions",
+    error: "The layer retains stages superseded by DFFM's July 2026 rescission. The agency's fire restrictions page returned a Cloudflare challenge.",
+  },
+  {
+    id: "az-coconino-emergency-management", state: "AZ", scope: "part", stack: "CivicPlus / HTML", mode: "manual", cadence: null,
+    sourceName: "Coconino County Emergency Management",
+    sourceUrl: "https://www.coconino.az.gov/2595/Fire-Restriction-Information",
+    officialUrl: "https://www.coconino.az.gov/2595/Fire-Restriction-Information",
+    error: "The county fire restrictions page returned a Cloudflare challenge (HTTP 403) on 2026-11-24.",
+  },
   {
     id: "ga-gfc-viewer", state: "GA", scope: "part", stack: "fiResponse / JSON", mode: "manual", cadence: null,
     sourceName: "Georgia Forestry Commission",

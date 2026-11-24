@@ -76,6 +76,7 @@ function collector(includeLinks: boolean) {
 
   return {
     parts,
+    capturesText: () => !ignored && (blocks.length > 0 || tables.at(-1)?.cell !== undefined || link !== undefined),
     open(tag: string, get: (key: string) => string | null | undefined) {
       if (IGNORED.test(tag)) ignored++;
       if (ignored) return;
@@ -168,6 +169,7 @@ export async function extractHtml(input: Response | string, { links = false } = 
     })
     .onDocument({
       text(chunk) {
+        if (!out.capturesText()) return;
         // Text chunks can split an entity. Decode the completed text-node run.
         pending += chunk.text;
         if (chunk.lastInTextNode) {

@@ -1,6 +1,6 @@
 import { atLocalTime, localClock, localDayWindow, shiftDay, US_ZONES } from "./dates";
 
-// Inventory: NY DEC Open Burning, GA EPD Summer Open Burning Ban, OH DNR Open Burning Regulations,
+// Inventory: AZ Area A, NY DEC Open Burning, GA EPD Summer Open Burning Ban, OH DNR Open Burning Regulations,
 // VA DOF 4 PM Burning Law, WV Forestry Fire Burning Guidelines, and MD DNR Burning Guidance.
 export type CalendarRule = {
   state: string;
@@ -59,6 +59,14 @@ const GA_COUNTIES = new Set((
 ).toLowerCase().split(","));
 
 export const CALENDAR_RULES: Record<string, CalendarRule> = {
+  AZ: {
+    state: "AZ", zone: US_ZONES.Arizona, status: "restricted", scope: "part",
+    scopeNote: "Area A within the county, as defined in A.R.S. § 49-541",
+    officialUrl: "https://www.azleg.gov/ars/49/00501.htm",
+    label: "Area A summer open-burning restriction", seasons: [["05-01", "09-30"]],
+    counties: new Set(["maricopa", "pinal", "yavapai"]),
+    note: "Arizona limits open outdoor fires in Area A from May 1 through September 30. The law lists exceptions, including cooking, and local air quality rules may impose stricter limits.",
+  },
   NY: {
     state: "NY", zone: US_ZONES.Eastern, status: "restricted", scope: "state", scopeNote: "Statewide brush-burning rule",
     officialUrl: "https://dec.ny.gov/environmental-protection/air-quality/open-burning",
