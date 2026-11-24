@@ -1,6 +1,6 @@
 import { atLocalTime, localClock, localDayWindow, shiftDay, US_ZONES } from "./dates";
 
-// Inventory: AZ Area A, NY DEC Open Burning, GA EPD Summer Open Burning Ban, KY fire hazard seasons, OH DNR Open Burning Regulations,
+// Inventory: AZ Area A, Idaho closed fire season, NY DEC Open Burning, GA EPD Summer Open Burning Ban, KY fire hazard seasons, OH DNR Open Burning Regulations,
 // PA state forest fires, VA DOF 4 PM Burning Law, WV Forestry Fire Burning Guidelines, and MD DNR Burning Guidance.
 export type CalendarRule = {
   state: string;
@@ -78,6 +78,13 @@ export const CALENDAR_RULES: Record<string, CalendarRule> = {
     officialUrl: "https://epd.georgia.gov/air-protection-branch/open-burning-rules-georgia/summer-open-burning-ban",
     label: "Summer yard and land-clearing debris ban", seasons: [["05-01", "09-30"]], counties: GA_COUNTIES,
     note: "May 1 through September 30, Georgia EPD prohibits burning yard and land-clearing debris here. Check the rule for activity-specific exceptions.",
+  },
+  ID: {
+    state: "ID", zone: US_ZONES.Mountain, status: "restricted", scope: "part",
+    scopeNote: "Burning covered by Idaho's fire-safety permit rule outside city limits",
+    officialUrl: "https://legislature.idaho.gov/statutesrules/idstat/Title38/T38CH1/SECT38-115/",
+    label: "Closed fire season permit requirement", seasons: [["05-10", "10-20"]],
+    note: "Idaho generally requires a fire-safety permit for outdoor burning outside city limits from May 10 through October 20. Campfires are generally exempt from the permit requirement. Districts can extend the season or suspend permits and campfires. Check local and air-quality rules as well.",
   },
   KY: {
     state: "KY", zone: US_ZONES.Eastern, status: "restricted", scope: "part",

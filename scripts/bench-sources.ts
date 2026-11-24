@@ -20,9 +20,12 @@ import {
 import { coDenverAir, parseDenverAir } from "../src/worker/sources/co/denver-air";
 import { gaEpdNonSummer, parseEpdSeasonal } from "../src/worker/sources/ga/epd";
 import { parseGwinnett } from "../src/worker/sources/ga/gwinnett";
+import { idIdlStages, parseIdlStages } from "../src/worker/sources/id/idl-stages";
+import { idKootenaiAir, parseKootenaiAir } from "../src/worker/sources/id/kootenai-air";
+import { idSeasonal, parseIdahoSeasonal } from "../src/worker/sources/id/seasonal";
 import { kyForestryCountyBans, parseKentuckyCountyBans } from "../src/worker/sources/ky/county-bans";
 import { kySeasonal, parseKentuckySeasonal } from "../src/worker/sources/ky/seasonal";
-import { codedDomains, dataLastEditDate, findOperationalLayers } from "../src/worker/sources/lib/arcgis";
+import { arcgisRows, codedDomains, dataLastEditDate, findOperationalLayers } from "../src/worker/sources/lib/arcgis";
 import { webFormsPost } from "../src/worker/sources/lib/aspnet";
 import { activeRule, CALENDAR_RULES } from "../src/worker/sources/lib/calendar";
 import { civicPlusNotices } from "../src/worker/sources/lib/civicplus";
@@ -119,6 +122,14 @@ const paCaptured = new Date("2026-11-24T08:11:00Z");
 const paSpringDay = new Date("2026-05-25T15:00:00Z");
 const parsePaNewsFixture = () => parseCarrollValley(paNews, paCaptured);
 const parsePaStatuteFixture = (time = paSpringDay) => extractHtml(paStatute).then((parts) => parsePaStateForestSpring(parts, time));
+const idCaptured = new Date("2026-11-24T08:32:00Z");
+const idLayer = utf8("id/fixtures/idl-layer-2026-11-24.json");
+const idZones = utf8("id/fixtures/idl-zones-2026-11-24.json");
+const idForecast = utf8("id/fixtures/deq-coeur-dalene-2026-11-24.html");
+const idStatute = utf8("id/fixtures/section-38-115-2026-11-24.html");
+const parseIdlFixture = () => parseIdlStages(JSON.parse(idLayer), arcgisRows(JSON.parse(idZones), { requireComplete: true }), idCaptured);
+const parseIdForecastFixture = () => parseKootenaiAir(idForecast, idCaptured);
+const parseIdStatuteFixture = (time = summerDay) => parseIdahoSeasonal(idStatute, time);
 const coFixture = (name: string, ext: string) => utf8(`co/fixtures/${name}-2026-11-24.${ext}`);
 const coDouglasJson = coFixture("douglas-status", "json");
 const coElPasoJson = coFixture("el-paso-status", "json");
@@ -181,6 +192,9 @@ recordedInputs.push(
   { source: kySeasonal, rows: await parseKyStatuteFixture(), checked: kyCaptured.toISOString() },
   { source: paCarrollValley, rows: await parsePaNewsFixture(), checked: paCaptured.toISOString() },
   { source: paStateForestSpring, rows: await parsePaStatuteFixture(paCaptured), checked: paCaptured.toISOString() },
+  { source: idIdlStages, rows: parseIdlFixture(), checked: idCaptured.toISOString() },
+  { source: idKootenaiAir, rows: await parseIdForecastFixture(), checked: idCaptured.toISOString() },
+  { source: idSeasonal, rows: await parseIdStatuteFixture(idCaptured), checked: idCaptured.toISOString() },
   { source: nwsFireWeather, rows: [], fireWeather: parseNwsLive(), checked: nwsCaptured.toISOString() },
 );
 
@@ -244,6 +258,9 @@ const jobs: Array<[string, () => unknown]> = [
   ["KY statute PDF and calendar", parseKyStatuteFixture],
   ["PA Carroll Valley CivicPlus", parsePaNewsFixture],
   ["PA state forest statute and calendar", parsePaStatuteFixture],
+  ["ID IDL stage zones", parseIdlFixture],
+  ["ID Kootenai district air forecast", parseIdForecastFixture],
+  ["ID closed fire season and calendar", parseIdStatuteFixture],
   ["NWS live fire-weather GeoJSON", parseNwsLive],
   ["NWS archived RFW GeoJSON", parseNwsArchive],
   ["Merge and encode current sources", () => JSON.stringify(mergeSources(null, recordedInputs, now).snapshot)],

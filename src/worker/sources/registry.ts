@@ -12,6 +12,9 @@ import { coArapahoeFire, coBoulderFire, coDouglasFire, coElPasoFire, coEstesFire
 import { coDenverAir } from "./co/denver-air";
 import { gaEpdNonSummer, gaEpdSummer } from "./ga/epd";
 import { gaGwinnett } from "./ga/gwinnett";
+import { idIdlStages } from "./id/idl-stages";
+import { idKootenaiAir } from "./id/kootenai-air";
+import { idSeasonal } from "./id/seasonal";
 import { kyForestryCountyBans } from "./ky/county-bans";
 import { kySeasonal } from "./ky/seasonal";
 import type { ArcgisResponse } from "./lib/arcgis";
@@ -86,6 +89,16 @@ export const SOURCES: readonly Source[] = [
   kySeasonal,
   paCarrollValley,
   paStateForestSpring,
+  idIdlStages,
+  idKootenaiAir,
+  idSeasonal,
+  {
+    id: "id-deq-outdoor-map", state: "ID", scope: "part", stack: "ASP.NET MVC / GeoJSON", mode: "manual", cadence: null,
+    sourceName: "Idaho Department of Environmental Quality",
+    sourceUrl: "https://www2.deq.idaho.gov/air/AQIPublic/Map/Forecast",
+    officialUrl: "https://www2.deq.idaho.gov/air/AQIPublic/Map/OutdoorBurn",
+    error: "The 9.5 MB county feed has no decision timestamp. The map's displayed update time tracks the page request.",
+  },
   {
     id: "pa-dcnr-county-bans", state: "PA", scope: "county", stack: "Adobe AEM / PDF map", mode: "manual", cadence: null,
     sourceName: "Pennsylvania DCNR Bureau of Forestry",

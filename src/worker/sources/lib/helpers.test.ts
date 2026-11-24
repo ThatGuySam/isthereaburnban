@@ -5,7 +5,7 @@ import { syncfusionGridRows, webFormsPost } from "./aspnet";
 import { arcgisEditWindow, arcgisLocalDate, arcgisRows, codedDomains, dataLastEditDate, findOperationalLayers, queryArcgis } from "./arcgis";
 import { activeRule, calendarDayWindows, CALENDAR_RULES } from "./calendar";
 import { civicPlusAlertDetails, civicPlusNotices, civicPlusUrl } from "./civicplus";
-import { localDayWindow, reportWindow } from "./dates";
+import { localDayWindow, parseWeekdayDate, reportWindow } from "./dates";
 import { decodeFeed, parseCsv, parseDotNetJsonDate, parseFeed, parseJson } from "./feeds";
 import { blockAfterHeading, extractHtml, extractHtmlGrid, localClock, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, US_ZONES } from "./html";
 import { BlockedError, fetchSource, HttpError, USER_AGENT } from "./http";
@@ -48,6 +48,15 @@ test("publisher-local dates allow a comma before a whole hour with meridiem", ()
   expect(parseLocalDateTime("Wednesday, November 18, 2026, 9 a.m.", US_ZONES.Pacific)).toBe("2026-11-18T17:00:00.000Z");
   expect(parseLocalDateTime("November 18, 2026, 12 p.m.", US_ZONES.Pacific)).toBe("2026-11-18T20:00:00.000Z");
   expect(parseLocalDateTime("November 18, 2026, 9", US_ZONES.Pacific)).toBeNull();
+});
+
+test("weekday-dated headings require a real date and a matching weekday", () => {
+  expect(parseWeekdayDate("Tuesday Nov 24", 2026)).toBe("2026-11-24");
+  expect(parseWeekdayDate("Thu., January 1, 2026")).toBe("2026-01-01");
+  expect(parseWeekdayDate("Tuesday Nov 24")).toBeNull();
+  expect(parseWeekdayDate("Monday Nov 24", 2026)).toBeNull();
+  expect(parseWeekdayDate("February 29, 2024")).toBeNull();
+  expect(parseWeekdayDate("Thursday February 29, 2026")).toBeNull();
 });
 
 test("legacy .NET JSON dates preserve the UTC instant regardless of the optional offset", () => {

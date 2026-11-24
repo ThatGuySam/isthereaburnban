@@ -223,15 +223,23 @@
     "abbr": "ID",
     "name": "Idaho",
     "coverage": "restrictions",
-    "publisher": "Idaho Department of Lands",
+    "publisher": "Idaho Department of Lands and Idaho DEQ",
     "officialUrl": "https://www.idl.idaho.gov/fire-management/fire-restrictions-finder/",
     "extraUrls": [
       {
         "label": "DEQ outdoor burn map",
         "url": "https://www2.deq.idaho.gov/air/AQIPublic/Map/OutdoorBurn"
+      },
+      {
+        "label": "Idaho fire-safety burn permits",
+        "url": "https://burnpermits.idaho.gov/"
+      },
+      {
+        "label": "Kootenai County Fire & Rescue burning rules",
+        "url": "https://kootenaifire.com/burn-permits/"
       }
     ],
-    "notes": "Fire restrictions in Idaho are set by interagency restriction areas and land owner. DEQ makes separate burn decisions by airshed."
+    "notes": "Land managers issue fire restrictions by zone, and Idaho DEQ issues separate air-quality restrictions. From May 10 through October 20, check state fire-safety permit requirements. Ask your local fire district, city, county, or Tribe about additional rules for your location."
   },
   {
     "abbr": "IL",

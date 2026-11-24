@@ -45,6 +45,18 @@ export function parseUsDate(raw: string, defaultYear?: number): string | null {
   return year && day ? isoDay(year, month, +day) : null;
 }
 
+const WEEKDAYS = "sunday monday tuesday wednesday thursday friday saturday".split(" ");
+
+/** Parse a date heading that must carry a matching weekday, such as a rolling daily forecast. */
+export function parseWeekdayDate(raw: string, defaultYear?: number): string | null {
+  const weekday = /^([a-z]+)\.?[\s,]+/i.exec(raw.trim())?.[1].toLowerCase();
+  if (!weekday) return null;
+  const day = parseUsDate(raw, defaultYear);
+  if (!day) return null;
+  const expected = WEEKDAYS[new Date(day).getUTCDay()];
+  return weekday === expected || weekday === expected.slice(0, 3) ? day : null;
+}
+
 export function parseEndDate(raw: string, defaultYear?: number) {
   if (/^until\s+(?:further notice|rescinded|lifted)\b/i.test(raw.trim())) return { kind: "open-ended" } as const;
   const date = parseUsDate(raw, defaultYear);
