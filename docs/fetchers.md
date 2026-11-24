@@ -56,9 +56,22 @@ The `nws-fire-weather` source runs in the hourly queue. It requests the NWS acti
 
 The crosswalk is a checked-in build input. Regenerate it after an NWS boundaries release using `uv run --no-project scripts/build-nws-zone-counties.py`. The script verifies the pinned inputs, intersects fire-weather zones with county geometry, and uses the NWS correlation file for public forecast zones. It also joins the Census boundary for Kalawao County, which the NWS groups with Maui. The Worker uses SAME county codes where available and UGC county or zone codes for the remaining mapping. [NWS API](https://www.weather.gov/documentation/services-web-api), [NWS fire zones](https://www.weather.gov/gis/firezones), [NWS zone-county correlation](https://www.weather.gov/gis/ZoneCounty), [Census boundary files](https://www.census.gov/geographies/mapping-files/2025/geo/carto-boundary-file.html).
 
-## Refresh and deploy
+## Snapshot architecture
 
-The hourly cron posts a source message for each due publisher and a merge message delayed by two minutes. The consumer handles one message at a time. Source fetchers compare normalized hashes and write `source:<id>` and `source:<id>:hash` only on a changed revision. D1 keeps small source health and validator records. A merge checks the current revision signature and validity windows before loading rows. A visible-revision check guards against delayed KV reads. D1 commits the publication checkpoint, transition rows, and pending alert run together. The same run ID reaches the existing notification claim after retry. Provider delivery still follows the existing delivery semantics, including the Web Push claim before transport.
+The hourly cron posts one job per due publisher and a merge coordinator delayed by two minutes. The queue consumer runs one job at a time. Each poll checks a normalized hash and checkpoints its health, validators and changed payload in D1. NWS has a national health record and state-level payload hashes, so a change in one alert area can leave other states alone. The coordinator compares each state's source hashes, health and effective-date boundaries with the last published signatures. It schedules one invocation per dirty state, including during a 51-area rebuild.
+
+Each state job reuses the existing merge rules and journals its shard, transition rows and pending notices together in D1. National active-list jobs join prepared state fragments. The final catalog points at the published revisions and carries the national generation time, source health, scoped-order check times and sitemap lastmod dates. Retries resume the same cursor and reuse the same notification run ID. Email grouping and the existing Web Push claim before transport also apply to these runs.
+
+| Binding | Published data and readers |
+| --- | --- |
+| `KV` | `snapshot:v2:<ST>` holds a state shard. County and city pages, status API and MCP lookups, and state sitemaps use the relevant shard. Border ZIPs can use more than one. |
+| `KV` | `snapshot:v2:index` is the small catalog for coverage, the sitemap index, and revision checks for all shards. `snapshot:v2:active` serves the national bans API, map and fire-weather API. `snapshot:v2:active:pretty` holds the same active county text in the wire format used by MCP. Date, health and weather changes are checked at read time. |
+| `DB` | Stores source heads and normalized payloads, the resumable publication cursor, and the last two revisions of each state. A reader can fetch the exact revision from D1 if KV has a miss or returns another revision. Ready shards beyond the hourly KV budget also read from D1. |
+| `SOURCE_QUEUE` | Carries source polls, the merge coordinator and publication continuations. Keep the consumer at one concurrent invocation. |
+
+`CountyStatus`, `SourceHealth`, and `LookupResult` define the public contract in `src/shared/types.ts`. `Snapshot` is the v1 working shape and rollout fallback. `StateSnapshot`, `SnapshotIndex`, and `ActiveProjection` describe the internal v2 formats in `src/worker/snapshot-v2.ts`. The Worker caches completed reads for up to 60 seconds in each isolate. [KV consistency](https://developers.cloudflare.com/kv/concepts/how-kv-works/)
+
+## Refresh and deploy
 
 On a fresh queue-backed deployment, coverage is available while the first refresh is pending. Without a queue binding, `refresh(env)` runs the registered sources sequentially for local development and tests. For example, apply the local migration and run Wrangler in a separate process.
 
@@ -76,15 +89,20 @@ curl -fsS -X POST -H 'Content-Type: application/json' \
 curl -fsS 'http://localhost:8787/api/v1/coverage'
 ```
 
-The deploy lead creates the queue and applies the D1 migration before deploying the configured Worker.
+For an existing environment, apply migration `0004_state_snapshots.sql` before deploying the Worker. The configured queue is reused. The first hourly run reads legacy source revisions as needed, drains any pending v1 notification run and rebuilds all 51 shards. Until v2 is published, readers can serve `snapshot:v1`. Verify the first v2 catalog and check CPU time for the source, publication and read invocations in Cloudflare before adding more sources.
 
 ```sh
-bunx wrangler queues create isthereaburnban-sources
 bunx wrangler d1 migrations apply isthereaburnban --remote
 bun run deploy
 ```
 
-The current cadence schedules 347 polls and 24 merges on a normal day. If every poll changes, that is 718 KV writes and about 1,113 queue operations before retries. Registry tests budget two KV writes per changed poll and one per hourly publication, so future registrations need cadences that fit the free allocation. Keep an eye on the 2 MB D1 checkpoint size as the snapshot gains scoped orders. The 51-area timing exceeds the 7 ms review threshold in the benchmark. Recheck the production merge CPU before enabling that much coverage. [Workers limits](https://developers.cloudflare.com/workers/platform/limits/), [Queues limits](https://developers.cloudflare.com/queues/platform/limits/), [D1 limits](https://developers.cloudflare.com/d1/platform/limits/).
+For a new environment, create the configured queue first with `bunx wrangler queues create isthereaburnban-sources`.
+
+The current registry has 84 entries and schedules 465 polls on a normal day. If every scheduled state source changes, those polls affect 393 state-hours. That would take 465 KV writes with the three national keys written each hour, before regional fire-weather changes, retries and operational writes. An unchanged hour writes zero. The hourly cap is 32 state keys and three national keys, or 840 writes across 24 hourly publications. The first complete rebuild takes at most 35 writes. At all 51 areas dirty every hour, the current cadence would use about 5,427 queue operations per day before retries.
+
+`bun run bench:sources` reports fixture parsing, legacy aggregate CPU, the highest state merge and cold-read p95, and a full rebuild summed across individual jobs. The regression test caps the 120-source fixture at 4 ms p95 per state merge and 2 ms p95 per shard read. The timings exclude Cloudflare binding and runtime overhead. In the stress fixture with all 3,143 counties active, cold MCP serialization and formatting used almost 10 ms p95 locally. Watch that route along with published state row sizes against D1's 2 MB row limit. [Workers limits](https://developers.cloudflare.com/workers/platform/limits/) · [KV limits](https://developers.cloudflare.com/kv/platform/limits/) · [Queues limits](https://developers.cloudflare.com/queues/platform/limits/) · [D1 limits](https://developers.cloudflare.com/d1/platform/limits/)
+
+The v1 compatibility data reflect the cutover point. Rolling back to a v1-only Worker after new source heads have been written requires reconciling those D1 heads with their older KV payloads and preserving notification claims.
 
 ### California verification
 
