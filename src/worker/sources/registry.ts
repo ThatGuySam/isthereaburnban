@@ -49,6 +49,8 @@ import { ncAirHours } from "./nc/air-hours";
 import { ncForestOrders } from "./nc/forest-orders";
 import { ncPermits } from "./nc/permits";
 import { ndDesRestrictions } from "./nd/restrictions";
+import { nhOpenBurningPermits } from "./nh/open-burning";
+import { nhTownHallRoad } from "./nh/town-hall-road";
 import { njRestrictions } from "./nj/restrictions";
 import { nmAngelFirePermits } from "./nm/angel-fire";
 import { nmBernalilloOpenBurning, nmOpenBurning } from "./nm/open-burning";
@@ -197,6 +199,15 @@ export const SOURCES: readonly Source[] = [
   ksFranklinPermits,
   ksDickinsonDistricts,
   alCahabaBurning,
+  nhOpenBurningPermits,
+  nhTownHallRoad,
+  {
+    id: "nh-forestry-emergency-orders", state: "NH", scope: "part", stack: "Drupal / email and social updates",
+    mode: "manual", cadence: null, sourceName: "New Hampshire Division of Forests and Lands",
+    sourceUrl: "https://www.nhdfl.dncr.nh.gov/forest-protection/daily-fire-danger",
+    officialUrl: "https://www.nhdfl.dncr.nh.gov/forest-protection/daily-fire-danger",
+    error: "Direct requests returned Akamai HTTP 403. Fire danger is advisory. Ask the local forest fire warden about current orders and permit suspensions.",
+  },
   {
     id: "al-forestry-orders", state: "AL", scope: "state", stack: "ASP.NET WebForms / HTML and WordPress notices",
     mode: "manual", cadence: null, sourceName: "Alabama Forestry Commission",

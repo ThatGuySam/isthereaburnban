@@ -103,6 +103,8 @@ import { parseWisconsinPermits, wiPermits } from "../src/worker/sources/wi/permi
 import { parseWyomingCountyOrders, wyCountyOrders } from "../src/worker/sources/wy/county-orders";
 import { parseWyomingStateLands, wyStateLands } from "../src/worker/sources/wy/state-lands";
 import { ndDesRestrictions, parseNdRestrictions } from "../src/worker/sources/nd/restrictions";
+import { nhOpenBurningPermits, parseNhOpenBurning } from "../src/worker/sources/nh/open-burning";
+import { nhTownHallRoad, parseTownHallRoad } from "../src/worker/sources/nh/town-hall-road";
 
 const sourceUrl = new URL("../src/worker/sources/", import.meta.url);
 const from = (path: string) => readFileSync(new URL(path, sourceUrl));
@@ -190,6 +192,14 @@ const alJeffersonHtml = utf8("al/fixtures/jefferson-health-2026-11-24.html");
 const parseAlAdem = (at = alCaptured) => parseAdemOpenBurning(alCahabaHtml, at);
 const parseAlJefferson = () => parseJeffersonOpenBurning(alJeffersonHtml, alCaptured);
 const parseAlCahaba = () => parseCahabaBurning(alCahabaHtml, alCaptured, "Tue, 24 Nov 2026 16:03:45 GMT");
+
+const nhCaptured = new Date("2026-11-24T16:20:16Z");
+const nhStatute = utf8("nh/fixtures/rsa-227-l-17-2026-11-24.html");
+const nhForestAlerts = utf8("nh/fixtures/usfs-alerts-2026-11-24.html");
+const nhRoadOrder = utf8("nh/fixtures/usfs-town-hall-road-2026-11-24.html");
+const parseNhStatuteFixture = () => parseNhOpenBurning(nhStatute, nhCaptured);
+const parseNhForestFixture = () => parseTownHallRoad(nhForestAlerts, async () => nhRoadOrder, nhCaptured);
+
 const parseNwsLive = () => parseNwsAlerts(JSON.parse(nwsLive), nwsCaptured);
 const parseNwsArchive = () => parseNwsAlerts(JSON.parse(nwsArchive), new Date("2026-11-18T20:00Z"), { archive: true });
 const nyDecHtml = utf8("ny/fixtures/dec-open-burning-2026-11-24.html");
@@ -440,6 +450,8 @@ recordedInputs.push(
   { source: alJeffersonOpenBurning, rows: await parseAlJefferson(), checked: alCaptured.toISOString() },
   { source: alAdemOpenBurning, rows: await parseAlAdem(), checked: alCaptured.toISOString() },
   { source: alCahabaBurning, rows: await parseAlCahaba(), checked: alCaptured.toISOString() },
+  { source: nhOpenBurningPermits, rows: await parseNhStatuteFixture(), checked: nhCaptured.toISOString() },
+  { source: nhTownHallRoad, rows: await parseNhForestFixture(), checked: nhCaptured.toISOString() },
   { source: ohSeasonal, rows: await parseOhFixture(), checked },
   { source: gaEpdNonSummer, rows: await parseGaNonSummerFixture(), checked },
   { source: azPimaWildfire, rows: await parseAzPimaFixture(), checked },
@@ -523,6 +535,8 @@ const jobs: Array<[string, () => unknown]> = [
   ["AL state air rule and summer calendar", () => parseAlAdem(new Date("2027-07-14T16:03:46Z"))],
   ["AL Jefferson County burning calendar", parseAlJefferson],
   ["AL Cahaba Valley district status", parseAlCahaba],
+  ["NH open-burning statute and calendar", parseNhStatuteFixture],
+  ["NH White Mountain Drupal forest order", parseNhForestFixture],
   ["CivicPlus News Flash", () => civicPlusNotices(parseHtml(placer, { links: true }), "https://www.placer.ca.gov/")],
   ["ASP.NET WebForms", () => webFormsPost(michigan, "https://www2.dnr.state.mi.us/burnpermits/", "ctl00$ContentPlaceHolder1$CntyName")],
   ["SharePoint list", () => sharePointListItems(parseHtml(kentucky), /current burn bans/i)],

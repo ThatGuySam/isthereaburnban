@@ -3,7 +3,7 @@ import { atLocalTime, localClock, localDayWindow, shiftDay, US_ZONES } from "./d
 
 // Inventory: Alabama and Jefferson County open burning, Alaska burn permits and winter air rules, AZ Area A, Idaho and Utah closed fire seasons, NY DEC Open Burning, GA EPD Summer Open Burning Ban, KY fire hazard seasons, OH DNR Open Burning Regulations,
 // PA state forest fires, VA DOF 4 PM Burning Law, WV Forestry Fire Burning Guidelines, MD DNR Burning Guidance,
-// ME and VT open-burning permits, DE open burning, and MA residential brush burning.
+// ME, NH and VT open-burning permits, DE open burning, and MA residential brush burning.
 export type CalendarRule = {
   state: string;
   officialUrl: string;
@@ -317,6 +317,13 @@ export const CALENDAR_RULES: Record<string, CalendarRule> = {
     officialUrl: "https://legislature.maine.gov/statutes/12/title12sec9325.html",
     label: "Permit required for covered open burning",
     note: "Maine requires a permit for burning brush, leaves and other activities listed in state law. Ask the town forest fire warden or, in unorganized areas, a Maine Forest Service ranger. The law has exceptions for certain small campfires on snow or frozen water and qualifying outdoor cooking fires. Check for local restrictions before burning.",
+  },
+  NH: {
+    state: "NH", zone: US_ZONES.Eastern, status: "restricted", scope: "state",
+    scopeNote: "Open burning covered by New Hampshire's permit law",
+    officialUrl: "https://gc.nh.gov/rsa/html/XIX-A/227-L/227-L-17.htm",
+    label: "Permit required for covered open burning",
+    note: "New Hampshire generally requires permission from the local forest fire warden for open burning. The law has exceptions for snow cover, certain camp or picnic sites, and other limited situations. Ask the warden about current permit availability, burn hours, and local restrictions.",
   },
   OH: {
     state: "OH", zone: US_ZONES.Eastern, status: "restricted", scope: "part", scopeNote: "Unincorporated areas outside railroad-controlled land",

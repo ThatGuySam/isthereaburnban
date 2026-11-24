@@ -661,10 +661,28 @@
   {
     "abbr": "NH",
     "name": "New Hampshire",
-    "coverage": "directory",
-    "publisher": "New Hampshire Division of Forests and Lands",
-    "officialUrl": "https://www.nhdfl.dncr.nh.gov/sites/g/files/ehbemt866/files/inline-documents/fire-law-brouchure.pdf",
-    "notes": "Town forest fire wardens issue burn permits in New Hampshire. The state can issue emergency bans."
+    "coverage": "restrictions",
+    "publisher": "New Hampshire General Court and U.S. Forest Service",
+    "officialUrl": "https://gc.nh.gov/rsa/html/XIX-A/227-L/227-L-17.htm",
+    "extraUrls": [
+      {
+        "label": "State fire permit portal",
+        "url": "https://nh.burnsafeamerica.com/"
+      },
+      {
+        "label": "State Forest Protection Bureau fire danger and contacts",
+        "url": "https://www.nhdfl.dncr.nh.gov/forest-protection/daily-fire-danger"
+      },
+      {
+        "label": "State fire permit and suspension rules",
+        "url": "https://gc.nh.gov/rules/state_agencies/ncr520-590.html"
+      },
+      {
+        "label": "White Mountain National Forest alerts and orders",
+        "url": "https://www.fs.usda.gov/r09/whitemountain/alerts"
+      }
+    ],
+    "notes": "New Hampshire generally requires a permit for open burning. Town forest fire wardens issue permits and can confirm local rules and suspensions. The state can suspend permits or issue emergency orders. We track the standing state permit rule and the Forest Service campfire order along Town Hall Road in part of Carroll County."
   },
   {
     "abbr": "NJ",
