@@ -1,11 +1,12 @@
 import type { BanStatus, CountyStatus } from "../../shared/types";
-import { type Adapter, type ArcgisResponse, arcgisRows, arcgisUrl, byFips, countyByName, getJson, msToIso, str, toStatuses } from "./common";
+import { type Adapter, type ArcgisResponse, arcgisRows, arcgisUrl, byPublisherFips, completeLayer, publisherDate, str, toStatuses } from "./common";
 
 const LAYER = "https://services3.arcgis.com/uymqJ6hE4wvB3E9t/arcgis/rest/services/Burn_Ban1/FeatureServer/3";
+const FIELDS = ["Parish1", "Prsh_Fips1", "Burn_Ban1", "EditDate"];
 const meta = {
   state: "LA",
   sourceName: "Louisiana Department of Agriculture and Forestry",
-  sourceUrl: arcgisUrl(LAYER, ["Parish1", "Prsh_Fips1", "Burn_Ban1", "EditDate"]),
+  sourceUrl: arcgisUrl(LAYER, FIELDS),
   officialUrl: "https://www.ldaf.la.gov/land/fire/safety",
 };
 
@@ -19,22 +20,23 @@ export function classify(raw: string): { status: BanStatus; label: string } {
 }
 
 export function parse(json: ArcgisResponse, checked: string): CountyStatus[] {
-  const rows = arcgisRows(json).map((a) => {
-    const code = str(a.Prsh_Fips1);
+  const rows = arcgisRows(json, { requireComplete: true }).map((a) => {
+    const decision = classify(str(a.Burn_Ban1));
+    if (decision.status === "unknown" && a.Burn_Ban1 !== null) throw new Error(`LA: unrecognized burn ban code ${decision.label}`);
     return {
-      county: (code ? byFips(`22${code.padStart(3, "0")}`) : undefined) ?? countyByName("LA", str(a.Parish1)),
-      ...classify(str(a.Burn_Ban1)),
-      sourceUpdated: msToIso(a.EditDate),
+      county: byPublisherFips("LA", "22", a.Parish1, a.Prsh_Fips1),
+      ...decision,
+      sourceUpdated: publisherDate("LA", a.EditDate),
     };
   });
-  return toStatuses(meta, rows, checked);
+  return toStatuses(meta, rows, checked, true);
 }
 
 export const la: Adapter = {
   id: "la",
   mode: "full",
   ...meta,
-  async fetch() {
-    return parse(await getJson(meta.sourceUrl), new Date().toISOString());
+  async fetch(now = new Date()) {
+    return parse(await completeLayer(LAYER, FIELDS), now.toISOString());
   },
 };

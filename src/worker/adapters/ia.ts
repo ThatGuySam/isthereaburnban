@@ -30,7 +30,7 @@ export const ia: Adapter = {
   mode: "positive-only",
   keepRowLinks: true,
   ...meta,
-  async fetch() {
-    return parse(await getJson(meta.sourceUrl), new Date().toISOString());
+  async fetch(now = new Date()) {
+    return parse(await getJson(meta.sourceUrl), now.toISOString());
   },
 };

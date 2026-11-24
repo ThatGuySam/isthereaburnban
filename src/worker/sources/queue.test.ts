@@ -107,7 +107,7 @@ const row = (status, checked, extra = {}) => ({
 });
 const source = (id, fetch, extra = {}) => ({
   id, state: "OR", coverage: "live", scope: "county", cadence: { kind: "hourly" }, mode: "full",
-  stack: "HTML", sourceName: id, sourceUrl: "https://www.example.gov/feed", officialUrl: "https://www.example.gov/status",
+  expectedFips: ["41039"], stack: "HTML", sourceName: id, sourceUrl: "https://www.example.gov/feed", officialUrl: "https://www.example.gov/status",
   fetch, ...extra,
 });
 const run = (box, sources, message, clock = message.slot) =>
@@ -171,7 +171,7 @@ test("queued NWS changes leave ban history alone and preserve a verified midnigh
   const active = before + 3_600_000;
   const after = Date.parse("2026-11-18T23:07Z");
   const county = source("co-example", async () => ({ rows: [row("none", new Date(before).toISOString(),
-    { state: "CO", fips: "08059", county: "Jefferson County" })] }), { state: "CO" });
+    { state: "CO", fips: "08059", county: "Jefferson County" })] }), { state: "CO", expectedFips: ["08059"] });
   const weather = { ...nwsFireWeather, fetch: async ({ now }) => ({ fireWeather: parseNwsAlerts({
     type: "FeatureCollection", features: now.getTime() === active ? [warning] : [],
   }, now) }) };
@@ -219,7 +219,7 @@ test("queue stores one revision, absorbs duplicate deliveries and skips unchange
       return { notModified: true, validators };
     }
     return { rows: called === 2 ? [b, a] : [a, b], validators: { etag: '"v1"' } };
-  });
+  }, { expectedFips: ["41039", "41051"] });
   await poll(box, src, initial);
   await poll(box, src, initial);
   await merge(box, [src], initial);
@@ -242,11 +242,28 @@ test("queue stores one revision, absorbs duplicate deliveries and skips unchange
   expect(box.alerts).toEqual([]);
 });
 
+test("a partial full edition records failure and retains the last complete payload", async () => {
+  const box = sandbox();
+  const src = source("or", async ({ now }) => {
+    const checked = now.toISOString();
+    const second = row("none", checked, { fips: "41051", county: "Multnomah County" });
+    return { rows: now.getTime() === initial ? [row("ban", checked), second] : [row("none", checked)] };
+  }, { expectedFips: ["41039", "41051"] });
+  await poll(box, src, initial);
+  const first = (await readHeads(box.env.DB)).get(src.id);
+  await poll(box, src, nextHour);
+  expect((await readHeads(box.env.DB)).get(src.id)).toMatchObject({
+    hash: first.hash, lastGood: first.lastGood, error: expect.stringContaining("missing 1 counties"),
+  });
+  await merge(box, [src], nextHour);
+  expect(box.snapshot().counties["41039"].status).toBe("ban");
+});
+
 test("journal handles KV and D1 interruption without duplicating a transition or alert run", async () => {
   const box = sandbox();
   let status = "none";
   const src = source("or", async ({ now }) => ({ rows: [row(status, now.toISOString())] }));
-  const tx = source("tx-test", async ({ now }) => ({ rows: [row(status, now.toISOString(), { state: "TX", fips: "48001", county: "Anderson County" })] }), { state: "TX" });
+  const tx = source("tx-test", async ({ now }) => ({ rows: [row(status, now.toISOString(), { state: "TX", fips: "48001", county: "Anderson County" })] }), { state: "TX", expectedFips: ["48001"] });
   const sources = [src, tx];
   await poll(box, src, initial);
   await poll(box, tx, initial);
@@ -284,7 +301,7 @@ test("one dirty state rewrites only its shard and readers pin the catalog revisi
   const next = start + 3_600_000;
   let status = "none";
   const or = source("or-fixture", async ({ now }) => ({ rows: [row(status, now.toISOString())] }));
-  const tx = source("tx-fixture", async ({ now }) => ({ rows: [row("none", now.toISOString(), { state: "TX", fips: "48001" })] }), { state: "TX" });
+  const tx = source("tx-fixture", async ({ now }) => ({ rows: [row("none", now.toISOString(), { state: "TX", fips: "48001", county: "Anderson County" })] }), { state: "TX", expectedFips: ["48001"] });
   await poll(box, or, start);
   await poll(box, tx, start);
   await merge(box, [or, tx], start);
@@ -323,7 +340,7 @@ test("a busy hour limits KV writes and still serves every changed state", async 
   const counties = new Map(COUNTIES.map(({ state, fips, name }) => [state, { state, fips, county: name }]));
   let status = "none";
   const sources = [...counties].map(([state, county]) =>
-    source(`fixture-${state}`, async ({ now }) => ({ rows: [row(status, now.toISOString(), county)] }), { state }));
+    source(`fixture-${state}`, async ({ now }) => ({ rows: [row(status, now.toISOString(), county)] }), { state, expectedFips: [county.fips] }));
   for (const src of sources) await poll(box, src, start);
   await merge(box, sources, start);
   expect(Object.values(box.catalog().states).every(({ cached }) => cached)).toBe(true);
@@ -369,7 +386,7 @@ test("unchanged scoped orders take the published check time without rewriting th
   const or = source("or-district", async ({ now }) => ({ rows: [row("restricted", now.toISOString(), {
     label: 'Fire restrictions in the district — check "today"', scopeNote: "County district", validUntil: new Date(start + 86_400_000).toISOString(),
   })] }), { mode: "positive-only", scope: "part" });
-  const tx = source("tx-test", async ({ now }) => ({ rows: [row(status, now.toISOString(), { state: "TX", fips: "48001" })] }), { state: "TX" });
+  const tx = source("tx-test", async ({ now }) => ({ rows: [row(status, now.toISOString(), { state: "TX", fips: "48001", county: "Anderson County" })] }), { state: "TX", expectedFips: ["48001"] });
   await poll(box, or, start);
   await poll(box, tx, start);
   await merge(box, [or, tx], start);

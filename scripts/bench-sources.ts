@@ -8,7 +8,7 @@ import { parse as parseFl } from "../src/worker/adapters/fl";
 import { parse as parseIa } from "../src/worker/adapters/ia";
 import { parse as parseIn } from "../src/worker/adapters/in";
 import { parse as parseLa } from "../src/worker/adapters/la";
-import { parse as parseMs } from "../src/worker/adapters/ms";
+import { parse as parseMs, msEditionIds } from "../src/worker/adapters/ms";
 import { parse as parseOk } from "../src/worker/adapters/ok";
 import { parse as parseTx, parseTxt } from "../src/worker/adapters/tx";
 import { COUNTIES } from "../src/worker/counties";
@@ -136,6 +136,7 @@ const now = new Date("2026-11-24T05:00:52Z");
 const checked = now.toISOString();
 const [ok, tx, fl, ind, la, ms, ia] = ["ok", "tx", "fl", "in", "la", "ms", "ia"].map(adapter);
 const txText = raw("../adapters/fixtures/tx.txt");
+const msIds = msEditionIds(utf8("../adapters/fixtures/ms-edition.html"));
 const pfirsHtml = utf8("ca/fixtures/pfirs.html");
 const miMap = utf8("mi/fixtures/permits-2026-11-24.json");
 const njDivisions = utf8("nj/fixtures/divisions-2026-11-24.json");
@@ -502,7 +503,7 @@ const adapters: Array<[string, () => CountyStatus[]]> = [
   ["FL ArcGIS", () => parseFl(JSON.parse(fl), checked)],
   ["IN ArcGIS", () => parseIn(JSON.parse(ind), checked)],
   ["LA ArcGIS", () => parseLa(JSON.parse(la), checked)],
-  ["MS Ninja Tables", () => parseMs(JSON.parse(ms), checked)],
+  ["MS Ninja Tables", () => parseMs(JSON.parse(ms), checked, msIds)],
   ["IA ArcGIS", () => parseIa(JSON.parse(ia), checked)],
 ];
 

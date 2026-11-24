@@ -1,6 +1,6 @@
 import { withReportDates } from "../report-dates";
 import type { CountyStatus, FireWeatherReport, SnapshotData } from "../../shared/types";
-import { COUNTY_BY_FIPS } from "../counties";
+import { COUNTY_BY_FIPS, countiesInState } from "../counties";
 import type { Env } from "../env";
 import { sha256 } from "./lib/hash";
 import { BlockedError, type Validators } from "./lib/http";
@@ -46,7 +46,16 @@ function normalize(source: ActiveSource, result: Exclude<SourceResult, { notModi
   }
   if (source.product === "fire-weather") throw new Error(`${source.id}: expected fire-weather reports`);
   const { rows } = result;
-  if (!rows.length && source.mode === "full") throw new Error("Full source returned no rows");
+  if (source.mode === "full") {
+    const expected = new Set(source.expectedFips ?? countiesInState(source.state).map(({ fips }) => fips));
+    if (!expected.size || !rows.length) throw new Error(`${source.id}: full source returned no county roster`);
+    for (const { fips, county } of rows) {
+      if (!expected.delete(fips) || COUNTY_BY_FIPS.get(fips)?.name !== county) {
+        throw new Error(`${source.id}: unexpected or duplicate county ${county} (${fips})`);
+      }
+    }
+    if (expected.size) throw new Error(`${source.id}: full source missing ${expected.size} counties`);
+  }
   const ordered = rows.map((row) => {
     const { fips, state, county, label, since, expires, sourceUpdated, sourceName, sourceUrl, officialUrl, note,
       scopeNote, validFrom, validUntil, standing, scopedBan } = row;

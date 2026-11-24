@@ -28,6 +28,8 @@ export type ActiveSource = Metadata & {
   mode: Exclude<SourceHealth["mode"], "manual">;
   coverage: Exclude<Coverage, "directory">;
   cadence: Cadence;
+  /** Full sources cover the state roster unless the publisher defines a smaller one. */
+  expectedFips?: readonly string[];
   /** Default 48 hours. Use a shorter window and row validity for daily permit decisions. */
   staleMs?: number;
   fetch(context: { now: Date; validators?: Validators }): Promise<SourceResult>;
