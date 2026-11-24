@@ -2,7 +2,7 @@ import type { CountyStatus } from "../../../shared/types";
 import { atLocalTime, localClock, localDayWindow, shiftDay, US_ZONES } from "./dates";
 
 // Inventory: Alaska burn permits and winter air rules, AZ Area A, Idaho and Utah closed fire seasons, NY DEC Open Burning, GA EPD Summer Open Burning Ban, KY fire hazard seasons, OH DNR Open Burning Regulations,
-// PA state forest fires, VA DOF 4 PM Burning Law, WV Forestry Fire Burning Guidelines, and MD DNR Burning Guidance.
+// PA state forest fires, VA DOF 4 PM Burning Law, WV Forestry Fire Burning Guidelines, MD DNR Burning Guidance, and VT open-burning permits.
 export type CalendarRule = {
   state: string;
   officialUrl: string;
@@ -276,6 +276,13 @@ export const CALENDAR_RULES: Record<string, CalendarRule> = {
     officialUrl: "https://law.lis.virginia.gov/vacode/title10.1/chapter11/section10.1-1142/",
     label: "Virginia 4 p.m. burning restriction", seasons: [["02-15", "04-30"]], hours: [0, 16 * 60],
     note: "From February 15 through April 30, Virginia prohibits starting covered fires between midnight and 4 p.m. Eastern. The law exempts federal lands, orchard and vineyard frost protection, and certain approved prescribed burns. Check local rules as well.",
+  },
+  VT: {
+    state: "VT", zone: US_ZONES.Eastern, status: "restricted", scope: "part",
+    scopeNote: "Open burning of natural wood, brush, weeds or grass covered by Vermont's permit law",
+    officialUrl: "https://legislature.vermont.gov/statutes/section/10/083/02645",
+    label: "Permit required for covered open burning",
+    note: "Get a permit from the town forest fire warden or deputy for covered open burning. Vermont law exempts qualifying small campfires, sites surrounded by snow and some primitive camping fires on state Agency of Natural Resources land. A special warden handles broadcast burn permits on those state lands. Ask the local fire warden about current restrictions.",
   },
   WV: {
     state: "WV", zone: US_ZONES.Eastern, status: "restricted", scope: "state",

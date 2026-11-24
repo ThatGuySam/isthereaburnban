@@ -75,6 +75,9 @@ import { parseUtahSeasonal, utClosedFireSeason } from "../src/worker/sources/ut/
 import { parseRapidanAlerts, vaRapidanAlerts } from "../src/worker/sources/va/rapidan";
 import { parseVirginiaSeasonal, vaSeasonal } from "../src/worker/sources/va/seasonal";
 import { parseShenandoahAlerts, vaShenandoahAlerts } from "../src/worker/sources/va/shenandoah";
+import { parseFprSituation, vtFprRestrictions } from "../src/worker/sources/vt/fpr";
+import { parseFranklinBurning, vtFranklinBurning } from "../src/worker/sources/vt/franklin";
+import { parseVermontPermits, vtOpenBurningPermits } from "../src/worker/sources/vt/permits";
 import { parseWestVirginiaSeasonal, wvForestryFireSeason } from "../src/worker/sources/wv/seasonal";
 import { parseEcologyAir, waEcologyAir } from "../src/worker/sources/wa/ecology-air";
 import { parseKingFireSafety, waKingFireSafety } from "../src/worker/sources/wa/king-fire-safety";
@@ -103,6 +106,15 @@ const mnRestrictionsJson = utf8("mn/fixtures/restrictions-2026-11-24.json");
 const nwsLive = utf8("nws/fixtures/active-2026-11-24.json");
 const nwsArchive = utf8("nws/fixtures/archive-2026-11-18-to-19.json");
 const nwsCaptured = new Date("2026-11-24T07:42:59Z");
+const vtCaptured = new Date("2026-11-24T13:40:27Z");
+const vtSituation = utf8("vt/fixtures/fpr-situation-2026-11-24.html");
+const vtFranklin = utf8("vt/fixtures/franklin-home-2026-11-24.html");
+const vtStatute = utf8("vt/fixtures/statute-2645-2026-11-24.html");
+const parseVtFpr = async () => parseFprSituation(await extractHtml(vtSituation, { blockLinks: true }), vtCaptured, () => {
+  throw new Error("Unexpected linked FPR order in current situation fixture");
+});
+const parseVtFranklin = async () => parseFranklinBurning(await extractHtml(vtFranklin), vtCaptured);
+const parseVtPermits = async () => parseVermontPermits(await extractHtml(vtStatute), vtCaptured);
 const parseNwsLive = () => parseNwsAlerts(JSON.parse(nwsLive), nwsCaptured);
 const parseNwsArchive = () => parseNwsAlerts(JSON.parse(nwsArchive), new Date("2026-11-18T20:00Z"), { archive: true });
 const nyDecHtml = utf8("ny/fixtures/dec-open-burning-2026-11-24.html");
@@ -330,6 +342,9 @@ recordedInputs.push(
   { source: wvForestryFireSeason, rows: await parseWvForestryFixture(), checked: wvDaytime.toISOString() },
   { source: mdDnrWoodland, rows: await parseMdWoodlandFixture(), checked },
   { source: mdSummerAir, rows: await parseMdSummerFixture(now), checked },
+  { source: vtFprRestrictions, rows: await parseVtFpr(), checked: vtCaptured.toISOString() },
+  { source: vtFranklinBurning, rows: await parseVtFranklin(), checked: vtCaptured.toISOString() },
+  { source: vtOpenBurningPermits, rows: await parseVtPermits(), checked: vtCaptured.toISOString() },
   { source: ohSeasonal, rows: await parseOhFixture(), checked },
   { source: gaEpdNonSummer, rows: await parseGaNonSummerFixture(), checked },
   { source: azPimaWildfire, rows: await parseAzPimaFixture(), checked },
@@ -454,6 +469,9 @@ const jobs: Array<[string, () => unknown]> = [
   ["WV Forestry WordPress and fire-season calendar", parseWvForestryFixture],
   ["MD DNR SharePoint woodland guidance and calendar", parseMdWoodlandFixture],
   ["MD COMAR summer air-quality rule and calendar", () => parseMdSummerFixture(mdSummer)],
+  ["VT FPR Drupal situation page", parseVtFpr],
+  ["VT Franklin Google Sites notice", parseVtFranklin],
+  ["VT Legislature open-burning statute and calendar", parseVtPermits],
   ["NV Spring Mountains Drupal order table", parseNvForestFixture],
   ["UT FFSL fire order polygons", parseUtOrders],
   ["UT closed fire season and calendar", parseUtStatute],

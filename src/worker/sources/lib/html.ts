@@ -27,7 +27,7 @@ export function attributes(raw: string): Record<string, string> {
 }
 
 export type Table = { heading: string; id?: string; rows: string[][] };
-export type Block = { tag: string; text: string };
+export type Block = { tag: string; text: string; links?: Link[] };
 export type Link = { href: string; text: string };
 export type HtmlParts = { blocks: Block[]; tables: Table[]; links: Link[] };
 
@@ -37,9 +37,14 @@ const IGNORED = /^(?:script|style|template|noscript)$/;
 const HTML_TAG = "h1,h2,h3,h4,h5,h6,p,li,dt,dd,blockquote,figcaption,table,tr,th,td,br,a,script,style,template,noscript";
 type ActiveTable = { table: Table; row?: string[]; cell?: string };
 
-type HtmlOptions = { links?: boolean; tableHeading?: (block: Block) => boolean };
+type HtmlOptions = {
+  links?: boolean;
+  /** Keep links with their enclosing text blocks so callers can restrict them to a section. */
+  blockLinks?: boolean;
+  tableHeading?: (block: Block) => boolean;
+};
 
-function collector({ links: includeLinks = false, tableHeading }: HtmlOptions) {
+function collector({ links: includeLinks = false, blockLinks = false, tableHeading }: HtmlOptions) {
   const parts: HtmlParts = { blocks: [], tables: [], links: [] };
   const tables: ActiveTable[] = [];
   const blocks: Block[] = [];
@@ -64,7 +69,7 @@ function collector({ links: includeLinks = false, tableHeading }: HtmlOptions) {
   function finishLink() {
     if (link) {
       link.text = cleanText(link.text);
-      parts.links.push(link);
+      if (includeLinks) parts.links.push(link);
       link = undefined;
     }
   }
@@ -89,10 +94,13 @@ function collector({ links: includeLinks = false, tableHeading }: HtmlOptions) {
         blocks.push(block);
         parts.blocks.push(block);
       }
-      if (tag === "a" && includeLinks) {
+      if (tag === "a" && (includeLinks || blockLinks)) {
         finishLink();
         const href = get("href");
-        if (href) link = { href, text: "" };
+        if (href) {
+          link = { href, text: "" };
+          if (blockLinks) for (const block of blocks) (block.links ??= []).push(link);
+        }
       }
       if (tag === "br") text(" ");
       if (tag === "table") {

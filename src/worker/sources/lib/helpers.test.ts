@@ -67,6 +67,18 @@ test("strict HTML and SharePoint sections omit missing and duplicate headings", 
   ]);
 });
 
+test("HTML block links stay with their section and preserve link text and URL", async () => {
+  const markup = '<h2>Current orders</h2><p><a href="/order?a=1&amp;b=2">Active <strong>order</strong></a></p>' +
+    '<h2>Archive</h2><p><a href="/old">Old order</a></p>';
+  for (const parts of [parseHtml(markup, { blockLinks: true }), await extractHtml(markup, { blockLinks: true })]) {
+    expect(blockAfterHeading(parts.blocks, /^Current orders$/)).toEqual([
+      { tag: "p", text: "Active order", links: [{ text: "Active order", href: "/order?a=1&b=2" }] },
+    ]);
+    expect(parts.links).toEqual([]);
+  }
+  expect(parseHtml(markup, { links: true }).blocks.every(({ links }) => links === undefined)).toBe(true);
+});
+
 test("calendar rows keep only covered counties and windows that have not ended", () => {
   const rule = { ...CALENDAR_RULES.AZ, hours: [18 * 60, 8 * 60] };
   const counties = [{ fips: "04013", name: "Maricopa County" }, { fips: "04019", name: "Pima County" }];

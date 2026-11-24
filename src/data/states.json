@@ -888,10 +888,16 @@
   {
     "abbr": "VT",
     "name": "Vermont",
-    "coverage": "directory",
+    "coverage": "restrictions",
     "publisher": "Vermont Department of Forests, Parks and Recreation",
     "officialUrl": "https://fpr.vermont.gov/wildfire-situation",
-    "notes": "Town forest fire wardens issue burn permits in Vermont, and the state can issue broader orders."
+    "extraUrls": [
+      { "label": "Town forest fire wardens", "url": "https://fpr.vermont.gov/forest/wildland-fire/forest-fire-warden" },
+      { "label": "Vermont burn permit law", "url": "https://legislature.vermont.gov/statutes/section/10/083/02645" },
+      { "label": "Vermont DEC open-burning rules", "url": "https://dec.vermont.gov/air-quality/compliance/open-burning" },
+      { "label": "Town of Franklin notices", "url": "https://www.franklinvermont.org/home" }
+    ],
+    "notes": "Town forest fire wardens or their deputies issue permits for covered burning and can restrict it locally. The state can issue broader orders. Check with your local warden for current restrictions and permit exceptions. Vermont DEC also limits what you can burn."
   },
   {
     "abbr": "VA",

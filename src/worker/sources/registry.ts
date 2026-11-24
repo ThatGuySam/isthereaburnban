@@ -58,6 +58,9 @@ import { utClosedFireSeason } from "./ut/seasonal";
 import { vaRapidanAlerts } from "./va/rapidan";
 import { vaSeasonal } from "./va/seasonal";
 import { vaShenandoahAlerts } from "./va/shenandoah";
+import { vtFprRestrictions } from "./vt/fpr";
+import { vtFranklinBurning } from "./vt/franklin";
+import { vtOpenBurningPermits } from "./vt/permits";
 import { waEcologyAir } from "./wa/ecology-air";
 import { waKingFireSafety } from "./wa/king-fire-safety";
 import { waPugetSoundAir } from "./wa/puget-sound";
@@ -155,6 +158,9 @@ export const SOURCES: readonly Source[] = [
   wvForestryFireSeason,
   mdDnrWoodland,
   mdSummerAir,
+  vtFprRestrictions,
+  vtFranklinBurning,
+  vtOpenBurningPermits,
   {
     id: "md-dnr-emergency-orders", state: "MD", scope: "state", stack: "WordPress / REST search", mode: "manual", cadence: null,
     sourceName: "Maryland Department of Natural Resources",
