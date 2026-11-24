@@ -85,6 +85,14 @@ export function shiftDay(date: string, days: number): string {
   return new Date(Date.parse(date + "T00:00:00Z") + days * 86_400_000).toISOString().slice(0, 10);
 }
 
+/** UTC instants bounding one publisher-local date, including 23- and 25-hour days. */
+export function localDayWindow(date: string, zone: string) {
+  const validFrom = atLocalTime(date, 0, zone);
+  const validUntil = validFrom && atLocalTime(shiftDay(date, 1), 0, zone);
+  if (!validFrom || !validUntil || validFrom >= validUntil) throw new Error(`Invalid local day ${date} in ${zone}`);
+  return { validFrom, validUntil };
+}
+
 /** Expire a report from its publisher timestamp, independently of when it was fetched. */
 export function reportWindow(sourceUpdated: string | null, now: Date, maxAgeMs: number) {
   if (!sourceUpdated) return;

@@ -10,12 +10,14 @@ import { parse as parseOk } from "../src/worker/adapters/ok";
 import { parse as parseTx, parseTxt } from "../src/worker/adapters/tx";
 import { COUNTIES } from "../src/worker/counties";
 import { parsePfirs, pfirs } from "../src/worker/sources/ca/pfirs";
+import { gaEpdNonSummer, parseEpdSeasonal } from "../src/worker/sources/ga/epd";
+import { parseGwinnett } from "../src/worker/sources/ga/gwinnett";
 import { codedDomains, dataLastEditDate, findOperationalLayers } from "../src/worker/sources/lib/arcgis";
 import { webFormsPost } from "../src/worker/sources/lib/aspnet";
 import { activeRule, CALENDAR_RULES } from "../src/worker/sources/lib/calendar";
 import { civicPlusNotices } from "../src/worker/sources/lib/civicplus";
 import { decodeFeed, parseCsv, parseFeed, parseJson } from "../src/worker/sources/lib/feeds";
-import { blockAfterHeading, parseHtml } from "../src/worker/sources/lib/html";
+import { blockAfterHeading, extractHtml, parseHtml } from "../src/worker/sources/lib/html";
 import { BlockedError, fetchSource } from "../src/worker/sources/lib/http";
 import { manualPdf } from "../src/worker/sources/lib/pdf";
 import { sharePointListItems } from "../src/worker/sources/lib/sharepoint";
@@ -44,6 +46,9 @@ const njCounties = utf8("nj/fixtures/counties-2026-11-24.json");
 const wiPermitsJson = utf8("wi/fixtures/permits-2026-11-24.json");
 const mnRestrictionsJson = utf8("mn/fixtures/restrictions-2026-11-24.json");
 const ohStatute = utf8("oh/fixtures/section-1503.18-2026-11-24.html");
+const gaGwinnettHtml = utf8("ga/fixtures/gwinnett-2026-11-24.html");
+const gaSummerHtml = utf8("ga/fixtures/epd-summer-2026-11-24.html");
+const gaNonSummerHtml = utf8("ga/fixtures/epd-non-summer-2026-11-24.html");
 const michigan = fixture("michigan-form.html");
 const kentucky = fixture("kentucky-list.html");
 const placer = fixture("placer-newsflash.html");
@@ -62,6 +67,11 @@ const parseNjFixture = () => parseNjRestrictions(JSON.parse(njDivisions), JSON.p
 const parseWiFixture = () => parseWisconsinPermits(wiPermitsJson, now);
 const parseMnFixture = () => parseMinnesotaRestrictions(mnRestrictionsJson, now);
 const parseOhFixture = () => parseOhioSeasonal(parseHtml(ohStatute), now);
+const gwinnettDecisionDay = new Date("2026-11-23T16:00:00Z");
+const summerDay = new Date("2026-07-01T14:00:00Z");
+const parseGwinnettFixture = async () => parseGwinnett(await extractHtml(gaGwinnettHtml), gwinnettDecisionDay);
+const parseGaSummerFixture = async () => parseEpdSeasonal(await extractHtml(gaSummerHtml), summerDay, "summer");
+const parseGaNonSummerFixture = async () => parseEpdSeasonal(await extractHtml(gaNonSummerHtml), now, "nonSummer");
 
 const adapters: Array<[string, () => CountyStatus[]]> = [
   ["OK ArcGIS", () => parseOk(JSON.parse(ok), checked)],
@@ -84,6 +94,7 @@ recordedInputs.push(
   { source: wiPermits, rows: parseWiFixture(), checked },
   { source: mnRestrictions, rows: parseMnFixture(), checked },
   { source: ohSeasonal, rows: await parseOhFixture(), checked },
+  { source: gaEpdNonSummer, rows: await parseGaNonSummerFixture(), checked },
 );
 
 const states = new Map<string, CountyStatus[]>();
@@ -131,6 +142,9 @@ const jobs: Array<[string, () => unknown]> = [
   ["WI DNR permit feed", parseWiFixture],
   ["MN DNR restriction feed", parseMnFixture],
   ["OH statute and calendar", parseOhFixture],
+  ["GA Gwinnett daily decision", parseGwinnettFixture],
+  ["GA EPD summer rules", parseGaSummerFixture],
+  ["GA EPD October–April rules", parseGaNonSummerFixture],
   ["Merge and encode current sources", () => JSON.stringify(mergeSources(null, recordedInputs, now).snapshot)],
   ["Parse, merge, encode 51-area projection", () => JSON.stringify(mergeSources(null,
     fullInputs.map((input, index) => ({ ...input, rows: JSON.parse(serializedFull[index]) })), now).snapshot)],

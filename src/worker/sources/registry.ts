@@ -5,6 +5,8 @@ import { parse as parseIn } from "../adapters/in";
 import { parse as parseLa } from "../adapters/la";
 import { parse as parseOk } from "../adapters/ok";
 import { pfirs } from "./ca/pfirs";
+import { gaEpdNonSummer, gaEpdSummer } from "./ga/epd";
+import { gaGwinnett } from "./ga/gwinnett";
 import type { ArcgisResponse } from "./lib/arcgis";
 import { fetchSource } from "./lib/http";
 import { miPermits } from "./mi/permits";
@@ -43,6 +45,16 @@ export const SOURCES: readonly Source[] = [
   wiPermits,
   mnRestrictions,
   ohSeasonal,
+  gaGwinnett,
+  gaEpdSummer,
+  gaEpdNonSummer,
+  {
+    id: "ga-gfc-viewer", state: "GA", scope: "part", stack: "fiResponse / JSON", mode: "manual", cadence: null,
+    sourceName: "Georgia Forestry Commission",
+    sourceUrl: "https://georgiafc.firesponse.com/burn-permit/api/burnrestriction/all/public?levels=PUBLIC&levels=PRIVATE_PUBLIC",
+    officialUrl: "https://georgiafc.firesponse.com/public/",
+    error: "Public map summary provides area labels without dates or order types. The restriction type catalog returned HTTP 401.",
+  },
   {
     id: "ca-calfire", state: "CA", scope: "part", stack: "Sitecore / HTML table", mode: "manual", cadence: null,
     sourceName: "CAL FIRE", sourceUrl: "https://burnpermit.fire.ca.gov/current-burn-status/",

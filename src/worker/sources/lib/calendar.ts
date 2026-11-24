@@ -1,4 +1,4 @@
-import { atLocalTime, localClock, shiftDay, US_ZONES } from "./dates";
+import { atLocalTime, localClock, localDayWindow, shiftDay, US_ZONES } from "./dates";
 
 // Inventory: NY DEC Open Burning, GA EPD Summer Open Burning Ban, OH DNR Open Burning Regulations,
 // VA DOF 4 PM Burning Law, WV Forestry Fire Burning Guidelines, and MD DNR Burning Guidance.
@@ -26,7 +26,8 @@ function inSeason(rule: CalendarRule, date: string): boolean {
 export function calendarDayWindows(rule: CalendarRule, now: Date) {
   const { date } = localClock(now, rule.zone);
   if (!inSeason(rule, date)) return [];
-  const [start, end] = rule.hours ?? [0, 1440];
+  if (!rule.hours) return [localDayWindow(date, rule.zone)];
+  const [start, end] = rule.hours;
   const periods: [number, number][] = start <= end ? [[start, end]] : [[0, end], [start, 1440]];
   const instant = (minute: number) => minute === 1440
     ? atLocalTime(shiftDay(date, 1), 0, rule.zone)

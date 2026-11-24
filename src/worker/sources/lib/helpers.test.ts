@@ -5,7 +5,7 @@ import { webFormsPost } from "./aspnet";
 import { arcgisEditWindow, arcgisLocalDate, arcgisRows, codedDomains, dataLastEditDate, findOperationalLayers, queryArcgis } from "./arcgis";
 import { activeRule, calendarDayWindows, CALENDAR_RULES } from "./calendar";
 import { civicPlusNotices, civicPlusUrl } from "./civicplus";
-import { reportWindow } from "./dates";
+import { localDayWindow, reportWindow } from "./dates";
 import { decodeFeed, parseCsv, parseDotNetJsonDate, parseFeed, parseJson } from "./feeds";
 import { blockAfterHeading, extractHtml, localClock, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, US_ZONES } from "./html";
 import { BlockedError, fetchSource, HttpError, USER_AGENT } from "./http";
@@ -297,6 +297,13 @@ test("Calendar day windows follow local midnight across DST and split overnight 
     { validFrom: "2026-03-16T04:00:00.000Z", validUntil: "2026-03-16T06:00:00.000Z" },
     { validFrom: "2026-03-17T02:00:00.000Z", validUntil: "2026-03-17T04:00:00.000Z" },
   ]);
+});
+
+test("Publisher-local dates include the extra hour at the end of daylight saving time", () => {
+  expect(localDayWindow("2026-11-01", US_ZONES.Eastern)).toEqual({
+    validFrom: "2026-11-01T04:00:00.000Z", validUntil: "2026-11-02T05:00:00.000Z",
+  });
+  expect(() => localDayWindow("2026-02-30", US_ZONES.Eastern)).toThrow("Invalid local day");
 });
 
 test("Link checker reads external anchors and separates access walls from missing links and TLS", async () => {

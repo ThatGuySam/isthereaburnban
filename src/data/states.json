@@ -128,16 +128,24 @@
   {
     "abbr": "GA",
     "name": "Georgia",
-    "coverage": "directory",
-    "publisher": "Georgia Environmental Protection Division",
-    "officialUrl": "https://epd.georgia.gov/air-protection-branch/open-burning-rules-georgia/summer-open-burning-ban",
+    "coverage": "restrictions",
+    "publisher": "Georgia Environmental Protection Division and Gwinnett County Fire and Emergency Services",
+    "officialUrl": "https://epd.georgia.gov/air-protection-branch/open-burning-rules-georgia",
     "extraUrls": [
       {
-        "label": "Georgia Forestry Commission",
-        "url": "https://gatrees.org/"
+        "label": "Georgia Forestry Commission fire and restrictions map",
+        "url": "https://georgiafc.firesponse.com/public/"
+      },
+      {
+        "label": "Georgia Forestry Commission permits and county contacts",
+        "url": "https://gatrees.org/burn-permits-and-notifications/"
+      },
+      {
+        "label": "Gwinnett Fire Marshal daily burn decision and medical burn zones",
+        "url": "https://www.gwinnettcounty.com/government/departments/fire-emergency/outdoor-burning-information"
       }
     ],
-    "notes": "Georgia EPD bans open burning in 54 counties every May 1 to September 30. The Georgia Forestry Commission can issue emergency bans."
+    "notes": "Georgia EPD limits certain types of burning in 54 counties May through September and 27 counties October through April. The Georgia Forestry Commission can issue emergency bans, and local fire officials can set additional restrictions, including Gwinnett's daily burn decision."
   },
   {
     "abbr": "HI",
