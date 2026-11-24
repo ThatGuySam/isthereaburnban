@@ -4,9 +4,11 @@ import { afterEach, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { STATES_DIR } from "../counties";
 import { SNAPSHOT_KEY } from "../env";
+import { withFireWeather } from "../fire-weather";
 import { readSnapshot } from "../snapshot";
 import { US_ZONES } from "./lib/dates";
 import { mergeSources, STALE_MS } from "./merge";
+import { nwsFireWeather, parseNwsAlerts } from "./nws/alerts";
 import { consumeSourceMessage, enqueueSources, isDue } from "./queue";
 import { SOURCES } from "./registry";
 import { applyChecks, readHeads } from "./state";
@@ -102,6 +104,11 @@ test("registry and states.json agree in both directions, and source IDs are uniq
   expect(dailyPolls * 2 + 24).toBeLessThanOrEqual(1000); // two keys per changed poll plus one hourly publication
   expect((dailyPolls + 24) * 3).toBeLessThanOrEqual(10000); // enqueue, dequeue, delete
   for (const item of active) {
+    if (item.product === "fire-weather") {
+      expect(item.state).toBe("US");
+      expect(item.mode).toBe("positive-only");
+      continue;
+    }
     const state = STATES_DIR.find(({ abbr }) => abbr === item.state);
     expect(state?.coverage === "live" || state?.coverage === item.coverage).toBe(true);
     if (item.scope === "part") expect(item.coverage).toBe("restrictions");
@@ -125,6 +132,49 @@ test("cron posts one message per due source and one delayed merge, including loc
   ]);
   expect(await merge(box, [county, district], initial)).toBe("waiting");
   expect(box.puts).toEqual([]);
+});
+
+test("queued NWS changes leave ban history alone and preserve a verified midnight cutoff", async () => {
+  const box = sandbox();
+  const { features } = JSON.parse(readFileSync(new URL("./nws/fixtures/archive-2026-11-18-to-19.json", import.meta.url), "utf8"));
+  const warning = features.find(({ properties }) => properties.senderName === "NWS Denver CO" &&
+    properties.geocode.SAME.includes("008059") && properties.onset === "2026-11-18T08:00:00-07:00");
+  expect(warning).toBeDefined();
+  const before = Date.parse("2026-11-18T19:07Z");
+  const active = before + 3_600_000;
+  const after = Date.parse("2026-11-18T23:07Z");
+  const county = source("co-example", async () => ({ rows: [row("none", new Date(before).toISOString(),
+    { state: "CO", fips: "08059", county: "Jefferson County" })] }), { state: "CO" });
+  const weather = { ...nwsFireWeather, fetch: async ({ now }) => ({ fireWeather: parseNwsAlerts({
+    type: "FeatureCollection", features: now.getTime() === active ? [warning] : [],
+  }, now) }) };
+  const sources = [county, weather];
+
+  await poll(box, county, before);
+  await poll(box, weather, before);
+  await merge(box, sources, before);
+  const baseline = box.snapshot();
+  await poll(box, county, active);
+  await poll(box, weather, active);
+  await merge(box, sources, active);
+  const during = box.snapshot();
+  expect(during.counties["08059"].status).toBe("none");
+  expect(withFireWeather(during, active).counties["08059"]).toMatchObject({
+    status: "restricted", expires: "2026-11-19T07:00:00.000Z", alerts: [expect.objectContaining({ event: "Red Flag Warning" })],
+  });
+
+  await poll(box, county, after);
+  await poll(box, weather, after);
+  await merge(box, sources, after);
+  const expiredWarning = box.snapshot();
+  const projected = withFireWeather(expiredWarning, after);
+  expect(projected.counties["08059"].status).toBe("restricted");
+  expect(projected.counties["08059"].alerts).toBeUndefined();
+  expect(projected.counties["08059"].orders[0].retainAfter).toBeUndefined();
+  expect(withFireWeather(expiredWarning, Date.parse("2026-11-19T07:00Z")).counties["08059"].status).toBe("none");
+  expect(expiredWarning.changed).toEqual(baseline.changed);
+  expect(box.sqlite.query("SELECT count(*) AS count FROM transitions").get().count).toBe(0);
+  expect(box.alerts).toEqual([]);
 });
 
 test("queue stores one revision, absorbs duplicate deliveries and skips unchanged content and merges", async () => {

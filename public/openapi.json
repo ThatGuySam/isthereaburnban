@@ -3,7 +3,7 @@
   "info": {
     "title": "Is There a Burn Ban? API",
     "version": "1.1.0",
-    "description": "County burn ban status from official US state sources, refreshed hourly. Informational only; always confirm with the official source. Missing data is reported as `unknown`, never `none`."
+    "description": "County burn status and National Weather Service fire-weather alerts, refreshed hourly. Informational only. Confirm restrictions with the official authority before burning."
   },
   "servers": [
     {
@@ -282,6 +282,92 @@
           }
         }
       }
+    },
+    "/api/v1/fire-weather": {
+      "get": {
+        "operationId": "listFireWeather",
+        "summary": "Current National Weather Service fire-weather alerts by county",
+        "description": "Weather signals can apply to part of a county. An issued warning or watch may have a future onset. Omitted counties have no current alert in the last published feed.",
+        "parameters": [
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2
+            },
+            "example": "TX"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "County alerts and national NWS source health",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "generated",
+                    "counties",
+                    "source",
+                    "disclaimer"
+                  ],
+                  "properties": {
+                    "generated": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "counties": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "fips",
+                          "state",
+                          "county",
+                          "alerts"
+                        ],
+                        "properties": {
+                          "fips": {
+                            "type": "string",
+                            "pattern": "^\\d{5}$"
+                          },
+                          "state": {
+                            "type": "string"
+                          },
+                          "county": {
+                            "type": "string"
+                          },
+                          "alerts": {
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/components/schemas/FireWeatherAlert"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "source": {
+                      "anyOf": [
+                        {
+                          "$ref": "#/components/schemas/SourceHealth"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "disclaimer": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -382,6 +468,54 @@
           },
           "note": {
             "type": "string"
+          },
+          "alerts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FireWeatherAlert"
+            },
+            "description": "Current NWS fire-weather signals that can cover part of the county. A verified local rule can independently trigger a scoped restriction."
+          },
+          "orders": {
+            "type": "array",
+            "description": "Scoped orders and legal restrictions. A weather-triggered order links to the rule that authorizes it.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "$ref": "#/components/schemas/BanStatus"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "scope": {
+                  "type": "string",
+                  "enum": [
+                    "part",
+                    "county",
+                    "state"
+                  ]
+                },
+                "scopeNote": {
+                  "type": "string"
+                },
+                "note": {
+                  "type": "string"
+                },
+                "officialUrl": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "validFrom": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "validUntil": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
           }
         }
       },
@@ -401,7 +535,8 @@
             "type": "string"
           },
           "state": {
-            "type": "string"
+            "type": "string",
+            "description": "Two-letter state code, or US for a national source"
           },
           "ok": {
             "type": "boolean"
@@ -423,9 +558,17 @@
             "type": "string",
             "enum": [
               "full",
-              "positive-only"
+              "positive-only",
+              "manual"
             ],
             "description": "positive-only: absence of a ban means unknown, not none"
+          },
+          "product": {
+            "type": "string",
+            "enum": [
+              "fire-weather"
+            ],
+            "description": "Signal source with nationwide fire-weather coverage"
           }
         }
       },
@@ -567,6 +710,65 @@
             "examples": [
               "Informational only. Always confirm with the official source before burning."
             ]
+          }
+        }
+      },
+      "FireWeatherAlert": {
+        "type": "object",
+        "required": [
+          "event",
+          "headline",
+          "onset",
+          "expires",
+          "ends",
+          "url",
+          "sender"
+        ],
+        "properties": {
+          "event": {
+            "type": "string",
+            "enum": [
+              "Red Flag Warning",
+              "Fire Weather Watch",
+              "Extreme Fire Danger",
+              "Fire Danger Statement"
+            ]
+          },
+          "headline": {
+            "type": "string"
+          },
+          "onset": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Expected start of the weather event"
+          },
+          "expires": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "CAP message expiry"
+          },
+          "ends": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Expected end of the weather event, when supplied"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Official NWS alert"
+          },
+          "sender": {
+            "type": "string",
+            "description": "NWS issuing office"
           }
         }
       }

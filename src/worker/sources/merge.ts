@@ -1,12 +1,13 @@
-import type { CountyStatus, ScopedOrder, Snapshot, SourceHealth } from "../../shared/types";
+import type { CountyStatus, FireWeatherReport, ScopedOrder, Snapshot, SourceHealth } from "../../shared/types";
 import type { Transition } from "../notification-message";
 import type { Source } from "./types";
 
 export const STALE_MS = 48 * 60 * 60 * 1000;
 
 export type SourceInput = {
-  source: Pick<Source, "id" | "state" | "mode"> & Partial<Pick<Source, "scope" | "officialUrl" | "recurring">>;
+  source: Pick<Source, "id" | "state" | "mode" | "product"> & Partial<Pick<Source, "scope" | "officialUrl" | "recurring">>;
   rows: (Omit<CountyStatus, "checked"> & { checked?: string })[];
+  fireWeather?: FireWeatherReport[];
   lastGood?: string;
   checked: string;
   staleMs?: number;
@@ -84,15 +85,26 @@ export function mergeSources(prev: Snapshot | null, inputs: SourceInput[], now: 
   const sources: SourceHealth[] = [];
   const sourceVersions: Record<string, string> = {};
   const groups = new Map<string, CountyCandidates>();
+  const fireWeather: NonNullable<Snapshot["fireWeather"]> = {};
   const transitions: Transition[] = [];
   const recurring = new Set(inputs.filter((i) => i.source.recurring).map((i) => i.source.id));
 
-  for (const { source, rows, checked, lastGood, staleMs = STALE_MS, error, version } of inputs) {
+  for (const { source, rows, fireWeather: reports, checked, lastGood, staleMs = STALE_MS, error, version } of inputs) {
     if (version) sourceVersions[source.id] = version;
     const mapped = new Set<string>();
     const bans = new Set<string>();
     const defaultChecked = lastGood ?? checked;
     const defaultStale = clock - Date.parse(defaultChecked) > staleMs;
+    if (source.product === "fire-weather") {
+      for (const { fips, alerts, orders } of reports ?? []) {
+        if (defaultStale || !alerts?.length) continue;
+        fireWeather[fips] = { alerts, orders: orders?.map((entry) => ({ ...entry, checked: defaultChecked })) };
+        mapped.add(fips);
+      }
+      sources.push({ id: source.id, state: source.state, mode: source.mode, product: source.product,
+        officialUrl: source.officialUrl, checked, ok: !error, error, counties: mapped.size, bans: 0 });
+      continue;
+    }
     for (const value of rows) {
       const seen = lastGood ?? value.checked ?? defaultChecked;
       const stale = seen === defaultChecked ? defaultStale : clock - Date.parse(seen) > staleMs;
@@ -115,6 +127,20 @@ export function mergeSources(prev: Snapshot | null, inputs: SourceInput[], now: 
     }
     sources.push({ id: source.id, state: source.state, mode: source.mode, scope: source.scope,
       officialUrl: source.officialUrl, checked, ok: !error, error, counties: mapped.size, bans: bans.size });
+  }
+
+  // A verified standing rule can run until local midnight after a warning ends.
+  // An earlier disappearance (such as cancellation) drops the derived order.
+  if (sources.some((source) => source.product === "fire-weather")) {
+    for (const [fips, report] of Object.entries(prev?.fireWeather ?? {})) {
+      for (const prior of report.orders ?? []) {
+        if (!prior.retainAfter || prior.retainAfter > at || !prior.validUntil || prior.validUntil <= at) continue;
+        const weather = fireWeather[fips] ??= { alerts: [] };
+        const orders = weather.orders ??= [];
+        if (!orders.some((entry) => entry.sourceId === prior.sourceId && entry.validFrom === prior.validFrom &&
+          entry.validUntil === prior.validUntil)) orders.push(prior);
+      }
+    }
   }
 
   for (const [fips, group] of groups) {
@@ -142,6 +168,7 @@ export function mergeSources(prev: Snapshot | null, inputs: SourceInput[], now: 
     counties[fips] = row;
   }
 
-  const snapshot: Snapshot = { version: 1, generated: at, counties, sources, changed, sourceVersions };
+  const snapshot: Snapshot = { version: 1, generated: at, counties, sources, changed, sourceVersions,
+    ...(Object.keys(fireWeather).length ? { fireWeather } : {}) };
   return { snapshot, transitions };
 }

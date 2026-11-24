@@ -9,6 +9,16 @@
  */
 export type BanStatus = "ban" | "restricted" | "none" | "unknown";
 
+export type FireWeatherAlert = {
+  event: string;
+  headline: string;
+  onset: string | null;
+  expires: string | null; // CAP message expiry
+  ends: string | null; // expected end of the weather event
+  url: string;
+  sender: string;
+};
+
 export type CountyStatus = {
   fips: string; // 5-digit county FIPS, string with leading zeros
   state: string; // "OK"
@@ -29,12 +39,22 @@ export type CountyStatus = {
   validFrom?: string; // start instant for a dated or scheduled decision
   validUntil?: string; // instant after which short-lived decisions are unconfirmed
   orders?: ScopedOrder[];
+  alerts?: FireWeatherAlert[];
 };
 
 export type ScopedOrder = Pick<CountyStatus, "status" | "label" | "note" | "since" | "expires" |
   "sourceId" | "sourceName" | "sourceUpdated" | "officialUrl" | "checked" | "validFrom" | "validUntil"> & {
   scope: "part" | "county" | "state";
   scopeNote: string;
+};
+
+/** Snapshot-only timing for local restrictions that can outlast the warning. */
+export type FireWeatherOrder = ScopedOrder & { retainAfter?: string };
+
+export type FireWeatherReport = {
+  fips: string;
+  alerts: FireWeatherAlert[];
+  orders?: Omit<FireWeatherOrder, "checked">[];
 };
 
 export type SourceHealth = {
@@ -49,6 +69,7 @@ export type SourceHealth = {
   mode: "full" | "positive-only" | "manual";
   scope?: CountyStatus["scope"];
   officialUrl?: string;
+  product?: "fire-weather";
 };
 
 export type Snapshot = {
@@ -61,6 +82,8 @@ export type Snapshot = {
   changed: Record<string, string>;
   /** Normalized source revisions used to publish this snapshot. */
   sourceVersions?: Record<string, string>;
+  /** Weather evidence used to decorate county results at read time. */
+  fireWeather?: Record<string, { alerts: FireWeatherAlert[]; orders?: FireWeatherOrder[] }>;
 };
 
 export type Coverage = "live" | "restrictions" | "directory";

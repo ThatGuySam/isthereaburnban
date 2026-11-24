@@ -19,6 +19,7 @@ import { fetchSource } from "./lib/http";
 import { miPermits } from "./mi/permits";
 import { mnRestrictions } from "./mn/restrictions";
 import { njRestrictions } from "./nj/restrictions";
+import { nwsFireWeather } from "./nws/alerts";
 import { ohSeasonal } from "./oh/seasonal";
 import { orLrapaHeating, orLrapaOutdoor } from "./or/lrapa";
 import { orOdfPublicUse } from "./or/odf";
@@ -52,6 +53,7 @@ export const SOURCES: readonly Source[] = [
       return { rows: parse(json, now.toISOString()), validators: reply.validators };
     },
   } satisfies ActiveSource)),
+  nwsFireWeather,
   pfirs,
   miPermits,
   njRestrictions,

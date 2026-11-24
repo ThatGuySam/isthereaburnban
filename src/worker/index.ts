@@ -1,4 +1,4 @@
-import { activeBans, coverage } from "./api";
+import { activeBans, activeFireWeather, coverage } from "./api";
 import { confirmEmail, subscribeEmail, unsubscribeEmail } from "./email";
 import type { Env } from "./env";
 import { DISCLAIMER, lookup, LookupError, resultSentence, statusFor } from "./lookup";
@@ -84,6 +84,7 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
       return json(result, 200, here ? "private, max-age=300" : undefined);
     }
     if (path === "/api/v1/bans") return json(activeBans(snapshot, p.get("state") ?? undefined));
+    if (path === "/api/v1/fire-weather") return json(activeFireWeather(snapshot, p.get("state") ?? undefined));
     if (path === "/api/v1/coverage") return json(coverage(snapshot));
     const m = path.match(/^\/api\/v1\/counties\/(\d{5})$/);
     if (m) return json({ ...statusFor(snapshot, m[1]), disclaimer: DISCLAIMER });

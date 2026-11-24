@@ -36,6 +36,7 @@ import { mergeSources, type SourceInput } from "../src/worker/sources/merge";
 import { miPermits, parseMichiganPermits } from "../src/worker/sources/mi/permits";
 import { mnRestrictions, parseMinnesotaRestrictions } from "../src/worker/sources/mn/restrictions";
 import { njRestrictions, parseNjRestrictions } from "../src/worker/sources/nj/restrictions";
+import { nwsFireWeather, parseNwsAlerts } from "../src/worker/sources/nws/alerts";
 import { ohSeasonal, parseOhioSeasonal } from "../src/worker/sources/oh/seasonal";
 import { orLrapaHeating, orLrapaOutdoor, parseLrapaHeating, parseLrapaOutdoor } from "../src/worker/sources/or/lrapa";
 import { orOdfPublicUse, parseOdfPublicUse } from "../src/worker/sources/or/odf";
@@ -61,6 +62,11 @@ const njDivisions = utf8("nj/fixtures/divisions-2026-11-24.json");
 const njCounties = utf8("nj/fixtures/counties-2026-11-24.json");
 const wiPermitsJson = utf8("wi/fixtures/permits-2026-11-24.json");
 const mnRestrictionsJson = utf8("mn/fixtures/restrictions-2026-11-24.json");
+const nwsLive = utf8("nws/fixtures/active-2026-11-24.json");
+const nwsArchive = utf8("nws/fixtures/archive-2026-11-18-to-19.json");
+const nwsCaptured = new Date("2026-11-24T07:42:59Z");
+const parseNwsLive = () => parseNwsAlerts(JSON.parse(nwsLive), nwsCaptured);
+const parseNwsArchive = () => parseNwsAlerts(JSON.parse(nwsArchive), new Date("2026-11-18T20:00Z"), { archive: true });
 const ohStatute = utf8("oh/fixtures/section-1503.18-2026-11-24.html");
 const gaGwinnettHtml = utf8("ga/fixtures/gwinnett-2026-11-24.html");
 const gaSummerHtml = utf8("ga/fixtures/epd-summer-2026-11-24.html");
@@ -165,6 +171,7 @@ recordedInputs.push(
   ...await Promise.all(orJobs.map(async ([, source, parse]) => ({ source, rows: await parse(), checked }))),
   { source: kyForestryCountyBans, rows: await parseKyListFixture(), checked: kyCaptured.toISOString() },
   { source: kySeasonal, rows: await parseKyStatuteFixture(), checked: kyCaptured.toISOString() },
+  { source: nwsFireWeather, rows: [], fireWeather: parseNwsLive(), checked: nwsCaptured.toISOString() },
 );
 
 const states = new Map<string, CountyStatus[]>();
@@ -225,6 +232,8 @@ const jobs: Array<[string, () => unknown]> = [
   ...orJobs.map(([name, , parse]): [string, () => unknown] => [name, parse]),
   ["KY Forestry SharePoint list", parseKyListFixture],
   ["KY statute PDF and calendar", parseKyStatuteFixture],
+  ["NWS live fire-weather GeoJSON", parseNwsLive],
+  ["NWS archived RFW GeoJSON", parseNwsArchive],
   ["Merge and encode current sources", () => JSON.stringify(mergeSources(null, recordedInputs, now).snapshot)],
   ["Parse, merge, encode 51-area projection", () => JSON.stringify(mergeSources(null,
     fullInputs.map((input, index) => ({ ...input, rows: JSON.parse(serializedFull[index]) })), now).snapshot)],

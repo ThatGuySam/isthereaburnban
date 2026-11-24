@@ -1,6 +1,7 @@
 import type { CountyStatus, Snapshot } from "../shared/types";
 import { ADAPTERS, type Adapter } from "./adapters";
 import { SNAPSHOT_KEY, type Env } from "./env";
+import { withFireWeather } from "./fire-weather";
 import { CHANNELS } from "./notification-audience";
 import { transitionNotice, type Transition } from "./notification-message";
 import { notify } from "./notify";
@@ -117,8 +118,8 @@ export async function refresh(env: Env, adapters?: Adapter[], scheduledTime?: nu
 
 export async function getSnapshot(env: Env): Promise<Snapshot> {
   const snapshot = await readSnapshot(env);
-  if (snapshot) return snapshot;
-  if (!env.SOURCE_QUEUE) return refresh(env);
+  if (snapshot) return withFireWeather(snapshot);
+  if (!env.SOURCE_QUEUE) return withFireWeather(await refresh(env));
   // A fresh deployment starts serving coverage immediately. The hourly queue fills in status.
   const now = new Date();
   return mergeSources(null, SOURCES.map((source) => ({

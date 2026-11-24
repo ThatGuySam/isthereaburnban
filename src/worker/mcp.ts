@@ -36,7 +36,7 @@ function createServer(env: Env) {
     "check_burn_ban",
     {
       description:
-        "Check whether a US county has an active burn ban. Give a 5-digit ZIP, or lat and lon, or a 5-digit county FIPS code, or a city or town with its state. Returns one result per county (a ZIP or city can touch several). Status is ban, restricted, none, or unknown; unknown means we can't confirm, not that burning is allowed. County bans usually cover unincorporated areas and cities can have their own rules. Always point the user to officialUrl.",
+        "Check whether a US county has an active burn ban. Give a 5-digit ZIP, or lat and lon, or a 5-digit county FIPS code, or a city or town with its state. Returns one result per county. Status is ban, restricted, none, or unknown. Unknown means the legal status is unconfirmed. County results may include NWS fire-weather alerts. Cite alerts[].url for the weather and officialUrl or orders[].officialUrl for applicable burn rules. County bans usually cover unincorporated areas and cities can have their own rules.",
       inputSchema: z.object({
         zip: z.string().regex(/^\d{5}$/).optional().describe("5-digit US ZIP code"),
         lat: z.number().min(-90).max(90).optional(),
@@ -59,7 +59,7 @@ function createServer(env: Env) {
   server.registerTool(
     "list_active_bans",
     {
-      description: "List counties with an active burn ban or burning restriction, optionally for one state (2-letter code). Only states with a live feed are included; see the coverage tool.",
+      description: "List counties with a reported active burn ban or burning restriction, optionally for one state (2-letter code). Use the coverage tool for source availability.",
       inputSchema: z.object({ state: z.string().length(2).optional().describe("2-letter state code, e.g. TX") }),
     },
     async ({ state }) => {

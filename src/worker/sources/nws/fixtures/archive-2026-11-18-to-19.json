@@ -1,0 +1,2652 @@
+{
+    "@context": [
+        "https://geojson.org/geojson-ld/geojson-context.jsonld",
+        {
+            "@version": "1.1",
+            "wx": "https://api.weather.gov/ontology#",
+            "@vocab": "https://api.weather.gov/ontology#"
+        }
+    ],
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.586f0669d6a52f40a371179b6fd4e965335ced48.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.586f0669d6a52f40a371179b6fd4e965335ced48.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.586f0669d6a52f40a371179b6fd4e965335ced48.001.1",
+                "areaDesc": "North Snowy Range Foothills; Southern Laramie Valley; Southern Laramie Range",
+                "geocode": {
+                    "SAME": [
+                        "056001",
+                        "056007",
+                        "056021"
+                    ],
+                    "UGC": [
+                        "WYZ427",
+                        "WYZ428",
+                        "WYZ429"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/WYZ427",
+                    "https://api.weather.gov/zones/fire/WYZ428",
+                    "https://api.weather.gov/zones/fire/WYZ429"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5394bd510673eb98bbfd3de67035e624cee92608.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.5394bd510673eb98bbfd3de67035e624cee92608.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-11-19T10:09:00-07:00"
+                    }
+                ],
+                "sent": "2026-11-19T16:46:00-07:00",
+                "effective": "2026-11-19T16:46:00-07:00",
+                "onset": "2026-11-19T16:46:00-07:00",
+                "expires": "2026-11-19T18:00:00-07:00",
+                "ends": "2026-11-19T17:00:00-07:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Cheyenne WY",
+                "headline": "Red Flag Warning issued November 19 at 4:46PM MST until November 19 at 5:00PM MST by NWS Cheyenne WY",
+                "description": "The relative humidity has increased above critical levels and the\nstrong winds have decreased. Hence, the Red Flag Warning will be\nallowed to expire.",
+                "instruction": null,
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWCYS"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS85 KCYS 192346"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING WILL EXPIRE AT 5 PM MST THIS AFTERNOON"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.EXP.KCYS.FW.W.0048.000000T0000Z-261120T0000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-19T17:00:00-07:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5394bd510673eb98bbfd3de67035e624cee92608.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5394bd510673eb98bbfd3de67035e624cee92608.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.5394bd510673eb98bbfd3de67035e624cee92608.001.1",
+                "areaDesc": "North Snowy Range Foothills; Southern Laramie Valley; Southern Laramie Range",
+                "geocode": {
+                    "SAME": [
+                        "056001",
+                        "056007",
+                        "056021"
+                    ],
+                    "UGC": [
+                        "WYZ427",
+                        "WYZ428",
+                        "WYZ429"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/WYZ427",
+                    "https://api.weather.gov/zones/fire/WYZ428",
+                    "https://api.weather.gov/zones/fire/WYZ429"
+                ],
+                "references": [],
+                "sent": "2026-11-19T10:09:00-07:00",
+                "effective": "2026-11-19T10:09:00-07:00",
+                "onset": "2026-11-19T11:00:00-07:00",
+                "expires": "2026-11-19T17:00:00-07:00",
+                "ends": "2026-11-19T17:00:00-07:00",
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Cheyenne WY",
+                "headline": "Red Flag Warning issued November 19 at 10:09AM MST until November 19 at 5:00PM MST by NWS Cheyenne WY",
+                "description": "...RED FLAG WARNING IN EFFECT UNTIL 5 PM MST THIS AFTERNOON DUE TO\nWIND AND LOW RELATIVE HUMIDITY FOR NORTH SNOWY RANGE FOOTHILLS,\nSOUTHERN LARAMIE VALLEY, AND SOUTHERN LARAMIE RANGE...\n\nThe National Weather Service in Cheyenne WY has issued a Red Flag\nWarning.\n\n* AFFECTED AREA...Fire Weather Zones 427, 428, and 429.\n\n* TIMING...Until 5 PM MST this afternoon.\n\n* WINDS...South winds 10 to 20 mph with gusts up to 40 mph.\n\n* RELATIVE HUMIDITY...Relative Humidity between 12 to 18 percent.\n\n* IMPACTS...Any fires that develop will spread rapidly. Outdoor\nburning is not recommended.",
+                "instruction": null,
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWCYS"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS85 KCYS 191709"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING IN EFFECT UNTIL 5 PM MST THIS AFTERNOON"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.NEW.KCYS.FW.W.0048.261119T1800Z-261120T0000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-19T17:00:00-07:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                },
+                "replacedBy": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.586f0669d6a52f40a371179b6fd4e965335ced48.001.1",
+                "replacedAt": "2026-11-19T16:46:00-07:00"
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.66835eef224e28d54c016129e14face1bcc52673.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.66835eef224e28d54c016129e14face1bcc52673.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.66835eef224e28d54c016129e14face1bcc52673.001.1",
+                "areaDesc": "Lyman; Buffalo",
+                "geocode": {
+                    "SAME": [
+                        "046085",
+                        "046017"
+                    ],
+                    "UGC": [
+                        "SDZ048",
+                        "SDZ051"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/SDZ048",
+                    "https://api.weather.gov/zones/fire/SDZ051"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.34cc78609331ea54510db8d9167840b729794ff2.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.34cc78609331ea54510db8d9167840b729794ff2.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-11-18T11:10:00-06:00"
+                    }
+                ],
+                "sent": "2026-11-18T17:57:00-06:00",
+                "effective": "2026-11-18T17:57:00-06:00",
+                "onset": "2026-11-18T17:57:00-06:00",
+                "expires": "2026-11-18T19:00:00-06:00",
+                "ends": "2026-11-18T18:00:00-06:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Aberdeen SD",
+                "headline": "Red Flag Warning issued November 18 at 5:57PM CST until November 18 at 6:00PM CST by NWS Aberdeen SD",
+                "description": "The relative humidity has increased above critical levels. Hence, the\nRed Flag Warning will be allowed to expire.",
+                "instruction": null,
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWABR"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS83 KABR 182357"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING WILL EXPIRE AT 6 PM CST THIS EVENING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.EXP.KABR.FW.W.0023.000000T0000Z-261119T0000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-18T18:00:00-06:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.e359af16501871b686a6f708d2fb875a53c86d04.001.1,2026-11-18T00:13:00-06:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b5795712d8b67bc86a68a1a0074a6d606b1edd11.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b5795712d8b67bc86a68a1a0074a6d606b1edd11.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.b5795712d8b67bc86a68a1a0074a6d606b1edd11.001.1",
+                "areaDesc": "Eastern Panhandle/Crescent Lake NWR; Sandhills/Valentine NWR/Nebraska National Forest; Niobrara Valley/Fort Niobrara NWR/Samuel R McKelvie National Forest; Loup Rivers Basin; Frenchman Basin; Loess Plains",
+                "geocode": {
+                    "SAME": [
+                        "031005",
+                        "031031",
+                        "031049",
+                        "031069",
+                        "031075",
+                        "031101",
+                        "031161",
+                        "031009",
+                        "031017",
+                        "031091",
+                        "031111",
+                        "031113",
+                        "031117",
+                        "031149",
+                        "031171",
+                        "031015",
+                        "031089",
+                        "031103",
+                        "031041",
+                        "031071",
+                        "031115",
+                        "031183",
+                        "031029",
+                        "031085",
+                        "031135",
+                        "031063"
+                    ],
+                    "UGC": [
+                        "NEZ204",
+                        "NEZ206",
+                        "NEZ208",
+                        "NEZ209",
+                        "NEZ210",
+                        "NEZ219"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/NEZ204",
+                    "https://api.weather.gov/zones/fire/NEZ206",
+                    "https://api.weather.gov/zones/fire/NEZ208",
+                    "https://api.weather.gov/zones/fire/NEZ209",
+                    "https://api.weather.gov/zones/fire/NEZ210",
+                    "https://api.weather.gov/zones/fire/NEZ219"
+                ],
+                "references": [],
+                "sent": "2026-11-18T17:57:00-06:00",
+                "effective": "2026-11-18T17:57:00-06:00",
+                "onset": "2026-11-18T17:57:00-06:00",
+                "expires": "2026-11-18T19:00:00-06:00",
+                "ends": "2026-11-18T18:00:00-06:00",
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS North Platte NE",
+                "headline": "Red Flag Warning issued November 18 at 5:57PM CST until November 18 at 6:00PM CST by NWS North Platte NE",
+                "description": "Winds will diminish early this evening with humidity climbing.\nThis will end the threat of critical fire weather conditions.",
+                "instruction": null,
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWLBF"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS83 KLBF 182357"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING WILL EXPIRE AT 6 PM CST /5 PM MST/ THIS EVENING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.EXP.KLBF.FW.W.0044.000000T0000Z-261119T0000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-18T18:00:00-06:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.9819b02880852a9e18241df77067dc2844e1e9d6.001.1,2026-11-18T02:22:00-06:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.ec1b9b4ec541f007a30162e492c9095d30d45fbe.001.1,2026-11-17T21:23:00-06:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.fe495178e774565be0b6c985892faa41a1abf3b7.001.1,2026-11-17T12:40:00-06:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ad81cc77569b9c2c01ea5400f97f1b66180d005a.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ad81cc77569b9c2c01ea5400f97f1b66180d005a.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.ad81cc77569b9c2c01ea5400f97f1b66180d005a.001.1",
+                "areaDesc": "Gregory; Jerauld; Brule; Aurora; Davison; Charles Mix; Douglas; Hutchinson; Bon Homme",
+                "geocode": {
+                    "SAME": [
+                        "046053",
+                        "046073",
+                        "046015",
+                        "046003",
+                        "046035",
+                        "046023",
+                        "046043",
+                        "046067",
+                        "046009"
+                    ],
+                    "UGC": [
+                        "SDZ050",
+                        "SDZ052",
+                        "SDZ057",
+                        "SDZ058",
+                        "SDZ059",
+                        "SDZ063",
+                        "SDZ064",
+                        "SDZ065",
+                        "SDZ068"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/SDZ050",
+                    "https://api.weather.gov/zones/fire/SDZ052",
+                    "https://api.weather.gov/zones/fire/SDZ057",
+                    "https://api.weather.gov/zones/fire/SDZ058",
+                    "https://api.weather.gov/zones/fire/SDZ059",
+                    "https://api.weather.gov/zones/fire/SDZ063",
+                    "https://api.weather.gov/zones/fire/SDZ064",
+                    "https://api.weather.gov/zones/fire/SDZ065",
+                    "https://api.weather.gov/zones/fire/SDZ068"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.1ddcf55b2be137666afea61b47a94e4125b30b67.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.1ddcf55b2be137666afea61b47a94e4125b30b67.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-11-18T10:51:00-06:00"
+                    },
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.fc0d4db3b13d0dd19b221bde990edbd12ecf29b7.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.fc0d4db3b13d0dd19b221bde990edbd12ecf29b7.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-11-18T05:04:00-06:00"
+                    }
+                ],
+                "sent": "2026-11-18T17:56:00-06:00",
+                "effective": "2026-11-18T17:56:00-06:00",
+                "onset": "2026-11-18T17:56:00-06:00",
+                "expires": "2026-11-18T19:00:00-06:00",
+                "ends": "2026-11-18T18:00:00-06:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Sioux Falls SD",
+                "headline": "Red Flag Warning issued November 18 at 5:56PM CST until November 18 at 6:00PM CST by NWS Sioux Falls SD",
+                "description": "The relative humidity has increased above critical levels. Hence, the\nRed Flag Warning will be allowed to expire.",
+                "instruction": null,
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWFSD"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS83 KFSD 182356"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING WILL EXPIRE AT 6 PM CST THIS EVENING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.EXP.KFSD.FW.W.0015.000000T0000Z-261119T0000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-18T18:00:00-06:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.1ce97c860477cd2d92a417fee279abf4aadae3a9.002.1,2026-11-18T02:37:00-06:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.1ce97c860477cd2d92a417fee279abf4aadae3a9.001.1,2026-11-18T02:37:00-06:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.1d94008f6b2ce00ba80f89714ebb43c8c9132c8b.001.2,2026-11-17T21:16:00-06:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.10a99ab351b43a5015262cd6a955f36f96dcb313.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.10a99ab351b43a5015262cd6a955f36f96dcb313.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.10a99ab351b43a5015262cd6a955f36f96dcb313.001.1",
+                "areaDesc": "Valley; Greeley; Sherman; Dawson; Buffalo; Gosper",
+                "geocode": {
+                    "SAME": [
+                        "031175",
+                        "031077",
+                        "031163",
+                        "031047",
+                        "031019",
+                        "031073"
+                    ],
+                    "UGC": [
+                        "NEZ039",
+                        "NEZ040",
+                        "NEZ046",
+                        "NEZ060",
+                        "NEZ061",
+                        "NEZ072"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/NEZ039",
+                    "https://api.weather.gov/zones/fire/NEZ040",
+                    "https://api.weather.gov/zones/fire/NEZ046",
+                    "https://api.weather.gov/zones/fire/NEZ060",
+                    "https://api.weather.gov/zones/fire/NEZ061",
+                    "https://api.weather.gov/zones/fire/NEZ072"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ae63e0878cd889bb198e77793c0db5c2bcc4de74.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.ae63e0878cd889bb198e77793c0db5c2bcc4de74.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-11-18T08:52:00-06:00"
+                    }
+                ],
+                "sent": "2026-11-18T17:52:00-06:00",
+                "effective": "2026-11-18T17:52:00-06:00",
+                "onset": "2026-11-18T17:52:00-06:00",
+                "expires": "2026-11-18T19:00:00-06:00",
+                "ends": "2026-11-18T18:00:00-06:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Hastings NE",
+                "headline": "Red Flag Warning issued November 18 at 5:52PM CST until November 18 at 6:00PM CST by NWS Hastings NE",
+                "description": "The temperature has dropped, the relative humidity has increased\nabove critical levels, and the strong winds have decreased. Hence,\nthe Red Flag Warning will be allowed to expire.",
+                "instruction": null,
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWGID"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS83 KGID 182352"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING WILL EXPIRE AT 6 PM CST THIS EVENING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.EXP.KGID.FW.W.0029.000000T0000Z-261119T0000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-18T18:00:00-06:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.11a755ed9794788da9c1ac64bdd4489c38e39680.001.1,2026-11-17T21:56:00-06:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.d9a203eb46ab05068eeac572727a6e9734e9b75c.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.d9a203eb46ab05068eeac572727a6e9734e9b75c.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.d9a203eb46ab05068eeac572727a6e9734e9b75c.001.1",
+                "areaDesc": "Lower North Platte River Basin/Scottsbluff National Monument; Lodgepole Creek/Southern Nebraska Panhandle; Laramie Foothills and High Plains; Laramie East High Plains; Bordeaux/Chugwater/Wheatland; Goshen/Middle-Lower North Platte River Basin",
+                "geocode": {
+                    "SAME": [
+                        "031007",
+                        "031033",
+                        "031105",
+                        "031123",
+                        "031157",
+                        "031165",
+                        "056015",
+                        "056001",
+                        "056021",
+                        "056031"
+                    ],
+                    "UGC": [
+                        "NEZ436",
+                        "NEZ437",
+                        "WYZ430",
+                        "WYZ431",
+                        "WYZ432",
+                        "WYZ433"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/NEZ436",
+                    "https://api.weather.gov/zones/fire/NEZ437",
+                    "https://api.weather.gov/zones/fire/WYZ430",
+                    "https://api.weather.gov/zones/fire/WYZ431",
+                    "https://api.weather.gov/zones/fire/WYZ432",
+                    "https://api.weather.gov/zones/fire/WYZ433"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.334b0d9984410e01afdb396e2347550d8b4957ba.001.2",
+                        "identifier": "urn:oid:2.49.0.1.840.0.334b0d9984410e01afdb396e2347550d8b4957ba.001.2",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-11-18T02:32:00-07:00"
+                    }
+                ],
+                "sent": "2026-11-18T16:50:00-07:00",
+                "effective": "2026-11-18T16:50:00-07:00",
+                "onset": "2026-11-18T16:50:00-07:00",
+                "expires": "2026-11-18T18:00:00-07:00",
+                "ends": "2026-11-18T17:00:00-07:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Cheyenne WY",
+                "headline": "Red Flag Warning issued November 18 at 4:50PM MST until November 18 at 5:00PM MST by NWS Cheyenne WY",
+                "description": "The relative humidity has increased above critical levels and the\nstrong winds have decreased. Hence, the Red Flag Warning will be\nallowed to expire.",
+                "instruction": null,
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWCYS"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS85 KCYS 182350"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING WILL EXPIRE AT 5 PM MST THIS AFTERNOON"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.EXP.KCYS.FW.W.0047.000000T0000Z-261119T0000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-18T17:00:00-07:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.4a7786446c399569fa11f450814d842bef24e5d3.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.4a7786446c399569fa11f450814d842bef24e5d3.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.4a7786446c399569fa11f450814d842bef24e5d3.001.1",
+                "areaDesc": "Knox",
+                "geocode": {
+                    "SAME": [
+                        "031107"
+                    ],
+                    "UGC": [
+                        "NEZ011"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/NEZ011"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.a5059ac9be8cc03cce108e8edee191b0c42b78d2.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.a5059ac9be8cc03cce108e8edee191b0c42b78d2.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-11-17T21:44:00-06:00"
+                    }
+                ],
+                "sent": "2026-11-18T17:47:00-06:00",
+                "effective": "2026-11-18T17:47:00-06:00",
+                "onset": "2026-11-18T17:47:00-06:00",
+                "expires": "2026-11-18T19:00:00-06:00",
+                "ends": "2026-11-18T18:00:00-06:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Omaha/Valley NE",
+                "headline": "Red Flag Warning issued November 18 at 5:47PM CST until November 18 at 6:00PM CST by NWS Omaha/Valley NE",
+                "description": "The strong winds have decreased. Hence, the Red Flag Warning will be\nallowed to expire.",
+                "instruction": null,
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWOAX"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS83 KOAX 182347"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING WILL EXPIRE AT 6 PM CST THIS EVENING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.EXP.KOAX.FW.W.0018.000000T0000Z-261119T0000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-18T18:00:00-06:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.899bbb2cdee718742b6c84d64629112c7a318287.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.899bbb2cdee718742b6c84d64629112c7a318287.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.899bbb2cdee718742b6c84d64629112c7a318287.001.1",
+                "areaDesc": "Jefferson and West Douglas Counties Above  6000 Feet/Gilpin/Clear Creek/Northeast Park Counties Below 9000 Feet; Larimer County Below 6000 Feet/Northwest Weld County; Boulder And Jefferson Counties Below 6000 Feet/West Broomfield County; Elbert/Central and East Douglas Counties Above 6000 Feet; Northeast Weld County; Logan County",
+                "geocode": {
+                    "SAME": [
+                        "008019",
+                        "008035",
+                        "008047",
+                        "008059",
+                        "008093",
+                        "008069",
+                        "008123",
+                        "008013",
+                        "008014",
+                        "008005",
+                        "008039",
+                        "008075"
+                    ],
+                    "UGC": [
+                        "COZ216",
+                        "COZ238",
+                        "COZ239",
+                        "COZ241",
+                        "COZ242",
+                        "COZ248"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/COZ216",
+                    "https://api.weather.gov/zones/fire/COZ238",
+                    "https://api.weather.gov/zones/fire/COZ239",
+                    "https://api.weather.gov/zones/fire/COZ241",
+                    "https://api.weather.gov/zones/fire/COZ242",
+                    "https://api.weather.gov/zones/fire/COZ248"
+                ],
+                "references": [],
+                "sent": "2026-11-18T16:07:00-07:00",
+                "effective": "2026-11-18T16:07:00-07:00",
+                "onset": "2026-11-18T16:07:00-07:00",
+                "expires": "2026-11-18T17:15:00-07:00",
+                "ends": "2026-11-18T16:00:00-07:00",
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Denver CO",
+                "headline": "Red Flag Warning issued November 18 at 4:07PM MST until November 18 at 4:00PM MST by NWS Denver CO",
+                "description": "Locally critical fire weather conditions may continue for the next\nhour or so. However, across most of the Red Flag Warning area,\nrelative humidity has increased above critical levels and the strong\nwinds have decreased. Hence, the Red Flag Warning has been allowed to\nexpire.",
+                "instruction": null,
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWBOU"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS85 KBOU 182307"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING HAS EXPIRED FOR THE PALMER DIVIDE, SOUTHERN FRONT RANGE FOOTHILLS WESTERN I-25 CORRIDOR, CHEYENNE RIDGE, AND LOGAN COUNTY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.EXP.KBOU.FW.W.0057.000000T0000Z-261118T2300Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-18T16:00:00-07:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.206ec1af29c3c4f3eab33a5e5522bf02225a3ae2.003.1,2026-11-18T12:25:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.206ec1af29c3c4f3eab33a5e5522bf02225a3ae2.002.1,2026-11-18T12:25:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.206ec1af29c3c4f3eab33a5e5522bf02225a3ae2.001.1,2026-11-18T12:25:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.87b0c47d365b094a1beb580d5b78d243c8133c34.003.1,2026-11-17T23:11:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.87b0c47d365b094a1beb580d5b78d243c8133c34.002.2,2026-11-17T23:11:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.382bc923e46a867f01f5d73980c813cffc84cd48.001.1,2026-11-17T12:46:00-07:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.206ec1af29c3c4f3eab33a5e5522bf02225a3ae2.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.206ec1af29c3c4f3eab33a5e5522bf02225a3ae2.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.206ec1af29c3c4f3eab33a5e5522bf02225a3ae2.001.1",
+                "areaDesc": "Northeast Weld County; Logan County",
+                "geocode": {
+                    "SAME": [
+                        "008123",
+                        "008075"
+                    ],
+                    "UGC": [
+                        "COZ242",
+                        "COZ248"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/COZ242",
+                    "https://api.weather.gov/zones/fire/COZ248"
+                ],
+                "references": [],
+                "sent": "2026-11-18T12:25:00-07:00",
+                "effective": "2026-11-18T12:25:00-07:00",
+                "onset": "2026-11-18T12:25:00-07:00",
+                "expires": "2026-11-18T16:00:00-07:00",
+                "ends": "2026-11-18T16:00:00-07:00",
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Denver CO",
+                "headline": "Red Flag Warning issued November 18 at 12:25PM MST until November 18 at 4:00PM MST by NWS Denver CO",
+                "description": "* AFFECTED AREA...Fire Weather Zones 242 and 248.\n\n* TIMING...Until 4 PM MST this afternoon.\n\n* WINDS...West 20 to 35 mph with gusts up to 60 mph.\n\n* RELATIVE HUMIDITY...Between 10 to 18 percent.\n\n* IMPACTS...Conditions will be favorable for rapid fire spread. Avoid\noutdoor burning and any activity that may produce a spark and start\na wildfire.",
+                "instruction": "Be sure you are signed up for your local emergency alert system. You\ncan find this information at dhsem.colorado.gov/emergencyalert.\n\nFollow all fire restrictions. Avoid activities that can cause sparks\nand do not park hot vehicles on dry vegetation. One less spark, one\nless wildfire.\n\nA Red Flag Warning means that critical fire weather conditions are\neither occurring now...or will shortly. A combination of strong\nwinds...low relative humidity...and warm temperatures can contribute\nto extreme fire behavior.",
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWBOU"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS85 KBOU 181925"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING NOW IN EFFECT FROM 8 AM TO 4 PM MST WEDNESDAY DUE TO WIND AND LOW RELATIVE HUMIDITY FOR THE NORTHERN COLORADO PLAINS"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.EXA.KBOU.FW.W.0057.000000T0000Z-261118T2300Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-18T16:00:00-07:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                },
+                "replacedBy": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.899bbb2cdee718742b6c84d64629112c7a318287.001.1",
+                "replacedAt": "2026-11-18T16:07:00-07:00"
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.206ec1af29c3c4f3eab33a5e5522bf02225a3ae2.003.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.206ec1af29c3c4f3eab33a5e5522bf02225a3ae2.003.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.206ec1af29c3c4f3eab33a5e5522bf02225a3ae2.003.1",
+                "areaDesc": "Larimer County Below 6000 Feet/Northwest Weld County; Boulder And Jefferson Counties Below 6000 Feet/West Broomfield County",
+                "geocode": {
+                    "SAME": [
+                        "008069",
+                        "008123",
+                        "008013",
+                        "008014",
+                        "008059"
+                    ],
+                    "UGC": [
+                        "COZ238",
+                        "COZ239"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/COZ238",
+                    "https://api.weather.gov/zones/fire/COZ239"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.87b0c47d365b094a1beb580d5b78d243c8133c34.002.2",
+                        "identifier": "urn:oid:2.49.0.1.840.0.87b0c47d365b094a1beb580d5b78d243c8133c34.002.2",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-11-17T23:11:00-07:00"
+                    }
+                ],
+                "sent": "2026-11-18T12:25:00-07:00",
+                "effective": "2026-11-18T12:25:00-07:00",
+                "onset": "2026-11-18T12:25:00-07:00",
+                "expires": "2026-11-18T16:00:00-07:00",
+                "ends": "2026-11-18T16:00:00-07:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Denver CO",
+                "headline": "Red Flag Warning issued November 18 at 12:25PM MST until November 18 at 4:00PM MST by NWS Denver CO",
+                "description": "* AFFECTED AREA...Fire Weather Zones 238 and 239.\n\n* TIMING...Until 4 PM MST this afternoon.\n\n* WINDS...West 20 to 30 mph with gusts up to 45 mph.\n\n* RELATIVE HUMIDITY...Between 8 to 15 percent.\n\n* IMPACTS...Conditions will be favorable for rapid fire spread. Avoid\noutdoor burning and any activity that may produce a spark and start\na wildfire.",
+                "instruction": "Be sure you are signed up for your local emergency alert system. You\ncan find this information at dhsem.colorado.gov/emergencyalert.\n\nFollow all fire restrictions. Avoid activities that can cause sparks\nand do not park hot vehicles on dry vegetation. One less spark, one\nless wildfire.\n\nA Red Flag Warning means that critical fire weather conditions are\neither occurring now...or will shortly. A combination of strong\nwinds...low relative humidity...and warm temperatures can contribute\nto extreme fire behavior.",
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWBOU"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS85 KBOU 181925"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING IN EFFECT FROM 8 AM TO 4 PM MST WEDNESDAY DUE TO WIND AND LOW RELATIVE HUMIDITY FOR THE WESTERN DENVER METRO AND WESTERN I-25 CORRIDOR INCLUDING BOULDER, LOVELAND, AND FORT COLLINS"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KBOU.FW.W.0057.000000T0000Z-261118T2300Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-18T16:00:00-07:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                },
+                "replacedBy": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.899bbb2cdee718742b6c84d64629112c7a318287.001.1",
+                "replacedAt": "2026-11-18T16:07:00-07:00"
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.206ec1af29c3c4f3eab33a5e5522bf02225a3ae2.002.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.206ec1af29c3c4f3eab33a5e5522bf02225a3ae2.002.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.206ec1af29c3c4f3eab33a5e5522bf02225a3ae2.002.1",
+                "areaDesc": "Jefferson and West Douglas Counties Above  6000 Feet/Gilpin/Clear Creek/Northeast Park Counties Below 9000 Feet; Elbert/Central and East Douglas Counties Above 6000 Feet",
+                "geocode": {
+                    "SAME": [
+                        "008019",
+                        "008035",
+                        "008047",
+                        "008059",
+                        "008093",
+                        "008005",
+                        "008039"
+                    ],
+                    "UGC": [
+                        "COZ216",
+                        "COZ241"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/COZ216",
+                    "https://api.weather.gov/zones/fire/COZ241"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.87b0c47d365b094a1beb580d5b78d243c8133c34.003.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.87b0c47d365b094a1beb580d5b78d243c8133c34.003.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-11-17T23:11:00-07:00"
+                    }
+                ],
+                "sent": "2026-11-18T12:25:00-07:00",
+                "effective": "2026-11-18T12:25:00-07:00",
+                "onset": "2026-11-18T12:25:00-07:00",
+                "expires": "2026-11-18T16:00:00-07:00",
+                "ends": "2026-11-18T16:00:00-07:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Denver CO",
+                "headline": "Red Flag Warning issued November 18 at 12:25PM MST until November 18 at 4:00PM MST by NWS Denver CO",
+                "description": "* AFFECTED AREA...Fire Weather Zones 216 and 241.\n\n* TIMING...Until 4 PM MST this afternoon.\n\n* WINDS...West 20 to 30 mph with gusts up to 50 mph.\n\n* RELATIVE HUMIDITY...Between 9 to 15 percent.\n\n* IMPACTS...Conditions will be favorable for rapid fire spread. Avoid\noutdoor burning and any activity that may produce a spark and start\na wildfire.",
+                "instruction": "Be sure you are signed up for your local emergency alert system. You\ncan find this information at dhsem.colorado.gov/emergencyalert.\n\nFollow all fire restrictions. Avoid activities that can cause sparks\nand do not park hot vehicles on dry vegetation. One less spark, one\nless wildfire.\n\nA Red Flag Warning means that critical fire weather conditions are\neither occurring now...or will shortly. A combination of strong\nwinds...low relative humidity...and warm temperatures can contribute\nto extreme fire behavior.",
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWBOU"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS85 KBOU 181925"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING NOW IN EFFECT FROM 8 AM TO 4 PM MST WEDNESDAY DUE TO WIND AND LOW RELATIVE HUMIDITY FOR THE SOUTHERN FRONT RANGE FOOTHILLS AND PALMER DIVIDE"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KBOU.FW.W.0057.000000T0000Z-261118T2300Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-18T16:00:00-07:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.382bc923e46a867f01f5d73980c813cffc84cd48.001.1,2026-11-17T12:46:00-07:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                },
+                "replacedBy": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.899bbb2cdee718742b6c84d64629112c7a318287.001.1",
+                "replacedAt": "2026-11-18T16:07:00-07:00"
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.34cc78609331ea54510db8d9167840b729794ff2.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.34cc78609331ea54510db8d9167840b729794ff2.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.34cc78609331ea54510db8d9167840b729794ff2.001.1",
+                "areaDesc": "Lyman; Buffalo",
+                "geocode": {
+                    "SAME": [
+                        "046085",
+                        "046017"
+                    ],
+                    "UGC": [
+                        "SDZ048",
+                        "SDZ051"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/SDZ048",
+                    "https://api.weather.gov/zones/fire/SDZ051"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.e359af16501871b686a6f708d2fb875a53c86d04.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.e359af16501871b686a6f708d2fb875a53c86d04.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-11-18T00:13:00-06:00"
+                    }
+                ],
+                "sent": "2026-11-18T11:10:00-06:00",
+                "effective": "2026-11-18T11:10:00-06:00",
+                "onset": "2026-11-18T12:00:00-06:00",
+                "expires": "2026-11-18T18:00:00-06:00",
+                "ends": "2026-11-18T18:00:00-06:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Aberdeen SD",
+                "headline": "Red Flag Warning issued November 18 at 11:10AM CST until November 18 at 6:00PM CST by NWS Aberdeen SD",
+                "description": "...RED FLAG WARNING REMAINS IN EFFECT UNTIL 6 PM CST THIS EVENING DUE\nTO WIND AND LOW RELATIVE HUMIDITY FOR LYMAN AND BUFFALO...\n\n* AFFECTED AREA...In South Dakota, Lyman and Buffalo.\n\n* TIMING...Until 6 PM CST this evening.\n\n* WINDS...West winds 20 to 30 mph with gusts up to 40 mph.\n\n* RELATIVE HUMIDITY...Relative Humidity between 30 to 36 percent.\n\n* IMPACTS...Any fires that develop will spread rapidly. Outdoor\nburning is not recommended.",
+                "instruction": "A Red Flag Warning is issued when we identify weather conditions that\npromote rapid spread of fire which may become life-threatening. This\ndoes not mean there is a fire. These conditions are either occurring\nnow or will begin soon. It is important to have multiple ways to\nreceive information from authorities.\n\nFollow all fire restrictions. One less spark, one less wildfire.",
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWABR"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS83 KABR 181710"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING REMAINS IN EFFECT UNTIL 6 PM CST THIS EVENING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KABR.FW.W.0023.261118T1800Z-261119T0000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-18T18:00:00-06:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                },
+                "replacedBy": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.66835eef224e28d54c016129e14face1bcc52673.001.1",
+                "replacedAt": "2026-11-18T17:57:00-06:00"
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.1ddcf55b2be137666afea61b47a94e4125b30b67.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.1ddcf55b2be137666afea61b47a94e4125b30b67.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.1ddcf55b2be137666afea61b47a94e4125b30b67.001.1",
+                "areaDesc": "Gregory; Jerauld; Brule; Aurora; Davison; Charles Mix; Douglas; Hutchinson; Bon Homme",
+                "geocode": {
+                    "SAME": [
+                        "046053",
+                        "046073",
+                        "046015",
+                        "046003",
+                        "046035",
+                        "046023",
+                        "046043",
+                        "046067",
+                        "046009"
+                    ],
+                    "UGC": [
+                        "SDZ050",
+                        "SDZ052",
+                        "SDZ057",
+                        "SDZ058",
+                        "SDZ059",
+                        "SDZ063",
+                        "SDZ064",
+                        "SDZ065",
+                        "SDZ068"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/SDZ050",
+                    "https://api.weather.gov/zones/fire/SDZ052",
+                    "https://api.weather.gov/zones/fire/SDZ057",
+                    "https://api.weather.gov/zones/fire/SDZ058",
+                    "https://api.weather.gov/zones/fire/SDZ059",
+                    "https://api.weather.gov/zones/fire/SDZ063",
+                    "https://api.weather.gov/zones/fire/SDZ064",
+                    "https://api.weather.gov/zones/fire/SDZ065",
+                    "https://api.weather.gov/zones/fire/SDZ068"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.1ce97c860477cd2d92a417fee279abf4aadae3a9.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.1ce97c860477cd2d92a417fee279abf4aadae3a9.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-11-18T02:37:00-06:00"
+                    },
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.1ce97c860477cd2d92a417fee279abf4aadae3a9.002.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.1ce97c860477cd2d92a417fee279abf4aadae3a9.002.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-11-18T02:37:00-06:00"
+                    },
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.fc0d4db3b13d0dd19b221bde990edbd12ecf29b7.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.fc0d4db3b13d0dd19b221bde990edbd12ecf29b7.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-11-18T05:04:00-06:00"
+                    }
+                ],
+                "sent": "2026-11-18T10:51:00-06:00",
+                "effective": "2026-11-18T10:51:00-06:00",
+                "onset": "2026-11-18T12:00:00-06:00",
+                "expires": "2026-11-18T18:00:00-06:00",
+                "ends": "2026-11-18T18:00:00-06:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Sioux Falls SD",
+                "headline": "Red Flag Warning issued November 18 at 10:51AM CST until November 18 at 6:00PM CST by NWS Sioux Falls SD",
+                "description": "...RED FLAG WARNING REMAINS IN EFFECT UNTIL 6 PM CST THIS EVENING DUE\nTO WIND AND LOW RELATIVE HUMIDITY FOR PORTIONS OF CENTRAL, SOUTH\nCENTRAL, AND SOUTHEAST SOUTH DAKOTA...\n\n* AFFECTED AREA...Portions of central, south central, and southeast\nSouth Dakota.\n\n* TIMING...Until 6 PM CST this evening.\n\n* WINDS...Southwest winds 15 to 25 mph with gusts up to 40 mph.\n\n* RELATIVE HUMIDITY...Relative Humidity between 20 to 25 percent.\n\n* IMPACTS...Any fires that develop will spread rapidly. Outdoor\nburning is not recommended.",
+                "instruction": "A Red Flag Warning means that critical fire weather conditions are\neither occurring now, or will begin shortly. These conditions will\npromote rapid fire spread which may become life-threatening.",
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWFSD"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS83 KFSD 181651"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING REMAINS IN EFFECT UNTIL 6 PM CST THIS EVENING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KFSD.FW.W.0015.261118T1800Z-261119T0000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-18T18:00:00-06:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.1d94008f6b2ce00ba80f89714ebb43c8c9132c8b.001.2,2026-11-17T21:16:00-06:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                },
+                "replacedBy": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ad81cc77569b9c2c01ea5400f97f1b66180d005a.001.1",
+                "replacedAt": "2026-11-18T17:56:00-06:00"
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ae63e0878cd889bb198e77793c0db5c2bcc4de74.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ae63e0878cd889bb198e77793c0db5c2bcc4de74.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.ae63e0878cd889bb198e77793c0db5c2bcc4de74.001.1",
+                "areaDesc": "Valley; Greeley; Sherman; Dawson; Buffalo; Gosper",
+                "geocode": {
+                    "SAME": [
+                        "031175",
+                        "031077",
+                        "031163",
+                        "031047",
+                        "031019",
+                        "031073"
+                    ],
+                    "UGC": [
+                        "NEZ039",
+                        "NEZ040",
+                        "NEZ046",
+                        "NEZ060",
+                        "NEZ061",
+                        "NEZ072"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/NEZ039",
+                    "https://api.weather.gov/zones/fire/NEZ040",
+                    "https://api.weather.gov/zones/fire/NEZ046",
+                    "https://api.weather.gov/zones/fire/NEZ060",
+                    "https://api.weather.gov/zones/fire/NEZ061",
+                    "https://api.weather.gov/zones/fire/NEZ072"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.11a755ed9794788da9c1ac64bdd4489c38e39680.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.11a755ed9794788da9c1ac64bdd4489c38e39680.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-11-17T21:56:00-06:00"
+                    }
+                ],
+                "sent": "2026-11-18T08:52:00-06:00",
+                "effective": "2026-11-18T08:52:00-06:00",
+                "onset": "2026-11-18T12:00:00-06:00",
+                "expires": "2026-11-18T18:00:00-06:00",
+                "ends": "2026-11-18T18:00:00-06:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Hastings NE",
+                "headline": "Red Flag Warning issued November 18 at 8:52AM CST until November 18 at 6:00PM CST by NWS Hastings NE",
+                "description": "...RED FLAG WARNING REMAINS IN EFFECT FROM NOON TODAY TO 6 PM CST\nTHIS EVENING DUE TO WIND AND LOW RELATIVE HUMIDITY FOR PORTIONS OF\nCENTRAL AND SOUTH CENTRAL NEBRASKA...\n\n* AFFECTED AREA...Portions of central and south central Nebraska.\n\n* TIMING...From noon today to 6 PM CST this evening.\n\n* WINDS...westerly, with sustained speeds around 20 MPH and gusts\naround 25-30 MPH.\n\n* RELATIVE HUMIDITY...as low as 20-25 percent.\n\n* IMPACTS...Any fires that develop will spread rapidly. Outdoor\nburning is not recommended.",
+                "instruction": "A Red Flag Warning means that critical fire weather conditions are\neither occurring now, or will shortly. A combination of strong winds,\nlow relative humidity, and warm temperatures can contribute to\nextreme fire behavior.",
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWGID"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS83 KGID 181452"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING REMAINS IN EFFECT FROM NOON TODAY TO 6 PM CST THIS EVENING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KGID.FW.W.0029.261118T1800Z-261119T0000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-18T18:00:00-06:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                },
+                "replacedBy": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.10a99ab351b43a5015262cd6a955f36f96dcb313.001.1",
+                "replacedAt": "2026-11-18T17:52:00-06:00"
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.fc0d4db3b13d0dd19b221bde990edbd12ecf29b7.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.fc0d4db3b13d0dd19b221bde990edbd12ecf29b7.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.fc0d4db3b13d0dd19b221bde990edbd12ecf29b7.001.1",
+                "areaDesc": "Gregory; Jerauld; Brule; Aurora; Davison; Charles Mix; Douglas; Hutchinson; Bon Homme",
+                "geocode": {
+                    "SAME": [
+                        "046053",
+                        "046073",
+                        "046015",
+                        "046003",
+                        "046035",
+                        "046023",
+                        "046043",
+                        "046067",
+                        "046009"
+                    ],
+                    "UGC": [
+                        "SDZ050",
+                        "SDZ052",
+                        "SDZ057",
+                        "SDZ058",
+                        "SDZ059",
+                        "SDZ063",
+                        "SDZ064",
+                        "SDZ065",
+                        "SDZ068"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/SDZ050",
+                    "https://api.weather.gov/zones/fire/SDZ052",
+                    "https://api.weather.gov/zones/fire/SDZ057",
+                    "https://api.weather.gov/zones/fire/SDZ058",
+                    "https://api.weather.gov/zones/fire/SDZ059",
+                    "https://api.weather.gov/zones/fire/SDZ063",
+                    "https://api.weather.gov/zones/fire/SDZ064",
+                    "https://api.weather.gov/zones/fire/SDZ065",
+                    "https://api.weather.gov/zones/fire/SDZ068"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.1d94008f6b2ce00ba80f89714ebb43c8c9132c8b.001.2",
+                        "identifier": "urn:oid:2.49.0.1.840.0.1d94008f6b2ce00ba80f89714ebb43c8c9132c8b.001.2",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-11-17T21:16:00-06:00"
+                    },
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.1ce97c860477cd2d92a417fee279abf4aadae3a9.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.1ce97c860477cd2d92a417fee279abf4aadae3a9.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-11-18T02:37:00-06:00"
+                    },
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.1ce97c860477cd2d92a417fee279abf4aadae3a9.002.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.1ce97c860477cd2d92a417fee279abf4aadae3a9.002.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-11-18T02:37:00-06:00"
+                    }
+                ],
+                "sent": "2026-11-18T05:04:00-06:00",
+                "effective": "2026-11-18T05:04:00-06:00",
+                "onset": "2026-11-18T12:00:00-06:00",
+                "expires": "2026-11-18T18:00:00-06:00",
+                "ends": "2026-11-18T18:00:00-06:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Sioux Falls SD",
+                "headline": "Red Flag Warning issued November 18 at 5:04AM CST until November 18 at 6:00PM CST by NWS Sioux Falls SD",
+                "description": "...RED FLAG WARNING REMAINS IN EFFECT FROM NOON TODAY TO 6 PM CST\nTHIS EVENING DUE TO WIND AND LOW RELATIVE HUMIDITY FOR PORTIONS OF\nCENTRAL, SOUTH CENTRAL, AND SOUTHEAST SOUTH DAKOTA...\n\n* AFFECTED AREA...Portions of central, south central, and southeast\nSouth Dakota.\n\n* TIMING...From noon today to 6 PM CST this evening.\n\n* WINDS...Southwest winds 20 to 25 mph with gusts up to 40 mph.\n\n* RELATIVE HUMIDITY...Relative Humidity between 18 to 27 percent.\n\n* IMPACTS...Any fires that develop will spread rapidly. Outdoor\nburning is not recommended.",
+                "instruction": "A Red Flag Warning means that critical fire weather conditions are\neither occurring now, or will begin shortly. These conditions will\npromote rapid fire spread which may become life-threatening.",
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWFSD"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS83 KFSD 181104"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING REMAINS IN EFFECT FROM NOON TODAY TO 6 PM CST THIS EVENING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KFSD.FW.W.0015.261118T1800Z-261119T0000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-18T18:00:00-06:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                },
+                "replacedBy": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ad81cc77569b9c2c01ea5400f97f1b66180d005a.001.1",
+                "replacedAt": "2026-11-18T17:56:00-06:00"
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.334b0d9984410e01afdb396e2347550d8b4957ba.001.2",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.334b0d9984410e01afdb396e2347550d8b4957ba.001.2",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.334b0d9984410e01afdb396e2347550d8b4957ba.001.2",
+                "areaDesc": "Lower North Platte River Basin/Scottsbluff National Monument; Lodgepole Creek/Southern Nebraska Panhandle; Laramie Foothills and High Plains; Laramie East High Plains; Bordeaux/Chugwater/Wheatland; Goshen/Middle-Lower North Platte River Basin",
+                "geocode": {
+                    "SAME": [
+                        "031007",
+                        "031033",
+                        "031105",
+                        "031123",
+                        "031157",
+                        "031165",
+                        "056015",
+                        "056001",
+                        "056021",
+                        "056031"
+                    ],
+                    "UGC": [
+                        "NEZ436",
+                        "NEZ437",
+                        "WYZ430",
+                        "WYZ431",
+                        "WYZ432",
+                        "WYZ433"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/NEZ436",
+                    "https://api.weather.gov/zones/fire/NEZ437",
+                    "https://api.weather.gov/zones/fire/WYZ430",
+                    "https://api.weather.gov/zones/fire/WYZ431",
+                    "https://api.weather.gov/zones/fire/WYZ432",
+                    "https://api.weather.gov/zones/fire/WYZ433"
+                ],
+                "references": [],
+                "sent": "2026-11-18T02:32:00-07:00",
+                "effective": "2026-11-18T02:32:00-07:00",
+                "onset": "2026-11-18T09:00:00-07:00",
+                "expires": "2026-11-18T17:00:00-07:00",
+                "ends": "2026-11-18T17:00:00-07:00",
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Cheyenne WY",
+                "headline": "Red Flag Warning issued November 18 at 2:32AM MST until November 18 at 5:00PM MST by NWS Cheyenne WY",
+                "description": "...RED FLAG WARNING IN EFFECT FROM 9 AM THIS MORNING TO 5 PM MST THIS\nAFTERNOON DUE TO WIND AND LOW RELATIVE HUMIDITY FOR PORTIONS OF NE\nAND WY...\n\nThe National Weather Service in Cheyenne WY has issued a Red Flag\nWarning in effect from 9 AM this morning to 5 PM MST this afternoon.\n\n* AFFECTED AREA...In southeast Wyoming, fire weather zones 430\nthrough 433. In western Nebraska, fire weather zones 436 and 437.\n\n* TIMING...From 9 AM this morning to 5 PM MST this afternoon.\n\n* WINDS...West winds 25 to 40 mph with gusts up to 65 mph in Wyoming\nand up to 55 mph in Nebraska.\n\n* RELATIVE HUMIDITY...Relative Humidity between 14 and 20 percent.\n\n* IMPACTS...Any fires that develop will spread rapidly. Outdoor\nburning is not recommended.",
+                "instruction": "A Red Flag Warning is issued when we identify weather conditions that\npromote rapid spread of fire which may become life-threatening. This\ndoes not mean there is a fire. These conditions are either occurring\nnow or will begin soon. It is important to have multiple ways to\nreceive information from authorities.",
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWCYS"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS85 KCYS 180932"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING IN EFFECT FROM 9 AM THIS MORNING TO 5 PM MST THIS AFTERNOON"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.NEW.KCYS.FW.W.0047.261118T1600Z-261119T0000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-18T17:00:00-07:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                },
+                "replacedBy": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.d9a203eb46ab05068eeac572727a6e9734e9b75c.001.1",
+                "replacedAt": "2026-11-18T16:50:00-07:00"
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.1ce97c860477cd2d92a417fee279abf4aadae3a9.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.1ce97c860477cd2d92a417fee279abf4aadae3a9.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.1ce97c860477cd2d92a417fee279abf4aadae3a9.001.1",
+                "areaDesc": "Jerauld",
+                "geocode": {
+                    "SAME": [
+                        "046073"
+                    ],
+                    "UGC": [
+                        "SDZ052"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/SDZ052"
+                ],
+                "references": [],
+                "sent": "2026-11-18T02:37:00-06:00",
+                "effective": "2026-11-18T02:37:00-06:00",
+                "onset": "2026-11-18T12:00:00-06:00",
+                "expires": "2026-11-18T12:45:00-06:00",
+                "ends": "2026-11-18T18:00:00-06:00",
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Sioux Falls SD",
+                "headline": "Red Flag Warning issued November 18 at 2:37AM CST until November 18 at 6:00PM CST by NWS Sioux Falls SD",
+                "description": "...RED FLAG WARNING IN EFFECT FROM NOON TODAY TO 6 PM CST THIS\nEVENING DUE TO WIND AND LOW RELATIVE HUMIDITY FOR JERAULD...\n\n...RED FLAG WARNING REMAINS IN EFFECT FROM NOON TODAY TO 6 PM CST\nTHIS EVENING DUE TO WIND AND LOW RELATIVE HUMIDITY FOR PORTIONS OF\nSOUTH CENTRAL AND SOUTHEAST SOUTH DAKOTA...\n\n* AFFECTED AREA...In South Dakota, Jerauld.\n\n* TIMING...From noon today to 6 PM CST this evening.\n\n* WINDS...Southwest winds 20 to 25 mph with gusts up to 40 mph.\n\n* RELATIVE HUMIDITY...Relative Humidity between 23 to 27 percent.\n\n* IMPACTS...Any fires that develop will spread rapidly. Outdoor\nburning is not recommended.",
+                "instruction": "A Red Flag Warning means that critical fire weather conditions are\neither occurring now, or will begin shortly. These conditions will\npromote rapid fire spread which may become life-threatening.",
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWFSD"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS83 KFSD 180837"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING IN EFFECT FROM NOON TODAY TO 6 PM CST THIS EVENING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.EXA.KFSD.FW.W.0015.261118T1800Z-261119T0000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-18T18:00:00-06:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                },
+                "replacedBy": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ad81cc77569b9c2c01ea5400f97f1b66180d005a.001.1",
+                "replacedAt": "2026-11-18T17:56:00-06:00"
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.1ce97c860477cd2d92a417fee279abf4aadae3a9.002.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.1ce97c860477cd2d92a417fee279abf4aadae3a9.002.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.1ce97c860477cd2d92a417fee279abf4aadae3a9.002.1",
+                "areaDesc": "Gregory; Brule; Aurora; Davison; Charles Mix; Douglas; Hutchinson; Bon Homme",
+                "geocode": {
+                    "SAME": [
+                        "046053",
+                        "046015",
+                        "046003",
+                        "046035",
+                        "046023",
+                        "046043",
+                        "046067",
+                        "046009"
+                    ],
+                    "UGC": [
+                        "SDZ050",
+                        "SDZ057",
+                        "SDZ058",
+                        "SDZ059",
+                        "SDZ063",
+                        "SDZ064",
+                        "SDZ065",
+                        "SDZ068"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/SDZ050",
+                    "https://api.weather.gov/zones/fire/SDZ057",
+                    "https://api.weather.gov/zones/fire/SDZ058",
+                    "https://api.weather.gov/zones/fire/SDZ059",
+                    "https://api.weather.gov/zones/fire/SDZ063",
+                    "https://api.weather.gov/zones/fire/SDZ064",
+                    "https://api.weather.gov/zones/fire/SDZ065",
+                    "https://api.weather.gov/zones/fire/SDZ068"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.1d94008f6b2ce00ba80f89714ebb43c8c9132c8b.001.2",
+                        "identifier": "urn:oid:2.49.0.1.840.0.1d94008f6b2ce00ba80f89714ebb43c8c9132c8b.001.2",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-11-17T21:16:00-06:00"
+                    }
+                ],
+                "sent": "2026-11-18T02:37:00-06:00",
+                "effective": "2026-11-18T02:37:00-06:00",
+                "onset": "2026-11-18T12:00:00-06:00",
+                "expires": "2026-11-18T12:45:00-06:00",
+                "ends": "2026-11-18T18:00:00-06:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Sioux Falls SD",
+                "headline": "Red Flag Warning issued November 18 at 2:37AM CST until November 18 at 6:00PM CST by NWS Sioux Falls SD",
+                "description": "...RED FLAG WARNING IN EFFECT FROM NOON TODAY TO 6 PM CST THIS\nEVENING DUE TO WIND AND LOW RELATIVE HUMIDITY FOR JERAULD...\n\n...RED FLAG WARNING REMAINS IN EFFECT FROM NOON TODAY TO 6 PM CST\nTHIS EVENING DUE TO WIND AND LOW RELATIVE HUMIDITY FOR PORTIONS OF\nSOUTH CENTRAL AND SOUTHEAST SOUTH DAKOTA...\n\n* AFFECTED AREA...Portions of south central and southeast South\nDakota.\n\n* TIMING...From noon today to 6 PM CST this evening.\n\n* WINDS...Southwest winds 20 to 25 mph with gusts up to 40 mph.\n\n* RELATIVE HUMIDITY...Relative Humidity between 18 to 27 percent.\n\n* IMPACTS...Any fires that develop will spread rapidly. Outdoor\nburning is not recommended.",
+                "instruction": "A Red Flag Warning means that critical fire weather conditions are\neither occurring now, or will begin shortly. These conditions will\npromote rapid fire spread which may become life-threatening.",
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWFSD"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS83 KFSD 180837"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING REMAINS IN EFFECT FROM NOON TODAY TO 6 PM CST THIS EVENING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KFSD.FW.W.0015.261118T1800Z-261119T0000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-18T18:00:00-06:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                },
+                "replacedBy": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ad81cc77569b9c2c01ea5400f97f1b66180d005a.001.1",
+                "replacedAt": "2026-11-18T17:56:00-06:00"
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.9819b02880852a9e18241df77067dc2844e1e9d6.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.9819b02880852a9e18241df77067dc2844e1e9d6.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.9819b02880852a9e18241df77067dc2844e1e9d6.001.1",
+                "areaDesc": "Eastern Panhandle/Crescent Lake NWR; Sandhills/Valentine NWR/Nebraska National Forest; Niobrara Valley/Fort Niobrara NWR/Samuel R McKelvie National Forest; Loup Rivers Basin; Frenchman Basin; Loess Plains",
+                "geocode": {
+                    "SAME": [
+                        "031005",
+                        "031031",
+                        "031049",
+                        "031069",
+                        "031075",
+                        "031101",
+                        "031161",
+                        "031009",
+                        "031017",
+                        "031091",
+                        "031111",
+                        "031113",
+                        "031117",
+                        "031149",
+                        "031171",
+                        "031015",
+                        "031089",
+                        "031103",
+                        "031041",
+                        "031071",
+                        "031115",
+                        "031183",
+                        "031029",
+                        "031085",
+                        "031135",
+                        "031063"
+                    ],
+                    "UGC": [
+                        "NEZ204",
+                        "NEZ206",
+                        "NEZ208",
+                        "NEZ209",
+                        "NEZ210",
+                        "NEZ219"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/NEZ204",
+                    "https://api.weather.gov/zones/fire/NEZ206",
+                    "https://api.weather.gov/zones/fire/NEZ208",
+                    "https://api.weather.gov/zones/fire/NEZ209",
+                    "https://api.weather.gov/zones/fire/NEZ210",
+                    "https://api.weather.gov/zones/fire/NEZ219"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.fe495178e774565be0b6c985892faa41a1abf3b7.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.fe495178e774565be0b6c985892faa41a1abf3b7.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-11-17T12:40:00-06:00"
+                    },
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ec1b9b4ec541f007a30162e492c9095d30d45fbe.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.ec1b9b4ec541f007a30162e492c9095d30d45fbe.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-11-17T21:23:00-06:00"
+                    }
+                ],
+                "sent": "2026-11-18T02:22:00-06:00",
+                "effective": "2026-11-18T02:22:00-06:00",
+                "onset": "2026-11-18T11:00:00-06:00",
+                "expires": "2026-11-18T10:30:00-06:00",
+                "ends": "2026-11-18T18:00:00-06:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS North Platte NE",
+                "headline": "Red Flag Warning issued November 18 at 2:22AM CST until November 18 at 6:00PM CST by NWS North Platte NE",
+                "description": "* AFFECTED AREA...Fire Weather Zone 204 Eastern\nPanhandle/Crescent Lake NWR, Fire Weather Zone 206\nSandhills/Valentine NWR/Nebraska National Forest, Fire Weather\nZone 208 Niobrara Valley/Fort Niobrara NWR/Samuel R McKelvie\nNational Forest, Fire Weather Zone 209 Loup Rivers Basin, Fire\nWeather Zone 210 Frenchman Basin and Fire Weather Zone 219\nLoess Plains.\n\n* TIMING... 11 AM CST / 10 AM MST through 6 PM CST / 5 PM MST\nWednesday.\n\n* WINDS...West 20 to 30 mph with gusts up to 50 mph. Strongest\ngusts across the Sandhills.\n\n* RELATIVE HUMIDITY...As low as 18 percent.\n\n* TEMPERATURES...Highs ranging from near 50 degrees across the\nPanhandle to the lower to mid 60s across central Nebraska.\n\n* LIGHTNING...None expected.\n\n* IMPACTS...Any fires starts will spread rapidly and be\ndifficult to contain.",
+                "instruction": "A Red Flag Warning means that critical fire weather conditions\nare either occurring now, or will shortly. A combination of\nstrong winds, low relative humidity, and warm temperatures can\ncontribute to extreme fire behavior.",
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWLBF"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS83 KLBF 180822"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING REMAINS IN EFFECT FROM 11 AM CST /10 AM MST/ THIS MORNING TO 6 PM CST /5 PM MST/ THIS EVENING FOR LOW HUMIDITY OVERLAPPING WITH STRONG WESTERLY WINDS FOR WESTERN AND NORTH CENTRAL NEBRASKA"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KLBF.FW.W.0044.261118T1700Z-261119T0000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-18T18:00:00-06:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                },
+                "replacedBy": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b5795712d8b67bc86a68a1a0074a6d606b1edd11.001.1",
+                "replacedAt": "2026-11-18T17:57:00-06:00"
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.e359af16501871b686a6f708d2fb875a53c86d04.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.e359af16501871b686a6f708d2fb875a53c86d04.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.e359af16501871b686a6f708d2fb875a53c86d04.001.1",
+                "areaDesc": "Lyman; Buffalo",
+                "geocode": {
+                    "SAME": [
+                        "046085",
+                        "046017"
+                    ],
+                    "UGC": [
+                        "SDZ048",
+                        "SDZ051"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/SDZ048",
+                    "https://api.weather.gov/zones/fire/SDZ051"
+                ],
+                "references": [],
+                "sent": "2026-11-18T00:13:00-06:00",
+                "effective": "2026-11-18T00:13:00-06:00",
+                "onset": "2026-11-18T12:00:00-06:00",
+                "expires": "2026-11-18T12:00:00-06:00",
+                "ends": "2026-11-18T18:00:00-06:00",
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Aberdeen SD",
+                "headline": "Red Flag Warning issued November 18 at 12:13AM CST until November 18 at 6:00PM CST by NWS Aberdeen SD",
+                "description": "...RED FLAG WARNING IN EFFECT FROM NOON TODAY TO 6 PM CST THIS\nEVENING DUE TO WIND AND LOW RELATIVE HUMIDITY FOR LYMAN AND\nBUFFALO...\n\nThe National Weather Service in Aberdeen SD has issued a Red Flag\nWarning.\n\n* AFFECTED AREA...In South Dakota, Lyman and Buffalo.\n\n* TIMING...From noon today to 6 PM CST this evening.\n\n* WINDS...West winds 20 to 30 mph with gusts up to 45 mph.\n\n* RELATIVE HUMIDITY...Relative Humidity between 20 to 30 percent.\n\n* IMPACTS...Any fires that develop will spread rapidly. Outdoor\nburning is not recommended.",
+                "instruction": "A Red Flag Warning is issued when we identify weather conditions that\npromote rapid spread of fire which may become life-threatening. This\ndoes not mean there is a fire. These conditions are either occurring\nnow or will begin soon. It is important to have multiple ways to\nreceive information from authorities.\n\nFollow all fire restrictions. One less spark, one less wildfire.",
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWABR"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS83 KABR 180613"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING IN EFFECT FROM NOON TODAY TO 6 PM CST THIS EVENING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.NEW.KABR.FW.W.0023.261118T1800Z-261119T0000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-18T18:00:00-06:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                },
+                "replacedBy": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.66835eef224e28d54c016129e14face1bcc52673.001.1",
+                "replacedAt": "2026-11-18T17:57:00-06:00"
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.87b0c47d365b094a1beb580d5b78d243c8133c34.002.2",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.87b0c47d365b094a1beb580d5b78d243c8133c34.002.2",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.87b0c47d365b094a1beb580d5b78d243c8133c34.002.2",
+                "areaDesc": "Larimer County Below 6000 Feet/Northwest Weld County; Boulder And Jefferson Counties Below 6000 Feet/West Broomfield County",
+                "geocode": {
+                    "SAME": [
+                        "008069",
+                        "008123",
+                        "008013",
+                        "008014",
+                        "008059"
+                    ],
+                    "UGC": [
+                        "COZ238",
+                        "COZ239"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/COZ238",
+                    "https://api.weather.gov/zones/fire/COZ239"
+                ],
+                "references": [],
+                "sent": "2026-11-17T23:11:00-07:00",
+                "effective": "2026-11-17T23:11:00-07:00",
+                "onset": "2026-11-18T08:00:00-07:00",
+                "expires": "2026-11-18T16:00:00-07:00",
+                "ends": "2026-11-18T16:00:00-07:00",
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Denver CO",
+                "headline": "Red Flag Warning issued November 17 at 11:11PM MST until November 18 at 4:00PM MST by NWS Denver CO",
+                "description": "* AFFECTED AREA...Fire Weather Zones 238 and 239.\n\n* TIMING...From 8 AM to 4 PM MST Wednesday.\n\n* WINDS...West 20 to 30 mph with gusts up to 45 mph.\n\n* RELATIVE HUMIDITY...Between 10 to 15 percent.\n\n* IMPACTS...Conditions will be favorable for rapid fire spread. Avoid\noutdoor burning and any activity that may produce a spark and start\na wildfire.",
+                "instruction": "Be sure you are signed up for your local emergency alert system. You\ncan find this information at dhsem.colorado.gov/emergencyalert.\n\nFollow all fire restrictions. Avoid activities that can cause sparks\nand do not park hot vehicles on dry vegetation. One less spark, one\nless wildfire.\n\nA Red Flag Warning means that critical fire weather conditions are\neither occurring now...or will shortly. A combination of strong\nwinds...low relative humidity...and warm temperatures can contribute\nto extreme fire behavior.",
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWBOU"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS85 KBOU 180611"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING IN EFFECT FROM 8 AM TO 4 PM MST WEDNESDAY DUE TO WIND AND LOW RELATIVE HUMIDITY FOR THE WESTERN DENVER METRO AND WESTERN I-25 CORRIDOR INCLUDING BOULDER, LOVELAND, AND FORT COLLINS"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.EXB.KBOU.FW.W.0057.261118T1500Z-261118T2300Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-18T16:00:00-07:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                },
+                "replacedBy": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.899bbb2cdee718742b6c84d64629112c7a318287.001.1",
+                "replacedAt": "2026-11-18T16:07:00-07:00"
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.87b0c47d365b094a1beb580d5b78d243c8133c34.003.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.87b0c47d365b094a1beb580d5b78d243c8133c34.003.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.87b0c47d365b094a1beb580d5b78d243c8133c34.003.1",
+                "areaDesc": "Jefferson and West Douglas Counties Above  6000 Feet/Gilpin/Clear Creek/Northeast Park Counties Below 9000 Feet; Elbert/Central and East Douglas Counties Above 6000 Feet",
+                "geocode": {
+                    "SAME": [
+                        "008019",
+                        "008035",
+                        "008047",
+                        "008059",
+                        "008093",
+                        "008005",
+                        "008039"
+                    ],
+                    "UGC": [
+                        "COZ216",
+                        "COZ241"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/COZ216",
+                    "https://api.weather.gov/zones/fire/COZ241"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.382bc923e46a867f01f5d73980c813cffc84cd48.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.382bc923e46a867f01f5d73980c813cffc84cd48.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-11-17T12:46:00-07:00"
+                    }
+                ],
+                "sent": "2026-11-17T23:11:00-07:00",
+                "effective": "2026-11-17T23:11:00-07:00",
+                "onset": "2026-11-18T08:00:00-07:00",
+                "expires": "2026-11-18T16:00:00-07:00",
+                "ends": "2026-11-18T16:00:00-07:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Denver CO",
+                "headline": "Red Flag Warning issued November 17 at 11:11PM MST until November 18 at 4:00PM MST by NWS Denver CO",
+                "description": "* AFFECTED AREA...Fire Weather Zones 216 and 241.\n\n* TIMING...From 8 AM to 4 PM MST Wednesday.\n\n* WINDS...West 15 to 25 mph with gusts up to 45 mph.\n\n* RELATIVE HUMIDITY...Between 10 to 15 percent.\n\n* IMPACTS...Conditions will be favorable for rapid fire spread. Avoid\noutdoor burning and any activity that may produce a spark and start\na wildfire.",
+                "instruction": "Be sure you are signed up for your local emergency alert system. You\ncan find this information at dhsem.colorado.gov/emergencyalert.\n\nFollow all fire restrictions. Avoid activities that can cause sparks\nand do not park hot vehicles on dry vegetation. One less spark, one\nless wildfire.\n\nA Red Flag Warning means that critical fire weather conditions are\neither occurring now...or will shortly. A combination of strong\nwinds...low relative humidity...and warm temperatures can contribute\nto extreme fire behavior.",
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWBOU"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS85 KBOU 180611"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING NOW IN EFFECT FROM 8 AM TO 4 PM MST WEDNESDAY DUE TO WIND AND LOW RELATIVE HUMIDITY FOR THE SOUTHERN FRONT RANGE FOOTHILLS AND PALMER DIVIDE"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.EXT.KBOU.FW.W.0057.261118T1500Z-261118T2300Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-18T16:00:00-07:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                },
+                "replacedBy": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.899bbb2cdee718742b6c84d64629112c7a318287.001.1",
+                "replacedAt": "2026-11-18T16:07:00-07:00"
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.11a755ed9794788da9c1ac64bdd4489c38e39680.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.11a755ed9794788da9c1ac64bdd4489c38e39680.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.11a755ed9794788da9c1ac64bdd4489c38e39680.001.1",
+                "areaDesc": "Valley; Greeley; Sherman; Dawson; Buffalo; Gosper",
+                "geocode": {
+                    "SAME": [
+                        "031175",
+                        "031077",
+                        "031163",
+                        "031047",
+                        "031019",
+                        "031073"
+                    ],
+                    "UGC": [
+                        "NEZ039",
+                        "NEZ040",
+                        "NEZ046",
+                        "NEZ060",
+                        "NEZ061",
+                        "NEZ072"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/NEZ039",
+                    "https://api.weather.gov/zones/fire/NEZ040",
+                    "https://api.weather.gov/zones/fire/NEZ046",
+                    "https://api.weather.gov/zones/fire/NEZ060",
+                    "https://api.weather.gov/zones/fire/NEZ061",
+                    "https://api.weather.gov/zones/fire/NEZ072"
+                ],
+                "references": [],
+                "sent": "2026-11-17T21:56:00-06:00",
+                "effective": "2026-11-17T21:56:00-06:00",
+                "onset": "2026-11-18T12:00:00-06:00",
+                "expires": "2026-11-18T12:00:00-06:00",
+                "ends": "2026-11-18T18:00:00-06:00",
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Hastings NE",
+                "headline": "Red Flag Warning issued November 17 at 9:56PM CST until November 18 at 6:00PM CST by NWS Hastings NE",
+                "description": "...RED FLAG WARNING IN EFFECT FROM NOON TO 6 PM CST WEDNESDAY DUE TO\nWIND AND LOW RELATIVE HUMIDITY FOR PORTIONS OF CENTRAL AND SOUTH\nCENTRAL NEBRASKA...\n\nThe National Weather Service in Hastings NE has issued a Red Flag\nWarning.\n\n* AFFECTED AREA...Portions of central and south central Nebraska.\n\n* TIMING...From noon to 6 PM CST Wednesday.\n\n* WINDS...from the west, sustained around 20 MPH with gusts to at\nleast 25-30 MPH.\n\n* RELATIVE HUMIDITY...as low as 20-25 percent.\n\n* IMPACTS...Any fires that develop will spread rapidly. Outdoor\nburning is not recommended.",
+                "instruction": "A Red Flag Warning is issued when we identify weather conditions that\npromote rapid spread of fire which may become life-threatening. This\ndoes not mean there is a fire. These conditions are either occurring\nnow or will begin soon.",
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWGID"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS83 KGID 180356"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING IN EFFECT FROM NOON TO 6 PM CST WEDNESDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.NEW.KGID.FW.W.0029.261118T1800Z-261119T0000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-18T18:00:00-06:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                },
+                "replacedBy": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.10a99ab351b43a5015262cd6a955f36f96dcb313.001.1",
+                "replacedAt": "2026-11-18T17:52:00-06:00"
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.a5059ac9be8cc03cce108e8edee191b0c42b78d2.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.a5059ac9be8cc03cce108e8edee191b0c42b78d2.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.a5059ac9be8cc03cce108e8edee191b0c42b78d2.001.1",
+                "areaDesc": "Knox",
+                "geocode": {
+                    "SAME": [
+                        "031107"
+                    ],
+                    "UGC": [
+                        "NEZ011"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/NEZ011"
+                ],
+                "references": [],
+                "sent": "2026-11-17T21:44:00-06:00",
+                "effective": "2026-11-17T21:44:00-06:00",
+                "onset": "2026-11-18T12:00:00-06:00",
+                "expires": "2026-11-18T18:00:00-06:00",
+                "ends": "2026-11-18T18:00:00-06:00",
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Omaha/Valley NE",
+                "headline": "Red Flag Warning issued November 17 at 9:44PM CST until November 18 at 6:00PM CST by NWS Omaha/Valley NE",
+                "description": "...RED FLAG WARNING IN EFFECT FROM NOON TO 6 PM CST WEDNESDAY DUE TO\nWIND AND LOW RELATIVE HUMIDITY FOR KNOX COUNTY...\n\nThe National Weather Service in Omaha/Valley NE has issued a Red Flag\nWarning.\n\n* WHAT...Southwest winds 22 to 28 mph with peak gusts up to 40 mph,\nRelative Humidity as low as 20 percent.\n\n* WHERE...Knox county.\n\n* WHEN...From noon to 6 PM CST Wednesday.\n\n* IMPACTS...Any fires that develop will spread rapidly. Outdoor\nburning is not recommended.",
+                "instruction": "A Red Flag Warning is issued when we identify weather conditions that\npromote rapid spread of fire which may become life-threatening. This\ndoes not mean there is a fire. These conditions are either occurring\nnow or will begin soon. It is important to have multiple ways to\nreceive information from authorities.",
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWOAX"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS83 KOAX 180344"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING IN EFFECT FROM NOON TO 6 PM CST WEDNESDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.NEW.KOAX.FW.W.0018.261118T1800Z-261119T0000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-18T18:00:00-06:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                },
+                "replacedBy": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.4a7786446c399569fa11f450814d842bef24e5d3.001.1",
+                "replacedAt": "2026-11-18T17:47:00-06:00"
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ec1b9b4ec541f007a30162e492c9095d30d45fbe.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ec1b9b4ec541f007a30162e492c9095d30d45fbe.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.ec1b9b4ec541f007a30162e492c9095d30d45fbe.001.1",
+                "areaDesc": "Eastern Panhandle/Crescent Lake NWR; Sandhills/Valentine NWR/Nebraska National Forest; Niobrara Valley/Fort Niobrara NWR/Samuel R McKelvie National Forest; Loup Rivers Basin; Frenchman Basin; Loess Plains",
+                "geocode": {
+                    "SAME": [
+                        "031005",
+                        "031031",
+                        "031049",
+                        "031069",
+                        "031075",
+                        "031101",
+                        "031161",
+                        "031009",
+                        "031017",
+                        "031091",
+                        "031111",
+                        "031113",
+                        "031117",
+                        "031149",
+                        "031171",
+                        "031015",
+                        "031089",
+                        "031103",
+                        "031041",
+                        "031071",
+                        "031115",
+                        "031183",
+                        "031029",
+                        "031085",
+                        "031135",
+                        "031063"
+                    ],
+                    "UGC": [
+                        "NEZ204",
+                        "NEZ206",
+                        "NEZ208",
+                        "NEZ209",
+                        "NEZ210",
+                        "NEZ219"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/NEZ204",
+                    "https://api.weather.gov/zones/fire/NEZ206",
+                    "https://api.weather.gov/zones/fire/NEZ208",
+                    "https://api.weather.gov/zones/fire/NEZ209",
+                    "https://api.weather.gov/zones/fire/NEZ210",
+                    "https://api.weather.gov/zones/fire/NEZ219"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.fe495178e774565be0b6c985892faa41a1abf3b7.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.fe495178e774565be0b6c985892faa41a1abf3b7.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-11-17T12:40:00-06:00"
+                    }
+                ],
+                "sent": "2026-11-17T21:23:00-06:00",
+                "effective": "2026-11-17T21:23:00-06:00",
+                "onset": "2026-11-18T11:00:00-06:00",
+                "expires": "2026-11-18T05:30:00-06:00",
+                "ends": "2026-11-18T18:00:00-06:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS North Platte NE",
+                "headline": "Red Flag Warning issued November 17 at 9:23PM CST until November 18 at 6:00PM CST by NWS North Platte NE",
+                "description": "* AFFECTED AREA...Fire Weather Zone 204 Eastern\nPanhandle/Crescent Lake NWR, Fire Weather Zone 206\nSandhills/Valentine NWR/Nebraska National Forest, Fire Weather\nZone 208 Niobrara Valley/Fort Niobrara NWR/Samuel R McKelvie\nNational Forest, Fire Weather Zone 209 Loup Rivers Basin, Fire\nWeather Zone 210 Frenchman Basin and Fire Weather Zone 219\nLoess Plains.\n\n* TIMING... 11 AM CST / 10 AM MST through 6 PM CST / 5 PM MST\nWednesday.\n\n* WINDS...West 20 to 30 mph with gusts up to 50 mph. Strongest\ngusts across the Sandhills.\n\n* RELATIVE HUMIDITY...As low as 18 percent.\n\n* TEMPERATURES...Highs ranging from near 50 degrees across the\nPanhandle to the lower to mid 60s across central Nebraska.\n\n* LIGHTNING...None expected.\n\n* IMPACTS...Any fires starts will spread rapidly and be\ndifficult to contain.",
+                "instruction": "A Red Flag Warning means that critical fire weather conditions\nare either occurring now, or will shortly. A combination of\nstrong winds, low relative humidity, and warm temperatures can\ncontribute to extreme fire behavior.",
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWLBF"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS83 KLBF 180323"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING REMAINS IN EFFECT FROM 11 AM CST /10 AM MST/ TO 6 PM CST /5 PM MST/ WEDNESDAY FOR LOW HUMIDITY OVERLAPPING WITH STRONG WESTERLY WINDS FOR WESTERN AND NORTH CENTRAL NEBRASKA"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KLBF.FW.W.0044.261118T1700Z-261119T0000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-18T18:00:00-06:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                },
+                "replacedBy": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b5795712d8b67bc86a68a1a0074a6d606b1edd11.001.1",
+                "replacedAt": "2026-11-18T17:57:00-06:00"
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.1d94008f6b2ce00ba80f89714ebb43c8c9132c8b.001.2",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.1d94008f6b2ce00ba80f89714ebb43c8c9132c8b.001.2",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.1d94008f6b2ce00ba80f89714ebb43c8c9132c8b.001.2",
+                "areaDesc": "Gregory; Brule; Aurora; Davison; Charles Mix; Douglas; Hutchinson; Bon Homme",
+                "geocode": {
+                    "SAME": [
+                        "046053",
+                        "046015",
+                        "046003",
+                        "046035",
+                        "046023",
+                        "046043",
+                        "046067",
+                        "046009"
+                    ],
+                    "UGC": [
+                        "SDZ050",
+                        "SDZ057",
+                        "SDZ058",
+                        "SDZ059",
+                        "SDZ063",
+                        "SDZ064",
+                        "SDZ065",
+                        "SDZ068"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/fire/SDZ050",
+                    "https://api.weather.gov/zones/fire/SDZ057",
+                    "https://api.weather.gov/zones/fire/SDZ058",
+                    "https://api.weather.gov/zones/fire/SDZ059",
+                    "https://api.weather.gov/zones/fire/SDZ063",
+                    "https://api.weather.gov/zones/fire/SDZ064",
+                    "https://api.weather.gov/zones/fire/SDZ065",
+                    "https://api.weather.gov/zones/fire/SDZ068"
+                ],
+                "references": [],
+                "sent": "2026-11-17T21:16:00-06:00",
+                "effective": "2026-11-17T21:16:00-06:00",
+                "onset": "2026-11-18T12:00:00-06:00",
+                "expires": "2026-11-18T08:15:00-06:00",
+                "ends": "2026-11-18T18:00:00-06:00",
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Red Flag Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Sioux Falls SD",
+                "headline": "Red Flag Warning issued November 17 at 9:16PM CST until November 18 at 6:00PM CST by NWS Sioux Falls SD",
+                "description": "...RED FLAG WARNING IN EFFECT FROM NOON TO 6 PM CST WEDNESDAY DUE TO\nWIND AND LOW RELATIVE HUMIDITY FOR PORTIONS OF SOUTH CENTRAL AND\nSOUTHEAST SOUTH DAKOTA...\n\nThe National Weather Service in Sioux Falls SD has issued a Red Flag\nWarning in effect from noon to 6 PM CST Wednesday.\n\n* AFFECTED AREA...Portions of south central and southeast South\nDakota.\n\n* TIMING...From noon to 6 PM CST Wednesday.\n\n* WINDS...Southwest winds 15 to 25 mph with gusts up to 40 mph.\n\n* RELATIVE HUMIDITY...Relative Humidity between 18 to 25 percent.\n\n* IMPACTS...Any fires that develop will spread rapidly. Outdoor\nburning is not recommended.",
+                "instruction": "A Red Flag Warning means that critical fire weather conditions are\neither occurring now, or will begin shortly. These conditions will\npromote rapid fire spread which may become life-threatening.",
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "RFWFSD"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS83 KFSD 180316"
+                    ],
+                    "NWSheadline": [
+                        "RED FLAG WARNING IN EFFECT FROM NOON TO 6 PM CST WEDNESDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.NEW.KFSD.FW.W.0015.261118T1800Z-261119T0000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-11-18T18:00:00-06:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FWW"
+                    ]
+                },
+                "replacedBy": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ad81cc77569b9c2c01ea5400f97f1b66180d005a.001.1",
+                "replacedAt": "2026-11-18T17:56:00-06:00"
+            }
+        }
+    ],
+    "title": "Red Flag Warning events issued between Wed, Nov 18, 2026 12:00:00 AM +0000 and Fri, Nov 20, 2026 12:00:00 AM +0000",
+    "updated": "2026-11-19T23:48:08+00:00",
+    "pagination": {
+        "next": "https://api.weather.gov/alerts?event%5B0%5D=Red%20Flag%20Warning&start=2026-11-18T00:00:00Z&end=2026-11-20T00:00:00Z&limit=50&cursor=eyJ0IjoxNzk0OTcxNzYwLCJpIjoidXJuOm9pZDoyLjQ5LjAuMS44NDAuMC4xZDk0MDA4ZjZiMmNlMDBiYTgwZjg5NzE0ZWJiNDNjOGM5MTMyYzhiLjAwMS4yIn0%3D"
+    }
+}

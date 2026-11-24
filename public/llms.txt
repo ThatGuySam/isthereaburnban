@@ -2,7 +2,7 @@
 
 > Answers one question for US counties: is there a burn ban right now? Data comes from official state feeds (forestry agencies, fire marshals, emergency management), refreshed hourly. Informational only. Always confirm with the official source before burning.
 
-Coverage: live county-level data for Oklahoma, Texas, Florida, Indiana, Louisiana and Mississippi. Iowa is positive-only: we can confirm active bans but not their absence. Every other state returns status "unknown" with a link to the official agency. "unknown" never means burning is allowed. Cities, fire districts, tribes and federal land managers can have stricter rules than the county.
+See the coverage endpoint for each state's burn restriction sources. NWS fire-weather alerts cover counties nationally. A county with unconfirmed restrictions returns status "unknown" and a link to the official agency. Cities, fire districts, tribes and federal land managers can have stricter rules than the county.
 
 ## API (GET, JSON, CORS open, no key)
 
@@ -13,10 +13,13 @@ Coverage: live county-level data for Oklahoma, Texas, Florida, Indiana, Louisian
 - [Plain-text answer](https://isthereaburnban.com/api/v1/status?zip=74103&format=text)
 - [One county](https://isthereaburnban.com/api/v1/counties/40143)
 - [All active bans](https://isthereaburnban.com/api/v1/bans) and [by state](https://isthereaburnban.com/api/v1/bans?state=TX)
+- [NWS fire-weather alerts by county](https://isthereaburnban.com/api/v1/fire-weather), optionally [filtered by state](https://isthereaburnban.com/api/v1/fire-weather?state=OK). Includes the national source's check time and health.
 - [Coverage and source health](https://isthereaburnban.com/api/v1/coverage)
 - [OpenAPI spec](https://isthereaburnban.com/openapi.json)
 
 Status values: `ban`, `restricted` (partial or activity-specific limits), `none` (the official source covers this county and reports no ban), `unknown` (no feed, feed failed, or stale).
+
+County, status, and MCP `check_burn_ban` results can include `alerts` entries with `event`, `headline`, `onset`, `expires`, `ends`, `url`, and `sender`. Timestamps are UTC. `expires` is the NWS message expiry and `ends` is the expected end of the weather event when supplied. Alerts can cover part of a county. Use `status` and `orders[].officialUrl` for legal restrictions and `alerts[].url` for weather. A verified rule can activate a scoped restriction during a Red Flag Warning.
 
 ## MCP
 

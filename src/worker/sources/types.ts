@@ -1,4 +1,4 @@
-import type { CountyStatus, Coverage, SourceHealth } from "../../shared/types";
+import type { CountyStatus, Coverage, FireWeatherReport, SourceHealth } from "../../shared/types";
 import type { Validators } from "./lib/http";
 
 export type Cadence =
@@ -14,12 +14,14 @@ type Metadata = {
   sourceUrl: string;
   sourceName: string;
   keepRowLinks?: boolean;
+  product?: SourceHealth["product"];
   /** Recurring statutory/calendar rule (e.g. daily burning hours). Its scheduled on/off flips never alert and never count as a status change. */
   recurring?: boolean;
 };
 
 export type SourceResult =
   | { rows: CountyStatus[]; validators?: Validators }
+  | { fireWeather: FireWeatherReport[]; validators?: Validators }
   | { notModified: true; validators: Validators };
 
 export type ActiveSource = Metadata & {

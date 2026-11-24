@@ -107,7 +107,7 @@ function retryDelay(response: Response | undefined, attempt: number): number {
 export async function fetchSource(url: string, options: Options = {}): Promise<SourceReply> {
   const { fetchImpl = fetch, timeoutMs = 15_000, attempts = 2, maxBytes = 2_000_000, validators, ...init } = options;
   const headers = new Headers(init.headers);
-  headers.set("user-agent", USER_AGENT);
+  if (!headers.has("user-agent")) headers.set("user-agent", USER_AGENT);
   if (!headers.has("accept")) headers.set("accept", "*/*");
   const method = (init.method ?? "GET").toUpperCase();
   const safe = method === "GET" || method === "HEAD";

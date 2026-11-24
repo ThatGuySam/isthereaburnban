@@ -1,0 +1,748 @@
+{
+    "@context": [
+        "https://geojson.org/geojson-ld/geojson-context.jsonld",
+        {
+            "@version": "1.1",
+            "wx": "https://api.weather.gov/ontology#",
+            "@vocab": "https://api.weather.gov/ontology#"
+        }
+    ],
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.72558f6e005655eb4161cee5e3c64f8004abb8f3.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.72558f6e005655eb4161cee5e3c64f8004abb8f3.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.72558f6e005655eb4161cee5e3c64f8004abb8f3.001.1",
+                "areaDesc": "Patapsco River including Baltimore Harbor; Carroll; Northern Baltimore; Cecil; Southern Baltimore; Prince Georges; Anne Arundel; Charles; St. Marys; Calvert; Northwest Montgomery; Central and Southeast Montgomery; Northwest Howard; Central and Southeast Howard; Northwest Harford; Southeast Harford",
+                "geocode": {
+                    "SAME": [
+                        "073538",
+                        "024013",
+                        "024005",
+                        "024015",
+                        "024510",
+                        "024033",
+                        "024003",
+                        "024017",
+                        "024037",
+                        "024009",
+                        "024031",
+                        "024027",
+                        "024025"
+                    ],
+                    "UGC": [
+                        "ANZ538",
+                        "MDZ005",
+                        "MDZ006",
+                        "MDZ008",
+                        "MDZ011",
+                        "MDZ013",
+                        "MDZ014",
+                        "MDZ016",
+                        "MDZ017",
+                        "MDZ018",
+                        "MDZ503",
+                        "MDZ504",
+                        "MDZ505",
+                        "MDZ506",
+                        "MDZ507",
+                        "MDZ508"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/ANZ538",
+                    "https://api.weather.gov/zones/forecast/MDZ005",
+                    "https://api.weather.gov/zones/forecast/MDZ006",
+                    "https://api.weather.gov/zones/forecast/MDZ008",
+                    "https://api.weather.gov/zones/forecast/MDZ011",
+                    "https://api.weather.gov/zones/forecast/MDZ013",
+                    "https://api.weather.gov/zones/forecast/MDZ014",
+                    "https://api.weather.gov/zones/forecast/MDZ016",
+                    "https://api.weather.gov/zones/forecast/MDZ017",
+                    "https://api.weather.gov/zones/forecast/MDZ018",
+                    "https://api.weather.gov/zones/forecast/MDZ503",
+                    "https://api.weather.gov/zones/forecast/MDZ504",
+                    "https://api.weather.gov/zones/forecast/MDZ505",
+                    "https://api.weather.gov/zones/forecast/MDZ506",
+                    "https://api.weather.gov/zones/forecast/MDZ507",
+                    "https://api.weather.gov/zones/forecast/MDZ508"
+                ],
+                "references": [],
+                "sent": "2026-11-24T02:40:00-05:00",
+                "effective": "2026-11-24T02:40:00-05:00",
+                "onset": "2026-11-24T02:40:00-05:00",
+                "expires": "2026-11-24T08:45:00-05:00",
+                "ends": null,
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Moderate",
+                "certainty": "Observed",
+                "urgency": "Expected",
+                "event": "Special Weather Statement",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Baltimore MD/Washington DC",
+                "headline": "Special Weather Statement issued November 24 at 2:40AM EST by NWS Baltimore MD/Washington DC",
+                "description": "* TIMING: 11 AM through 4 PM.\n\n* WINDS: North at 10 to 15 mph with gusts up to 20 mph.\n\n* RELATIVE HUMIDITY: As low as 25 to 30 percent.\n\n* 10-HOUR FUEL MOISTURE: 10 to 12 percent.\n\n* TEMPERATURES: Upper 40s to low 50s.\n\n* IMPACTS: The combination of low relative humidities and breezy\nnorth winds will lead to an increased risk for the spread of\nwidfires today.\n\n\nResidents and visitors are urged to properly dispose of cigarette\nbutts, matches, and any other flammable items in appropriate\ncontainers. Additionally, exercise caution if operating any\nequipment that could create sparks and keep vehicles off of dry\ngrass. Most dry grasses, dead leaves, and other tree litter could\neasily ignite and spread fire quickly.\n\nLastly, remember to obey local burn bans. For more information about\nwildfire danger, burn restrictions, and wildfire prevention and\neducation, please visit your state forestry or environmental\nprotection website.\n\nFor West Virginia, visit www.wvforestry.com\nFor Maryland, visit dnr.maryland.gov\nFor Virginia, visit dof.virginia.gov",
+                "instruction": null,
+                "response": "Execute",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "SPSLWX"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS81 KLWX 240740"
+                    ],
+                    "NWSheadline": [
+                        "ELEVATED FIRE DANGER FOR AREAS EAST OF U.S. 15 IN MARYLAND THIS AFTERNOON"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "EAS-ORG": [
+                        "WXR"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "SPS"
+                    ],
+                    "NationalWeatherService": [
+                        "SPS"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.1827acff287c9311f8c5e0082e37ca342e960ba5.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.1827acff287c9311f8c5e0082e37ca342e960ba5.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.1827acff287c9311f8c5e0082e37ca342e960ba5.001.1",
+                "areaDesc": "Dorchester; Wicomico; Somerset; Inland Worcester",
+                "geocode": {
+                    "SAME": [
+                        "024019",
+                        "024045",
+                        "024039",
+                        "024047"
+                    ],
+                    "UGC": [
+                        "MDZ021",
+                        "MDZ022",
+                        "MDZ023",
+                        "MDZ024"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/MDZ021",
+                    "https://api.weather.gov/zones/forecast/MDZ022",
+                    "https://api.weather.gov/zones/forecast/MDZ023",
+                    "https://api.weather.gov/zones/forecast/MDZ024"
+                ],
+                "references": [],
+                "sent": "2026-11-24T02:29:00-05:00",
+                "effective": "2026-11-24T02:29:00-05:00",
+                "onset": "2026-11-24T02:29:00-05:00",
+                "expires": "2026-11-24T15:00:00-05:00",
+                "ends": null,
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Moderate",
+                "certainty": "Observed",
+                "urgency": "Expected",
+                "event": "Special Weather Statement",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Wakefield VA",
+                "headline": "Special Weather Statement issued November 24 at 2:29AM EST by NWS Wakefield VA",
+                "description": "* TIMING: Until 4 PM this afternoon.\n\n* WINDS...North 10 to 15 mph with gusts up to 20-25 mph.\n\n* RELATIVE HUMIDITY...As low as 25 to 30 percent.\n\n* TEMPERATURES...In the lower 50s.\n\n* IMPACTS...Low relative humidities and breezy north winds could\nproduce favorable conditions for wildfires to spread today.\n\n\nResidents are urged to exercise caution handling any potential\nignition source, including machinery, cigarettes, and matches. Be\nsure to properly discard all smoking materials. Any dry grasses and\ntree litter that ignite will have the potential to spread\nquickly.",
+                "instruction": null,
+                "response": "Execute",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "SPSAKQ"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS81 KAKQ 240729"
+                    ],
+                    "NWSheadline": [
+                        "INCREASED FIRE DANGER IN EFFECT FROM 10 AM EST THIS MORNING TO 4 PM EDT THIS AFTERNOON DUE TO A COMBINATION OF BREEZY NORTH WINDS AND LOW AFTERNOON RELATIVE HUMIDITIES"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "EAS-ORG": [
+                        "WXR"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "SPS"
+                    ],
+                    "NationalWeatherService": [
+                        "SPS"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.a737751e2cc0ec3444b9e89af8869aa6e72e4e84.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.a737751e2cc0ec3444b9e89af8869aa6e72e4e84.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.a737751e2cc0ec3444b9e89af8869aa6e72e4e84.001.1",
+                "areaDesc": "Kent; Queen Anne's; Talbot; Caroline",
+                "geocode": {
+                    "SAME": [
+                        "024029",
+                        "024035",
+                        "024041",
+                        "024011"
+                    ],
+                    "UGC": [
+                        "MDZ012",
+                        "MDZ015",
+                        "MDZ019",
+                        "MDZ020"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/MDZ012",
+                    "https://api.weather.gov/zones/forecast/MDZ015",
+                    "https://api.weather.gov/zones/forecast/MDZ019",
+                    "https://api.weather.gov/zones/forecast/MDZ020"
+                ],
+                "references": [],
+                "sent": "2026-11-24T02:15:00-05:00",
+                "effective": "2026-11-24T02:15:00-05:00",
+                "onset": "2026-11-24T02:15:00-05:00",
+                "expires": "2026-11-24T15:00:00-05:00",
+                "ends": null,
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Moderate",
+                "certainty": "Observed",
+                "urgency": "Expected",
+                "event": "Special Weather Statement",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Mount Holly NJ",
+                "headline": "Special Weather Statement issued November 24 at 2:15AM EST by NWS Mount Holly NJ",
+                "description": "There is an elevated risk for fire spread today across the\nEastern Shore of Maryland today. Minimum relative humidity values\nwill drop to around 25 to 30 percent this afternoon. This will be\naccompanied by temperatures rising generally rising into the low\n50s and northerly winds around 10 to 15 mph gusting up to 25 mph.\nThese conditions could support the rapid spread of any fires that\nignite, which could quickly become difficult to control.\nConditions improve during the evening as the wind diminishes and\nthe relative humidity increases.\n\nOutdoor burning is strongly discouraged. Be sure to properly\nextinguish or dispose of any potential ignition sources, including\nsmoking materials such as cigarette butts. Use caution while\nusing any machinery outdoors, such as lawn care equipment, that\ncould cause sparks to come in contact with the dry ground.\n\nThis forecast considers meteorological, fuel, and land conditions\nand has been developed in coordination with state fire officials.",
+                "instruction": null,
+                "response": "Execute",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "SPSPHI"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS81 KPHI 240715"
+                    ],
+                    "NWSheadline": [
+                        "ELEVATED RISK FOR FIRE SPREAD TODAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "EAS-ORG": [
+                        "WXR"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "SPS"
+                    ],
+                    "NationalWeatherService": [
+                        "SPS"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.67f27dad4f4315cf5248c42aa33861cfa0aa0b5a.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.67f27dad4f4315cf5248c42aa33861cfa0aa0b5a.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.67f27dad4f4315cf5248c42aa33861cfa0aa0b5a.001.1",
+                "areaDesc": "Helena Valley; Canyon Ferry Area; Missouri Headwaters; Gallatin Valley; Beaverhead and Western Madison below 6000ft",
+                "geocode": {
+                    "SAME": [
+                        "030049",
+                        "030007",
+                        "030043",
+                        "030057",
+                        "030031",
+                        "030001"
+                    ],
+                    "UGC": [
+                        "MTZ319",
+                        "MTZ323",
+                        "MTZ324",
+                        "MTZ326",
+                        "MTZ328"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/MTZ319",
+                    "https://api.weather.gov/zones/forecast/MTZ323",
+                    "https://api.weather.gov/zones/forecast/MTZ324",
+                    "https://api.weather.gov/zones/forecast/MTZ326",
+                    "https://api.weather.gov/zones/forecast/MTZ328"
+                ],
+                "references": [],
+                "sent": "2026-11-23T23:12:00-07:00",
+                "effective": "2026-11-23T23:12:00-07:00",
+                "onset": "2026-11-23T23:12:00-07:00",
+                "expires": "2026-11-24T01:15:00-07:00",
+                "ends": null,
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Moderate",
+                "certainty": "Observed",
+                "urgency": "Expected",
+                "event": "Special Weather Statement",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Great Falls MT",
+                "headline": "Special Weather Statement issued November 23 at 11:12PM MST by NWS Great Falls MT",
+                "description": "A mix of very low clouds and patchy dense fog has developed across\nmany valleys in Southwest Montana and vicinity. This looks to\npersist through the remainder of the night and Tuesday morning.\nBe prepared for widely varying visibility if traveling tonight.\nSlow down and use your low-beam headlights if you encounter the\nfog and be sure to leave plenty of room between you and the\nvehicle ahead of you.",
+                "instruction": null,
+                "response": "Execute",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "SPSTFX"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS85 KTFX 240612"
+                    ],
+                    "NWSheadline": [
+                        "Patchy Dense Fog The Remainder of the Night"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "EAS-ORG": [
+                        "WXR"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "SPS"
+                    ],
+                    "NationalWeatherService": [
+                        "SPS"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.332e14694c491434399085711c2e2f4725b9d3f0.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.332e14694c491434399085711c2e2f4725b9d3f0.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.332e14694c491434399085711c2e2f4725b9d3f0.001.1",
+                "areaDesc": "Inland Colleton; Dorchester; Inland Berkeley; Charleston; Tidal Berkeley",
+                "geocode": {
+                    "SAME": [
+                        "045029",
+                        "045035",
+                        "045015",
+                        "045019"
+                    ],
+                    "UGC": [
+                        "SCZ043",
+                        "SCZ044",
+                        "SCZ045",
+                        "SCZ150",
+                        "SCZ152"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/SCZ043",
+                    "https://api.weather.gov/zones/forecast/SCZ044",
+                    "https://api.weather.gov/zones/forecast/SCZ045",
+                    "https://api.weather.gov/zones/forecast/SCZ150",
+                    "https://api.weather.gov/zones/forecast/SCZ152"
+                ],
+                "references": [],
+                "sent": "2026-11-24T00:20:00-05:00",
+                "effective": "2026-11-24T00:20:00-05:00",
+                "onset": "2026-11-24T00:20:00-05:00",
+                "expires": "2026-11-24T05:00:00-05:00",
+                "ends": null,
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Moderate",
+                "certainty": "Observed",
+                "urgency": "Expected",
+                "event": "Special Weather Statement",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Charleston SC",
+                "headline": "Special Weather Statement issued November 24 at 12:20AM EST by NWS Charleston SC",
+                "description": "Areas of fog will impact much of Colleton, Charleston, Berkeley and\nDorchester Counties through 5 AM. The fog could become locally dense\nat time with visibilities dropping to 1/4 mile or less. The nature of\nthe fog is such that visibilities will vary greatly over short\ndistances with the risk for locally dense fog being the greatest near\nbodies of water and other low-lying areas such as marshes, swamps and\nlarge ditches. Motorists should remain alert for these conditions\nthis morning.\n\nVisibilities are expected to improve prior to daybreak as a cold\nfront drops south through the area.",
+                "instruction": "If driving, slow down and leave extra distance ahead of you in case a\nsudden stop is needed.",
+                "response": "Execute",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "SPSCHS"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS82 KCHS 240520"
+                    ],
+                    "NWSheadline": [
+                        "LOCALLY DENSE FOG THIS MORNING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "EAS-ORG": [
+                        "WXR"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "SPS"
+                    ],
+                    "NationalWeatherService": [
+                        "SPS"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.63defbf041d07a5e7e1c527f4c66060a898e32be.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.63defbf041d07a5e7e1c527f4c66060a898e32be.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.63defbf041d07a5e7e1c527f4c66060a898e32be.001.1",
+                "areaDesc": "Parmer; Castro; Swisher; Briscoe; Hall; Childress; Bailey; Lamb; Hale; Floyd; Motley; Cottle; Cochran; Hockley; Lubbock; Crosby; Dickens; King; Yoakum; Terry; Lynn; Garza; Kent; Stonewall",
+                "geocode": {
+                    "SAME": [
+                        "048369",
+                        "048069",
+                        "048437",
+                        "048045",
+                        "048191",
+                        "048075",
+                        "048017",
+                        "048279",
+                        "048189",
+                        "048153",
+                        "048345",
+                        "048101",
+                        "048079",
+                        "048219",
+                        "048303",
+                        "048107",
+                        "048125",
+                        "048269",
+                        "048501",
+                        "048445",
+                        "048305",
+                        "048169",
+                        "048263",
+                        "048433"
+                    ],
+                    "UGC": [
+                        "TXZ021",
+                        "TXZ022",
+                        "TXZ023",
+                        "TXZ024",
+                        "TXZ025",
+                        "TXZ026",
+                        "TXZ027",
+                        "TXZ028",
+                        "TXZ029",
+                        "TXZ030",
+                        "TXZ031",
+                        "TXZ032",
+                        "TXZ033",
+                        "TXZ034",
+                        "TXZ035",
+                        "TXZ036",
+                        "TXZ037",
+                        "TXZ038",
+                        "TXZ039",
+                        "TXZ040",
+                        "TXZ041",
+                        "TXZ042",
+                        "TXZ043",
+                        "TXZ044"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/TXZ021",
+                    "https://api.weather.gov/zones/forecast/TXZ022",
+                    "https://api.weather.gov/zones/forecast/TXZ023",
+                    "https://api.weather.gov/zones/forecast/TXZ024",
+                    "https://api.weather.gov/zones/forecast/TXZ025",
+                    "https://api.weather.gov/zones/forecast/TXZ026",
+                    "https://api.weather.gov/zones/forecast/TXZ027",
+                    "https://api.weather.gov/zones/forecast/TXZ028",
+                    "https://api.weather.gov/zones/forecast/TXZ029",
+                    "https://api.weather.gov/zones/forecast/TXZ030",
+                    "https://api.weather.gov/zones/forecast/TXZ031",
+                    "https://api.weather.gov/zones/forecast/TXZ032",
+                    "https://api.weather.gov/zones/forecast/TXZ033",
+                    "https://api.weather.gov/zones/forecast/TXZ034",
+                    "https://api.weather.gov/zones/forecast/TXZ035",
+                    "https://api.weather.gov/zones/forecast/TXZ036",
+                    "https://api.weather.gov/zones/forecast/TXZ037",
+                    "https://api.weather.gov/zones/forecast/TXZ038",
+                    "https://api.weather.gov/zones/forecast/TXZ039",
+                    "https://api.weather.gov/zones/forecast/TXZ040",
+                    "https://api.weather.gov/zones/forecast/TXZ041",
+                    "https://api.weather.gov/zones/forecast/TXZ042",
+                    "https://api.weather.gov/zones/forecast/TXZ043",
+                    "https://api.weather.gov/zones/forecast/TXZ044"
+                ],
+                "references": [],
+                "sent": "2026-11-23T22:17:00-06:00",
+                "effective": "2026-11-23T22:17:00-06:00",
+                "onset": "2026-11-23T22:17:00-06:00",
+                "expires": "2026-11-24T09:00:00-06:00",
+                "ends": null,
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Moderate",
+                "certainty": "Observed",
+                "urgency": "Expected",
+                "event": "Special Weather Statement",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Lubbock TX",
+                "headline": "Special Weather Statement issued November 23 at 10:17PM CST by NWS Lubbock TX",
+                "description": "Periods of on-and-off light wintry precipitation will continue\nacross the South Plains, Rolling Plains, and far southern Texas\nPanhandle overnight. Initially, precipitation will be a mix of\nsleet, rain, and snow, which is then expected to transition to\nmostly or all snow early Tuesday morning. Sleet and snow\naccumulations, if any, are expected to remain very light with\ntemperatures near or only slightly below freezing. However, a few\nslick spots cannot be ruled out on area roadways, particularly on\nbridges and overpasses. Motorists are encouraged to use extra\ncaution during the morning commute Tuesday. Precipitation will\nthen come to an end by early Tuesday afternoon.",
+                "instruction": null,
+                "response": "Execute",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "SPSLUB"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS84 KLUB 240417"
+                    ],
+                    "NWSheadline": [
+                        "LIGHT WINTRY MIX CONTINUES THROUGH TUESDAY MORNING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "EAS-ORG": [
+                        "WXR"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "SPS"
+                    ],
+                    "NationalWeatherService": [
+                        "SPS"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5c4c86d8a16cbe693b3868c76f17b0f3dd44cfd4.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5c4c86d8a16cbe693b3868c76f17b0f3dd44cfd4.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.5c4c86d8a16cbe693b3868c76f17b0f3dd44cfd4.001.1",
+                "areaDesc": "Parmer; Castro; Swisher; Briscoe; Hall; Childress; Bailey; Lamb; Hale; Floyd; Motley; Cottle; Cochran; Hockley; Lubbock; Crosby; Dickens; King; Yoakum; Terry; Lynn; Garza; Kent; Stonewall",
+                "geocode": {
+                    "SAME": [
+                        "048369",
+                        "048069",
+                        "048437",
+                        "048045",
+                        "048191",
+                        "048075",
+                        "048017",
+                        "048279",
+                        "048189",
+                        "048153",
+                        "048345",
+                        "048101",
+                        "048079",
+                        "048219",
+                        "048303",
+                        "048107",
+                        "048125",
+                        "048269",
+                        "048501",
+                        "048445",
+                        "048305",
+                        "048169",
+                        "048263",
+                        "048433"
+                    ],
+                    "UGC": [
+                        "TXZ021",
+                        "TXZ022",
+                        "TXZ023",
+                        "TXZ024",
+                        "TXZ025",
+                        "TXZ026",
+                        "TXZ027",
+                        "TXZ028",
+                        "TXZ029",
+                        "TXZ030",
+                        "TXZ031",
+                        "TXZ032",
+                        "TXZ033",
+                        "TXZ034",
+                        "TXZ035",
+                        "TXZ036",
+                        "TXZ037",
+                        "TXZ038",
+                        "TXZ039",
+                        "TXZ040",
+                        "TXZ041",
+                        "TXZ042",
+                        "TXZ043",
+                        "TXZ044"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/TXZ021",
+                    "https://api.weather.gov/zones/forecast/TXZ022",
+                    "https://api.weather.gov/zones/forecast/TXZ023",
+                    "https://api.weather.gov/zones/forecast/TXZ024",
+                    "https://api.weather.gov/zones/forecast/TXZ025",
+                    "https://api.weather.gov/zones/forecast/TXZ026",
+                    "https://api.weather.gov/zones/forecast/TXZ027",
+                    "https://api.weather.gov/zones/forecast/TXZ028",
+                    "https://api.weather.gov/zones/forecast/TXZ029",
+                    "https://api.weather.gov/zones/forecast/TXZ030",
+                    "https://api.weather.gov/zones/forecast/TXZ031",
+                    "https://api.weather.gov/zones/forecast/TXZ032",
+                    "https://api.weather.gov/zones/forecast/TXZ033",
+                    "https://api.weather.gov/zones/forecast/TXZ034",
+                    "https://api.weather.gov/zones/forecast/TXZ035",
+                    "https://api.weather.gov/zones/forecast/TXZ036",
+                    "https://api.weather.gov/zones/forecast/TXZ037",
+                    "https://api.weather.gov/zones/forecast/TXZ038",
+                    "https://api.weather.gov/zones/forecast/TXZ039",
+                    "https://api.weather.gov/zones/forecast/TXZ040",
+                    "https://api.weather.gov/zones/forecast/TXZ041",
+                    "https://api.weather.gov/zones/forecast/TXZ042",
+                    "https://api.weather.gov/zones/forecast/TXZ043",
+                    "https://api.weather.gov/zones/forecast/TXZ044"
+                ],
+                "references": [],
+                "sent": "2026-11-23T01:38:00-06:00",
+                "effective": "2026-11-23T01:38:00-06:00",
+                "onset": "2026-11-23T01:38:00-06:00",
+                "expires": "2026-11-24T12:00:00-06:00",
+                "ends": null,
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Moderate",
+                "certainty": "Observed",
+                "urgency": "Expected",
+                "event": "Special Weather Statement",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Lubbock TX",
+                "headline": "Special Weather Statement issued November 23 at 1:38AM CST by NWS Lubbock TX",
+                "description": "An approaching storm system late Monday will bring increasing\nmoisture and colder temperatures to the region. Overnight lows are\nexpected to fall below freezing area-wide, allowing for isolated\nto scattered snow showers to develop overnight and continue into\nTuesday morning. Any accumulations are expected to remain light,\nwith little to no impacts anticipated. However, a few slick spots\ncannot be ruled out, particularly on bridges and overpasses.\nMotorists are encouraged to use caution during the morning\ncommute Tuesday.",
+                "instruction": null,
+                "response": "Execute",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "SPSLUB"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS84 KLUB 230738"
+                    ],
+                    "NWSheadline": [
+                        "LIGHT SNOW SHOWERS OVERNIGHT MONDAY THROUGH TUESDAY MORNING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "EAS-ORG": [
+                        "WXR"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "SPS"
+                    ],
+                    "NationalWeatherService": [
+                        "SPS"
+                    ]
+                }
+            }
+        }
+    ],
+    "title": "Current watches, warnings, and advisories",
+    "updated": "2026-11-24T07:42:47+00:00"
+}

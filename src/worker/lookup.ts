@@ -122,5 +122,9 @@ export function resultSentence(r: CountyStatus): string {
           : `Not sure: we can't confirm the burn ban status for ${where} (${r.label}).`;
   const src = r.sourceName ? ` Source: ${r.sourceName}, checked ${checked}.` : "";
   const exp = r.expires ? ` Expires ${r.expires}.` : "";
-  return `${head}${exp}${src}${r.officialUrl ? ` Official: ${r.officialUrl}` : ""}`;
+  const weather = r.alerts?.map((alert) => {
+    const end = alert.ends ?? alert.expires;
+    return ` NWS fire weather: ${alert.event}${end ? ` until ${end}` : ""}.`;
+  }).join("") ?? "";
+  return `${head}${exp}${src}${weather}${r.officialUrl ? ` Official: ${r.officialUrl}` : ""}`;
 }

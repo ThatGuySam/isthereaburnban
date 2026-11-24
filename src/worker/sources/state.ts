@@ -1,10 +1,10 @@
-import type { CountyStatus, Snapshot } from "../../shared/types";
+import type { CountyStatus, FireWeatherReport, Snapshot } from "../../shared/types";
 import { COUNTY_BY_FIPS } from "../counties";
 import type { Env } from "../env";
 import { sha256 } from "./lib/hash";
 import { BlockedError, type Validators } from "./lib/http";
 import { STALE_MS, type SourceInput } from "./merge";
-import { isActive, type ActiveSource, type Source } from "./types";
+import { isActive, type ActiveSource, type Source, type SourceResult } from "./types";
 
 type Health = {
   checked: string;
@@ -21,7 +21,8 @@ type StoredHead = Pick<SourceHead, "id" | "slot" | "hash"> & { health: string };
 const loadHead = ({ health, ...row }: StoredHead): SourceHead => ({ ...row, ...JSON.parse(health) as Health });
 const sourceKey = (id: string) => `source:${id}`;
 const hashKey = (id: string) => `${sourceKey(id)}:hash`;
-type SourceData = { hash: string; rows: Omit<CountyStatus, "checked">[] };
+type SourcePayload = { rows: Omit<CountyStatus, "checked">[] } | { fireWeather: FireWeatherReport[] };
+type SourceData = { hash: string } & SourcePayload;
 const errorText = (reason: unknown) => (reason instanceof Error ? reason.message : String(reason)).slice(0, 300);
 const BY_VALIDITY = new Set(["ban", "restricted", "none", "unknown"]);
 
@@ -30,7 +31,14 @@ export async function readHeads(db: D1Database): Promise<Map<string, SourceHead>
   return new Map(results.map((row) => [row.id, loadHead(row)]));
 }
 
-function normalize(source: ActiveSource, rows: CountyStatus[]) {
+function normalize(source: ActiveSource, result: Exclude<SourceResult, { notModified: true }>) {
+  if ("fireWeather" in result) {
+    if (source.product !== "fire-weather" || result.fireWeather.some(({ fips, alerts }) =>
+      !COUNTY_BY_FIPS.has(fips) || !alerts.length)) throw new Error(`${source.id}: invalid fire-weather report`);
+    return { field: "fireWeather", serialized: serialize(result.fireWeather), boundaries: [] };
+  }
+  if (source.product === "fire-weather") throw new Error(`${source.id}: expected fire-weather reports`);
+  const { rows } = result;
   if (!rows.length && source.mode === "full") throw new Error("Full source returned no rows");
   const ordered = rows.map((row) => {
     const { fips, state, county, label, since, expires, sourceUpdated, sourceName, sourceUrl, officialUrl, note,
@@ -46,20 +54,23 @@ function normalize(source: ActiveSource, rows: CountyStatus[]) {
       since, expires, sourceUpdated, sourceName, sourceUrl, officialUrl, note,
       scope, scopeNote, sourceId: source.id, validFrom, validUntil };
   });
-  // Sort complete normalized rows so publisher ordering alone does not cause a write.
-  const serialized = [...new Set(ordered.map((row) => JSON.stringify(row)))].sort().join(",");
   const boundaries = [...new Set(ordered.flatMap(({ validFrom, validUntil }) =>
     [validFrom, validUntil].filter((value): value is string => Boolean(value))))].sort();
-  return { serialized, boundaries };
+  return { field: "rows", serialized: serialize(ordered), boundaries };
 }
 
-async function writeSource(env: Env, id: string, hash: string, serialized: string): Promise<void> {
+// Sort complete normalized rows so publisher ordering alone does not cause a write.
+function serialize(rows: unknown[]) {
+  return [...new Set(rows.map((row) => JSON.stringify(row)))].sort().join(",");
+}
+
+async function writeSource(env: Env, id: string, hash: string, { field, serialized }: ReturnType<typeof normalize>): Promise<void> {
   const storedHash = await env.KV.get(hashKey(id), "text");
   if (storedHash === hash) {
     const data = await env.KV.get<SourceData>(sourceKey(id), "json");
     if (data?.hash === hash) return; // The prior attempt completed the KV write before losing its D1 checkpoint.
   }
-  await env.KV.put(sourceKey(id), `{"hash":"${hash}","rows":[${serialized}]}`);
+  await env.KV.put(sourceKey(id), `{"hash":"${hash}","${field}":[${serialized}]}`);
   if (storedHash !== hash) await env.KV.put(hashKey(id), hash);
 }
 
@@ -77,7 +88,7 @@ export async function pollSource(env: Env, source: ActiveSource, slot: number, n
     const result = await source.fetch({ now, validators: hash ? health.validators : undefined });
     if ("notModified" in result) {
       if (!hash) throw new Error("Source returned 304 before its first successful fetch");
-    } else incoming = normalize(source, result.rows);
+    } else incoming = normalize(source, result);
     health = { ...health, lastGood: checked, validators: result.validators };
   } catch (reason) {
     health.error = errorText(reason);
@@ -87,7 +98,7 @@ export async function pollSource(env: Env, source: ActiveSource, slot: number, n
 
   if (incoming) {
     const next = await sha256(incoming.serialized);
-    if (next !== hash) await writeSource(env, source.id, next, incoming.serialized);
+    if (next !== hash) await writeSource(env, source.id, next, incoming);
     hash = next;
     health.boundaries = incoming.boundaries;
   }
@@ -110,6 +121,7 @@ export function materialRevisions(sources: readonly Source[], heads: Map<string,
 }
 
 function fallback(source: Source, prev: Snapshot | null): CountyStatus[] {
+  if (source.product === "fire-weather") return [];
   const rows: CountyStatus[] = [];
   for (const county of Object.values(prev?.counties ?? {})) {
     if (county.state !== source.state) continue;
@@ -150,7 +162,7 @@ export async function readSourceInputs(
     if (data?.hash !== head.hash) throw new Error(`KV source revision is not visible yet: ${source.id}`);
     const lastGood = head.lastGood ?? head.checked;
     inputs.push({ source, version: head.hash, checked: head.checked, lastGood, error: head.error,
-      staleMs: source.staleMs, rows: data.rows });
+      staleMs: source.staleMs, ...("fireWeather" in data ? { rows: [], fireWeather: data.fireWeather } : { rows: data.rows }) });
   }
   return inputs;
 }
@@ -166,8 +178,10 @@ export async function sourceInputs(sources: readonly Source[], prev: Snapshot | 
     try {
       const result = await source.fetch({ now });
       if ("notModified" in result) throw new Error("Unexpected 304 without stored validators");
-      const normalized: SourceData["rows"] = JSON.parse(`[${normalize(source, result.rows).serialized}]`);
-      inputs.push({ source, rows: normalized, checked, lastGood: checked, staleMs: source.staleMs });
+      const { field, serialized } = normalize(source, result);
+      const data = JSON.parse(`{"${field}":[${serialized}]}`) as SourcePayload;
+      inputs.push({ source, checked, lastGood: checked, staleMs: source.staleMs,
+        ...("fireWeather" in data ? { rows: [], fireWeather: data.fireWeather } : { rows: data.rows }) });
     } catch (reason) {
       inputs.push({ source, rows: fallback(source, prev), checked, error: errorText(reason), staleMs: source.staleMs });
     }

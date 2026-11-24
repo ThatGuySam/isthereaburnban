@@ -2,6 +2,7 @@ import type { Env } from "./env";
 
 export const ALERTS_PAUSED_KEY = "notifications:paused";
 export const MANUAL_LIMIT = 8;
+// TODO(fire-weather-notifications): Add a separate opt-in flag and delivery history for NWS push and email.
 
 export async function alertsPausedInDb(env: Env): Promise<boolean> {
   const paused = await env.DB.prepare("SELECT paused FROM notification_settings WHERE id = 1").first<number>("paused");

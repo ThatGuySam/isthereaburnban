@@ -15,3 +15,15 @@ export function activeBans(snapshot: Snapshot, state?: string) {
 export function coverage(snapshot: Snapshot) {
   return { generated: snapshot.generated, states: STATES_DIR, sources: snapshot.sources, disclaimer: DISCLAIMER };
 }
+
+export function activeFireWeather(snapshot: Snapshot, state?: string) {
+  const st = state?.trim().toUpperCase();
+  const counties = Object.keys(snapshot.fireWeather ?? {}).sort().flatMap((fips) => {
+    const row = snapshot.counties[fips];
+    if (!row?.alerts?.length || (st && row.state !== st)) return [];
+    const { state, county, alerts } = row;
+    return [{ fips, state, county, alerts }];
+  });
+  const source = snapshot.sources.find((entry) => entry.product === "fire-weather") ?? null;
+  return { generated: snapshot.generated, counties, source, disclaimer: DISCLAIMER };
+}
