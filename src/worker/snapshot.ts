@@ -1,4 +1,4 @@
-import type { CountyStatus, Snapshot, SnapshotData } from "../shared/types";
+import type { CountyStatus, MapStatus, Snapshot, SnapshotData } from "../shared/types";
 import type { Adapter } from "./adapters";
 import { formatNationalBans, projectWeather, type BanFormat } from "./active-bans";
 import { countyDecision } from "./county-decision";
@@ -128,6 +128,7 @@ type ReadCache = {
   index?: Memo<SnapshotIndex>;
   heads?: Memo<Map<string, SourceHead>>;
   active: Partial<Record<BanFormat, Memo<ActiveProjection>>>;
+  map?: MapStatus;
   states: Map<string, Memo<StateSnapshot> & { heads?: Map<string, SourceHead> }>;
 };
 const readCache = new WeakMap<KVNamespace, ReadCache>();
@@ -170,10 +171,9 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
   };
 
   function countyView<T extends SnapshotData>(snapshot: T, heads: Map<string, SourceHead>, now: Date): T {
-    const view = { ...snapshot,
-      counties: Object.fromEntries(Object.entries(snapshot.counties).map(([fips, row]) => [fips, { ...row }])),
-      sources: snapshot.sources.map((source) => ({ ...source })),
-    };
+    const counties: SnapshotData["counties"] = {};
+    for (const row of Object.values(snapshot.counties)) counties[row.fips] = { ...row };
+    const view = { ...snapshot, counties, sources: snapshot.sources.map((source) => ({ ...source })) };
     withCurrentLinks(view);
     applyChecks(view, heads, now);
     return view;
@@ -226,6 +226,7 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
         const snapshot = await state("");
         return projectMapStatus(snapshot.generated, [snapshot], Date.now());
       }
+      if (!fresh && memo.map?.revision === idx.revision && Date.now() < memo.map.expiresAt) return memo.map;
       const headsPromise = allHeads();
       const states = Object.keys(idx.states);
       const shards: StateSnapshot[] = [];
@@ -244,7 +245,10 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
       }
       const heads = await headsPromise;
       const now = new Date();
-      return projectMapStatus(idx.revision, shards.map((shard) => stateView(shard, idx, heads, now, true)), now.getTime());
+      const map = projectMapStatus(idx.revision, shards.map((shard) => stateView(shard, idx, heads, now, true)), now.getTime());
+      map.expiresAt = Math.min(map.expiresAt, memo.heads?.until ?? Infinity);
+      if (shards.length === states.length) memo.map = map;
+      return map;
     },
     async coverage() {
       const idx = await catalog();
