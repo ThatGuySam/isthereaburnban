@@ -26,7 +26,7 @@ function fakeEnv(resend?: string) {
 }
 
 describe("subscribe_email_alerts", () => {
-  test("stores an unconfirmed signup and says nothing is sent until the user confirms", async () => {
+  test("stores an unconfirmed signup and sends a confirmation email", async () => {
     const { env, inserts } = fakeEnv("re_test");
     const realFetch = globalThis.fetch;
     const calls: { url: string; body: any }[] = [];
@@ -121,6 +121,6 @@ describe("MCP metadata for directories", () => {
       expect(typeof t.annotations?.readOnlyHint).toBe("boolean");
     }
     for (const name of ["check_burn_ban", "list_active_bans", "coverage"]) expect(by[name].annotations.readOnlyHint).toBe(true);
-    expect(by.subscribe_email_alerts.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false, idempotentHint: true });
+    expect(by.subscribe_email_alerts.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false, idempotentHint: false });
   });
 });

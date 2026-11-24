@@ -2,6 +2,7 @@ import { activeFireWeather, coverage } from "./api";
 import { confirmEmail, subscribeEmail, unsubscribeEmail } from "./email";
 import type { Env } from "./env";
 import { DISCLAIMER, lookup, LookupError, lookupText, statusFor } from "./lookup";
+import { serveMachineDocs } from "./machine-docs";
 import { handleMcp } from "./mcp";
 import { handleOps } from "./ops";
 import { CANARY_CRON, runCanary } from "./notify";
@@ -61,12 +62,12 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
     if (path === "/api/v1/push/key") return env.VAPID_PUBLIC_KEY ? json({ publicKey: env.VAPID_PUBLIC_KEY }) : error("push is not configured", 503);
     if (path === "/api/v1/email/confirm") {
       return (await confirmEmail(env, p.get("token") ?? ""))
-        ? page("You're subscribed", "We'll email you when the burn ban status changes for the counties you picked.")
+        ? page("You're subscribed", "Your subscription is active for eligible changes in the counties you picked.")
         : page("Link not valid", "This confirmation link is invalid or was already unsubscribed.", 404);
     }
     if (path === "/api/v1/email/unsubscribe") {
       return (await unsubscribeEmail(env, p.get("token") ?? ""))
-        ? page("Unsubscribed", "You won't get any more burn ban emails from us.")
+        ? page("Unsubscribed", "The subscription for this link is now disabled. Messages already queued may still arrive.")
         : page("Link not valid", "This unsubscribe link is invalid.", 404);
     }
 
@@ -122,6 +123,8 @@ async function route(request: Request, env: Env, ctx: ExecutionContext, mcp?: Mc
   if (path === "/ops" || path.startsWith("/ops/")) return handleOps(request, env, url);
   try {
     if (path.startsWith("/api/")) return await api(request, env, url);
+    const docs = await serveMachineDocs(request, env, url);
+    if (docs) return docs;
     if (path === "/mcp" || path.startsWith("/mcp/")) return await handleMcp(request, env, ctx, mcp);
     if (path.startsWith("/us/")) return await handlePage(request, env, snapshotReader(env));
     if (path === "/sitemap.xml" || path.startsWith("/sitemaps/")) return await handleSitemap(request, env, snapshotReader(env));

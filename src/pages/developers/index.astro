@@ -1,10 +1,11 @@
 ---
 import Base from "../../layouts/Base.astro";
-import { SITE, states, statePath } from "../../components/site-data";
+import { DOCS_ORIGIN } from "../../shared/site-origin";
+import { states, statePath } from "../../components/site-data";
 
 const live = states.filter((s) => s.coverage === "live");
 const restrictions = states.filter((s) => s.coverage === "restrictions");
-const MCP = `${SITE}/mcp`;
+const MCP = `${DOCS_ORIGIN}/mcp`;
 const cursorConfig = JSON.stringify({ mcpServers: { "burn-ban": { url: MCP } } }, null, 2);
 const vscodeConfig = JSON.stringify({ servers: { "burn-ban": { type: "http", url: MCP } } }, null, 2);
 const genericConfig = JSON.stringify({ mcpServers: { "burn-ban": { type: "http", url: MCP } } }, null, 2);
@@ -12,18 +13,23 @@ const alertPrompt = `Every morning at 7, use the burn-ban tools to check list_ac
 const sample = JSON.stringify(
   {
     query: { zip: "74103" },
+    answer: "none",
+    generated: "2026-11-23T19:09:00Z",
     ambiguous: false,
     approximate: false,
+    matchedZip: "74103",
     results: [
       {
         fips: "40143",
         state: "OK",
         county: "Tulsa County",
         status: "none",
-        label: "None",
+        label: "No county or governor burn ban reported",
         since: null,
         expires: null,
         sourceUpdated: null,
+        firstSeenAt: "2026-11-23T19:09:00Z",
+        statusChangedAt: null,
         checked: "2026-11-23T19:07:00Z",
         sourceName: "Oklahoma Forestry Services",
         sourceUrl: "https://services3.arcgis.com/…/FeatureServer/0",
@@ -31,7 +37,7 @@ const sample = JSON.stringify(
         url: "/us/ok/tulsa-county/",
       },
     ],
-    disclaimer: "Informational only — confirm with the official source.",
+    disclaimer: "Informational only. Always confirm with the official source before burning.",
   },
   null,
   2,
@@ -39,7 +45,7 @@ const sample = JSON.stringify(
 ---
 <Base
   title="Connect your agent to burn ban status · Is There a Burn Ban?"
-  description="Let Claude, ChatGPT, Cursor or any AI agent check US county burn bans and alert you: a free, keyless MCP server and JSON API."
+  description="Connect an agent to published US county burn reports and restrictions through a free MCP server or JSON API."
   path="/developers/"
 >
   <main id="content" class="page dev">
@@ -51,8 +57,8 @@ const sample = JSON.stringify(
     </nav>
     <h1>Connect your agent</h1>
     <p>
-      Your AI assistant can tell you if there's a burn ban where you are, and warn you when one starts.
-      Add our MCP server once, then ask in plain words: <q>Is there a burn ban in Tulsa?</q>{" "}It's free and needs no account or key.
+      Connect your assistant to county burn-ban reports and their sources. Once connected, ask <q>Is there a burn ban in Tulsa?</q>
+      The server is free and requires no account or key.
     </p>
     <p class="mcp-url"><span>MCP server URL</span> <code>{MCP}</code></p>
     <p class="muted">Setup steps checked against each client's docs on Nov 23, 2026. Menus move; if one doesn't match, look for "custom connector" or "MCP server".</p>
@@ -76,82 +82,83 @@ const sample = JSON.stringify(
 
     <h2 id="tools">What your agent can do</h2>
     <ul>
-      <li><code>check_burn_ban</code>: status for a ZIP, coordinates, county FIPS, or city and state. Returns every county the place touches.</li>
-      <li><code>list_active_bans</code>: every county with a ban or restriction right now, optionally for one state.</li>
-      <li><code>coverage</code>: which states have live data and how fresh each source is.</li>
-      <li><code>subscribe_email_alerts</code>: signs you up for email when a county's status changes. You get a confirmation email and nothing is sent until you click it.</li>
+      <li><code>check_burn_ban</code> looks up county reports for a ZIP, coordinates, FIPS or incorporated place. Confirm the county when the location is approximate.</li>
+      <li><code>list_active_bans</code> lists published bans and restrictions, including scoped orders. Pass a state to narrow the list.</li>
+      <li><code>coverage</code> shows the scope, cadence and health of the sources we check.</li>
+      <li><code>subscribe_email_alerts</code> requests alerts. When email delivery is enabled, the first email asks you to confirm.</li>
     </ul>
-    <p>The first three only read. <code>subscribe_email_alerts</code> is the one tool that writes (it stores a pending signup), so clients may ask you before it runs.</p>
+    <p>The subscription tool stores a pending signup, so clients may ask you before it runs.</p>
 
     <h2 id="alerts">Get an alert</h2>
-    <p>MCP can't push messages to you by itself. Two ways to hear about a new ban:</p>
+    <p>Use a scheduled lookup or subscribe on the site.</p>
     <ol>
       <li>
-        <strong>Ask your agent to check on a schedule.</strong> In an assistant that runs scheduled tasks (for example ChatGPT Tasks, or a Claude Code routine via <code>/schedule</code>), use a prompt like:
+        <strong>Ask your agent to check on a schedule.</strong> In an assistant that runs scheduled tasks (for example ChatGPT Tasks, or a Claude Code routine via <code>/schedule</code>), use this example prompt.
         <pre><code>{alertPrompt}</code></pre>
       </li>
       <li>
-        <strong>Subscribe on the site.</strong> Open your county page and tap <em>Alert me</em> for push notifications, or have your agent call <code>subscribe_email_alerts</code> with your email. Alerts go out only when the official source changes.
+        <strong>Subscribe on the site.</strong> Open your county page and tap <em>Alert me</em> for push notifications, or have your agent call <code>subscribe_email_alerts</code> with your email. After confirmation we attempt alerts for eligible changes we detect. Scheduled rules and weather signals are excluded.
       </li>
     </ol>
 
     <h2 id="http">Plain HTTP, for any agent or script</h2>
     <p>
-      A keyless JSON API with open CORS, refreshed about every hour. Add <code>format=text</code> for a one-line answer an agent can quote.
-      Please cache for a few minutes and link the official source when you show a status.
+      The read API uses JSON with open CORS. Source schedules vary. Add <code>format=text</code> for a plain-language report.
+      Follow the response's cache headers and include the publisher and official link when quoting a result.
     </p>
-    <pre><code>curl "{SITE}/api/v1/status?city=Tulsa&amp;state=OK&amp;format=text"
-curl "{SITE}/api/v1/status?zip=74103"
-curl "{SITE}/api/v1/status?lat=36.154&amp;lon=-95.993"
-curl "{SITE}/api/v1/status?fips=40143"
-curl "{SITE}/api/v1/bans?state=TX"</code></pre>
+    <pre><code>curl "{DOCS_ORIGIN}/api/v1/status?city=Tulsa&amp;state=OK&amp;format=text"
+curl "{DOCS_ORIGIN}/api/v1/status?zip=74103"
+curl "{DOCS_ORIGIN}/api/v1/status?lat=36.154&amp;lon=-95.993"
+curl "{DOCS_ORIGIN}/api/v1/status?fips=40143"
+curl "{DOCS_ORIGIN}/api/v1/bans?state=TX"</code></pre>
     <p>
-      Machine-readable: <a href="/openapi.json">OpenAPI spec</a> · <a href="/llms.txt">llms.txt</a>.
+      <a href="/openapi.json">Read API in OpenAPI</a> · <a href="/llms.txt">llms.txt</a>.
       Every county and city page also links its JSON with <code>&lt;link rel="alternate" type="application/json"&gt;</code> and a <code>Link</code> header.
     </p>
 
     <h2>Status values</h2>
     <ul>
-      <li><code>ban</code>: the official source reports an active burn ban.</li>
-      <li><code>restricted</code>: partial or activity-specific limits (for example an ozone alert or permits required). See <code>label</code>.</li>
-      <li><code>none</code>: the source covers this county and reports no ban.</li>
-      <li><code>unknown</code>: we can't confirm (no feed, a stale feed, or a feed that only lists bans). Never treat this as "no ban".</li>
+      <li><code>ban</code> means a reported burn ban. Check which area the order covers.</li>
+      <li><code>restricted</code> includes local bans, standing rules and activity-specific limits.</li>
+      <li><code>none</code> means the feed reported no temporary county ban within its coverage.</li>
+      <li><code>unknown</code> means the county's status is unconfirmed.</li>
     </ul>
 
     <h2>Response</h2>
     <p>
-      A ZIP or city can touch more than one county. When it does, <code>ambiguous</code> is <code>true</code> and
-      <code>results</code> lists every county, largest share first. City lookups add a <code>place</code> object with the
-      city's page. <code>approximate</code> means the ZIP wasn't in Census data and we
-      used the nearest one.
+      ZIP results use Census 2020 land overlap. City results use Census place and county overlap, with a representative point where overlap data is unavailable.
+      The <code>place</code> object gives the city or county page. If county answers differ, <code>answer</code> is <code>depends</code>.
+      Same-state duplicate names normally select the larger place. Use a page slug to select a different place.
+    </p>
+    <p>
+      If a ZIP is absent from the Census data, the response identifies the numeric substitute in <code>matchedZip</code> and explains the match in
+      <code>approximationReason</code>. Approximate ZIP and IP results require county confirmation before a status lookup.
+      For confirmed reports, read <code>scope</code>, <code>orders</code>, <code>checked</code> and <code>validUntil</code> when available.
     </p>
     <pre><code>{sample}</code></pre>
 
-    <h2>All active bans</h2>
-    <pre><code>curl "{SITE}/api/v1/bans"
-curl "{SITE}/api/v1/bans?state=TX"</code></pre>
-    <p>Returns counties with <code>ban</code> or <code>restricted</code> status, plus the health of each source.</p>
+    <h2>Published active reports</h2>
+    <pre><code>curl "{DOCS_ORIGIN}/api/v1/bans"
+curl "{DOCS_ORIGIN}/api/v1/bans?state=TX"</code></pre>
+    <p>Includes published county bans, scoped orders and other restrictions. Use <code>state</code> to narrow the report.</p>
 
     <h2>Coverage</h2>
-    <pre><code>curl "{SITE}/api/v1/coverage"</code></pre>
-    <p>Lists every state with its coverage level, publisher and official link, plus source health.</p>
+    <pre><code>curl "{DOCS_ORIGIN}/api/v1/coverage"</code></pre>
+    <p>Shows directory coverage and which sources are full, positive-only or manual, along with their latest checks and configured cadence.</p>
 
-    <h2>States with live data</h2>
+    <h2>States with county-reporting feeds</h2>
     <ul class="inline-list">
       {live.map((s) => <li><a href={statePath(s.abbr)}>{s.name}</a></li>)}
     </ul>
     <p>
-      States with restriction feeds (labeled, not county bans): {restrictions.map((s) => s.abbr).join(", ")}.
-      Every other state has an official link only. See <a href="/us/">full coverage</a>.
+      {restrictions.length} areas have selected sources for local orders, permits or other restrictions. Iowa publishes active proclamations only.
+      See <a href="/us/">coverage by state</a>.
     </p>
 
     <h2>Terms</h2>
     <p>
-      Informational only. Burn bans are set by state and local officials; confirm with the official source
-      before you burn. Some sources restrict commercial reuse (for example Texas). Check the source's terms
-      before you redistribute. Sources, cadence and attribution are on the <a href="/data/">dataset page</a>.
-      See the <a href="/terms/">terms</a> and <a href="/privacy/">privacy</a> pages; lookups aren't stored, and
-      <code>subscribe_email_alerts</code> stores only the email address and counties.
+      Confirm with the issuing authority before burning. Verify the publisher's terms before republishing source records.
+      The <a href="/data/">dataset page</a> explains how to attribute reports. The <a href="/terms/">terms</a> and <a href="/privacy/">privacy policy</a> cover use, lookup caching and subscriptions.
     </p>
   </main>
 </Base>

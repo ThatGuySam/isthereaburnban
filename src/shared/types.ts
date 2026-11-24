@@ -4,8 +4,8 @@
 /**
  * ban          - source reports an active burn ban for this county
  * restricted   - partial / activity-specific / permit restrictions (e.g. ozone alert, permits required)
- * none         - source covers this county and reports no ban (only from a fresh, complete feed)
- * unknown      - no feed for this state, feed failed, stale, or field is null. NEVER show "Nope" for this.
+ * none         - feed reports no temporary order within its defined reporting scope
+ * unknown      - county status is unconfirmed. NEVER show "Nope" for this.
  */
 export type BanStatus = "ban" | "restricted" | "none" | "unknown";
 
@@ -32,6 +32,7 @@ export type CountyStatus = {
   sourceUpdated: string | null; // ISO, source's own update/edit time if exposed
   checked: string | null; // last successful source check, if known
   lastAttemptedAt?: string; // latest attempt for this report's source, when available
+  sourceCheckFailed?: true; // a failed latest attempt can coexist with an earlier report
   sourceName: string; // "Oklahoma Forestry Services"
   sourceUrl: string; // retrieved publication, when available
   officialUrl: string; // issuing order, agency report, or official directory
@@ -75,7 +76,7 @@ export type SourceHealth = {
   error?: string;
   counties: number; // distinct counties with a mapped report
   bans: number;
-  /** "full" = negatives are trustworthy; "positive-only" = absence means unknown, not none */
+  /** Full feeds can supply explicit negatives within their scope. Positive-only omissions stay unknown. */
   mode: "full" | "positive-only" | "manual";
   scope?: CountyStatus["scope"];
   officialUrl?: string;

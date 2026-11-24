@@ -331,6 +331,7 @@ export function renderReportDetailsHtml(row: CountyStatus, now = Date.now()): st
     ${row.scopeNote ? `<p>${escapeHtml(row.scopeNote)}</p>` : ""}
     ${row.note ? `<p>${escapeHtml(row.note)}</p>` : ""}
     ${countywide}
+    ${row.sourceCheckFailed ? "<p>The latest source check failed.</p>" : ""}
     ${renderReportDates(row)}
     ${orders?.length ? `<h3>Reported orders and rules</h3><ul class="report-orders">${orders.map(renderOrder).join("")}</ul>` : ""}
     ${renderAlertLineHtml(row, now)}

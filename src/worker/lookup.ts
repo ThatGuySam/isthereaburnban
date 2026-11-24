@@ -22,8 +22,9 @@ export function statusFor(snapshot: SnapshotData, fips: string, now = Date.now()
   if (hit) {
     const decision = countyDecision(withReportDates(hit), now);
     const checked = decision.sourceUrl ? decision.checked : null;
-    const lastAttemptedAt = decision.sourceId && snapshot.sources.find((s) => s.id === decision.sourceId)?.lastAttemptedAt;
-    return { ...decision, checked, lastAttemptedAt: lastAttemptedAt || undefined };
+    const health = decision.sourceId ? snapshot.sources.find((s) => s.id === decision.sourceId) : undefined;
+    return { ...decision, checked, lastAttemptedAt: health?.lastAttemptedAt ?? undefined,
+      sourceCheckFailed: health?.lastAttemptedAt && !health.ok ? true : undefined };
   }
   const c = COUNTY_BY_FIPS.get(fips);
   if (!c) throw new LookupError(`unknown county FIPS ${fips}`, 404);
@@ -150,6 +151,7 @@ export function resultSentence(r: CountyStatus): string {
   const head = `${statusTheme(r.status).word}: ${statusSentence(r)}.`;
   const src = r.sourceUrl && r.sourceName ? ` Source: ${r.sourceName}${checked ? `, checked ${checked}` : ""}.` : "";
   const dates = [
+    r.sourceCheckFailed && r.lastAttemptedAt && `Latest source check failed at ${r.lastAttemptedAt}.`,
     r.since && `Effective ${r.since}.`,
     r.firstSeenAt && `First recorded ${r.firstSeenAt}.`,
     r.statusChangedAt && `Published status changed ${r.statusChangedAt}.`,

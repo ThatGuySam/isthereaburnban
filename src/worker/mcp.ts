@@ -32,22 +32,25 @@ export const SERVER_INFO = {
   name: "isthereaburnban",
   title: "Is There a Burn Ban?",
   version: "1.1.0",
-  description: "US county burn ban status from official state sources, plus NWS fire-weather alerts.",
-  websiteUrl: "https://isthereaburnban.com/developers/",
-  icons: [{ src: "https://isthereaburnban.com/icons/icon-512.png", mimeType: "image/png", sizes: ["512x512"] }],
+  description: "US county burn-ban reports, standing restrictions and selected NWS fire-weather signals.",
 };
 
 export const SERVER_INSTRUCTIONS =
-  "Answers whether a US county has a burn ban right now, from official state and local sources, refreshed hourly. " +
+  "Summarizes published US county reports and restrictions. Source schedules and coverage vary. " +
   "Start with check_burn_ban for a ZIP, city and state, coordinates or county FIPS. " +
-  "Status is ban, restricted, none or unknown; unknown never means burning is allowed. " +
-  "Always show the officialUrl so the person can confirm with the official source before burning. " +
+  "Check location matches, scope, activity, source checks and deadlines. Confirm the county for approximate results. " +
+  "Report differing counties separately. Cite the issuing order when available and use officialUrl for confirmation. " +
   "Only call subscribe_email_alerts when the person asks for alerts and gives their own email.";
 
 export function createServer(env: Env, banText: (wireText: string[]) => string = (value) => JSON.parse(value.join(""))) {
   let reader: ReturnType<typeof snapshotReader> | undefined;
   const snapshots = () => (reader ??= snapshotReader(env));
-  const server = new McpServer(SERVER_INFO, { instructions: SERVER_INSTRUCTIONS });
+  const { origin } = new URL(env.SITE_URL);
+  const server = new McpServer({
+    ...SERVER_INFO,
+    websiteUrl: `${origin}/developers/`,
+    icons: [{ src: `${origin}/icons/icon-512.png`, mimeType: "image/png", sizes: ["512x512"] }],
+  }, { instructions: SERVER_INSTRUCTIONS });
 
   server.registerTool(
     "check_burn_ban",
@@ -55,7 +58,7 @@ export function createServer(env: Env, banText: (wireText: string[]) => string =
       title: "Check burn ban",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
       description:
-        "Check whether a US county has an active burn ban. Give a 5-digit ZIP, or lat and lon, or a 5-digit county FIPS code, or a city or town with its state. Returns one result per county. Status is ban, restricted, none, or unknown. Unknown means the legal status is unconfirmed. County results may include NWS fire-weather alerts. Cite alerts[].url for the weather and officialUrl or orders[].officialUrl for applicable burn rules. County bans usually cover unincorporated areas and cities can have their own rules.",
+        "Read reported county status by ZIP, coordinates, FIPS, or incorporated place and state. Confirm county candidates if approximate is true. For split places, describe the differing reports. Inspect scope, activity, reported orders and check times. Cite the issuing order when available and cite alerts[].url for any fire-weather signal. Cities can have separate rules.",
       inputSchema: z.object({
         zip: z.string().regex(/^\d{5}$/).optional().describe("5-digit US ZIP code"),
         lat: z.number().min(-90).max(90).optional(),
@@ -80,13 +83,13 @@ export function createServer(env: Env, banText: (wireText: string[]) => string =
     {
       title: "List active burn bans",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      description: "List counties with a reported active burn ban or burning restriction, optionally for one state (2-letter code). Use the coverage tool for source availability.",
+      description: "List published active reports, including scoped restrictions. Pass a two-letter state code to narrow the list. Use coverage to check which reports the sources can establish.",
       inputSchema: z.object({ state: z.string().length(2).optional().describe("2-letter state code, e.g. TX") }),
     },
     async ({ state }) => {
       const { count, body, generated } = await snapshots().bans(state, "pretty");
       return { content: [
-        { type: "text" as const, text: `${count} counties with a ban or restriction${state ? ` in ${state.toUpperCase()}` : ""} as of ${generated}.` },
+        { type: "text" as const, text: `${count ? `${count} counties with published active reports` : "No published active reports"}${state ? ` in ${state.toUpperCase()}` : ""}. Published ${generated}.` },
         { type: "text" as const, text: banText(body) },
       ] };
     },
@@ -97,9 +100,9 @@ export function createServer(env: Env, banText: (wireText: string[]) => string =
     {
       title: "Subscribe to email alerts",
       // Writes a pending signup and sends a confirmation email; repeating it never removes anything.
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
       description:
-        "Sign a person up for email alerts when the burn ban status changes for one or more counties. Only call this when the user asks for alerts and gives their own email. It is double opt-in: we email a confirmation link and send nothing until they click it, so tell them to check their inbox. Get FIPS codes from check_burn_ban first.",
+        "Request email alerts for eligible changes in selected counties. Use only when the person asks for alerts and provides their own email. When email delivery is enabled, the signup sends a confirmation link. Alerts start after confirmation. Use confirmed county FIPS codes.",
       inputSchema: z.object({
         email: z.string().email().max(254).describe("The user's own email address"),
         fips: z.array(z.string().regex(/^\d{5}$/)).min(1).max(20).describe("County FIPS codes from check_burn_ban results"),
@@ -113,7 +116,7 @@ export function createServer(env: Env, banText: (wireText: string[]) => string =
     {
       title: "Data coverage",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
-      description: "Which states have live burn ban data, which only have official links, and the health of each data source.",
+      description: "Show source coverage and health, including full county-reporting feeds, positive-only sources and manual references.",
     },
     async () => json(coverage(await snapshots().coverage())),
   );
@@ -123,9 +126,7 @@ export function createServer(env: Env, banText: (wireText: string[]) => string =
 
 export async function handleMcp(request: Request, env: Env, ctx: ExecutionContext, hint?: McpCall): Promise<Response> {
   const site = new URL(env.SITE_URL).hostname;
-  const host = new URL(request.url).hostname;
   const hosts = [site, "isthereaburnban.com", "www.isthereaburnban.com", "beta.isthereaburnban.com", "localhost", "127.0.0.1"];
-  if (host.endsWith(".workers.dev")) hosts.push(host);
   const call = hint ?? await peekMcp(request);
   const banCall = request.method === "POST" && call?.method === "tools/call" && call.tool === "list_active_bans";
   const deferred = new Map<string, string[]>();
