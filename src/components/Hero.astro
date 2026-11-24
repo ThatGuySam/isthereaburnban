@@ -27,6 +27,7 @@ const ask = `<div class="status" data-status="checking"><p class="status-word st
   style={heroStyle("checking")}
 >
   <div class="hero-inner">
+    {home && <h1 class="sr-only">Is there a burn ban near you?</h1>}
     <div data-status-slot data-fips={fips} data-note={note} aria-live="polite" set:html={home ? ask : renderCheckingHtml(place)} />
     {home && (
       <div class="hero-ask">
