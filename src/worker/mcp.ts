@@ -3,6 +3,8 @@ import { createMcpHandler } from "agents/mcp/server";
 import { z } from "zod";
 import type { Snapshot } from "../shared/types";
 import { activeBans, coverage } from "./api";
+import { countyPath } from "./counties";
+import { subscribeEmail } from "./email";
 import type { Env } from "./env";
 import { lookup, resultSentence } from "./lookup";
 import { getSnapshot } from "./snapshot";
@@ -14,6 +16,17 @@ function json(value: unknown, summary?: string) {
   return { content };
 }
 
+/** subscribe_email_alerts: same double opt-in as the site form (POST /api/v1/email/subscribe). */
+export async function subscribeAlertsTool(env: Env, args: { email: string; fips: string[] }) {
+  const r = await subscribeEmail(env, { email: args.email, fips: args.fips });
+  if (!r.ok) return { content: [{ type: "text" as const, text: r.error ?? "subscription failed" }], isError: true };
+  const pages = args.fips.map((f) => `${new URL(countyPath(f), env.SITE_URL).href}`).join(", ");
+  const text = r.emailEnabled
+    ? `Almost done: we sent a confirmation email to ${args.email.trim().toLowerCase()}. No alerts go out until they click the link in it. Pages: ${pages}`
+    : `Saved, but email alerts are not switched on yet, so no confirmation was sent. Suggest the user turn on push alerts on the county page instead: ${pages}`;
+  return { content: [{ type: "text" as const, text }] };
+}
+
 function createServer(env: Env) {
   let snap: Promise<Snapshot> | undefined;
   const snapshot = () => (snap ??= getSnapshot(env));
@@ -23,12 +36,14 @@ function createServer(env: Env) {
     "check_burn_ban",
     {
       description:
-        "Check whether a US county has an active burn ban. Give a 5-digit ZIP, or lat and lon, or a 5-digit county FIPS code. Returns one result per county (a ZIP can touch several). Status is ban, restricted, none, or unknown; unknown means we can't confirm, not that burning is allowed. Always point the user to officialUrl.",
+        "Check whether a US county has an active burn ban. Give a 5-digit ZIP, or lat and lon, or a 5-digit county FIPS code, or a city or town with its state. Returns one result per county (a ZIP or city can touch several). Status is ban, restricted, none, or unknown; unknown means we can't confirm, not that burning is allowed. County bans usually cover unincorporated areas and cities can have their own rules. Always point the user to officialUrl.",
       inputSchema: z.object({
         zip: z.string().regex(/^\d{5}$/).optional().describe("5-digit US ZIP code"),
         lat: z.number().min(-90).max(90).optional(),
         lon: z.number().min(-180).max(180).optional(),
         fips: z.string().regex(/^\d{5}$/).optional().describe("5-digit county FIPS, e.g. 40143 for Tulsa County, OK"),
+        city: z.string().max(80).optional().describe("Incorporated city or town name, e.g. Tulsa. Pass state too."),
+        state: z.string().length(2).optional().describe("2-letter state code for city, e.g. OK"),
       }),
     },
     async (args) => {
@@ -51,6 +66,19 @@ function createServer(env: Env) {
       const r = activeBans(await snapshot(), state);
       return json(r, `${r.counties.length} counties with a ban or restriction${state ? ` in ${state.toUpperCase()}` : ""} as of ${r.generated}.`);
     },
+  );
+
+  server.registerTool(
+    "subscribe_email_alerts",
+    {
+      description:
+        "Sign a person up for email alerts when the burn ban status changes for one or more counties. Only call this when the user asks for alerts and gives their own email. It is double opt-in: we email a confirmation link and send nothing until they click it, so tell them to check their inbox. Get FIPS codes from check_burn_ban first.",
+      inputSchema: z.object({
+        email: z.string().email().max(254).describe("The user's own email address"),
+        fips: z.array(z.string().regex(/^\d{5}$/)).min(1).max(20).describe("County FIPS codes from check_burn_ban results"),
+      }),
+    },
+    async (args) => subscribeAlertsTool(env, args),
   );
 
   server.registerTool(
