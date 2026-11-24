@@ -76,6 +76,23 @@ test("calendar lookahead joins adjacent days and applies the opening day's hours
   }]);
 });
 
+test("calendar rows preserve multiple local scopes for one county", () => {
+  const rule = CALENDAR_RULES.NY_FIRE_TOWNS;
+  const county = { fips: "36019", name: "Clinton County" };
+  const places = [
+    { ...county, scopeNote: "Town of Altona" },
+    { ...county, scopeNote: "Town of Au Sable" },
+    county,
+  ];
+  const publisher = { id: "ny-example", sourceName: "Publisher", sourceUrl: rule.officialUrl };
+  const rows = calendarStatusRows(rule, places, publisher, date("2026-11-24T13:00:00Z"));
+  expect(rows.map(({ fips, scope, scopeNote }) => [fips, scope, scopeNote])).toEqual([
+    [county.fips, "part", "Town of Altona"],
+    [county.fips, "part", "Town of Au Sable"],
+    [county.fips, "part", rule.scopeNote],
+  ]);
+});
+
 test("offset-free ISO timestamps use the stated zone and reject invalid local times", () => {
   expect(parseLocalIsoTimestamp("2026-11-24T00:01:02.1234567", US_ZONES.Central)).toBe("2026-11-24T06:01:02.123Z");
   expect(parseLocalIsoTimestamp("2026-11-24T00:01:02", US_ZONES.Eastern)).toBe("2026-11-24T05:01:02.000Z");

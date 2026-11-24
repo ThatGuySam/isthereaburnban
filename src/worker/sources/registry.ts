@@ -38,6 +38,8 @@ import { njRestrictions } from "./nj/restrictions";
 import { nvTmfpdPileBurning } from "./nv/tmfpd";
 import { nvUsfsSpringMountains } from "./nv/usfs";
 import { nwsFireWeather } from "./nws/alerts";
+import { nyDecBrushBurning } from "./ny/dec-brush-burning";
+import { nyNycBarbecuing } from "./ny/nyc-barbecuing";
 import { ohSeasonal } from "./oh/seasonal";
 import { orLrapaHeating, orLrapaOutdoor } from "./or/lrapa";
 import { orOdfPublicUse } from "./or/odf";
@@ -139,6 +141,29 @@ export const SOURCES: readonly Source[] = [
   moYardWaste,
   tnForestryPermitHolds,
   tnSeasonalBurnPermits,
+  nyDecBrushBurning,
+  nyNycBarbecuing,
+  {
+    id: "ny-governor-fire-proclamations", state: "NY", scope: "state", stack: "Drupal HTML / signed PDFs", mode: "manual", cadence: null,
+    sourceName: "New York Governor's Office",
+    sourceUrl: "https://www.governor.ny.gov/news?search_api_fulltext=burn%20ban",
+    officialUrl: "https://www.governor.ny.gov/news",
+    error: "The pressroom search omits known orders. Check the Governor's announcements and signed proclamations for current areas, dates and exceptions.",
+  },
+  {
+    id: "ny-ulster-local-orders", state: "NY", scope: "part", stack: "Granicus OpenCities / HTML and PDF", mode: "manual", cadence: null,
+    sourceName: "Ulster County Emergency Services",
+    sourceUrl: "https://www.ulstercountyny.gov/Departments/Emergency-Services/Burn-Bans",
+    officialUrl: "https://www.ulstercountyny.gov/Departments/Emergency-Services/Burn-Bans",
+    error: "The page had an empty order area with no dated status on November 24, 2026. Ask the local issuer about current orders and their boundaries.",
+  },
+  {
+    id: "ny-nyc-parks-barbecuing", state: "NY", scope: "part", stack: "HTML / CloudFront", mode: "manual", cadence: null,
+    sourceName: "NYC Parks",
+    sourceUrl: "https://www.nycgovparks.org/facilities/barbecue",
+    officialUrl: "https://www.nycgovparks.org/facilities/barbecue",
+    error: "The designated barbecuing area directory returned CloudFront HTTP 403 on November 24, 2026. Check NYC Parks or NYC 311 for the site.",
+  },
   {
     id: "tn-commissioner-burn-bans", state: "TN", scope: "part", stack: "Adobe AEM / ArcGIS Dashboard", mode: "manual", cadence: null,
     sourceName: "Tennessee Division of Forestry",

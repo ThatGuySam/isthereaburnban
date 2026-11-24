@@ -570,10 +570,40 @@
   {
     "abbr": "NY",
     "name": "New York",
-    "coverage": "directory",
-    "publisher": "New York DEC",
+    "coverage": "restrictions",
+    "publisher": "New York State Department of Environmental Conservation and NYC 311",
     "officialUrl": "https://dec.ny.gov/environmental-protection/air-quality/open-burning",
-    "notes": "New York bans brush burning statewide every March 16 to May 14. DEC can issue other temporary bans, and towns have their own rules."
+    "notes": "New York bans residential brush burning March 16 through May 14. Outside that window, DEC requires a written permit for eligible brush burning in designated Fire Towns. NYC has separate rules for open fires and outdoor barbecues. The Governor can issue temporary state or regional bans, and local governments and land managers can set stricter rules. Check the authority for your location before burning.",
+    "extraUrls": [
+      {
+        "label": "DEC wildfire advisories and burn-ban announcements",
+        "url": "https://dec.ny.gov/news/press-releases?text=burn%20ban"
+      },
+      {
+        "label": "Governor's pressroom",
+        "url": "https://www.governor.ny.gov/news"
+      },
+      {
+        "label": "DEC Fire Towns and brush-burning permits",
+        "url": "https://dec.ny.gov/environmental-protection/air-quality/open-burning#Adirondack"
+      },
+      {
+        "label": "DEC wildfire danger map",
+        "url": "https://dec.ny.gov/environmental-protection/wildfires/fire-danger-map"
+      },
+      {
+        "label": "NYC 311 outdoor barbecuing rules",
+        "url": "https://portal.311.nyc.gov/article/?kanumber=KA-02228"
+      },
+      {
+        "label": "NYC Fire Code on open fires",
+        "url": "https://www.nyc.gov/assets/fdny/downloads/pdf/about/chapter-3-2022.pdf"
+      },
+      {
+        "label": "Ulster County local orders",
+        "url": "https://www.ulstercountyny.gov/Departments/Emergency-Services/Burn-Bans"
+      }
+    ]
   },
   {
     "abbr": "NC",

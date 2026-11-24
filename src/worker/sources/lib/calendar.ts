@@ -55,7 +55,7 @@ type CalendarPublisher = Pick<CountyStatus, "sourceName" | "sourceUrl"> & { id: 
 /** Emit effective windows for the mapped counties, optionally covering the next local day. */
 export function calendarStatusRows(
   rule: CalendarRule,
-  counties: ReadonlyArray<{ fips: string; name: string }>,
+  counties: ReadonlyArray<{ fips: string; name: string; scopeNote?: string }>,
   publisher: CalendarPublisher,
   now: Date,
   { includeTomorrow = false } = {},
@@ -72,8 +72,8 @@ export function calendarStatusRows(
     if (previous?.validUntil === window.validFrom) previous.validUntil = window.validUntil;
     else if (window.validUntil > checked) windows.push(window);
   }
-  return windows.flatMap((window) => covered.map(({ fips, name }) => ({
-    ...window, fips, county: name, state, status, label, note, scope, scopeNote,
+  return windows.flatMap((window) => covered.map(({ fips, name, scopeNote: localScope }) => ({
+    ...window, fips, county: name, state, status, label, note, scope, scopeNote: localScope ?? scopeNote,
     sourceId, sourceName, sourceUrl, officialUrl, checked, sourceUpdated: null, since: null, expires: null,
   })));
 }
@@ -125,10 +125,22 @@ export const CALENDAR_RULES: Record<string, CalendarRule> = {
     note: "Arizona limits open outdoor fires in Area A from May 1 through September 30. The law lists exceptions, including cooking, and local air quality rules may impose stricter limits.",
   },
   NY: {
-    state: "NY", zone: US_ZONES.Eastern, status: "restricted", scope: "state", scopeNote: "Statewide brush-burning rule",
+    state: "NY", zone: US_ZONES.Eastern, status: "restricted", scope: "state", scopeNote: "Statewide residential brush-burning rule",
     officialUrl: "https://dec.ny.gov/environmental-protection/air-quality/open-burning",
     label: "Spring brush-burning ban", seasons: [["03-16", "05-14"]],
-    note: "March 16 through May 14, New York prohibits burning brush. See DEC for agricultural and other exceptions and check local rules.",
+    note: "New York prohibits residential brush burning from March 16 through May 14. DEC lists separate rules for small campfires, cooking fires, agricultural burning and prescribed burns. Check local rules before burning.",
+  },
+  NY_FIRE_TOWNS: {
+    state: "NY", zone: US_ZONES.Eastern, status: "restricted", scope: "part", scopeNote: "DEC-designated Fire Towns",
+    officialUrl: "https://dec.ny.gov/environmental-protection/air-quality/open-burning#Adirondack",
+    label: "DEC brush-burning permit required", seasons: [["05-15", "03-15"]],
+    note: "In designated Fire Towns, get a written DEC permit before burning eligible brush. The state brush-burning exception applies on-site in towns under 20,000 outside incorporated villages and has size limits. Check DEC and your local fire department.",
+  },
+  NY_NYC_BARBECUES: {
+    state: "NY", zone: US_ZONES.Eastern, status: "restricted", scope: "part", scopeNote: "New York City outdoor barbecuing",
+    officialUrl: "https://portal.311.nyc.gov/article/?kanumber=KA-02228",
+    label: "Outdoor barbecue limits",
+    note: "NYC allows barbecuing only in designated areas of certain city parks. Residential barbecues have Fire Code limits on fuel, location and clearance. Check NYC 311 for the rules at your location.",
   },
   GA: {
     state: "GA", zone: US_ZONES.Eastern, status: "restricted", scope: "county", scopeNote: "Georgia EPD's 54 covered counties",

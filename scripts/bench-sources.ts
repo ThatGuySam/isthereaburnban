@@ -56,6 +56,8 @@ import { njRestrictions, parseNjRestrictions } from "../src/worker/sources/nj/re
 import { nvTmfpdPileBurning, parseTmfpdPileBurning } from "../src/worker/sources/nv/tmfpd";
 import { nvUsfsSpringMountains, parseSpringMountainsOrder } from "../src/worker/sources/nv/usfs";
 import { nwsFireWeather, parseNwsAlerts } from "../src/worker/sources/nws/alerts";
+import { nyDecBrushBurning, parseDecBrushBurning } from "../src/worker/sources/ny/dec-brush-burning";
+import { nyNycBarbecuing, parseNycBarbecuing } from "../src/worker/sources/ny/nyc-barbecuing";
 import { ohSeasonal, parseOhioSeasonal } from "../src/worker/sources/oh/seasonal";
 import { orLrapaHeating, orLrapaOutdoor, parseLrapaHeating, parseLrapaOutdoor } from "../src/worker/sources/or/lrapa";
 import { orOdfPublicUse, parseOdfPublicUse } from "../src/worker/sources/or/odf";
@@ -97,6 +99,10 @@ const nwsArchive = utf8("nws/fixtures/archive-2026-11-18-to-19.json");
 const nwsCaptured = new Date("2026-11-24T07:42:59Z");
 const parseNwsLive = () => parseNwsAlerts(JSON.parse(nwsLive), nwsCaptured);
 const parseNwsArchive = () => parseNwsAlerts(JSON.parse(nwsArchive), new Date("2026-11-18T20:00Z"), { archive: true });
+const nyDecHtml = utf8("ny/fixtures/dec-open-burning-2026-11-24.html");
+const nyNycHtml = utf8("ny/fixtures/nyc-311-barbecuing-2026-11-24.html");
+const parseNyDecFixture = async () => parseDecBrushBurning(await extractHtml(nyDecHtml), now);
+const parseNyNycFixture = async () => parseNycBarbecuing(await extractHtml(nyNycHtml), now);
 const ohStatute = utf8("oh/fixtures/section-1503.18-2026-11-24.html");
 const gaGwinnettHtml = utf8("ga/fixtures/gwinnett-2026-11-24.html");
 const gaSummerHtml = utf8("ga/fixtures/epd-summer-2026-11-24.html");
@@ -295,6 +301,8 @@ recordedInputs.push(
   { source: njRestrictions, rows: parseNjFixture(), checked },
   { source: wiPermits, rows: parseWiFixture(), checked },
   { source: mnRestrictions, rows: parseMnFixture(), checked },
+  { source: nyDecBrushBurning, rows: await parseNyDecFixture(), checked },
+  { source: nyNycBarbecuing, rows: await parseNyNycFixture(), checked },
   { source: ohSeasonal, rows: await parseOhFixture(), checked },
   { source: gaEpdNonSummer, rows: await parseGaNonSummerFixture(), checked },
   { source: azPimaWildfire, rows: await parseAzPimaFixture(), checked },
@@ -411,6 +419,8 @@ const jobs: Array<[string, () => unknown]> = [
   ["MO EPA SIP index, PDFs and calendar", parseMoSipFixture],
   ["TN Forestry fiResponse roster and permit details", parseTnHolds],
   ["TN Forestry permit-season HTML and calendar", parseTnSeason],
+  ["NY DEC brush rules and Fire Towns", parseNyDecFixture],
+  ["NYC 311 outdoor barbecuing rules", parseNyNycFixture],
   ["NV Spring Mountains Drupal order table", parseNvForestFixture],
   ["UT FFSL fire order polygons", parseUtOrders],
   ["UT closed fire season and calendar", parseUtStatute],
