@@ -149,10 +149,10 @@ export function snapshotBenchmarks(inputs: SourceInput[], now: Date) {
       };
     },
     joinActive: () => encodeActive("fixture", previous),
-    readActive: () => new Response(readActive("compact").body),
-    readActiveMcp: () => new Response(new Blob(['{"content":[{"type":"text","text":', readActive("pretty").body, '}] }'])),
+    readActive: () => new Response(readActive("compact").body.join("")),
+    readActiveMcp: () => new Response(new Blob(['{"content":[{"type":"text","text":', ...readActive("pretty").body, '}] }'])),
     readActiveExpired: () => new Response(new Blob(['{"content":[{"type":"text","text":',
-      readActive("pretty", new Date(now.getTime() + 3_600_000)).body, '}] }'])),
+      ...readActive("pretty", new Date(now.getTime() + 3_600_000)).body, '}] }'])),
     parseIndex: () => JSON.parse(indexJson) as SnapshotIndex,
     parseWhole: () => JSON.parse(originalJson) as SnapshotData,
     parseLargestState: () => JSON.parse(largest) as StateSnapshot,

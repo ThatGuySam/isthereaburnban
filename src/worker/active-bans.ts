@@ -162,11 +162,17 @@ export function formatNationalBans(projection: ActiveProjection, index: Snapshot
   const { generated, sources } = weather;
   const time = JSON.stringify(generated);
   const disclaimer = JSON.stringify(DISCLAIMER);
-  let body: string;
+  let body: string[];
   if (format === "pretty") {
     const prefix = escapeText(`{\n  "generated": ${time},\n  "counties": [${allRows.length ? "\n    " : ""}`);
     const suffix = escapeText(`${allRows.length ? "\n  " : ""}],\n  "sources": ${JSON.stringify(sources, null, 2).replaceAll("\n", "\n  ")},\n  "disclaimer": ${disclaimer}\n}`);
-    body = `"${prefix}${allRows.join(String.raw`,\n    `)}${suffix}"`;
-  } else body = `{"generated":${time},"counties":[${allRows.join(",")}],"sources":${JSON.stringify(sources)},"disclaimer":${disclaimer}}`;
+    body = [`"${prefix}`];
+    const separator = String.raw`,\n    `;
+    // Keep response parts small so Blob can encode them without flattening a second national-sized string.
+    for (let i = 0; i < allRows.length; i += 128) {
+      body.push((i ? separator : "") + allRows.slice(i, i + 128).join(separator));
+    }
+    body.push(`${suffix}"`);
+  } else body = [`{"generated":${time},"counties":[${allRows.join(",")}],"sources":${JSON.stringify(sources)},"disclaimer":${disclaimer}}`];
   return { body, generated, count: allRows.length };
 }

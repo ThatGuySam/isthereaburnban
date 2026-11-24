@@ -30,7 +30,7 @@ test("prepared bans retain the public JSON for partial and complete scoped-order
     const expected = activeBans(withPublishedChecks(old, index.orderChecks));
     for (const format of ["compact", "pretty"]) {
       const projection = decodeActive(encodeActive(index.revision, [{ ...pub, active: format === "pretty" ? pub.pretty : pub.active }]));
-      const { body } = formatNationalBans(projection, index, heads, now, format);
+      const body = formatNationalBans(projection, index, heads, now, format).body.join("");
       expect(format === "pretty" ? JSON.parse(body) : body).toBe(JSON.stringify(expected, null, format === "pretty" ? 2 : undefined));
     }
   }

@@ -44,7 +44,7 @@ export const SERVER_INSTRUCTIONS =
   "Always show the officialUrl so the person can confirm with the official source before burning. " +
   "Only call subscribe_email_alerts when the person asks for alerts and gives their own email.";
 
-export function createServer(env: Env, banText: (wireText: string) => string = JSON.parse) {
+export function createServer(env: Env, banText: (wireText: string[]) => string = (value) => JSON.parse(value.join(""))) {
   let reader: ReturnType<typeof snapshotReader> | undefined;
   const snapshots = () => (reader ??= snapshotReader(env));
   const server = new McpServer(SERVER_INFO, { instructions: SERVER_INSTRUCTIONS });
@@ -128,8 +128,8 @@ export async function handleMcp(request: Request, env: Env, ctx: ExecutionContex
   if (host.endsWith(".workers.dev")) hosts.push(host);
   const call = hint ?? await peekMcp(request);
   const banCall = request.method === "POST" && call?.method === "tools/call" && call.tool === "list_active_bans";
-  const deferred = new Map<string, string>();
-  const deferBanText = (wireText: string) => {
+  const deferred = new Map<string, string[]>();
+  const deferBanText = (wireText: string[]) => {
     const marker = crypto.randomUUID();
     deferred.set(JSON.stringify(marker), wireText);
     return marker;
@@ -146,7 +146,7 @@ export async function handleMcp(request: Request, env: Env, ctx: ExecutionContex
   const slots = [...deferred].map(([marker, body]) => ({ marker, body, at: envelope.indexOf(marker) }))
     .filter(({ at }) => at >= 0).sort((a, b) => a.at - b.at);
   for (const { marker, body, at } of slots) {
-    parts.push(envelope.slice(cursor, at), body);
+    parts.push(envelope.slice(cursor, at), ...body);
     cursor = at + marker.length;
   }
   parts.push(envelope.slice(cursor));

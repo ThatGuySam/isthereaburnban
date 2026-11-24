@@ -216,7 +216,7 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
         }
         const data = activeBans(snapshot, st);
         const body = format === "pretty" ? JSON.stringify(JSON.stringify(data, null, 2)) : JSON.stringify(data);
-        return { body, generated: data.generated, count: data.counties.length };
+        return { body: [body], generated: data.generated, count: data.counties.length };
       }
       const [projection, heads] = await Promise.all([active(idx, format), allHeads()]);
       return formatNationalBans(projection, idx, heads, new Date(), format);

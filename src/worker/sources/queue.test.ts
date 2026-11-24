@@ -303,7 +303,7 @@ test("one dirty state rewrites only its shard and readers pin the catalog revisi
   box.keys.set(ACTIVE_KEY, old.get(ACTIVE_KEY));
   const current = snapshotReader(box.env, { fresh: true });
   expect((await current.state("OR")).counties["41039"].status).toBe("ban");
-  expect(JSON.parse((await current.bans()).body).counties.map(({ fips }) => fips)).toEqual(["41039"]);
+  expect(JSON.parse((await current.bans()).body.join("")).counties.map(({ fips }) => fips)).toEqual(["41039"]);
 
   box.keys.set(INDEX_KEY, old.get(INDEX_KEY)); // Edge sees the previous catalog with a newer shard.
   box.keys.set(stateKey("OR"), freshOr);
@@ -383,8 +383,8 @@ test("unchanged scoped orders take the published check time without rewriting th
   expect(box.catalog().states.OR).toEqual(previous);
   const county = (await reader().state("OR")).counties["41039"];
   expect(county.orders[0].checked).toBe(new Date(next).toISOString());
-  expect(JSON.parse((await reader().bans()).body).counties[0]).toEqual(county);
-  expect(JSON.parse(JSON.parse((await reader().bans(undefined, "pretty")).body)).counties[0]).toEqual(county);
+  expect(JSON.parse((await reader().bans()).body.join("")).counties[0]).toEqual(county);
+  expect(JSON.parse(JSON.parse((await reader().bans(undefined, "pretty")).body.join(""))).counties[0]).toEqual(county);
 });
 
 test("out-of-order merge replay leaves a newer incomplete hourly refresh unpublished", async () => {

@@ -88,7 +88,7 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
       if (p.get("format") === "text") return text(result.results.map(resultSentence).join("\n") + `\n${DISCLAIMER}\n`);
       return json(result, 200, here ? "private, max-age=300" : undefined);
     }
-    if (path === "/api/v1/bans") return jsonResponse((await snapshots.bans(p.get("state") ?? undefined)).body);
+    if (path === "/api/v1/bans") return jsonResponse((await snapshots.bans(p.get("state") ?? undefined)).body.join(""));
     if (path === "/api/v1/fire-weather") return json(activeFireWeather(await snapshots.weather(), p.get("state") ?? undefined));
     if (path === "/api/v1/coverage") return json(coverage(await snapshots.coverage()));
     const m = path.match(/^\/api\/v1\/counties\/(\d{5})$/);
