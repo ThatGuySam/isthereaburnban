@@ -45,6 +45,8 @@ import { mtDnrcRestrictions, parseDnrcRestrictions } from "../src/worker/sources
 import { parseGallatin } from "../src/worker/sources/mt/gallatin";
 import { mtMissoulaSeasons, parseMissoulaSeasons } from "../src/worker/sources/mt/missoula";
 import { njRestrictions, parseNjRestrictions } from "../src/worker/sources/nj/restrictions";
+import { nvTmfpdPileBurning, parseTmfpdPileBurning } from "../src/worker/sources/nv/tmfpd";
+import { nvUsfsSpringMountains, parseSpringMountainsOrder } from "../src/worker/sources/nv/usfs";
 import { nwsFireWeather, parseNwsAlerts } from "../src/worker/sources/nws/alerts";
 import { ohSeasonal, parseOhioSeasonal } from "../src/worker/sources/oh/seasonal";
 import { orLrapaHeating, orLrapaOutdoor, parseLrapaHeating, parseLrapaOutdoor } from "../src/worker/sources/or/lrapa";
@@ -167,6 +169,12 @@ const ndCaptured = new Date("2026-11-24T10:06:16Z");
 const ndRestrictions = utf8("nd/fixtures/restrictions-2026-11-24.json");
 const ndFireDanger = utf8("nd/fixtures/fire-danger-2026-11-24.json");
 const parseNdFixture = () => parseNdRestrictions(JSON.parse(ndRestrictions), JSON.parse(ndFireDanger), ndCaptured);
+const nvCaptured = new Date("2026-11-24T10:16:08Z");
+const nvTmfpdHtml = utf8("nv/fixtures/tmfpd-pile-burning-2026-11-24.html");
+const parseNvTmfpdFixture = () => parseTmfpdPileBurning(nvTmfpdHtml, nvCaptured);
+const nvForestCaptured = new Date("2026-11-24T10:21:34Z");
+const nvForestHtml = utf8("nv/fixtures/usfs-current-fire-restrictions-2026-11-24.html");
+const parseNvForestFixture = async () => parseSpringMountainsOrder(await extractHtml(nvForestHtml, { links: true }), nvForestCaptured);
 const akPermitLayer = utf8("ak/fixtures/permit-layer-2026-11-24.json");
 const akPermitZones = utf8("ak/fixtures/permit-zones-2026-11-24.json");
 const akFireSeason = utf8("ak/fixtures/as-41-15-050-2026-11-24.html");
@@ -252,6 +260,8 @@ recordedInputs.push(
   { source: wyCountyOrders, rows: parseWyCountyFixture(), checked: wyCaptured.toISOString() },
   { source: wyStateLands, rows: parseWyLandFixture(), checked: wyCaptured.toISOString() },
   { source: ndDesRestrictions, rows: parseNdFixture(), checked: ndCaptured.toISOString() },
+  { source: nvTmfpdPileBurning, rows: await parseNvTmfpdFixture(), checked: nvCaptured.toISOString() },
+  { source: nvUsfsSpringMountains, rows: await parseNvForestFixture(), checked: nvForestCaptured.toISOString() },
   { source: nwsFireWeather, rows: [], fireWeather: parseNwsLive(), checked: nwsCaptured.toISOString() },
 );
 
@@ -321,6 +331,8 @@ const jobs: Array<[string, () => unknown]> = [
   ["WY State Forestry county orders", parseWyCountyFixture],
   ["WY state trust lands rule", parseWyLandFixture],
   ["ND DES ArcGIS daily restrictions", parseNdFixture],
+  ["NV Truckee Meadows WordPress / Oxygen", parseNvTmfpdFixture],
+  ["NV Spring Mountains Drupal order table", parseNvForestFixture],
   ["UT FFSL fire order polygons", parseUtOrders],
   ["UT closed fire season and calendar", parseUtStatute],
   ["MT DEQ fall open-burning decisions", parseMtDeq],

@@ -44,6 +44,14 @@ test("HTML status grids extract only selected rows and keep cell data", async ()
   ]]);
 });
 
+test("HTML table cells separate adjacent paragraphs without splitting inline text", async () => {
+  const markup = "<table><tr><td><p><a>04-17-24-01</a></p><p><a>Map</a></p></td>" +
+    "<td><strong>Year</strong>-round</td></tr></table>";
+  for (const parts of [parseHtml(markup), await extractHtml(markup)]) {
+    expect(parts.tables[0].rows).toEqual([["04-17-24-01 Map", "Year-round"]]);
+  }
+});
+
 test("publisher-local dates allow a comma before a whole hour with meridiem", () => {
   expect(parseLocalDateTime("Wednesday, November 18, 2026, 9 a.m.", US_ZONES.Pacific)).toBe("2026-11-18T17:00:00.000Z");
   expect(parseLocalDateTime("November 18, 2026, 12 p.m.", US_ZONES.Pacific)).toBe("2026-11-18T20:00:00.000Z");

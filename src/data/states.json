@@ -477,15 +477,35 @@
     "abbr": "NV",
     "name": "Nevada",
     "coverage": "restrictions",
-    "publisher": "Nevada Fire Info",
+    "publisher": "Nevada Fire Info, Truckee Meadows Fire Protection District and U.S. Forest Service",
     "officialUrl": "https://www.nevadafireinfo.org/restrictions",
     "extraUrls": [
       {
+        "label": "Truckee Meadows daily pile-burning status",
+        "url": "https://tmfpd.us/outdoor-burning/?burn-status-check=1"
+      },
+      {
+        "label": "Nevada Division of Forestry state land restrictions",
+        "url": "https://forestry.nv.gov/wildland-fire-management/fire-incidents-restrictions"
+      },
+      {
+        "label": "Humboldt-Toiyabe National Forest fire restrictions",
+        "url": "https://www.fs.usda.gov/r04/humboldt-toiyabe/fire/fire-restrictions"
+      },
+      {
         "label": "BLM Nevada fire restrictions",
         "url": "https://www.blm.gov/nevada-fire-information-and-fire-restrictions"
+      },
+      {
+        "label": "Nevada open-burning permits and smoke rules",
+        "url": "https://ndep.nv.gov/air/air-pollutants/smoke-management"
+      },
+      {
+        "label": "Washoe wood-burning device rules and daily hotline",
+        "url": "https://washoelife.washoecounty.gov/nnph/daily-burn-code-for-wood-burning-devices-is-underway/"
       }
     ],
-    "notes": "Federal and state land managers set fire restrictions by zone in Nevada. Local governments and air districts can add their own."
+    "notes": "We track daily pile burning in the Truckee Meadows Fire Protection District in part of Washoe County and a campfire order on mapped National Forest lands in part of Clark County. Local fire authorities and air-quality agencies set separate rules. Check the agency that manages the land for current orders."
   },
   {
     "abbr": "NH",

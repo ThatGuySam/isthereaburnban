@@ -29,6 +29,8 @@ import { mtGallatinOpenBurning } from "./mt/gallatin";
 import { mtMissoulaSeasons } from "./mt/missoula";
 import { ndDesRestrictions } from "./nd/restrictions";
 import { njRestrictions } from "./nj/restrictions";
+import { nvTmfpdPileBurning } from "./nv/tmfpd";
+import { nvUsfsSpringMountains } from "./nv/usfs";
 import { nwsFireWeather } from "./nws/alerts";
 import { ohSeasonal } from "./oh/seasonal";
 import { orLrapaHeating, orLrapaOutdoor } from "./or/lrapa";
@@ -115,6 +117,15 @@ export const SOURCES: readonly Source[] = [
   wyCountyOrders,
   wyStateLands,
   ndDesRestrictions,
+  nvTmfpdPileBurning,
+  nvUsfsSpringMountains,
+  {
+    id: "nv-interagency-fire-restrictions", state: "NV", scope: "part", stack: "ArcGIS FeatureServer / Squarespace order index",
+    mode: "manual", cadence: null, sourceName: "Nevada Fire Info interagency partners",
+    sourceUrl: "https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/Nevada_Fire_Restrictions_Public_View/FeatureServer/0",
+    officialUrl: "https://www.nevadafireinfo.org/restrictions",
+    error: "The ArcGIS map still showed Stage 1 for the Winnemucca District after its October 31, 2026 rescission. Check orders and rescissions with the land manager.",
+  },
   {
     id: "nd-cass-county-order", state: "ND", scope: "part", stack: "Granicus / Vision HTML and PDF", mode: "manual", cadence: null,
     sourceName: "Cass County Emergency Management",

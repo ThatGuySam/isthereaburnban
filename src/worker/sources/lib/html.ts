@@ -101,6 +101,7 @@ function collector({ links: includeLinks = false, tableHeading }: HtmlOptions) {
         parts.tables.push(table);
       }
       const current = tables.at(-1);
+      if (tag === "p" && current?.cell !== undefined) current.cell += " ";
       if (current && tag === "tr") {
         finishRow(current);
         current.row = [];
