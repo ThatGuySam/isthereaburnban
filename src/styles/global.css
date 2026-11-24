@@ -893,6 +893,12 @@ body[data-filtering] [data-unfiltered] {
   font-size: 0.85rem;
   color: var(--muted);
 }
+.vs-fine + .vs-fine {
+  margin-top: 0.35rem;
+}
+.vs-fine a {
+  color: inherit;
+}
 
 /* Detached county card on /map/: floats inset from every edge, colored by status (--bg/--fg/--meta
    from heroStyle), above the home indicator and Safari's floating toolbar. Non-modal, no overlay. */

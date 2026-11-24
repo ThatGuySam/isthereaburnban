@@ -431,6 +431,9 @@ function MenuSheet({ detail }: { detail: OpenDetail }) {
         </ul>
       </nav>
       <p className="vs-fine">Informational only. Confirm with the official source before you burn.</p>
+      <p className="vs-fine">
+        <a href="/data/">Data</a> · <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a>
+      </p>
     </div>
   );
 }

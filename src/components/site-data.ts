@@ -137,3 +137,8 @@ export function nearbyPlaces(p: Place, n = 6, maxKm = 50): Place[] {
       }
   return out.sort((a, b) => a.d - b.d).slice(0, n).map((x) => x.q);
 }
+
+/** Public contact for privacy, terms and data questions. Placeholder until Sam confirms the mailbox. */
+export const CONTACT_EMAIL = "hello@isthereaburnban.com";
+/** Date shown on /privacy/ and /terms/. Change it when either page changes. */
+export const POLICY_UPDATED = "November 24, 2026";
