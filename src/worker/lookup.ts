@@ -1,5 +1,6 @@
 import type { CountyStatus, LookupResult, SnapshotData } from "../shared/types";
-import { statusSentence, statusTheme } from "../shared/render";
+import { cityRulesUrl } from "../shared/city-rules";
+import { DEPENDS_SENTENCE, placeStatus, statusSentence, statusTheme } from "../shared/render";
 import { countyDecision } from "./county-decision";
 import { ADAPTERS } from "./adapters";
 import { COUNTY_BY_FIPS, countyPath, STATE_DIR_BY_ABBR } from "./counties";
@@ -44,7 +45,7 @@ export function statusFor(snapshot: SnapshotData, fips: string, now = Date.now()
 
 export function buildResult(query: LookupResult["query"], fipsList: string[], snapshot: SnapshotData | ((fips: string) => SnapshotData), approximate = false): LookupResult {
   const results = fipsList.map((f) => ({ ...statusFor(typeof snapshot === "function" ? snapshot(f) : snapshot, f), url: countyPath(f) }));
-  return { query, ambiguous: results.length > 1, approximate, results, disclaimer: DISCLAIMER };
+  return { query, answer: placeStatus(results), ambiguous: results.length > 1, approximate, results, disclaimer: DISCLAIMER };
 }
 
 /** ZIP -> county FIPS list (largest land overlap first). Unknown ZIPs fall back to the nearest ZIP in the same 3-digit shard. */
@@ -110,7 +111,10 @@ export async function lookup(
   }
   if (q.city) {
     const place = await resolveCity(env, q.city, q.state);
-    return { ...await result({ city: q.city.trim(), ...(q.state ? { state: q.state.trim().toUpperCase() } : {}) }, place.counties), place };
+    return {
+      ...await result({ city: q.city.trim(), ...(q.state ? { state: q.state.trim().toUpperCase() } : {}) }, place.counties),
+      place: { ...place, localRulesUrl: cityRulesUrl(place.url) },
+    };
   }
   throw new LookupError("provide zip, lat and lon, fips, city (with state), or here=1");
 }
@@ -132,4 +136,15 @@ export function resultSentence(r: CountyStatus): string {
     return ` NWS fire weather: ${alert.event}${end ? ` until ${end}` : ""}.`;
   }).join("") ?? "";
   return `${head}${exp}${src}${weather}${r.officialUrl ? ` ${r.sourceUrl ? "Official source" : "Official directory"}: ${r.officialUrl}` : ""}`;
+}
+
+/** Share the place qualifier and county answers across the text API and MCP. */
+export function lookupText(result: LookupResult): string {
+  const lines = result.results.map(resultSentence);
+  if (result.answer === "depends") lines.unshift(`${DEPENDS_SENTENCE}.`);
+  if (result.place) {
+    const local = result.place.localRulesUrl;
+    lines.push(`Check rules inside city limits with the city fire authority.${local ? ` ${local}` : ""}`);
+  }
+  return lines.join("\n");
 }

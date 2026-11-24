@@ -147,6 +147,16 @@ html:has(.hero[data-mode="home"]) {
   text-wrap: balance;
 }
 
+.city-reports {
+  list-style: none;
+  padding: 0;
+  margin: 0.85rem 0 0;
+  max-width: 44rem;
+}
+.city-reports li + li {
+  margin-top: 0.65rem;
+}
+
 /* The quiet line: official source, checked time. Tone-on-tone (--meta), 4.5:1 on every status. */
 .status-meta,
 .status-alert,

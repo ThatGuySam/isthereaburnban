@@ -5,7 +5,7 @@ import { coverage } from "./api";
 import { countyPath } from "./counties";
 import { subscribeEmail } from "./email";
 import type { Env } from "./env";
-import { lookup, resultSentence } from "./lookup";
+import { lookup, lookupText } from "./lookup";
 import { snapshotReader } from "./snapshot";
 import { peekMcp, type McpCall } from "./usage";
 
@@ -68,7 +68,7 @@ export function createServer(env: Env, banText: (wireText: string[]) => string =
     async (args) => {
       try {
         const r = await lookup(env, snapshots(), args);
-        return json(r, r.results.map(resultSentence).join("\n"));
+        return json(r, lookupText(r));
       } catch (err) {
         return { content: [{ type: "text" as const, text: err instanceof Error ? err.message : String(err) }], isError: true };
       }

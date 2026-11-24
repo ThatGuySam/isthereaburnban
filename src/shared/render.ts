@@ -1,8 +1,8 @@
 // Status wording, colors and hero markup. Pure functions shared by the Worker (HTMLRewriter
 // injection) and the browser (client-side lookups), so every surface says the same thing.
-import type { BanStatus, CountyStatus, FireWeatherAlert, StateDirectoryEntry } from "./types";
+import type { BanStatus, CountyStatus, FireWeatherAlert, PlaceStatus, StateDirectoryEntry } from "./types";
 
-export type HeroStatus = BanStatus | "checking";
+export type HeroStatus = PlaceStatus | "checking";
 
 export type StatusTheme = {
   status: HeroStatus;
@@ -22,8 +22,9 @@ export type StatusTheme = {
 const THEMES: Record<HeroStatus, StatusTheme> = {
   ban: { status: "ban", word: "Yes", color: "#f34f49", text: "#ffffff", meta: "#3a1312" },
   none: { status: "none", word: "Nope", color: "#2a9d70", text: "#ffffff", meta: "#0a261b" },
-  restricted: { status: "restricted", word: "Sort of", color: "#f5a623", text: "#1a1a1a", meta: "#563a0c" },
-  unknown: { status: "unknown", word: "Not sure", color: "#123646", text: "#ffffff", meta: "#d0d7da" },
+  restricted: { status: "restricted", word: "Limited", color: "#f5a623", text: "#1a1a1a", meta: "#563a0c" },
+  unknown: { status: "unknown", word: "Unsure", color: "#123646", text: "#ffffff", meta: "#d0d7da" },
+  depends: { status: "depends", word: "Depends", color: "#123646", text: "#ffffff", meta: "#d0d7da" },
   checking: { status: "checking", word: "Checking", color: "#767676", text: "#ffffff", meta: "#ffffff" },
 };
 
@@ -254,34 +255,50 @@ export function localDate(iso: string | null | undefined, state: string): string
   return new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: stateTimeZone(state) });
 }
 
-const SHORT_ANSWER: Record<string, string> = { ban: "Yes", none: "No", restricted: "Restrictions only" };
-
-/** True when the source actually vouched for this status (a fetched feed, not a directory fallback). */
-function vouched(cs: CountyStatus): boolean {
-  return cs.status !== "unknown" && Boolean(cs.sourceUrl);
+export function placeStatus(list: Pick<CountyStatus, "status">[]): PlaceStatus {
+  const first = list[0]?.status;
+  return first === undefined ? "unknown" : list.every((c) => c.status === first) ? first : "depends";
 }
 
-/**
- * Title and meta description that answer the question, for one or more counties (a city can span several).
- * Returns null when we can't vouch for an answer, so the page keeps its plain question title.
- */
+export const DEPENDS_SENTENCE = "Depends on your county";
+
+export function renderCityHtml(list: CountyStatus[], city: string, localRulesUrl?: string, now = Date.now()): string {
+  if (!list.length) return renderCheckingHtml(city);
+  const local = localRulesUrl
+    ? `<p class="status-meta"><a href="${escapeHtml(localRulesUrl)}" target="_blank" rel="noopener">City fire rules</a></p>` : "";
+  if (list.length === 1) return renderStatusHtml(list[0], { relativeTimeBase: now }) + local;
+
+  const status = placeStatus(list);
+  const theme = statusTheme(status);
+  const message = status === "depends" ? DEPENDS_SENTENCE : `County reports for ${city}`;
+  const items = list.map((row) => {
+    const official = row.officialUrl
+      ? `<a href="${escapeHtml(row.officialUrl)}" target="_blank" rel="noopener">${row.sourceUrl ? "Official source" : "Official directory"}</a>` : "";
+    const checked = row.sourceUrl && row.checked ? `<span>checked ${timeTag(row.checked, relativeTime(row.checked, now))}</span>` : "";
+    const meta = [official, checked].filter(Boolean).join('<span aria-hidden="true"> · </span>');
+    return `<li><strong>${escapeHtml(statusTheme(row.status).word)}</strong> · ${escapeHtml(statusSentence(row))}.${meta ? ` <span class="status-meta">${meta}</span>` : ""}</li>`;
+  }).join("");
+  return `<div class="status" data-status="${status}">
+    <p class="status-word${theme.word.length > 5 ? " status-word--long" : ""}">${escapeHtml(theme.word)}</p>
+    <p class="status-sentence">${escapeHtml(message)}</p>
+    <ul class="city-reports">${items}</ul>${local}
+  </div>`;
+}
+
+const SHORT_ANSWER: Record<PlaceStatus, string> = {
+  ban: "Ban reported", none: "No burn ban reported", restricted: "Restrictions reported",
+  unknown: "Status unconfirmed", depends: DEPENDS_SENTENCE,
+};
+
 export function answerMeta(question: string, list: CountyStatus[], cityName?: string): { title: string; description: string } | null {
-  if (!list.length || !list.every(vouched)) return null;
-  const first = list[0];
-  const same = list.every((c) => c.status === first.status);
-  const asOf = localDate(first.checked, first.state);
-  const answer = same ? SHORT_ANSWER[first.status] : "It depends on the county";
-  const title = `${question} ${answer} — as of ${asOf}`;
-  const ALL: Record<string, string> = { none: "None of them has an active burn ban.", ban: "All of them are under a burn ban.", restricted: "All of them have burning restrictions." };
-  let body: string;
-  if (list.length === 1) body = `${cityName ? `${cityName} is in ${placeName(first)}. ` : ""}${statusSentence(first)}.`;
-  else {
-    const names = list.map((c) => c.county);
-    const joined = `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
-    body = `${cityName ?? "This place"} spans ${list.length} counties: ${joined}. ${same ? ALL[first.status] : list.map((c) => `${statusSentence(c)}.`).join(" ")}`;
-  }
-  const description = `${body} Checked ${asOf} with ${first.sourceName}. Confirm with the official source before you burn.`;
-  return { title, description };
+  if (!list.length) return null;
+  const status = placeStatus(list);
+  const answer = cityName && status !== "depends" ? `County reports · ${SHORT_ANSWER[status]}` : SHORT_ANSWER[status];
+  const body = list.map((c) => `${statusSentence(c)}.`).join(" ");
+  return {
+    title: `${question} ${answer}`,
+    description: `${body}${cityName ? " Check the city fire authority for rules inside city limits." : ""}`,
+  };
 }
 
 /** One-line status for lists ("Nope: There is no burn ban active for Wagoner County, OK."). */

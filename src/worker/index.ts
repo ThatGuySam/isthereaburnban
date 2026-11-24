@@ -1,7 +1,7 @@
 import { activeFireWeather, coverage } from "./api";
 import { confirmEmail, subscribeEmail, unsubscribeEmail } from "./email";
 import type { Env } from "./env";
-import { DISCLAIMER, lookup, LookupError, resultSentence, statusFor } from "./lookup";
+import { DISCLAIMER, lookup, LookupError, lookupText, statusFor } from "./lookup";
 import { handleMcp } from "./mcp";
 import { handleOps } from "./ops";
 import { CANARY_CRON, runCanary } from "./notify";
@@ -85,7 +85,7 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
             lon: p.has("lon") ? Number(p.get("lon")) : undefined,
           };
       const result = await lookup(env, snapshots, q);
-      if (p.get("format") === "text") return text(result.results.map(resultSentence).join("\n") + `\n${DISCLAIMER}\n`);
+      if (p.get("format") === "text") return text(lookupText(result) + `\n${DISCLAIMER}\n`);
       return json(result, 200, here ? "private, max-age=300" : undefined);
     }
     if (path === "/api/v1/map-status") {

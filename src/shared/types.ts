@@ -111,10 +111,13 @@ export type MapStatus = {
   counties: Partial<Record<string, Exclude<BanStatus, "unknown">>>;
 };
 
+export type PlaceStatus = BanStatus | "depends";
+
 export type LookupResult = {
+  answer: PlaceStatus;
   query: { zip?: string; lat?: number; lon?: number; fips?: string; city?: string; state?: string };
   /** set for city= lookups: the matched incorporated place and its page (or its county page when it has none) */
-  place?: { name: string; state: string; url: string; counties: string[] };
+  place?: { name: string; state: string; url: string; counties: string[]; localRulesUrl?: string };
   /** true if a ZIP touches more than one county; UI should ask the user to pick */
   ambiguous: boolean;
   /** true if the ZIP was not in Census ZCTA data and we used the nearest ZIP */
