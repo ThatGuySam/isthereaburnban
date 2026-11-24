@@ -5,7 +5,7 @@ import type { Source } from "./types";
 export const STALE_MS = 48 * 60 * 60 * 1000;
 
 export type SourceInput = {
-  source: Pick<Source, "id" | "state" | "mode"> & Partial<Pick<Source, "scope" | "officialUrl">>;
+  source: Pick<Source, "id" | "state" | "mode"> & Partial<Pick<Source, "scope" | "officialUrl" | "recurring">>;
   rows: (Omit<CountyStatus, "checked"> & { checked?: string })[];
   lastGood?: string;
   checked: string;
@@ -85,6 +85,7 @@ export function mergeSources(prev: Snapshot | null, inputs: SourceInput[], now: 
   const sourceVersions: Record<string, string> = {};
   const groups = new Map<string, CountyCandidates>();
   const transitions: Transition[] = [];
+  const recurring = new Set(inputs.filter((i) => i.source.recurring).map((i) => i.source.id));
 
   for (const { source, rows, checked, lastGood, staleMs = STALE_MS, error, version } of inputs) {
     if (version) sourceVersions[source.id] = version;
@@ -126,6 +127,8 @@ export function mergeSources(prev: Snapshot | null, inputs: SourceInput[], now: 
     const before = prev?.counties[fips];
     if (!before) {
       changed[fips] = row.since ?? row.sourceUpdated ?? at;
+    } else if (before.status !== row.status && (recurring.has(row.sourceId ?? "") || recurring.has(before.sourceId ?? ""))) {
+      // A scheduled calendar window opened or closed: not news, no alert, no lastmod churn.
     } else if (before.status !== row.status) {
       changed[fips] = at;
       const retainedAuthority = !before.sourceId || before.sourceId === row.sourceId ||

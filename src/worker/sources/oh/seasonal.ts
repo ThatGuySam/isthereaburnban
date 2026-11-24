@@ -36,6 +36,7 @@ export async function parseOhioSeasonal(parts: HtmlParts, now: Date): Promise<Co
 
 export const ohSeasonal: ActiveSource = {
   ...META,
+  recurring: true,
   mode: "positive-only",
   coverage: "restrictions",
   cadence: { kind: "daily", zone: RULE.zone, hours: [0] },

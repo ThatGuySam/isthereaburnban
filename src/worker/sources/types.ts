@@ -14,6 +14,8 @@ type Metadata = {
   sourceUrl: string;
   sourceName: string;
   keepRowLinks?: boolean;
+  /** Recurring statutory/calendar rule (e.g. daily burning hours). Its scheduled on/off flips never alert and never count as a status change. */
+  recurring?: boolean;
 };
 
 export type SourceResult =
