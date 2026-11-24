@@ -3,7 +3,7 @@ import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { webFormsPost } from "./aspnet";
 import { arcgisEditWindow, arcgisLocalDate, arcgisRows, codedDomains, dataLastEditDate, findOperationalLayers, queryArcgis } from "./arcgis";
-import { activeRule, CALENDAR_RULES } from "./calendar";
+import { activeRule, calendarDayWindows, CALENDAR_RULES } from "./calendar";
 import { civicPlusNotices, civicPlusUrl } from "./civicplus";
 import { reportWindow } from "./dates";
 import { decodeFeed, parseCsv, parseDotNetJsonDate, parseFeed, parseJson } from "./feeds";
@@ -282,6 +282,21 @@ test("Calendar restrictions respect local windows, covered counties, and narrow 
   expect(activeRule(VA, date("2026-02-15T21:00Z"))).toBeUndefined();
   expect(activeRule(WV, date("2026-03-02T12:00Z"))?.status).toBe("restricted");
   expect(activeRule(MD, date("2026-06-01T12:00Z"))?.note).toContain("Snow cover");
+});
+
+test("Calendar day windows follow local midnight across DST and split overnight hours", () => {
+  const rule = CALENDAR_RULES.NY;
+  expect(calendarDayWindows(rule, date("2026-03-16T03:59Z"))).toEqual([]);
+  expect(calendarDayWindows(rule, date("2026-03-16T04:00Z"))).toEqual([
+    { validFrom: "2026-03-16T04:00:00.000Z", validUntil: "2026-03-17T04:00:00.000Z" },
+  ]);
+  expect(calendarDayWindows({ ...rule, seasons: undefined }, date("2026-03-08T12:00Z"))).toEqual([
+    { validFrom: "2026-03-08T05:00:00.000Z", validUntil: "2026-03-09T04:00:00.000Z" },
+  ]);
+  expect(calendarDayWindows({ ...rule, hours: [1320, 120] }, date("2026-03-16T12:00Z"))).toEqual([
+    { validFrom: "2026-03-16T04:00:00.000Z", validUntil: "2026-03-16T06:00:00.000Z" },
+    { validFrom: "2026-03-17T02:00:00.000Z", validUntil: "2026-03-17T04:00:00.000Z" },
+  ]);
 });
 
 test("Link checker reads external anchors and separates access walls from missing links and TLS", async () => {

@@ -1,4 +1,4 @@
-import { localClock, US_ZONES } from "./dates";
+import { atLocalTime, localClock, shiftDay, US_ZONES } from "./dates";
 
 // Inventory: NY DEC Open Burning, GA EPD Summer Open Burning Ban, OH DNR Open Burning Regulations,
 // VA DOF 4 PM Burning Law, WV Forestry Fire Burning Guidelines, and MD DNR Burning Guidance.
@@ -16,12 +16,33 @@ export type CalendarRule = {
   counties?: ReadonlySet<string>; // publisher county names without "County"
 };
 
+function inSeason(rule: CalendarRule, date: string): boolean {
+  const day = date.slice(5);
+  return !rule.seasons || rule.seasons.some(([start, end]) =>
+    start <= end ? day >= start && day <= end : day >= start || day <= end);
+}
+
+/** UTC validity windows within the rule's current local date. Geography is applied by the caller. */
+export function calendarDayWindows(rule: CalendarRule, now: Date) {
+  const { date } = localClock(now, rule.zone);
+  if (!inSeason(rule, date)) return [];
+  const [start, end] = rule.hours ?? [0, 1440];
+  const periods: [number, number][] = start <= end ? [[start, end]] : [[0, end], [start, 1440]];
+  const instant = (minute: number) => minute === 1440
+    ? atLocalTime(shiftDay(date, 1), 0, rule.zone)
+    : atLocalTime(date, minute, rule.zone);
+  return periods.filter(([from, until]) => from < until).map(([from, until]) => {
+    const validFrom = instant(from);
+    const validUntil = instant(until);
+    if (!validFrom || !validUntil || validFrom >= validUntil) throw new Error(`${rule.state}: invalid calendar window for ${date}`);
+    return { validFrom, validUntil };
+  });
+}
+
 export function activeRule(rule: CalendarRule, now: Date, county?: string) {
   if (rule.counties && (!county || !rule.counties.has(county.replace(/\s+County$/i, "").toLowerCase()))) return undefined;
   const { date, minute } = localClock(now, rule.zone);
-  const day = date.slice(5);
-  if (rule.seasons && !rule.seasons.some(([start, end]) =>
-    start <= end ? day >= start && day <= end : day >= start || day <= end)) return undefined;
+  if (!inSeason(rule, date)) return undefined;
   if (rule.hours) {
     const [start, end] = rule.hours;
     if (!(start <= end ? minute >= start && minute < end : minute >= start || minute < end)) return undefined;
@@ -51,9 +72,9 @@ export const CALENDAR_RULES: Record<string, CalendarRule> = {
   },
   OH: {
     state: "OH", zone: US_ZONES.Eastern, status: "restricted", scope: "part", scopeNote: "Unincorporated areas outside railroad-controlled land",
-    officialUrl: "https://ohiodnr.gov/discover-and-learn/safety-conservation/about-odnr/forestry/fire-management-program/open-burn-laws",
-    label: "Daytime burning restriction in unincorporated areas", seasons: [["03-01", "05-31"], ["10-01", "11-30"]], hours: [360, 1080],
-    note: "Ohio restricts most open burning in unincorporated areas from 6 a.m. to 6 p.m. in March–May and October–November. See Ohio law for exceptions.",
+    officialUrl: "https://codes.ohio.gov/ohio-revised-code/section-1503.18",
+    label: "Seasonal daytime burning restriction", seasons: [["03-01", "05-31"], ["10-01", "11-30"]], hours: [360, 1080],
+    note: "The rule covers outdoor burning of wood, brush, weeds, grass or rubbish from 6 a.m. to 6 p.m. Eastern in March–May and October–November. Ohio law excepts fires in plowed fields, gardens or on public roads at least 200 feet from woods, brush or fields with dry grass or other flammable material. Check with your local fire department about other rules.",
   },
   VA: {
     state: "VA", zone: US_ZONES.Eastern, status: "restricted", scope: "part", scopeNote: "Within 300 feet of woods or vegetation that could carry fire to woods",

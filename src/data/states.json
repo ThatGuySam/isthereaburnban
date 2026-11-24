@@ -416,14 +416,22 @@
   {
     "abbr": "OH",
     "name": "Ohio",
-    "coverage": "directory",
-    "publisher": "Ohio State Fire Marshal",
-    "officialUrl": "https://dam.assets.ohio.gov/image/upload/com.ohio.gov/documents/fire_ForestryLaws.pdf",
-    "notes": "Ohio bans most open burning outside towns from 6 a.m. to 6 p.m. in March, April, May, October and November. Towns and temporary orders add other rules.",
+    "coverage": "restrictions",
+    "publisher": "Ohio Division of Forestry",
+    "officialUrl": "https://codes.ohio.gov/ohio-revised-code/section-1503.18",
+    "notes": "Ohio limits outdoor burning of wood, brush, weeds, grass or rubbish in unincorporated areas from 6 a.m. to 6 p.m. Eastern in March through May and October through November. The law has exceptions. The State Fire Marshal and local fire officials can issue additional bans. Check with your local fire department and follow Ohio EPA rules.",
     "extraUrls": [
       {
-        "label": "Ohio Revised Code 1503.18",
-        "url": "https://codes.ohio.gov/ohio-revised-code/section-1503.18"
+        "label": "State Fire Marshal's outdoor fire guide (PDF)",
+        "url": "https://dam.assets.ohio.gov/image/upload/com.ohio.gov/documents/fire_ForestryLaws.pdf"
+      },
+      {
+        "label": "Ohio EPA open burning guidance",
+        "url": "https://ohioepa.custhelp.com/app/answers/detail/a_id/2517/~/ohio-epas-regulations-on-open-burning"
+      },
+      {
+        "label": "Ohio Fire Code on emergency bans",
+        "url": "https://codes.ohio.gov/ohio-administrative-code/rule-1301%3A7-7-03"
       }
     ]
   },

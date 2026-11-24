@@ -24,6 +24,7 @@ import { mergeSources, type SourceInput } from "../src/worker/sources/merge";
 import { miPermits, parseMichiganPermits } from "../src/worker/sources/mi/permits";
 import { mnRestrictions, parseMinnesotaRestrictions } from "../src/worker/sources/mn/restrictions";
 import { njRestrictions, parseNjRestrictions } from "../src/worker/sources/nj/restrictions";
+import { ohSeasonal, parseOhioSeasonal } from "../src/worker/sources/oh/seasonal";
 import { parseWisconsinPermits, wiPermits } from "../src/worker/sources/wi/permits";
 
 const sourceUrl = new URL("../src/worker/sources/", import.meta.url);
@@ -42,6 +43,7 @@ const njDivisions = utf8("nj/fixtures/divisions-2026-11-24.json");
 const njCounties = utf8("nj/fixtures/counties-2026-11-24.json");
 const wiPermitsJson = utf8("wi/fixtures/permits-2026-11-24.json");
 const mnRestrictionsJson = utf8("mn/fixtures/restrictions-2026-11-24.json");
+const ohStatute = utf8("oh/fixtures/section-1503.18-2026-11-24.html");
 const michigan = fixture("michigan-form.html");
 const kentucky = fixture("kentucky-list.html");
 const placer = fixture("placer-newsflash.html");
@@ -59,6 +61,7 @@ const parseMiFixture = () => parseMichiganPermits(JSON.parse(miMap), now);
 const parseNjFixture = () => parseNjRestrictions(JSON.parse(njDivisions), JSON.parse(njCounties), now);
 const parseWiFixture = () => parseWisconsinPermits(wiPermitsJson, now);
 const parseMnFixture = () => parseMinnesotaRestrictions(mnRestrictionsJson, now);
+const parseOhFixture = () => parseOhioSeasonal(parseHtml(ohStatute), now);
 
 const adapters: Array<[string, () => CountyStatus[]]> = [
   ["OK ArcGIS", () => parseOk(JSON.parse(ok), checked)],
@@ -80,6 +83,7 @@ recordedInputs.push(
   { source: njRestrictions, rows: parseNjFixture(), checked },
   { source: wiPermits, rows: parseWiFixture(), checked },
   { source: mnRestrictions, rows: parseMnFixture(), checked },
+  { source: ohSeasonal, rows: await parseOhFixture(), checked },
 );
 
 const states = new Map<string, CountyStatus[]>();
@@ -126,6 +130,7 @@ const jobs: Array<[string, () => unknown]> = [
   ["NJ Forest Fire Service ArcGIS", parseNjFixture],
   ["WI DNR permit feed", parseWiFixture],
   ["MN DNR restriction feed", parseMnFixture],
+  ["OH statute and calendar", parseOhFixture],
   ["Merge and encode current sources", () => JSON.stringify(mergeSources(null, recordedInputs, now).snapshot)],
   ["Parse, merge, encode 51-area projection", () => JSON.stringify(mergeSources(null,
     fullInputs.map((input, index) => ({ ...input, rows: JSON.parse(serializedFull[index]) })), now).snapshot)],
