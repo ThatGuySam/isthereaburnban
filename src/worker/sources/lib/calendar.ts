@@ -107,6 +107,20 @@ export const CALENDAR_RULES: Record<string, CalendarRule> = {
     label: "Seasonal daytime burning restriction", seasons: [["02-15", "04-30"], ["10-01", "12-15"]], hours: [360, 1080],
     note: "Kentucky limits burning materials that can spread fire from 6 a.m. to 6 p.m. local time during February 15 through April 30 and October 1 through December 15. The law makes exceptions for snow-covered ground and certain activities. Check local orders and air-quality rules before burning.",
   },
+  MT_MISSOULA_GENERAL: {
+    state: "MT", zone: US_ZONES.Mountain, status: "restricted", scope: "part",
+    officialUrl: "https://www.missoulacounty.gov/9652", counties: new Set(["missoula"]),
+    scopeNote: "General outdoor burning under Missoula County’s permit program",
+    label: "General outdoor burning season closed", seasons: [["09-01", "02-29"]],
+    note: "Missoula Public Health’s regular season for burning yard debris and untreated vegetation generated on site is March 1 through August 31. The county lists separate permits and seasons for other activities.",
+  },
+  MT_MISSOULA_AGRICULTURE: {
+    state: "MT", zone: US_ZONES.Mountain, status: "restricted", scope: "part",
+    officialUrl: "https://www.missoulacounty.gov/9652", counties: new Set(["missoula"]),
+    scopeNote: "Essential agricultural burning under Missoula County’s permit program",
+    label: "Essential agricultural burning season closed", seasons: [["11-01", "02-29"]],
+    note: "Missoula Public Health’s regular essential agricultural burning season is March 1 through October 31. Check the permit system for daily decisions for other types of burning.",
+  },
   OH: {
     state: "OH", zone: US_ZONES.Eastern, status: "restricted", scope: "part", scopeNote: "Unincorporated areas outside railroad-controlled land",
     officialUrl: "https://codes.ohio.gov/ohio-revised-code/section-1503.18",

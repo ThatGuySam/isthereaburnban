@@ -23,6 +23,10 @@ import type { ArcgisResponse } from "./lib/arcgis";
 import { fetchSource } from "./lib/http";
 import { miPermits } from "./mi/permits";
 import { mnRestrictions } from "./mn/restrictions";
+import { mtDeqFall } from "./mt/deq-fall";
+import { mtDnrcRestrictions } from "./mt/dnrc";
+import { mtGallatinOpenBurning } from "./mt/gallatin";
+import { mtMissoulaSeasons } from "./mt/missoula";
 import { njRestrictions } from "./nj/restrictions";
 import { nwsFireWeather } from "./nws/alerts";
 import { ohSeasonal } from "./oh/seasonal";
@@ -101,6 +105,10 @@ export const SOURCES: readonly Source[] = [
   akDecWinterBurning,
   utFfslFireOrders,
   utClosedFireSeason,
+  mtDeqFall,
+  mtDnrcRestrictions,
+  mtGallatinOpenBurning,
+  mtMissoulaSeasons,
   {
     id: "ut-blm-campfire-orders", state: "UT", scope: "part", stack: "Drupal / PDF orders", mode: "manual", cadence: null,
     sourceName: "Bureau of Land Management Utah",

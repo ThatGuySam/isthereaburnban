@@ -435,15 +435,35 @@
     "abbr": "MT",
     "name": "Montana",
     "coverage": "restrictions",
-    "publisher": "Montana DNRC",
-    "officialUrl": "https://mt.gov/fire",
+    "publisher": "Montana DEQ, Montana DNRC and local agencies",
+    "officialUrl": "https://gis.mtdeq.us/portal/apps/instant/sidebar/index.html?appid=f6169ce9ad4a43098e1c89a909ea07e4",
     "extraUrls": [
+      {
+        "label": "Montana DEQ open burning seasons and guidance",
+        "url": "https://prod-deq.mt.gov/air/Programs/burning"
+      },
       {
         "label": "DNRC fire restrictions dashboard",
         "url": "https://www.arcgis.com/apps/dashboards/86668bab4c2248f09c1b70b546bff420"
+      },
+      {
+        "label": "Gallatin County fire district status",
+        "url": "https://www.readygallatin.com/residents/open-burning/"
+      },
+      {
+        "label": "Gallatin County permit activation",
+        "url": "https://gallatinburnpermits.com/"
+      },
+      {
+        "label": "Missoula County outdoor burning seasons",
+        "url": "https://www.missoulacounty.gov/9652"
+      },
+      {
+        "label": "Participating county permits and daily restrictions",
+        "url": "https://app.egovmt.com/burnpermit/"
       }
     ],
-    "notes": "Counties, the state, tribes and federal land managers each set fire restrictions for their own land in Montana."
+    "notes": "Montana DEQ posts daily fall air-quality limits for open burning in parts of western Montana. County and district fire officials manage local permits and closures. Tribal, state and federal land managers issue separate fire restrictions for their jurisdictions. Check the permit issuer and land manager for your location."
   },
   {
     "abbr": "NE",

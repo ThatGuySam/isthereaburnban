@@ -5,7 +5,7 @@ import { syncfusionGridRows, webFormsPost } from "./aspnet";
 import { arcgisDateOnly, arcgisEditWindow, arcgisLocalDate, arcgisRows, codedDomains, dataLastEditDate, findOperationalLayers, queryArcgis } from "./arcgis";
 import { activeRule, calendarDayWindows, CALENDAR_RULES } from "./calendar";
 import { civicPlusAlertDetails, civicPlusNotices, civicPlusUrl } from "./civicplus";
-import { localDayWindow, parseWeekdayDate, reportWindow } from "./dates";
+import { localDayWindow, parseWeekdayDate, reportWindow, weekdayOnOrAfter } from "./dates";
 import { decodeFeed, parseCsv, parseDotNetJsonDate, parseFeed, parseJson } from "./feeds";
 import { blockAfterHeading, extractHtml, extractHtmlGrid, localClock, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, US_ZONES } from "./html";
 import { BlockedError, fetchSource, HttpError, pacedTextReader, USER_AGENT } from "./http";
@@ -57,6 +57,15 @@ test("weekday-dated headings require a real date and a matching weekday", () => 
   expect(parseWeekdayDate("Monday Nov 24", 2026)).toBeNull();
   expect(parseWeekdayDate("February 29, 2024")).toBeNull();
   expect(parseWeekdayDate("Thursday February 29, 2026")).toBeNull();
+});
+
+test("weekday-only forecasts resolve within a bounded publisher-local horizon", () => {
+  expect(weekdayOnOrAfter("2026-11-23", "Tuesday", 3)).toBe("2026-11-24");
+  expect(weekdayOnOrAfter("2026-12-31", "Sunday", 3)).toBe("2027-01-03");
+  expect(weekdayOnOrAfter("2026-11-20", "Monday", 2)).toBeNull();
+  expect(weekdayOnOrAfter("2026-11-20", "Friday", 0)).toBe("2026-11-20");
+  expect(weekdayOnOrAfter("2026-02-30", "Monday", 3)).toBeNull();
+  expect(weekdayOnOrAfter("2026-11-23", "Weekend", 3)).toBeNull();
 });
 
 test("ArcGIS DateOnly fields accept only valid ISO calendar dates", () => {

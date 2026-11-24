@@ -99,6 +99,14 @@ export function shiftDay(date: string, days: number): string {
   return new Date(Date.parse(date + "T00:00:00Z") + days * 86_400_000).toISOString().slice(0, 10);
 }
 
+/** Resolve a named weekday within a publisher's short forecast horizon, in local dates. */
+export function weekdayOnOrAfter(date: string, weekday: string, maxDaysAhead: number): string | null {
+  const day = WEEKDAYS.indexOf(weekday.trim().toLowerCase());
+  if (day < 0 || parseUsDate(date) !== date) return null;
+  const ahead = (day - new Date(date).getUTCDay() + 7) % 7;
+  return ahead <= maxDaysAhead ? shiftDay(date, ahead) : null;
+}
+
 /** UTC instants bounding one publisher-local date, including 23- and 25-hour days. */
 export function localDayWindow(date: string, zone: string) {
   const validFrom = atLocalTime(date, 0, zone);

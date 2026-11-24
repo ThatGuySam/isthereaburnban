@@ -40,6 +40,10 @@ import { parseNinjaRows, parseWpItems } from "../src/worker/sources/lib/wordpres
 import { mergeSources, type SourceInput } from "../src/worker/sources/merge";
 import { miPermits, parseMichiganPermits } from "../src/worker/sources/mi/permits";
 import { mnRestrictions, parseMinnesotaRestrictions } from "../src/worker/sources/mn/restrictions";
+import { mtDeqFall, parseDeqFall } from "../src/worker/sources/mt/deq-fall";
+import { mtDnrcRestrictions, parseDnrcRestrictions } from "../src/worker/sources/mt/dnrc";
+import { parseGallatin } from "../src/worker/sources/mt/gallatin";
+import { mtMissoulaSeasons, parseMissoulaSeasons } from "../src/worker/sources/mt/missoula";
 import { njRestrictions, parseNjRestrictions } from "../src/worker/sources/nj/restrictions";
 import { nwsFireWeather, parseNwsAlerts } from "../src/worker/sources/nws/alerts";
 import { ohSeasonal, parseOhioSeasonal } from "../src/worker/sources/oh/seasonal";
@@ -140,6 +144,16 @@ const utOrders = utf8("ut/fixtures/orders-2026-11-24.json");
 const utStatute = utf8("ut/fixtures/code-index-2026-11-24.html");
 const parseUtOrders = () => parseUtahOrders(JSON.parse(utLayer), JSON.parse(utOrders), utCaptured);
 const parseUtStatute = (time = summerDay) => parseUtahSeasonal(utStatute, time);
+const mtCaptured = new Date("2026-11-24T09:25:38Z");
+const mtDeq = utf8("mt/fixtures/deq-fall-2026-11-24.json");
+const mtDnrcLayer = utf8("mt/fixtures/dnrc-layer-2026-11-24.json");
+const mtDnrcOrders = utf8("mt/fixtures/dnrc-orders-2026-11-24.json");
+const mtGallatin = utf8("mt/fixtures/gallatin-2026-11-24.html");
+const mtMissoula = utf8("mt/fixtures/missoula-2026-11-24.html");
+const parseMtDeq = () => parseDeqFall(JSON.parse(mtDeq), mtCaptured);
+const parseMtDnrc = () => parseDnrcRestrictions(JSON.parse(mtDnrcLayer), JSON.parse(mtDnrcOrders), mtCaptured);
+const parseMtGallatin = () => parseGallatin(mtGallatin, new Date("2026-11-20T19:00:00Z"));
+const parseMtMissoula = async () => parseMissoulaSeasons(await extractHtml(mtMissoula), mtCaptured);
 const akPermitLayer = utf8("ak/fixtures/permit-layer-2026-11-24.json");
 const akPermitZones = utf8("ak/fixtures/permit-zones-2026-11-24.json");
 const akFireSeason = utf8("ak/fixtures/as-41-15-050-2026-11-24.html");
@@ -219,6 +233,9 @@ recordedInputs.push(
   { source: idSeasonal, rows: await parseIdStatuteFixture(idCaptured), checked: idCaptured.toISOString() },
   { source: utFfslFireOrders, rows: parseUtOrders(), checked: utCaptured.toISOString() },
   { source: utClosedFireSeason, rows: parseUtStatute(utCaptured), checked: utCaptured.toISOString() },
+  { source: mtDeqFall, rows: parseMtDeq(), checked: mtCaptured.toISOString() },
+  { source: mtDnrcRestrictions, rows: parseMtDnrc(), checked: mtCaptured.toISOString() },
+  { source: mtMissoulaSeasons, rows: await parseMtMissoula(), checked: mtCaptured.toISOString() },
   { source: nwsFireWeather, rows: [], fireWeather: parseNwsLive(), checked: nwsCaptured.toISOString() },
 );
 
@@ -287,6 +304,10 @@ const jobs: Array<[string, () => unknown]> = [
   ["ID closed fire season and calendar", parseIdStatuteFixture],
   ["UT FFSL fire order polygons", parseUtOrders],
   ["UT closed fire season and calendar", parseUtStatute],
+  ["MT DEQ fall open-burning decisions", parseMtDeq],
+  ["MT DNRC interagency ArcGIS dashboard", parseMtDnrc],
+  ["MT Gallatin district status table", parseMtGallatin],
+  ["MT Missoula seasonal closures", parseMtMissoula],
   ["AK DNR permit zone statuses", parseAkZones],
   ["AK DNR fire-season permit law", parseAkSummer],
   ["AK DEC winter open-burning rule", parseAkWinter],

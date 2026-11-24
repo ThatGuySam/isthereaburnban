@@ -18,7 +18,7 @@ export function matchKey(name: string): string {
 const byStateKey = new Map<string, County>();
 for (const c of COUNTIES) byStateKey.set(`${c.state}:${matchKey(c.name)}`, c);
 
-const ALIASES: Record<string, string> = { "FL:dade": "FL:miamidade" };
+const ALIASES: Record<string, string> = { "FL:dade": "FL:miamidade", "MT:lewisclark": "MT:lewisandclark" };
 
 export function countyByName(state: string, name: string): County | undefined {
   const k = `${state}:${matchKey(name)}`;
