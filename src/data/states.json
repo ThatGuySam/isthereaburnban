@@ -941,10 +941,32 @@
   {
     "abbr": "WV",
     "name": "West Virginia",
-    "coverage": "directory",
+    "coverage": "restrictions",
     "publisher": "West Virginia Division of Forestry",
     "officialUrl": "https://wvforestry.com/fire-laws/",
-    "notes": "West Virginia limits outdoor burning hours statewide in spring and fall fire seasons. The Governor can issue emergency bans."
+    "extraUrls": [
+      {
+        "label": "Governor's news and orders",
+        "url": "https://governor.wv.gov/allnews/all"
+      },
+      {
+        "label": "Secretary of State Executive Journal",
+        "url": "https://apps.sos.wv.gov/adlaw/executivejournal/"
+      },
+      {
+        "label": "West Virginia DEP open burning rules",
+        "url": "https://dep.wv.gov/DAQ/CANDE/Pages/default.aspx"
+      },
+      {
+        "label": "County emergency management contacts",
+        "url": "https://emd.wv.gov/document-search/west-virginia-local-emergency-management-contact-information"
+      },
+      {
+        "label": "Berkeley County outdoor burning",
+        "url": "https://berkeleywv.org/330/Outdoor-Burning"
+      }
+    ],
+    "notes": "West Virginia limits covered outdoor burning statewide from 7 a.m. to 5 p.m. Eastern in March–May and October–December. The Forestry director can issue emergency bans with the Governor's approval. Ask Forestry and your local fire authority about current orders, permits and rules at your address."
   },
   {
     "abbr": "WI",

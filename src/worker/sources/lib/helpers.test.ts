@@ -11,7 +11,7 @@ import { blockAfterHeading, extractHtml, extractHtmlGrid, localClock, parseEndDa
 import { BlockedError, fetchSource, HttpError, pacedSourceReader, pacedTextReader, USER_AGENT } from "./http";
 import { manualPdf } from "./pdf";
 import { parseSharePointItems, parseSharePointPage, sharePointListItems, sharePointListUrl, sharePointRows } from "./sharepoint";
-import { ninjaTablesUrl, parseNinjaRows, parseWpItems, parseWpPage, wpRestEndpoint, wpRestUrl } from "./wordpress";
+import { ninjaTablesUrl, parseNinjaRows, parseWpItems, parseWpPage, parseWpPageBlocks, wpRestEndpoint, wpRestUrl } from "./wordpress";
 import { checkLink, htmlLinks } from "../../../../scripts/check-links";
 
 const data = (name) => readFileSync(new URL(`./fixtures/${name}`, import.meta.url));
@@ -414,13 +414,19 @@ test("WordPress builds a custom REST route below a subdirectory install", () => 
   expect(url.searchParams.get("county")).toBe("New City");
 });
 
-test("WordPress validates a published page and keeps its rendered structure", () => {
+test("WordPress validates a published page and keeps its rendered structure", async () => {
   const url = "https://county.gov/fire-status/";
   const expected = { id: 12, url };
   const page = { id: 12, link: url, status: "publish", modified_gmt: "2026-02-03T19:25:00",
     content: { rendered: "<h2>Current</h2><p>Stage 1</p>", protected: false } };
   expect(new URL(wpRestUrl("https://county.gov", "pages/12")).pathname).toBe("/wp-json/wp/v2/pages/12");
   expect(parseWpPage(page, expected)).toEqual({ html: page.content.rendered, modified: "2026-02-03T19:25:00Z" });
+  expect(await parseWpPageBlocks(page, expected, new Date("2026-02-03T19:25:00Z"))).toEqual({
+    blocks: [{ tag: "h2", text: "Current" }, { tag: "p", text: "Stage 1" }],
+    modified: "2026-02-03T19:25:00Z",
+  });
+  await expect(parseWpPageBlocks(page, expected, new Date("2026-02-03T19:24:59Z")))
+    .rejects.toThrow("Future WordPress page update");
   expect(() => parseWpPage({ ...page, id: 18 }, expected)).toThrow("Invalid public WordPress page");
   expect(() => parseWpPage({ ...page, status: "draft" }, expected)).toThrow("Invalid public WordPress page");
   expect(() => parseWpPage({ ...page, modified_gmt: "2026-02-30T19:25:00" }, expected)).toThrow("Invalid public WordPress page");

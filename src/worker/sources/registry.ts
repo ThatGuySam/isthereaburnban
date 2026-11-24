@@ -60,6 +60,7 @@ import { waEcologyAir } from "./wa/ecology-air";
 import { waKingFireSafety } from "./wa/king-fire-safety";
 import { waPugetSoundAir } from "./wa/puget-sound";
 import { wiPermits } from "./wi/permits";
+import { wvForestryFireSeason } from "./wv/seasonal";
 import { wyCountyOrders } from "./wy/county-orders";
 import { wyStateLands } from "./wy/state-lands";
 
@@ -149,6 +150,14 @@ export const SOURCES: readonly Source[] = [
   vaSeasonal,
   vaRapidanAlerts,
   vaShenandoahAlerts,
+  wvForestryFireSeason,
+  {
+    id: "wv-governor-fire-orders", state: "WV", scope: "state", stack: "Drupal / HTML news archive", mode: "manual", cadence: null,
+    sourceName: "West Virginia Governor's Office",
+    sourceUrl: "https://governor.wv.gov/allnews/all",
+    officialUrl: "https://governor.wv.gov/allnews/all",
+    error: "The news archive has announcements but no authoritative current fire order list. Check signed orders with the Secretary of State or Division of Forestry.",
+  },
   {
     id: "va-dof-local-burn-bans", state: "VA", scope: "part", stack: "WordPress / HTML and REST", mode: "manual", cadence: null,
     sourceName: "Virginia Department of Forestry",

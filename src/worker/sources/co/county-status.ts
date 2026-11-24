@@ -5,7 +5,7 @@ import { msToIso } from "../lib/arcgis";
 import { atLocalTime, localClock, parseUsDate, US_ZONES } from "../lib/dates";
 import { blockAfterHeading, extractHtml, htmlText, parseHtml, type HtmlParts } from "../lib/html";
 import { fetchSource } from "../lib/http";
-import { parseWpPage, wpRestUrl } from "../lib/wordpress";
+import { parseWpPageBlocks, wpRestUrl } from "../lib/wordpress";
 import type { ActiveSource } from "../types";
 
 const DOUGLAS_URL = "https://dcsheriff.net/sheriffs-office/divisions/emergency-management/fire-restrictions/";
@@ -48,14 +48,8 @@ function countyReport(publisher: Publisher, name: string, now: Date, decision: D
   }];
 }
 
-async function wpCountyPage(data: unknown, id: number, url: string, now: Date) {
-  const { html, modified } = parseWpPage(data, { id, url });
-  if (Date.parse(modified) > now.getTime()) throw new Error(`Future WordPress page update: ${url}`);
-  return { blocks: (await extractHtml(html)).blocks, modified };
-}
-
 export async function parseDouglasFire(data: unknown, now: Date): Promise<CountyStatus[]> {
-  const { blocks, modified } = await wpCountyPage(data, 5828, DOUGLAS_URL, now);
+  const { blocks, modified } = await parseWpPageBlocks(data, { id: 5828, url: DOUGLAS_URL }, now);
   const scope = /^Fire Restrictions For Unincorporated Douglas County, Colorado$/i;
   const headings = blocks.filter(({ tag, text }) => tag === "h2" && scope.test(text));
   if (headings.length !== 1) throw new Error("Douglas County: expected one jurisdiction heading");
@@ -81,7 +75,7 @@ export async function parseDouglasFire(data: unknown, now: Date): Promise<County
 }
 
 export async function parseElPasoFire(data: unknown, now: Date): Promise<CountyStatus[]> {
-  const { blocks, modified } = await wpCountyPage(data, 108, EL_PASO_URL, now);
+  const { blocks, modified } = await parseWpPageBlocks(data, { id: 108, url: EL_PASO_URL }, now);
   const heading = /^Current Fire Restrictions$/i;
   if (blocks.filter(({ tag, text }) => tag === "h2" && heading.test(text)).length !== 1 ||
       !blocks.some(({ tag, text }) => tag === "p" && /^Note: Fire Restriction information .* for the unincorporated area of El Paso County, Colorado, pursuant to Ordinance No\. 22-001/i.test(text))) {

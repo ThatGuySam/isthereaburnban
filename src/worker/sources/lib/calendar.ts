@@ -278,10 +278,11 @@ export const CALENDAR_RULES: Record<string, CalendarRule> = {
     note: "From February 15 through April 30, Virginia prohibits starting covered fires between midnight and 4 p.m. Eastern. The law exempts federal lands, orchard and vineyard frost protection, and certain approved prescribed burns. Check local rules as well.",
   },
   WV: {
-    state: "WV", zone: US_ZONES.Eastern, status: "restricted", scope: "state", scopeNote: "West Virginia fire seasons",
+    state: "WV", zone: US_ZONES.Eastern, status: "restricted", scope: "state",
+    scopeNote: "Covered outdoor burning during West Virginia's statewide forest fire seasons",
     officialUrl: "https://wvforestry.com/fire-laws/",
     label: "Daytime fire-season burning restriction", seasons: [["03-01", "05-31"], ["10-01", "12-31"]], hours: [420, 1020],
-    note: "West Virginia restricts outdoor burning from 7 a.m. to 5 p.m. during March–May and October–December. See the state rules for small fires, snow cover and commercial permits.",
+    note: "From March 1 through May 31 and October 1 through December 31, West Virginia restricts covered outdoor burning from 7 a.m. to 5 p.m. Eastern. Fires must be out by 7 a.m. The law has exceptions for certain small attended fires, snow cover of at least one inch and approved permits. Check for emergency orders and local rules before burning.",
   },
   WY_STATE_LANDS: {
     state: "WY", zone: US_ZONES.Mountain, status: "restricted", scope: "part",
