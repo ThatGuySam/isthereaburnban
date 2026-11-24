@@ -53,6 +53,9 @@ import { tnSeasonalBurnPermits } from "./tn/seasonal";
 import type { ActiveSource, Source } from "./types";
 import { utFfslFireOrders } from "./ut/orders";
 import { utClosedFireSeason } from "./ut/seasonal";
+import { vaRapidanAlerts } from "./va/rapidan";
+import { vaSeasonal } from "./va/seasonal";
+import { vaShenandoahAlerts } from "./va/shenandoah";
 import { waEcologyAir } from "./wa/ecology-air";
 import { waKingFireSafety } from "./wa/king-fire-safety";
 import { waPugetSoundAir } from "./wa/puget-sound";
@@ -143,6 +146,16 @@ export const SOURCES: readonly Source[] = [
   tnSeasonalBurnPermits,
   nyDecBrushBurning,
   nyNycBarbecuing,
+  vaSeasonal,
+  vaRapidanAlerts,
+  vaShenandoahAlerts,
+  {
+    id: "va-dof-local-burn-bans", state: "VA", scope: "part", stack: "WordPress / HTML and REST", mode: "manual", cadence: null,
+    sourceName: "Virginia Department of Forestry",
+    sourceUrl: "https://www.dof.virginia.gov/wp-json/wp/v2/posts?search=burn%20ban",
+    officialUrl: "https://www.dof.virginia.gov/wildland-prescribed-fire/fire-laws/local-burn-bans/",
+    error: "DOF refers current local orders to local fire officials. The WordPress REST search returned HTTP 403 during verification.",
+  },
   {
     id: "ny-governor-fire-proclamations", state: "NY", scope: "state", stack: "Drupal HTML / signed PDFs", mode: "manual", cadence: null,
     sourceName: "New York Governor's Office",

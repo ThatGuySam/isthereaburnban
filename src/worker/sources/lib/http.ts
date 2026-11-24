@@ -27,6 +27,8 @@ type Options = RequestInit & {
   timeoutMs?: number;
   attempts?: number;
   maxBytes?: number;
+  /** Reject responses older than this using the HTTP Date and Age headers. */
+  maxResponseAgeMs?: number;
   fetchImpl?: HttpFetch;
 };
 
@@ -108,7 +110,7 @@ function retryDelay(response: Response | undefined, attempt: number): number {
 }
 
 export async function fetchSource(url: string, options: Options = {}): Promise<SourceReply> {
-  const { fetchImpl = fetch, timeoutMs = 15_000, attempts = 2, maxBytes = 2_000_000, validators, ...init } = options;
+  const { fetchImpl = fetch, timeoutMs = 15_000, attempts = 2, maxBytes = 2_000_000, maxResponseAgeMs, validators, ...init } = options;
   const headers = new Headers(init.headers);
   if (!headers.has("user-agent")) headers.set("user-agent", USER_AGENT);
   if (!headers.has("accept")) headers.set("accept", "*/*");
@@ -126,6 +128,13 @@ export async function fetchSource(url: string, options: Options = {}): Promise<S
       const finalUrl = response.url || url;
       const blocked = blockedReason(response.status, response.headers);
       if (blocked) throw new BlockedError(finalUrl, response.status, blocked);
+      if (maxResponseAgeMs !== undefined && (response.ok || response.status === 304)) {
+        const sentAt = Date.parse(response.headers.get("date") ?? "");
+        const age = response.headers.get("age") ?? "0";
+        if (!Number.isFinite(sentAt) || !/^\d+$/.test(age) || Math.max(Date.now() - sentAt, Number(age) * 1000) > maxResponseAgeMs) {
+          throw new Error(`${finalUrl} -> stale or undated HTTP response`);
+        }
+      }
       const received = {
         etag: response.headers.get("etag") ?? undefined,
         lastModified: response.headers.get("last-modified") ?? undefined,

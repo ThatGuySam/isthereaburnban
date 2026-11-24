@@ -271,10 +271,11 @@ export const CALENDAR_RULES: Record<string, CalendarRule> = {
     note: "June 1 through October 31, Utah requires a written permit and advance notification for covered burning. The state forester may change the season. Check the statute for exemptions and ask the local fire authority about permits, air-quality rules and Red Flag Warning rules.",
   },
   VA: {
-    state: "VA", zone: US_ZONES.Eastern, status: "restricted", scope: "part", scopeNote: "Within 300 feet of woods or vegetation that could carry fire to woods",
-    officialUrl: "https://www.dof.virginia.gov/wildland-prescribed-fire/fire-laws/4-pm-burning-law/",
-    label: "Virginia 4 p.m. burning restriction", seasons: [["02-15", "04-30"]], hours: [0, 960],
-    note: "February 15 through April 30, Virginia restricts open-air burning before 4 p.m. near woods or dry vegetation that could carry fire to woods. Exceptions and local rules apply.",
+    state: "VA", zone: US_ZONES.Eastern, status: "restricted", scope: "part",
+    scopeNote: "Covered fires in or within 300 feet of woodland, brushland or fields with dry or flammable vegetation in areas organized for forest fire control",
+    officialUrl: "https://law.lis.virginia.gov/vacode/title10.1/chapter11/section10.1-1142/",
+    label: "Virginia 4 p.m. burning restriction", seasons: [["02-15", "04-30"]], hours: [0, 16 * 60],
+    note: "From February 15 through April 30, Virginia prohibits starting covered fires between midnight and 4 p.m. Eastern. The law exempts federal lands, orchard and vineyard frost protection, and certain approved prescribed burns. Check local rules as well.",
   },
   WV: {
     state: "WV", zone: US_ZONES.Eastern, status: "restricted", scope: "state", scopeNote: "West Virginia fire seasons",

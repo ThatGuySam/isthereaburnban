@@ -70,6 +70,9 @@ import { parseTennesseePermitHolds, parseTennesseePermitRoster, tnForestryPermit
 import { parseTennesseePermitSeason, tnSeasonalBurnPermits } from "../src/worker/sources/tn/seasonal";
 import { parseUtahOrders, utFfslFireOrders } from "../src/worker/sources/ut/orders";
 import { parseUtahSeasonal, utClosedFireSeason } from "../src/worker/sources/ut/seasonal";
+import { parseRapidanAlerts, vaRapidanAlerts } from "../src/worker/sources/va/rapidan";
+import { parseVirginiaSeasonal, vaSeasonal } from "../src/worker/sources/va/seasonal";
+import { parseShenandoahAlerts, vaShenandoahAlerts } from "../src/worker/sources/va/shenandoah";
 import { parseEcologyAir, waEcologyAir } from "../src/worker/sources/wa/ecology-air";
 import { parseKingFireSafety, waKingFireSafety } from "../src/worker/sources/wa/king-fire-safety";
 import { parsePugetSound, waPugetSoundAir } from "../src/worker/sources/wa/puget-sound";
@@ -103,6 +106,13 @@ const nyDecHtml = utf8("ny/fixtures/dec-open-burning-2026-11-24.html");
 const nyNycHtml = utf8("ny/fixtures/nyc-311-barbecuing-2026-11-24.html");
 const parseNyDecFixture = async () => parseDecBrushBurning(await extractHtml(nyDecHtml), now);
 const parseNyNycFixture = async () => parseNycBarbecuing(await extractHtml(nyNycHtml), now);
+const vaStatute = utf8("va/fixtures/section-10.1-1142-2026-11-24.html");
+const vaRapidanHtml = utf8("va/fixtures/rapidan-wma-2026-11-24.html");
+const vaParkJson = utf8("va/fixtures/shen-park-alerts-2026-11-24.json");
+const vaSpring = new Date("2027-02-15T05:00:00Z");
+const parseVaStatuteFixture = async (at: Date) => parseVirginiaSeasonal(await extractHtml(vaStatute), at);
+const parseVaRapidanFixture = async () => parseRapidanAlerts(await extractHtml(vaRapidanHtml), now);
+const parseVaParkFixture = () => parseShenandoahAlerts(JSON.parse(vaParkJson), now);
 const ohStatute = utf8("oh/fixtures/section-1503.18-2026-11-24.html");
 const gaGwinnettHtml = utf8("ga/fixtures/gwinnett-2026-11-24.html");
 const gaSummerHtml = utf8("ga/fixtures/epd-summer-2026-11-24.html");
@@ -303,6 +313,9 @@ recordedInputs.push(
   { source: mnRestrictions, rows: parseMnFixture(), checked },
   { source: nyDecBrushBurning, rows: await parseNyDecFixture(), checked },
   { source: nyNycBarbecuing, rows: await parseNyNycFixture(), checked },
+  { source: vaSeasonal, rows: await parseVaStatuteFixture(now), checked },
+  { source: vaRapidanAlerts, rows: await parseVaRapidanFixture(), checked },
+  { source: vaShenandoahAlerts, rows: parseVaParkFixture(), checked },
   { source: ohSeasonal, rows: await parseOhFixture(), checked },
   { source: gaEpdNonSummer, rows: await parseGaNonSummerFixture(), checked },
   { source: azPimaWildfire, rows: await parseAzPimaFixture(), checked },
@@ -421,6 +434,9 @@ const jobs: Array<[string, () => unknown]> = [
   ["TN Forestry permit-season HTML and calendar", parseTnSeason],
   ["NY DEC brush rules and Fire Towns", parseNyDecFixture],
   ["NYC 311 outdoor barbecuing rules", parseNyNycFixture],
+  ["VA 4 p.m. statute and calendar", () => parseVaStatuteFixture(vaSpring)],
+  ["VA DWR Rapidan WordPress notice table", parseVaRapidanFixture],
+  ["VA NPS Shenandoah park-alert JSON", parseVaParkFixture],
   ["NV Spring Mountains Drupal order table", parseNvForestFixture],
   ["UT FFSL fire order polygons", parseUtOrders],
   ["UT closed fire season and calendar", parseUtStatute],

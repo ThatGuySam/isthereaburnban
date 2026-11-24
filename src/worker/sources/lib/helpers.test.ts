@@ -227,6 +227,20 @@ test("HTTP sends validators, retains them on 304 and retries unblocked transient
   expect(result).toEqual({ notModified: true, validators });
 });
 
+test("HTTP freshness checks both the response date and cache age when enabled", async () => {
+  const url = "https://example.gov/current-alerts";
+  const recent = new Date().toUTCString();
+  const old = new Date(Date.now() - 120_000).toUTCString();
+  const get = (headers) => fetchSource(url, {
+    attempts: 1, maxResponseAgeMs: 60_000,
+    fetchImpl: async () => new Response("[]", { headers }),
+  });
+  await expect(get({ date: recent, age: "0" })).resolves.toMatchObject({ notModified: false });
+  for (const headers of [{ date: old }, { date: recent, age: "120" }, { date: recent, age: "-1" }, {}]) {
+    await expect(get(headers)).rejects.toThrow("stale or undated HTTP response");
+  }
+});
+
 test("HTTP reliably peeks at a split challenge, preserves a normal body and caps bytes", async () => {
   const url = "https://example.gov/burn-bans";
   const stream = (chunks) => new ReadableStream({
