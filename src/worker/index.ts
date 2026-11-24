@@ -3,6 +3,8 @@ import { confirmEmail, subscribeEmail, unsubscribeEmail } from "./email";
 import type { Env } from "./env";
 import { DISCLAIMER, lookup, LookupError, resultSentence, statusFor } from "./lookup";
 import { handleMcp } from "./mcp";
+import { handleOps } from "./ops";
+import { CANARY_CRON, runCanary } from "./notify";
 import { handlePage, handleSitemap } from "./pages";
 import { subscribePush, unsubscribePush } from "./push";
 import { getSnapshot, refresh } from "./snapshot";
@@ -101,6 +103,7 @@ export default {
   async fetch(request, env, ctx): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname;
+    if (path === "/ops" || path.startsWith("/ops/")) return handleOps(request, env, url);
     try {
       if (path.startsWith("/api/")) return await api(request, env, url);
       if (path === "/mcp" || path.startsWith("/mcp/")) return await handleMcp(request, env, ctx);
@@ -114,8 +117,10 @@ export default {
     return env.ASSETS.fetch(request);
   },
 
-  async scheduled(_controller, env, ctx) {
-    ctx.waitUntil(refresh(env));
+  scheduled(controller, env, ctx) {
+    ctx.waitUntil(controller.cron === CANARY_CRON
+      ? runCanary(env, controller.scheduledTime)
+      : refresh(env, undefined, controller.scheduledTime));
   },
 } satisfies ExportedHandler<Env>;
 

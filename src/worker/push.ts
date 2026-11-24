@@ -1,12 +1,19 @@
 import { buildPushPayload, type PushSubscription } from "@block65/webcrypto-web-push";
-import type { Snapshot } from "../shared/types";
 import { cleanFipsList } from "./counties";
+import type { DeliveryOutcome } from "./delivery";
 import type { Env } from "./env";
-import { transitionMessage, type Transition } from "./snapshot";
+import type { Notice } from "./notification-message";
 
-type SubRow = { endpoint: string; p256dh: string; auth: string; fips_json: string };
+export type PushTarget = { endpoint: string; p256dh: string; auth: string };
 
-export async function subscribePush(env: Env, body: unknown): Promise<{ ok: boolean; error?: string; fips?: string[] }> {
+export function pushVapid(env: Env) {
+  const { VAPID_PUBLIC_KEY: publicKey, VAPID_PRIVATE_KEY: privateKey, VAPID_SUBJECT: subject } = env;
+  return publicKey && privateKey && subject ? { publicKey, privateKey, subject } : null;
+}
+
+export async function subscribePush(
+  env: Env, body: unknown, testDevice?: { canary: boolean },
+): Promise<{ ok: boolean; error?: string; fips?: string[] }> {
   const b = (body ?? {}) as { subscription?: { endpoint?: unknown; keys?: { p256dh?: unknown; auth?: unknown } }; fips?: unknown };
   const sub = b.subscription;
   const endpoint = typeof sub?.endpoint === "string" ? sub.endpoint : "";
@@ -15,6 +22,19 @@ export async function subscribePush(env: Env, body: unknown): Promise<{ ok: bool
   if (!endpoint.startsWith("https://") || endpoint.length > 1000 || !p256dh || !auth) return { ok: false, error: "subscription must include an https endpoint and keys.p256dh / keys.auth" };
   const fips = cleanFipsList(b.fips);
   if (!fips.length) return { ok: false, error: "fips must be a non-empty array of 5-digit county FIPS codes" };
+  if (testDevice) {
+    await env.DB.prepare(
+      `INSERT INTO push_subscriptions (endpoint, p256dh, auth, fips_json, created, is_test, is_canary, ops_id)
+       VALUES (?, ?, ?, ?, ?, 1, ?, ?)
+       ON CONFLICT(endpoint) DO UPDATE SET p256dh = excluded.p256dh, auth = excluded.auth,
+         is_test = 1, is_canary = excluded.is_canary, ops_id = COALESCE(push_subscriptions.ops_id, excluded.ops_id),
+         fips_json = CASE WHEN EXISTS (SELECT 1 FROM json_each(push_subscriptions.fips_json) WHERE value = ?)
+           THEN push_subscriptions.fips_json ELSE json_insert(push_subscriptions.fips_json, '$[#]', ?) END`,
+    ).bind(endpoint, p256dh, auth, JSON.stringify(fips), new Date().toISOString(),
+      Number(testDevice.canary), crypto.randomUUID(), fips[0], fips[0]).run();
+    return { ok: true, fips };
+  }
+
   await env.DB.prepare(
     `INSERT INTO push_subscriptions (endpoint, p256dh, auth, fips_json, created) VALUES (?, ?, ?, ?, ?)
      ON CONFLICT(endpoint) DO UPDATE SET p256dh = excluded.p256dh, auth = excluded.auth, fips_json = excluded.fips_json`,
@@ -31,34 +51,31 @@ export async function unsubscribePush(env: Env, body: unknown): Promise<{ ok: bo
   return { ok: true };
 }
 
-/** Send one notification per subscriber per changed county they follow. Gone subscriptions are deleted. */
-export async function notifyPush(env: Env, transitions: Transition[], snapshot: Snapshot): Promise<void> {
-  if (!env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY || !transitions.length) return;
-  const byFips = new Map(transitions.map((t) => [t.fips, t]));
-  const marks = transitions.map(() => "?").join(",");
-  const { results } = await env.DB.prepare(
-    `SELECT DISTINCT s.endpoint, s.p256dh, s.auth, s.fips_json FROM push_subscriptions s, json_each(s.fips_json) j WHERE j.value IN (${marks})`,
-  )
-    .bind(...byFips.keys())
-    .all<SubRow>();
+export async function sendPush(env: Env, target: PushTarget, notice: Notice): Promise<DeliveryOutcome> {
+  const vapid = pushVapid(env);
+  if (!vapid) return { result: "error", error: "VAPID is unavailable" };
+  const { kind, fips, title, body, url } = notice;
+  const tag = kind === "live" ? undefined : `${kind}-${fips}`;
+  const subscription: PushSubscription = {
+    endpoint: target.endpoint, expirationTime: null, keys: { p256dh: target.p256dh, auth: target.auth },
+  };
 
-  const vapid = { subject: env.VAPID_SUBJECT, publicKey: env.VAPID_PUBLIC_KEY, privateKey: env.VAPID_PRIVATE_KEY };
-  const gone: string[] = [];
-  await Promise.allSettled(
-    results.flatMap((row) => {
-      const subscription: PushSubscription = { endpoint: row.endpoint, expirationTime: null, keys: { p256dh: row.p256dh, auth: row.auth } };
-      const followed = (JSON.parse(row.fips_json) as string[]).filter((f) => byFips.has(f));
-      return followed.map(async (f) => {
-        const m = transitionMessage(byFips.get(f)!, snapshot);
-        const data = JSON.stringify({ title: m.title, body: m.body, url: m.url, fips: f });
-        const payload = await buildPushPayload({ data, options: { ttl: 6 * 3600, urgency: "high", topic: `f${f}` } }, subscription, vapid);
-        const res = await fetch(row.endpoint, payload);
-        if (res.status === 404 || res.status === 410) gone.push(row.endpoint);
-      });
-    }),
-  );
-  if (gone.length) {
-    const stmt = env.DB.prepare("DELETE FROM push_subscriptions WHERE endpoint = ?");
-    await env.DB.batch([...new Set(gone)].map((e) => stmt.bind(e)));
+  let payload;
+  try {
+    const data = JSON.stringify({ title, body, url, fips, tag });
+    payload = await buildPushPayload({
+      data, options: { ttl: 6 * 3600, urgency: "high", topic: tag ?? `f${fips}` },
+    }, subscription, vapid);
+  } catch {
+    return { result: "error", error: "Push encryption or VAPID signing failed" };
+  }
+
+  try {
+    const res = await fetch(target.endpoint, { ...payload, redirect: "error", signal: AbortSignal.timeout(10_000) });
+    if (res.ok) return { result: "accepted" };
+    const error = `Push HTTP ${res.status}`;
+    return { result: res.status === 404 || res.status === 410 ? "gone" : "error", error };
+  } catch {
+    return { result: "error", error: "Push request failed" };
   }
 }

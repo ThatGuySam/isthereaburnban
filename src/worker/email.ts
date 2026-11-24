@@ -1,7 +1,7 @@
-import type { Snapshot } from "../shared/types";
 import { cleanFipsList, COUNTY_BY_FIPS } from "./counties";
+import type { DeliveryOutcome } from "./delivery";
 import type { Env } from "./env";
-import { transitionMessage, type Transition } from "./snapshot";
+import type { Notice } from "./notification-message";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -9,14 +9,30 @@ function from(env: Env): string {
   return env.EMAIL_FROM || "Is There a Burn Ban? <alerts@isthereaburnban.com>";
 }
 
-async function sendEmail(env: Env, to: string, subject: string, text: string): Promise<void> {
+async function sendEmail(
+  env: Env, to: string, subject: string, text: string, idempotencyKey?: string,
+): Promise<string | undefined> {
   if (!env.RESEND_API_KEY) return;
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
-    headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, "content-type": "application/json" },
+    headers: {
+      authorization: `Bearer ${env.RESEND_API_KEY}`,
+      "content-type": "application/json",
+      ...(idempotencyKey ? { "idempotency-key": idempotencyKey } : {}),
+    },
+    signal: AbortSignal.timeout(10_000),
     body: JSON.stringify({ from: from(env), to: [to], subject, text }),
   });
-  if (!res.ok) throw new Error(`Resend HTTP ${res.status}`);
+  if (!res.ok) throw new ResendError(res.status);
+  const body: unknown = await res.json().catch(() => null);
+  if (body && typeof body === "object" && "id" in body &&
+      typeof body.id === "string" && /^[a-z0-9_-]{1,128}$/i.test(body.id)) return body.id;
+}
+
+class ResendError extends Error {
+  constructor(status: number) {
+    super(`Resend HTTP ${status}`);
+  }
 }
 
 function countyNames(fips: string[]): string {
@@ -69,25 +85,20 @@ export async function unsubscribeEmail(env: Env, token: string): Promise<boolean
   return (r.meta.changes ?? 0) > 0;
 }
 
-/** Email confirmed subscribers about changes to counties they follow (only when Resend is configured). */
-export async function notifyEmail(env: Env, transitions: Transition[], snapshot: Snapshot): Promise<void> {
-  if (!env.RESEND_API_KEY || !transitions.length) return;
-  const byFips = new Map(transitions.map((t) => [t.fips, t]));
-  const marks = transitions.map(() => "?").join(",");
-  const { results } = await env.DB.prepare(
-    `SELECT DISTINCT s.email, s.token, s.fips_json FROM email_subscriptions s, json_each(s.fips_json) j
-     WHERE s.confirmed_at IS NOT NULL AND s.unsubscribed_at IS NULL AND j.value IN (${marks})`,
-  )
-    .bind(...byFips.keys())
-    .all<{ email: string; token: string; fips_json: string }>();
+export async function sendAlertEmail(
+  env: Env, target: { email: string; token: string | null }, notices: Notice[], idempotencyKey: string,
+): Promise<DeliveryOutcome> {
+  if (!env.RESEND_API_KEY) return { result: "error", error: "Resend is unavailable" };
   const base = env.SITE_URL.replace(/\/$/, "");
-  await Promise.allSettled(
-    results.map((row) => {
-      const msgs = (JSON.parse(row.fips_json) as string[]).filter((f) => byFips.has(f)).map((f) => transitionMessage(byFips.get(f)!, snapshot));
-      const text =
-        msgs.map((m) => `${m.title}\n${m.body}\n${base}${m.url}`).join("\n\n") +
-        `\n\nInformational only. Always confirm with the official source before burning.\nUnsubscribe: ${base}/api/v1/email/unsubscribe?token=${row.token}\n`;
-      return sendEmail(env, row.email, msgs.length === 1 ? msgs[0].title : `Burn ban changes in ${msgs.length} counties`, text);
-    }),
-  );
+  const footer = target.token
+    ? `\nUnsubscribe: ${base}/api/v1/email/unsubscribe?token=${target.token}\n` : "";
+  const text = notices.map((m) => `${m.title}\n${m.body}\n${base}${m.url}`).join("\n\n") +
+    "\n\nInformational only. Always confirm with the official source before burning." + footer;
+  const subject = notices.length === 1 ? notices[0].title : `Burn ban changes in ${notices.length} counties`;
+  try {
+    const providerId = await sendEmail(env, target.email, subject, text, idempotencyKey);
+    return { result: "accepted", providerId };
+  } catch (err) {
+    return { result: "error", error: err instanceof ResendError ? err.message : "Resend request failed" };
+  }
 }

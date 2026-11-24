@@ -8,6 +8,9 @@ export interface Env {
   VAPID_SUBJECT: string;
   RESEND_API_KEY?: string; // secret; when absent, email signups are stored but not sent
   EMAIL_FROM?: string;
+  DASH_TOKEN?: string;
+  PUSH_CANARY_ENABLED?: string;
+  PUSH_CANARY_FIPS?: string;
 }
 
 export const SNAPSHOT_KEY = "snapshot:v1";

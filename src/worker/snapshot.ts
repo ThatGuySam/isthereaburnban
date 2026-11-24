@@ -1,13 +1,13 @@
 import type { CountyStatus, Snapshot, SourceHealth } from "../shared/types";
 import { ADAPTERS, type Adapter } from "./adapters";
-import { countyPath } from "./counties";
-import { notifyEmail } from "./email";
 import { SNAPSHOT_KEY, type Env } from "./env";
-import { notifyPush } from "./push";
+import { CHANNELS } from "./notification-audience";
+import { transitionNotice, type Transition } from "./notification-message";
+import { notify } from "./notify";
+
+export type { Transition } from "./notification-message";
 
 export const STALE_MS = 48 * 60 * 60 * 1000;
-
-export type Transition = { fips: string; oldStatus: CountyStatus["status"]; newStatus: CountyStatus["status"]; at: string };
 
 /**
  * Pure: merge this run's adapter results into the previous snapshot.
@@ -104,7 +104,7 @@ export function withCurrentLinks(snapshot: Snapshot, adapters: Adapter[] = ADAPT
   return snapshot;
 }
 
-export async function refresh(env: Env, adapters: Adapter[] = ADAPTERS): Promise<Snapshot> {
+export async function refresh(env: Env, adapters: Adapter[] = ADAPTERS, scheduledTime?: number): Promise<Snapshot> {
   const prev = await readSnapshot(env, true);
   const results = await Promise.allSettled(adapters.map((a) => a.fetch()));
   const { snapshot, transitions } = buildSnapshot(prev, adapters, results, new Date());
@@ -117,7 +117,16 @@ export async function refresh(env: Env, adapters: Adapter[] = ADAPTERS): Promise
       const stmt = env.DB.prepare("INSERT INTO transitions (fips, old_status, new_status, at) VALUES (?, ?, ?, ?)");
       await env.DB.batch(transitions.map((t) => stmt.bind(t.fips, t.oldStatus, t.newStatus, t.at)));
       const alerts = transitions.filter((t) => t.oldStatus === "ban" || t.newStatus === "ban" || t.oldStatus === "restricted" || t.newStatus === "restricted");
-      if (alerts.length) await Promise.allSettled([notifyPush(env, alerts, snapshot), notifyEmail(env, alerts, snapshot)]);
+      if (alerts.length) {
+        await notify(env, {
+          mode: "send",
+          origin: "cron",
+          runId: `cron-${scheduledTime ?? snapshot.generated}`,
+          audience: { kind: "all" },
+          channels: CHANNELS,
+          notices: alerts.map((transition) => transitionNotice(transition, snapshot.counties[transition.fips])),
+        });
+      }
     } catch (err) {
       console.error("transition handling failed", err);
     }
@@ -128,14 +137,4 @@ export async function refresh(env: Env, adapters: Adapter[] = ADAPTERS): Promise
 /** Snapshot for a request; on a fresh deployment with an empty KV, build one inline. */
 export async function getSnapshot(env: Env): Promise<Snapshot> {
   return (await readSnapshot(env)) ?? refresh(env);
-}
-
-/** One-line human message for a county's change, shared by push and email. */
-export function transitionMessage(t: Transition, snapshot: Snapshot): { title: string; body: string; url: string; county: CountyStatus | undefined } {
-  const c = snapshot.counties[t.fips];
-  const where = c ? `${c.county}, ${c.state}` : t.fips;
-  const title =
-    t.newStatus === "ban" ? `Burn ban: ${where}` : t.newStatus === "restricted" ? `Burning restricted: ${where}` : t.oldStatus === "ban" ? `Burn ban lifted: ${where}` : `Burn status changed: ${where}`;
-  const body = c ? `${c.label}. Source: ${c.sourceName}. Check the official page before burning.` : "Check the official source before burning.";
-  return { title, body, url: countyPath(t.fips), county: c };
 }
