@@ -38,12 +38,12 @@ Give each town, city, fire or air district, tribal authority, or land manager a 
 | Inventory stack or shape | Shared helper | Sources and use |
 | --- | --- | --- |
 | Every HTTP publisher | `http.ts` | User agent, deadlines, bounded bodies, validators, retry backoff, and typed access blocks |
-| FeatureServer and MapServer | `arcgis.ts` | OK, TX, FL, IN, LA, IA, NJDEP divisions, AK permit zones, ND declarations, and WY county layers. Read coded domains, edit stamps, and all pages. |
+| FeatureServer and MapServer | `arcgis.ts` | OK, TX, FL, IN, LA, IA, NJDEP divisions, ODF regulated-use areas, AK permit zones, ND declarations, and WY county layers. Read coded domains, edit stamps, and all pages. |
 | Dashboard, Experience, WebMap | `arcgis.ts` | Southwest interagency Experience, Florida and Montana dashboards. Follow item data to operational layers and select the layers that establish status. |
 | CivicPlus/CivicEngage, Granicus and municipal portals | `civicplus.ts`, `html.ts` | Pima, Angel Fire, Placer and Greenwich notices, Puget Sound status table, Boulder govDelivery. Pair issue and lift notices by authority and effective date. |
 | WordPress | `wordpress.ts`, `html.ts` | Faulkner homepage and REST search, Mississippi Ninja Tables, WV Forestry and SC Forestry. Check that the REST content type actually carries status. |
 | Drupal, Sitecore, Liferay and other HTML | `html.ts`, `dates.ts` | CAL FIRE, CARB PFIRS, Vermont FPR, NC Forest Service. Stream tables and heading blocks with HTMLRewriter in Workers. The fallback runs in Bun. |
-| ASP.NET WebForms and DNN | `aspnet.ts`, `html.ts` | Michigan township lookup and Alabama Forestry. Prefer a direct GET before same-origin navigation postbacks. |
+| ASP.NET WebForms, MVC and DNN | `aspnet.ts`, `html.ts` | Michigan township lookup, Alabama Forestry and LRAPA's Syncfusion advisory grids. Prefer a direct GET. Read literal grid JSON without executing scripts. |
 | SharePoint | `sharepoint.ts`, `html.ts` | Kentucky current list, Maryland DNR, Oregon DEQ and Sacramento Metro AQMD. Use the rendered list or the public `_api/web/lists` endpoint where available. |
 | JSON, GeoJSON, CSV, RSS and Atom | `feeds.ts`, `dates.ts` | Wisconsin DNR, Texas UTF-16 RSS, Maine class days, Minnesota CGI, Idaho DEQ, Tennessee fiResponse. Verify the schema, date and explicit codes. |
 | PDF, signed order, map or workbook | `pdf.ts` for PDFs | Pennsylvania DCNR, Faulkner orders, Missouri SEMA. The manual PDF helper records Last-Modified and SHA-256. Use publisher HTML or a structured export for automated status. XLSX needs its own implementation and timing. |
@@ -78,7 +78,7 @@ bunx wrangler d1 migrations apply isthereaburnban --remote
 bun run deploy
 ```
 
-The current cadence schedules 194 polls and 24 merges on a normal day. If every poll changes, that is 412 KV writes and about 654 queue operations before retries. Registry tests budget two KV writes per changed poll and one per hourly publication, so future registrations need cadences that fit the free allocation. Keep an eye on the 2 MB D1 checkpoint size as the snapshot gains scoped orders. The 51-area timing exceeds the 7 ms review threshold in the benchmark. Recheck the production merge CPU before enabling that much coverage. [Workers limits](https://developers.cloudflare.com/workers/platform/limits/), [Queues limits](https://developers.cloudflare.com/queues/platform/limits/), [D1 limits](https://developers.cloudflare.com/d1/platform/limits/).
+The current cadence schedules 347 polls and 24 merges on a normal day. If every poll changes, that is 718 KV writes and about 1,113 queue operations before retries. Registry tests budget two KV writes per changed poll and one per hourly publication, so future registrations need cadences that fit the free allocation. Keep an eye on the 2 MB D1 checkpoint size as the snapshot gains scoped orders. The 51-area timing exceeds the 7 ms review threshold in the benchmark. Recheck the production merge CPU before enabling that much coverage. [Workers limits](https://developers.cloudflare.com/workers/platform/limits/), [Queues limits](https://developers.cloudflare.com/queues/platform/limits/), [D1 limits](https://developers.cloudflare.com/d1/platform/limits/).
 
 ### California verification
 
@@ -97,7 +97,7 @@ The fixture benchmark measured 1.20 ms p95 for CARB, 3.25 ms for merging and enc
 7. Arizona — `civicplus.ts` and `html.ts` for Pima, then `arcgis.ts` for interagency orders.
 8. Washington — `civicplus.ts` and `html.ts` for Puget Sound and King County, then `arcgis.ts` for DNR.
 9. Colorado — `wordpress.ts` and `html.ts` for Douglas County and Boulder notices.
-10. Oregon — `feeds.ts` and `wordpress.ts` for LRAPA's Lane County advisory.
+10. Oregon — `arcgis.ts` for ODF's public regulated-use view, `aspnet.ts` for LRAPA's Lane County grids and `html.ts` for the Willamette Valley bulletin.
 11. Kentucky — `sharepoint.ts` for the positive-only current list.
 12. Pennsylvania — `html.ts` and `pdf.ts` for DCNR's linked map and freshness check.
 13. Idaho — `feeds.ts` and `arcgis.ts` for DEQ GeoJSON and land stages.

@@ -529,15 +529,43 @@
     "abbr": "OR",
     "name": "Oregon",
     "coverage": "restrictions",
-    "publisher": "Oregon Department of Forestry",
+    "publisher": "Oregon DEQ, Oregon Department of Forestry and Lane Regional Air Protection Agency",
     "officialUrl": "https://www.oregon.gov/odf/fire/Pages/restrictions.aspx",
     "extraUrls": [
       {
         "label": "ODF public regulation map",
         "url": "https://gisapps.odf.oregon.gov/firerestrictions/pfr.html"
+      },
+      {
+        "label": "Oregon DEQ open burning rules and address map",
+        "url": "https://www.oregon.gov/deq/aq/pages/burning.aspx"
+      },
+      {
+        "label": "Lane County outdoor burning advisory",
+        "url": "https://www.lrapa-or.gov/air-quality-protection/burning-overview/outdoor-burning/#current-restrictions"
+      },
+      {
+        "label": "Lane County home wood heating advisory",
+        "url": "https://www.lrapa-or.gov/air-quality-protection/burning-overview/wood-heating/"
+      },
+      {
+        "label": "Willamette Valley daily open burning announcement",
+        "url": "https://smkmgt.com/burn.php"
+      },
+      {
+        "label": "Clackamas Fire outdoor burning",
+        "url": "https://clackamasfire.com/outdoor-burning-notice/"
+      },
+      {
+        "label": "Tualatin Valley Fire and Rescue outdoor burning",
+        "url": "https://www.tvfr.com/356/Outdoor-Burning"
+      },
+      {
+        "label": "BLM fire restrictions on Oregon public lands",
+        "url": "https://www.blm.gov/programs/fire/regional-info/oregon-washington/fire-restrictions"
       }
     ],
-    "notes": "ODF sets fire restrictions for the forest land it protects. DEQ, fire districts and federal land managers cover other areas."
+    "notes": "We track Oregon Department of Forestry restrictions on land it protects, Lane County air-quality advisories, and the Willamette Valley backyard burning bulletin for special control areas north of Lane County. Cities, counties, fire districts, Tribes and federal land managers can have their own rules. Check your location and type of burning before lighting a fire."
   },
   {
     "abbr": "PA",

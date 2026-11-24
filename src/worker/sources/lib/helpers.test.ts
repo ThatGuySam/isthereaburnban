@@ -1,7 +1,7 @@
 // @ts-nocheck -- bun test types are not installed.
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { webFormsPost } from "./aspnet";
+import { syncfusionGridRows, webFormsPost } from "./aspnet";
 import { arcgisEditWindow, arcgisLocalDate, arcgisRows, codedDomains, dataLastEditDate, findOperationalLayers, queryArcgis } from "./arcgis";
 import { activeRule, calendarDayWindows, CALENDAR_RULES } from "./calendar";
 import { civicPlusAlertDetails, civicPlusNotices, civicPlusUrl } from "./civicplus";
@@ -18,6 +18,14 @@ const data = (name) => readFileSync(new URL(`./fixtures/${name}`, import.meta.ur
 const text = (name) => data(name).toString();
 const json = (name) => JSON.parse(text(name));
 const date = (s) => new Date(s);
+
+test("Syncfusion reads literal JSON rows and rejects computed or ambiguous data sources", () => {
+  const rows = [{ name: 'A ]), "quoted"', values: [[1], [2]] }];
+  const widget = `<script>new ejs.grids.Grid({"dataSource": ejs.data.DataUtil.parse.isJson(${JSON.stringify(rows)})});</script>`;
+  expect(syncfusionGridRows(widget)).toEqual(rows);
+  expect(() => syncfusionGridRows(widget + widget)).toThrow("Expected one Syncfusion");
+  expect(() => syncfusionGridRows(widget.replace(JSON.stringify(rows), "window.currentRows"))).toThrow("Expected one Syncfusion");
+});
 
 test("HTML tables can follow a publisher's text labels instead of heading tags", async () => {
   const markup = '<h2>Orders</h2><p>Stage &amp; status</p><p>Scope</p><table><tr><td>Active</td></tr></table>';

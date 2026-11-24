@@ -1,3 +1,4 @@
+import { parseJson } from "./feeds";
 import { attributes } from "./html";
 import { getText } from "./http";
 
@@ -25,4 +26,14 @@ export function webFormsPost(html: string, pageUrl: string, eventTarget: string,
 export function postBack(html: string, pageUrl: string, eventTarget: string, eventArgument?: string, fields?: Record<string, string>, cookie?: string): Promise<string> {
   const { url, body } = webFormsPost(html, pageUrl, eventTarget, eventArgument, fields);
   return getText(url, { method: "POST", body, headers: cookie ? { cookie } : undefined, redirect: "error" });
+}
+
+/** Read a server-rendered Syncfusion grid's literal JSON array. Never execute the page's script. */
+export function syncfusionGridRows(html: string): unknown[] {
+  // Skip quoted JSON strings and nonfinal brackets. A closing bracket in a string is data.
+  const dataSource = /"dataSource"\s*:\s*ejs\.data\.DataUtil\.parse\.isJson\(\s*(\[(?:[^"\]\\]|"(?:[^"\\]|\\[\s\S])*"|\](?!\s*\)))*\])\s*\)/g;
+  const matches = html.matchAll(dataSource);
+  const first = matches.next().value;
+  if (!first || !matches.next().done) throw new Error("Expected one Syncfusion grid JSON data source");
+  return parseJson(first[1], Array.isArray);
 }

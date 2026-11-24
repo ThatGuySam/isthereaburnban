@@ -18,6 +18,9 @@ import { miPermits } from "./mi/permits";
 import { mnRestrictions } from "./mn/restrictions";
 import { njRestrictions } from "./nj/restrictions";
 import { ohSeasonal } from "./oh/seasonal";
+import { orLrapaHeating, orLrapaOutdoor } from "./or/lrapa";
+import { orOdfPublicUse } from "./or/odf";
+import { orWillametteBackyard } from "./or/willamette";
 import type { ActiveSource, Source } from "./types";
 import { waEcologyAir } from "./wa/ecology-air";
 import { waKingFireSafety } from "./wa/king-fire-safety";
@@ -69,6 +72,24 @@ export const SOURCES: readonly Source[] = [
   coEstesFire,
   coLarimerFire,
   coDenverAir,
+  orLrapaOutdoor,
+  orLrapaHeating,
+  orWillametteBackyard,
+  orOdfPublicUse,
+  {
+    id: "or-odf-edit-view", state: "OR", scope: "part", stack: "ArcGIS FeatureServer", mode: "manual", cadence: null,
+    sourceName: "Oregon Department of Forestry",
+    sourceUrl: "https://gis.odf.oregon.gov/odfags/rest/services/Hosted/Fire_Restriction_Edit_View/FeatureServer/0/query?where=1%3D1&outFields=*&returnGeometry=false&f=json",
+    officialUrl: "https://gisapps.odf.oregon.gov/firerestrictions/pfr.html",
+    error: "The edit view in the map config returned ArcGIS error 499 Token Required on 2026-11-24. The map reads a separate public view.",
+  },
+  {
+    id: "or-hillsboro-open-burning", state: "OR", scope: "part", stack: "Granicus / Vision HTML", mode: "manual", cadence: null,
+    sourceName: "City of Hillsboro Fire & Rescue",
+    sourceUrl: "https://www.hillsboro-oregon.gov/our-city/departments/fire/community-risk-reduction/burning-and-air-quality",
+    officialUrl: "https://www.hillsboro-oregon.gov/our-city/departments/fire/community-risk-reduction/burning-and-air-quality",
+    error: "The city burning rules and summer burn-ban notice returned HTTP 403 Access Denied on 2026-11-24.",
+  },
   {
     id: "co-dfpc-fire", state: "CO", scope: "part", stack: "Drupal / HTML directory", mode: "manual", cadence: null,
     sourceName: "Colorado Division of Fire Prevention and Control",

@@ -1,0 +1,206 @@
+{
+  "name": "Fire_Restriction",
+  "editingInfo": {
+    "lastEditDate": 1795198016847
+  },
+  "fields": [
+    {
+      "modelName": "district",
+      "nullable": true,
+      "editable": true,
+      "defaultValue": null,
+      "domain": {
+        "splitPolicy": "esriSPTDefaultValue",
+        "name": "protectionDistrict",
+        "description": "Protection district name",
+        "type": "codedValue",
+        "codedValues": [
+          {
+            "code": 0,
+            "name": "Statewide SCC"
+          },
+          {
+            "code": 51,
+            "name": "Tillamook"
+          },
+          {
+            "code": 52,
+            "name": "Astoria"
+          },
+          {
+            "code": 53,
+            "name": "Forest Grove"
+          },
+          {
+            "code": 55,
+            "name": "West Oregon"
+          },
+          {
+            "code": 58,
+            "name": "North Cascade"
+          },
+          {
+            "code": 71,
+            "name": "Southwest Oregon"
+          },
+          {
+            "code": 72,
+            "name": "Coos FPA"
+          },
+          {
+            "code": 73,
+            "name": "Douglas FPA"
+          },
+          {
+            "code": 77,
+            "name": "South Cascade"
+          },
+          {
+            "code": 78,
+            "name": "Western Lane"
+          },
+          {
+            "code": 95,
+            "name": "Central Oregon"
+          },
+          {
+            "code": 97,
+            "name": "Northeast Oregon"
+          },
+          {
+            "code": 98,
+            "name": "Klamath-Lake"
+          },
+          {
+            "code": 99,
+            "name": "Walker Range FPA"
+          },
+          {
+            "code": 5,
+            "name": "Northwest"
+          }
+        ],
+        "mergePolicy": "esriMPTDefaultValue"
+      },
+      "name": "district",
+      "alias": "District",
+      "type": "esriFieldTypeSmallInteger"
+    },
+    {
+      "modelName": "debrisburning",
+      "nullable": true,
+      "editable": true,
+      "defaultValue": null,
+      "domain": {
+        "splitPolicy": "esriSPTDefaultValue",
+        "name": "RestrictionsDebrisBurning",
+        "description": "Detailed Debris Burning Restrictions",
+        "type": "codedValue",
+        "codedValues": [
+          {
+            "code": 0,
+            "name": "NA"
+          },
+          {
+            "code": 1,
+            "name": "No Debris Burning"
+          },
+          {
+            "code": 2,
+            "name": "Debris Burn Permit Required"
+          }
+        ],
+        "mergePolicy": "esriMPTDefaultValue"
+      },
+      "name": "debrisburning",
+      "alias": "DebrisBurning",
+      "type": "esriFieldTypeSmallInteger"
+    },
+    {
+      "modelName": "openfire",
+      "nullable": true,
+      "editable": true,
+      "defaultValue": null,
+      "domain": {
+        "splitPolicy": "esriSPTDefaultValue",
+        "name": "RestrictionsOpenFire",
+        "description": "Detailed Open Fire Restricitons",
+        "type": "codedValue",
+        "codedValues": [
+          {
+            "code": 0,
+            "name": "NA"
+          },
+          {
+            "code": 1,
+            "name": "No campfires"
+          },
+          {
+            "code": 2,
+            "name": "Campfires in designated locations"
+          },
+          {
+            "code": 3,
+            "name": "Campfires in approved campgrounds"
+          }
+        ],
+        "mergePolicy": "esriMPTDefaultValue"
+      },
+      "name": "openfire",
+      "alias": "OpenFire",
+      "type": "esriFieldTypeSmallInteger"
+    },
+    {
+      "modelName": "openfireother",
+      "nullable": true,
+      "editable": true,
+      "defaultValue": null,
+      "domain": {
+        "splitPolicy": "esriSPTDefaultValue",
+        "name": "RestrictionsOpenFireOther",
+        "description": "Open Fires Other Restrictions",
+        "type": "codedValue",
+        "codedValues": [
+          {
+            "code": 0,
+            "name": "NA"
+          },
+          {
+            "code": 1,
+            "name": "Appliances using bottled fuels allowed"
+          }
+        ],
+        "mergePolicy": "esriMPTDefaultValue"
+      },
+      "name": "openfireother",
+      "alias": "OpenFireOther",
+      "type": "esriFieldTypeSmallInteger"
+    },
+    {
+      "modelName": "openfirewoodburning",
+      "nullable": true,
+      "editable": true,
+      "defaultValue": null,
+      "domain": {
+        "splitPolicy": "esriSPTDefaultValue",
+        "name": "RestrictionsOpenFireWoodBurning",
+        "description": "Open Fires Wood Burning Restrictions",
+        "type": "codedValue",
+        "codedValues": [
+          {
+            "code": 0,
+            "name": "NA"
+          },
+          {
+            "code": 1,
+            "name": "No wood burning devices in temporary dwellings (i.e. tents, travel trailers, etc.)"
+          }
+        ],
+        "mergePolicy": "esriMPTDefaultValue"
+      },
+      "name": "openfirewoodburning",
+      "alias": "OpenFireWoodBurning",
+      "type": "esriFieldTypeSmallInteger"
+    }
+  ]
+}

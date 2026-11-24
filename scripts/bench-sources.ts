@@ -35,6 +35,9 @@ import { miPermits, parseMichiganPermits } from "../src/worker/sources/mi/permit
 import { mnRestrictions, parseMinnesotaRestrictions } from "../src/worker/sources/mn/restrictions";
 import { njRestrictions, parseNjRestrictions } from "../src/worker/sources/nj/restrictions";
 import { ohSeasonal, parseOhioSeasonal } from "../src/worker/sources/oh/seasonal";
+import { orLrapaHeating, orLrapaOutdoor, parseLrapaHeating, parseLrapaOutdoor } from "../src/worker/sources/or/lrapa";
+import { orOdfPublicUse, parseOdfPublicUse } from "../src/worker/sources/or/odf";
+import { orWillametteBackyard, parseWillametteBackyard } from "../src/worker/sources/or/willamette";
 import { parseEcologyAir, waEcologyAir } from "../src/worker/sources/wa/ecology-air";
 import { parseKingFireSafety, waKingFireSafety } from "../src/worker/sources/wa/king-fire-safety";
 import { parsePugetSound, waPugetSoundAir } from "../src/worker/sources/wa/puget-sound";
@@ -112,6 +115,17 @@ const coJobs = [
   ["CO Larimer Aegis Experience", coLarimerFire, () => parseLarimerFire(JSON.parse(coLarimerJson), now)],
   ["CO CDPHE Denver Metro advisory", coDenverAir, async () => parseDenverAir(await extractHtml(coDenverHtml), now)],
 ] as const;
+const orOutdoor = utf8("or/fixtures/lrapa-outdoor-2026-11-24.html");
+const orHeating = utf8("or/fixtures/lrapa-wood-heating-2026-11-24.html");
+const orWillamette = utf8("or/fixtures/willamette-2026-11-23.html");
+const orOdfLayer = utf8("or/fixtures/odf-layer-2026-11-24.json");
+const orOdfAreas = utf8("or/fixtures/odf-areas-2026-11-24.json");
+const orJobs = [
+  ["OR LRAPA outdoor advisory", orLrapaOutdoor, () => parseLrapaOutdoor(orOutdoor, now)],
+  ["OR LRAPA wood heating advisory", orLrapaHeating, () => parseLrapaHeating(orHeating, now)],
+  ["OR Willamette backyard bulletin", orWillametteBackyard, () => parseWillametteBackyard(orWillamette, now)],
+  ["OR ODF regulated-use ArcGIS view", orOdfPublicUse, () => parseOdfPublicUse(JSON.parse(orOdfLayer), JSON.parse(orOdfAreas), now)],
+] as const;
 
 const adapters: Array<[string, () => CountyStatus[]]> = [
   ["OK ArcGIS", () => parseOk(JSON.parse(ok), checked)],
@@ -141,6 +155,7 @@ recordedInputs.push(
   { source: waPugetSoundAir, rows: await parseWaPugetFixture(), checked },
   { source: waKingFireSafety, rows: await parseWaKingFixture(), checked },
   ...await Promise.all(coJobs.map(async ([, source, parse]) => ({ source, rows: await parse(), checked }))),
+  ...await Promise.all(orJobs.map(async ([, source, parse]) => ({ source, rows: await parse(), checked }))),
 );
 
 const states = new Map<string, CountyStatus[]>();
@@ -198,6 +213,7 @@ const jobs: Array<[string, () => unknown]> = [
   ["WA Puget Sound air quality grid", parseWaPugetFixture],
   ["WA King County fire safety", parseWaKingFixture],
   ...coJobs.map(([name, , parse]): [string, () => unknown] => [name, parse]),
+  ...orJobs.map(([name, , parse]): [string, () => unknown] => [name, parse]),
   ["Merge and encode current sources", () => JSON.stringify(mergeSources(null, recordedInputs, now).snapshot)],
   ["Parse, merge, encode 51-area projection", () => JSON.stringify(mergeSources(null,
     fullInputs.map((input, index) => ({ ...input, rows: JSON.parse(serializedFull[index]) })), now).snapshot)],

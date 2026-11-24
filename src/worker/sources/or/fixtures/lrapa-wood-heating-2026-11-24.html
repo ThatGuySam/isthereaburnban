@@ -1,0 +1,56 @@
+<h5 style="padding-left: 5px">Home Wood Heating Advisory for 11/24/2026</h5>
+
+<div class="important">
+
+        </div>
+
+<script>new ejs.grids.Grid({
+  "allowTextWrap": true,
+  "columns": [
+    {
+      "field": "HWHAreaNm",
+      "headerText": "Advisory Area",
+      "width": "50%"
+    },
+    {
+      "field": "HWHLevelNm",
+      "headerText": "Advisory",
+      "width": "50%"
+    }
+  ],
+  "dataSource": ejs.data.DataUtil.parse.isJson([
+  {
+    "HWHBlckId": 584087.0,
+    "HWHBlckPblshDttm": "2026-11-23T14:00:00",
+    "HWHBlckDtFor": "2026-11-24T00:00:00",
+    "HWHBlckMsg": null,
+    "HWHBlckAreaId": 588171.0,
+    "HWHBlckAreaMsg": "40% max opacity.  Use dry wood and dampers open",
+    "HWHLevelCd": "Allowed",
+    "HWHAreaCd": "EugeneSpringfield",
+    "HWHLevelNm": "Allowed",
+    "HWHAreaNm": "Eugene/Springfield",
+    "MapFillColor": "Green"
+  },
+  {
+    "HWHBlckId": 584087.0,
+    "HWHBlckPblshDttm": "2026-11-23T14:00:00",
+    "HWHBlckDtFor": "2026-11-24T00:00:00",
+    "HWHBlckMsg": null,
+    "HWHBlckAreaId": 588172.0,
+    "HWHBlckAreaMsg": "20% max opacity.  Use dry wood and dampers open",
+    "HWHLevelCd": "Allowed",
+    "HWHAreaCd": "Oakridge",
+    "HWHLevelNm": "Allowed",
+    "HWHAreaNm": "Oakridge",
+    "MapFillColor": "Green"
+  }
+]),
+  "ej2StatePersistenceVersion": "default version",
+  "frozenColumns": 0.0,
+  "frozenRows": 0.0,
+  "selectedRowIndex": -1.0,
+  "width": "Auto",
+  "queryCellInfo": customizecell
+}).appendTo("#Grid");
+</script>
