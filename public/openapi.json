@@ -1,0 +1,527 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Is There a Burn Ban? API",
+    "version": "1.0.0",
+    "description": "County burn ban status from official US state sources, refreshed hourly. Informational only; always confirm with the official source. Missing data is reported as `unknown`, never `none`."
+  },
+  "servers": [
+    {
+      "url": "https://isthereaburnban.com"
+    }
+  ],
+  "paths": {
+    "/api/v1/status": {
+      "get": {
+        "operationId": "getStatus",
+        "summary": "Burn ban status for a ZIP, coordinates, county FIPS, or the caller's IP location",
+        "parameters": [
+          {
+            "name": "zip",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{5}$"
+            },
+            "example": "74103"
+          },
+          {
+            "name": "lat",
+            "in": "query",
+            "schema": {
+              "type": "number"
+            },
+            "example": 36.154
+          },
+          {
+            "name": "lon",
+            "in": "query",
+            "schema": {
+              "type": "number"
+            },
+            "example": -95.993
+          },
+          {
+            "name": "fips",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{5}$"
+            },
+            "example": "48453"
+          },
+          {
+            "name": "here",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            },
+            "description": "Use the request's approximate IP location"
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "json",
+                "text"
+              ]
+            },
+            "description": "text returns one plain sentence per county"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One result per county",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookupResult"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Bad input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bans": {
+      "get": {
+        "operationId": "listBans",
+        "summary": "Counties with an active ban or restriction",
+        "parameters": [
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2
+            },
+            "example": "TX"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generated": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "counties": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CountyStatus"
+                      }
+                    },
+                    "sources": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SourceHealth"
+                      }
+                    },
+                    "disclaimer": {
+                      "type": "string",
+                      "examples": [
+                        "Informational only. Always confirm with the official source before burning."
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/coverage": {
+      "get": {
+        "operationId": "getCoverage",
+        "summary": "Coverage level and official links per state, plus source health",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generated": {
+                      "type": "string"
+                    },
+                    "states": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/StateDirectoryEntry"
+                      }
+                    },
+                    "sources": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SourceHealth"
+                      }
+                    },
+                    "disclaimer": {
+                      "type": "string",
+                      "examples": [
+                        "Informational only. Always confirm with the official source before burning."
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/counties/{fips}": {
+      "get": {
+        "operationId": "getCounty",
+        "summary": "Status for one county",
+        "parameters": [
+          {
+            "name": "fips",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{5}$"
+            },
+            "example": "40143"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CountyStatus"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "disclaimer": {
+                          "type": "string",
+                          "examples": [
+                            "Informational only. Always confirm with the official source before burning."
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Bad input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BanStatus": {
+        "type": "string",
+        "enum": [
+          "ban",
+          "restricted",
+          "none",
+          "unknown"
+        ],
+        "description": "none = the official source covers this county and reports no ban. unknown = no feed, failed, stale, or not reported; never treat as permission to burn."
+      },
+      "CountyStatus": {
+        "type": "object",
+        "required": [
+          "fips",
+          "state",
+          "county",
+          "status",
+          "label",
+          "since",
+          "expires",
+          "sourceUpdated",
+          "checked",
+          "sourceName",
+          "sourceUrl",
+          "officialUrl"
+        ],
+        "properties": {
+          "fips": {
+            "type": "string",
+            "pattern": "^\\d{5}$",
+            "examples": [
+              "40143"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "examples": [
+              "OK"
+            ]
+          },
+          "county": {
+            "type": "string",
+            "examples": [
+              "Tulsa County"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/BanStatus"
+          },
+          "label": {
+            "type": "string",
+            "description": "Human label from the source",
+            "examples": [
+              "County Burn Ban"
+            ]
+          },
+          "since": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "When the ban started (source), or when we first saw this status"
+          },
+          "expires": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Expiry date when the source gives one"
+          },
+          "sourceUpdated": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "checked": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When we last fetched this source successfully"
+          },
+          "sourceName": {
+            "type": "string"
+          },
+          "sourceUrl": {
+            "type": "string",
+            "description": "Machine endpoint we read"
+          },
+          "officialUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Official human page to confirm with"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      },
+      "SourceHealth": {
+        "type": "object",
+        "required": [
+          "id",
+          "state",
+          "ok",
+          "checked",
+          "counties",
+          "bans",
+          "mode"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "checked": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "error": {
+            "type": "string"
+          },
+          "counties": {
+            "type": "integer"
+          },
+          "bans": {
+            "type": "integer"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "full",
+              "positive-only"
+            ],
+            "description": "positive-only: absence of a ban means unknown, not none"
+          }
+        }
+      },
+      "StateDirectoryEntry": {
+        "type": "object",
+        "properties": {
+          "abbr": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "coverage": {
+            "type": "string",
+            "enum": [
+              "live",
+              "restrictions",
+              "directory"
+            ]
+          },
+          "publisher": {
+            "type": "string"
+          },
+          "officialUrl": {
+            "type": "string"
+          },
+          "extraUrls": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      },
+      "LookupResult": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "object",
+            "properties": {
+              "zip": {
+                "type": "string"
+              },
+              "lat": {
+                "type": "number"
+              },
+              "lon": {
+                "type": "number"
+              },
+              "fips": {
+                "type": "string"
+              }
+            }
+          },
+          "ambiguous": {
+            "type": "boolean",
+            "description": "The ZIP touches more than one county"
+          },
+          "approximate": {
+            "type": "boolean",
+            "description": "The ZIP wasn't in Census data; the nearest ZIP was used"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/CountyStatus"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "examples": [
+                        "/us/ok/tulsa-county/"
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "disclaimer": {
+            "type": "string",
+            "examples": [
+              "Informational only. Always confirm with the official source before burning."
+            ]
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "disclaimer": {
+            "type": "string",
+            "examples": [
+              "Informational only. Always confirm with the official source before burning."
+            ]
+          }
+        }
+      }
+    }
+  }
+}

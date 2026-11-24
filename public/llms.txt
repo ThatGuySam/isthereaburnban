@@ -1,0 +1,26 @@
+# Is There a Burn Ban?
+
+> Answers one question for US counties: is there a burn ban right now? Data comes from official state feeds (forestry agencies, fire marshals, emergency management), refreshed hourly. Informational only. Always confirm with the official source before burning.
+
+Coverage: live county-level data for Oklahoma, Texas, Florida, Indiana, Louisiana and Mississippi. Iowa is positive-only: we can confirm active bans but not their absence. Every other state returns status "unknown" with a link to the official agency. "unknown" never means burning is allowed. Cities, fire districts, tribes and federal land managers can have stricter rules than the county.
+
+## API (GET, JSON, CORS open, no key)
+
+- [Status by ZIP](https://isthereaburnban.com/api/v1/status?zip=74103): one result per county the ZIP touches; `ambiguous` is true when there are several.
+- [Status by coordinates](https://isthereaburnban.com/api/v1/status?lat=36.154&lon=-95.993)
+- [Status by county FIPS](https://isthereaburnban.com/api/v1/status?fips=48453)
+- [Plain-text answer](https://isthereaburnban.com/api/v1/status?zip=74103&format=text)
+- [One county](https://isthereaburnban.com/api/v1/counties/40143)
+- [All active bans](https://isthereaburnban.com/api/v1/bans) and [by state](https://isthereaburnban.com/api/v1/bans?state=TX)
+- [Coverage and source health](https://isthereaburnban.com/api/v1/coverage)
+- [OpenAPI spec](https://isthereaburnban.com/openapi.json)
+
+Status values: `ban`, `restricted` (partial or activity-specific limits), `none` (the official source covers this county and reports no ban), `unknown` (no feed, feed failed, or stale).
+
+## MCP
+
+- Streamable HTTP endpoint: https://isthereaburnban.com/mcp (stateless, no auth). Tools: `check_burn_ban` ({zip} | {lat, lon} | {fips}), `list_active_bans` ({state?}), `coverage`.
+
+## Pages
+
+- County pages: https://isthereaburnban.com/us/{state}/{county-slug}/ (e.g. /us/ok/tulsa-county/)
