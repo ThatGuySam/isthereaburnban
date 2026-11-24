@@ -1,6 +1,6 @@
 // @ts-nocheck -- bun test types aren't installed.
 import { expect, setSystemTime, test } from "bun:test";
-import { renderStatusHtml } from "../shared/render";
+import { renderReportDetailsHtml, renderStatusHtml } from "../shared/render";
 import { activeBans } from "./api";
 import { formatNationalBans, projectWeather } from "./active-bans";
 import worker from "./index";
@@ -125,4 +125,39 @@ test("weather alert visibility and its cache honor the weather source deadline",
   expect(projectWeather(projection, index, heads, at(2)).counties[fips].alerts).toEqual([alert]);
   expect(projectWeather(projection, index, heads, at(3)).counties[fips].alerts).toBeUndefined();
   expect(formatNationalBans(projection, index, heads, at(2), "compact").nextBoundary).toBe(at(3).getTime());
+});
+
+test("a verified county rescission conflicts with the aggregator's active order", () => {
+  const state = input("tx", "ban", { since: "2026-08-05", officialUrl: "https://example.gov/state-report" });
+  const county = input("archer", "none", {
+    issuerFor: "tx", documentId: "2026-10-06-rescission", since: "2026-10-06",
+    validFrom: "2026-10-06T05:00:00.000Z", officialUrl: "https://example.gov/archer.pdf",
+  });
+  const { snapshot } = mergeSources(null, [state, county], at(0));
+  const result = statusFor(snapshot, fips, at(1).getTime());
+  expect(result).toMatchObject({ status: "unknown", conflict: { kind: "issuer", reports: [
+    { status: "none", since: "2026-10-06", officialUrl: "https://example.gov/archer.pdf" },
+    { status: "ban", since: "2026-08-05", officialUrl: "https://example.gov/state-report" },
+  ] } });
+  expect(renderStatusHtml(result)).toContain("Conflicting reports");
+  const details = renderReportDetailsHtml(result);
+  for (const value of ["https://example.gov/archer.pdf", "https://example.gov/state-report", "Oct 6, 2026", "Aug 5, 2026"]) {
+    expect(details).toContain(value);
+  }
+  expect(resultSentence(result)).toContain("https://example.gov/state-report");
+  expect(national(snapshot, at(1)).counties).toEqual([]);
+  expect(statusFor(mergeSources(null, [county], at(0)).snapshot, fips, at(1).getTime()).status).toBe("unknown");
+  const resolved = mergeSources(snapshot, [input("tx", "none"), county], at(1)).snapshot;
+  expect(statusFor(resolved, fips, at(1).getTime())).toMatchObject({ status: "none", conflict: undefined });
+});
+
+test("a failed county ban and a separate successful all-clear produce a visible disagreement", () => {
+  const failed = input("prior", "ban", {}, { error: "HTTP 500", lastGood: started, checked: at(1).toISOString() });
+  const good = input("new", "none", {}, { checked: at(1).toISOString() });
+  const { snapshot } = mergeSources(null, [failed, good], at(1));
+  const row = county(snapshot, at(1));
+  expect(row).toMatchObject({ status: "unknown", conflict: { kind: "degraded", reports: [
+    { sourceId: "prior", sourceCheckFailed: true }, { sourceId: "new", status: "none" },
+  ] } });
+  expect(resultSentence(row)).toContain(at(1).toISOString());
 });

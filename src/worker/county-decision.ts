@@ -1,5 +1,5 @@
 import { DEFAULT_STALE_MS, evidenceDeadline, evidenceInEffect, nextEvidenceBoundary } from "../shared/evidence";
-import type { CountyReport, CountyStatus, ScopedOrder, StoredCountyStatus } from "../shared/types";
+import type { ConflictReport, CountyReport, CountyStatus, ScopedOrder, StoredCountyStatus } from "../shared/types";
 
 export { DEFAULT_STALE_MS as STALE_MS };
 
@@ -42,7 +42,7 @@ function currentReport<T extends Report>(report: T, now: number): T {
 
 export function toCountyReport(row: StoredCountyStatus): CountyReport {
   const { fips: _fips, state: _state, county: _county, firstSeenAt: _first, statusChangedAt: _change,
-    countywide: _broad, orders: _orders, alerts: _alerts, candidates: _candidates, ...report } = row;
+    countywide: _broad, orders: _orders, alerts: _alerts, candidates: _candidates, conflict: _conflict, ...report } = row;
   return report;
 }
 
@@ -51,16 +51,45 @@ function order(report: Report): ScopedOrder | undefined {
   return { ...report, checked: report.checked, scope: report.scope ?? "county", scopeNote: report.scopeNote ?? report.label };
 }
 
+function describeConflict(report: Report): ConflictReport {
+  return { ...report, sourceUrl: report.sourceUrl ?? report.officialUrl };
+}
+
+function issuerDisagreement(issuers: CountyReport[], reports: Report[], now: number): [ConflictReport, ConflictReport] | undefined {
+  for (const issuer of issuers) {
+    if (!issuer.validFrom || Date.parse(issuer.validFrom) > now) continue;
+    const opposite = issuer.status === "ban" ? "none" : "ban";
+    const aggregate = reports.find((report) => report.sourceId === issuer.issuerFor && report.scope !== "part" &&
+      report.status === opposite && currentReport(report, now).status === opposite);
+    if (!aggregate) continue;
+    // A verified rescission remains evidence against the older order even if
+    // a later check of the county page fails. It carries no general all-clear.
+    const olderOrder = issuer.status === "none" && (!aggregate.since ||
+      Date.parse(aggregate.since) <= Date.parse(issuer.validFrom));
+    if (olderOrder || evidenceInEffect(issuer, now)) return [describeConflict(issuer), describeConflict(aggregate)];
+  }
+}
+
 function selectReports(base: CountyStatus, reports: Report[], now: number, saveDecision?: (row: CountyStatus) => void): CountyStatus {
   let broad: Report | undefined;
   let local: Report | undefined;
   let localBan: Report | undefined;
   let fallback: Report | undefined;
+  let issuers: CountyReport[] | undefined;
+  let failedBan: Report | undefined;
+  let confirmedClear: Report | undefined;
   const orders: ScopedOrder[] = [];
   let visibleOrders: ScopedOrder[] | undefined;
   for (const raw of reports) {
     const scoped = raw.scope === "part" || raw.standing;
     const current = currentReport(raw, now);
+    if ("issuerFor" in raw && raw.issuerFor && raw.documentId && (raw.status === "ban" || raw.status === "none")) {
+      (issuers ??= []).push(raw);
+      if (raw.status === "none") {
+        fallback = preferred(fallback, current.status === "none" ? { ...current, status: "unknown" } : current);
+        continue;
+      }
+    }
     if (scoped) {
       const fresh = evidenceDeadline(raw) > now;
       if (!fresh && saveDecision) visibleOrders ??= orders.slice();
@@ -73,13 +102,22 @@ function selectReports(base: CountyStatus, reports: Report[], now: number, saveD
       if (isScopedBan(current)) localBan = preferred(localBan, current);
     } else if (!scoped && evidenceInEffect(raw, now)) {
       broad = preferred(broad, current);
+      if (current.status === "ban" && current.sourceCheckFailed) failedBan = current;
+      if (current.status === "none") confirmedClear = current;
     }
     fallback = preferred(fallback, current);
   }
   const choice = localBan ?? local;
   const selected = broad && broad.status !== "unknown" ? broad : choice ?? broad ?? fallback ?? toCountyReport(base);
   const promoted = choice && selected.status !== "ban" && (selected.status !== "restricted" || localBan) ? choice : selected;
+  const issuerConflict = issuers && issuerDisagreement(issuers, reports, now);
+  const degraded = failedBan && confirmedClear && failedBan.scope === confirmedClear.scope
+    && failedBan.sourceId !== confirmedClear.sourceId ? [describeConflict(failedBan), describeConflict(confirmedClear)] as const : undefined;
+  const conflict = issuerConflict
+    ? { kind: "issuer" as const, reports: issuerConflict }
+    : degraded ? { kind: "degraded" as const, reports: [...degraded] as [ConflictReport, ConflictReport] } : undefined;
   const result = (report: Report, publishing: boolean, orders: ScopedOrder[]): CountyStatus => {
+    if (conflict) report = conflict.reports[0];
     const selectedLocal = report.scope === "part";
     const selectedActive = activeStatus(report.status);
     const status = selectedLocal ? selectedActive ? "restricted" : "unknown" : report.status;
@@ -100,10 +138,11 @@ function selectReports(base: CountyStatus, reports: Report[], now: number, saveD
       sourceUpdated: broad.sourceUpdated, officialUrl: broad.officialUrl,
     } : undefined;
     const { fips, state, county, alerts, firstSeenAt, statusChangedAt } = base;
-    return { fips, state, county, alerts, firstSeenAt, statusChangedAt, ...report, status, label, note,
+    return { fips, state, county, alerts, firstSeenAt, statusChangedAt, ...report,
+      status: conflict ? "unknown" : status, label: conflict ? "Conflicting reports" : label, note,
       sourceUrl: report.sourceUrl ?? report.officialUrl,
       scopedBan: selectedLocal && selectedActive && isScopedBan(report) ? true : undefined,
-      countywide, orders: orders.length ? orders : undefined };
+      countywide: conflict ? undefined : countywide, orders: orders.length ? orders : undefined, conflict };
   };
   const answer = result(promoted, false, visibleOrders ?? orders);
   if (!saveDecision) return answer;
@@ -113,7 +152,7 @@ function selectReports(base: CountyStatus, reports: Report[], now: number, saveD
 
 /** Keep the publisher's evidence so starts, expirations and changes in source health can be evaluated at read time. */
 export function storeCountyReports(rows: CountyStatus | CountyStatus[], now: number) {
-  if (!Array.isArray(rows) && rows.scope !== "part" && !rows.standing && currentReport(rows, now) === rows) return { row: rows, answer: rows };
+  if (!Array.isArray(rows) && rows.scope !== "part" && !rows.standing && !rows.issuerFor && currentReport(rows, now) === rows) return { row: rows, answer: rows };
   const reports = Array.isArray(rows) ? rows : [rows];
   const evidence = reports.map(toCountyReport);
   let answer: CountyStatus;
@@ -128,7 +167,7 @@ function oldDecision(row: CountyStatus, now: number): CountyStatus {
   if (!row.orders?.length) return current;
   const surviving = row.orders.filter((item) => evidenceDeadline(item) > now);
   const withOrders = surviving.length === row.orders.length ? current : { ...current, orders: surviving, note: undefined };
-  if (current.status === "ban") return withOrders;
+  if (current.status === "ban" || current.conflict) return withOrders;
   const valid = surviving.filter((item) => activeStatus(item.status) && evidenceInEffect(item, now));
   const selected = valid.find(isScopedBan) ?? valid[0];
   if (!selected || (current.status === "restricted" && current.scope !== "part" && !isScopedBan(selected))) return withOrders;

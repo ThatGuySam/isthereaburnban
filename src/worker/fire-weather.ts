@@ -63,7 +63,7 @@ export function withFireWeather<T extends SnapshotData>(snapshot: T, now = Date.
       const base = statusFor(snapshot, fips, now);
       row = { ...base, alerts: row.alerts, orders: [...(base.orders ?? []), ...orders] };
       if (saved) nextBoundary = Math.min(nextBoundary, countyBoundary(saved, now));
-      if (base.status === "unknown" || base.status === "none") {
+      if (!base.conflict && (base.status === "unknown" || base.status === "none")) {
         const [rule] = orders;
         Object.assign(row, { sourceCheckFailed: undefined, sourceFailedSince: undefined, lastAttemptedAt: undefined }, rule,
           { sourceUrl: rule.officialUrl });

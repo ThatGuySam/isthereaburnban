@@ -82,6 +82,7 @@ import { sdBlmFireRestrictions } from "./sd/blm";
 import { sdBlackHillsPileBurning } from "./sd/pile-burning";
 import { tnForestryPermitHolds } from "./tn/permit-holds";
 import { tnSeasonalBurnPermits } from "./tn/seasonal";
+import { txArcherCountyIssuer, txBexarCountyIssuer } from "./tx/county-issuers";
 import type { ActiveSource, Source } from "./types";
 import { utFfslFireOrders } from "./ut/orders";
 import { utClosedFireSeason } from "./ut/seasonal";
@@ -115,6 +116,8 @@ export const SOURCES: readonly Source[] = [
       return { rows: await adapter.fetch(now) };
     },
   } satisfies ActiveSource)),
+  txArcherCountyIssuer,
+  txBexarCountyIssuer,
   nwsFireWeather,
   flMiamiDadeResidentialBurning,
   inIdemResidentialBurning,

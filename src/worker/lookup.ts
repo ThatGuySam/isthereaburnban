@@ -154,6 +154,16 @@ export function countyState(fips: string): string {
 export function resultSentence(r: CountyStatus): string {
   const checked = r.checked?.replace(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}):.*Z$/, "$1Z");
   const head = `${statusTheme(r.status).word}: ${statusSentence(r)}.`;
+  if (r.conflict) {
+    return [head, ...r.conflict.reports.map((report) => [
+      `${report.sourceName} reports ${report.label}.`,
+      report.since && `Effective ${report.since}.`,
+      report.sourceUpdated && report.sourceUpdated !== report.since && `Publisher report date ${report.sourceUpdated}.`,
+      report.checked && `Checked ${report.checked}.`,
+      report.sourceFailedSince && `Couldn't check since ${report.sourceFailedSince}.`,
+      report.note, report.officialUrl, report.sourceUrl !== report.officialUrl && report.sourceUrl,
+    ].filter(Boolean).join(" "))].join("\n");
+  }
   const src = r.sourceUrl && r.sourceName ? ` Source: ${r.sourceName}${checked ? `, checked ${checked}` : ""}.` : "";
   const dates = [
     r.sourceCheckFailed && (r.sourceFailedSince ?? r.lastAttemptedAt) && `Couldn't check since ${r.sourceFailedSince ?? r.lastAttemptedAt}.`,

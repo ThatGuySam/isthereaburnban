@@ -259,6 +259,24 @@ test("a partial full edition records failure and retains the last complete paylo
   expect(box.snapshot().counties["41039"].status).toBe("ban");
 });
 
+test("a positive-only issuer rescission survives normalization and does not send a lift alert", async () => {
+  const box = sandbox();
+  const aggregator = source("or", async ({ now }) => ({ rows: [row("ban", now.toISOString(), { since: "2026-11-20" })] }));
+  const county = source("lane-issuer", async ({ now }) => ({ rows: now.getTime() === initial ? [] : [
+    row("none", now.toISOString(), { issuerFor: aggregator.id, documentId: "signed-lift",
+      since: "2026-11-23", validFrom: new Date(nextHour - 60_000).toISOString() }),
+  ] }), { mode: "positive-only" });
+  const sources = [aggregator, county];
+  for (const time of [initial, nextHour]) {
+    for (const src of sources) await poll(box, src, time);
+    await merge(box, sources, time);
+  }
+  expect(statusFor(box.snapshot(), "41039", nextHour + 120_000)).toMatchObject({
+    status: "unknown", conflict: { kind: "issuer", reports: [{ documentId: "signed-lift" }, { sourceId: "or" }] },
+  });
+  expect(box.alerts).toEqual([]);
+});
+
 test("journal handles KV and D1 interruption without duplicating a transition or alert run", async () => {
   const box = sandbox();
   let status = "none";

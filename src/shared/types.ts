@@ -49,14 +49,19 @@ export type CountyStatus = EvidenceTiming & {
   standing?: true; // ongoing, activity-specific rule
   scopedBan?: true; // explicit ban in part of the county
   sourceId?: string;
+  issuerFor?: string; // aggregator reporting the same county order
+  documentId?: string; // independently verified issuer document or notice
+  conflict?: { kind: "issuer" | "degraded"; reports: [ConflictReport, ConflictReport] };
   /** Broader report when a scoped order supplies the headline. */
   countywide?: Pick<CountyStatus, "status" | "label" | "checked" | "sourceId" | "sourceName" | "sourceUpdated" | "officialUrl">;
   orders?: ScopedOrder[];
   alerts?: FireWeatherAlert[];
 };
 
-export type CountyReport = Omit<CountyStatus, "fips" | "state" | "county" | "firstSeenAt" | "statusChangedAt" | "countywide" | "orders" | "alerts">;
+export type CountyReport = Omit<CountyStatus, "fips" | "state" | "county" | "firstSeenAt" | "statusChangedAt" | "countywide" | "orders" | "alerts" | "conflict">;
 export type StoredCountyStatus = CountyStatus & { candidates?: CountyReport[] };
+export type ConflictReport = EvidenceTiming & Pick<CountyReport, "status" | "label" | "note" | "since" | "expires" |
+  "sourceId" | "sourceName" | "sourceUpdated" | "sourceUrl" | "officialUrl" | "scopeNote" | "documentId">;
 
 export type ScopedOrder = Pick<CountyStatus, "status" | "label" | "note" | "since" | "expires" |
   "sourceId" | "sourceName" | "sourceUpdated" | "officialUrl" | "standing" | "scopedBan"> & EvidenceTiming & {

@@ -110,7 +110,9 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
       const retainedAuthority = !before.sourceId || before.sourceId === decision.sourceId ||
         (Array.isArray(group) && group.some((candidate) => !candidate.sourceCheckFailed && candidate.sourceId === before.sourceId));
       const lostAuthority = !newScopedBan && (!retainedAuthority || (before.status === "ban" && decision.scope === "part"));
-      if (!decision.sourceCheckFailed && !lostAuthority && decision.status !== "unknown") {
+      const repeatsDisputedBan = decision.status === "ban" && before.conflict?.reports.some((report) =>
+        report.status === "ban" && report.sourceId === decision.sourceId && report.since === decision.since);
+      if (!decision.sourceCheckFailed && !lostAuthority && !repeatsDisputedBan && decision.status !== "unknown") {
         transitions.push({ fips, oldStatus: before.status, newStatus: decision.status, at });
       }
     }

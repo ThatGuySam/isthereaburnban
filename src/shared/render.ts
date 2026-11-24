@@ -1,6 +1,6 @@
 // Status wording, colors and hero markup. Pure functions shared by the Worker (HTMLRewriter
 // injection) and the browser (client-side lookups), so every surface says the same thing.
-import type { BanStatus, CountyStatus, FireWeatherAlert, LookupResult, PlaceStatus, ScopedOrder, StateDirectoryEntry } from "./types";
+import type { BanStatus, ConflictReport, CountyStatus, FireWeatherAlert, LookupResult, PlaceStatus, ScopedOrder, StateDirectoryEntry } from "./types";
 
 export type HeroStatus = PlaceStatus | "checking";
 
@@ -68,6 +68,7 @@ function negativeReport(cs: CountyStatus): string {
 
 export function statusSentence(cs: CountyStatus): string {
   const place = placeName(cs);
+  if (cs.conflict) return `Conflicting reports for ${place}`;
   switch (cs.status) {
     case "ban": {
       const label = cs.label && !GENERIC_BAN_LABEL.test(cs.label.trim()) ? ` (${cs.label})` : "";
@@ -332,6 +333,15 @@ function renderOrder(order: ScopedOrder): string {
     ${order.note ? `<p>${escapeHtml(order.note)}</p>` : ""}${failure ? `<p>${escapeHtml(failure)}</p>` : ""}<p>${source}</p>${renderReportDates(order)}</li>`;
 }
 
+function renderConflict(report: ConflictReport): string {
+  const source = `<a href="${escapeHtml(report.officialUrl)}" target="_blank" rel="noopener">${escapeHtml(report.sourceName)}</a>`;
+  const publication = report.sourceUrl && report.sourceUrl !== report.officialUrl
+    ? ` · <a href="${escapeHtml(report.sourceUrl)}" target="_blank" rel="noopener">Publisher report</a>` : "";
+  const failure = failedCheckText(report);
+  return `<li><strong>${escapeHtml(report.label)}</strong><p>${source}${publication}</p>
+    ${report.note ? `<p>${escapeHtml(report.note)}</p>` : ""}${failure ? `<p>${escapeHtml(failure)}</p>` : ""}${renderReportDates(report)}</li>`;
+}
+
 export function renderReportDetailsHtml(row: CountyStatus, now = Date.now()): string {
   const broader = row.countywide;
   const countywide = broader ? `<p>${escapeHtml(statusSentence({ ...row, ...broader, scope: "county", scopeNote: undefined }))}.
@@ -339,10 +349,12 @@ export function renderReportDetailsHtml(row: CountyStatus, now = Date.now()): st
   const orders = row.orders?.filter((order) => order.status === "ban" || order.status === "restricted");
   return `<div class="report-details">
     ${row.scopeNote ? `<p>${escapeHtml(row.scopeNote)}</p>` : ""}
-    ${row.note ? `<p>${escapeHtml(row.note)}</p>` : ""}
+    ${row.note && !row.conflict ? `<p>${escapeHtml(row.note)}</p>` : ""}
     ${countywide}
     ${failedCheckText(row) ? `<p>${escapeHtml(failedCheckText(row))}</p>` : ""}
-    ${renderReportDates(row)}
+    ${row.conflict
+      ? `<h3>Conflicting reports</h3><ul class="report-orders">${row.conflict.reports.map(renderConflict).join("")}</ul>`
+      : renderReportDates(row)}
     ${orders?.length ? `<h3>Reported orders and rules</h3><ul class="report-orders">${orders.map(renderOrder).join("")}</ul>` : ""}
     ${renderAlertLineHtml(row, now)}
   </div>`;
