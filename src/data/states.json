@@ -230,10 +230,18 @@
   {
     "abbr": "DC",
     "name": "District of Columbia",
-    "coverage": "directory",
+    "coverage": "restrictions",
     "publisher": "DC Department of Energy and Environment",
-    "officialUrl": "https://doee.dc.gov/sites/default/files/dc/sites/ddoe/publication/attachments/aqd.revch6_.pdf",
-    "notes": "District air rules limit open fires across DC. National parks in DC may have separate rules."
+    "officialUrl": "https://doee.dc.gov/sites/default/files/dc/sites/ddoe/publication/attachments/aqd.revch6_.pdf#page=4",
+    "extraUrls": [
+      { "label": "DC Fire Marshal operational permits", "url": "https://fems.dc.gov/service/operational-permits" },
+      { "label": "DC Code on kindling bonfires", "url": "https://code.dccouncil.gov/us/dc/council/code/sections/22-1313" },
+      { "label": "District emergency alerts", "url": "https://hsema.dc.gov/featured-content/alert-dc-emap" },
+      { "label": "DC Parks and Recreation fire and grilling rules", "url": "https://dpr.dc.gov/page/rules-and-regulations-0" },
+      { "label": "Rock Creek Park fire rules", "url": "https://www.nps.gov/rocr/learn/management/rock-creek-park-superintendent-compendium.htm" },
+      { "label": "Rock Creek Park alerts", "url": "https://www.nps.gov/rocr/planyourvisit/conditions.htm" }
+    ],
+    "notes": "District air rules generally prohibit open fires and allow limited exceptions, including some recreational fires. DC Fire and EMS handles permits for activities such as ceremonial bonfires. The Mayor can issue air-pollution emergency orders. Check with the Fire Marshal about your burn and with the land manager about park restrictions."
   },
   {
     "abbr": "FL",

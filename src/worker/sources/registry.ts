@@ -16,6 +16,8 @@ import { pfirs } from "./ca/pfirs";
 import { coArapahoeFire, coBoulderFire, coDouglasFire, coElPasoFire, coEstesFire, coLarimerFire } from "./co/county-status";
 import { coDenverAir } from "./co/denver-air";
 import { ctDeepFireDanger } from "./ct/fire-danger";
+import { dcOpenBurning } from "./dc/open-burning";
+import { dcRockCreekFireRules } from "./dc/rock-creek";
 import { deActionDays } from "./de/air-quality";
 import { deOpenBurning } from "./de/open-burning";
 import { gaEpdNonSummer, gaEpdSummer } from "./ga/epd";
@@ -218,6 +220,22 @@ export const SOURCES: readonly Source[] = [
   sdBlmFireRestrictions,
   hiCabNoBurnPeriods,
   hiCabOpenBurning,
+  dcOpenBurning,
+  dcRockCreekFireRules,
+  {
+    id: "dc-emergency-orders", state: "DC", scope: "state", stack: "AlertDC / RSS",
+    mode: "manual", cadence: null, sourceName: "DC Homeland Security and Emergency Management Agency",
+    sourceUrl: "https://trainingtrack.hsema.dc.gov/NRss/RssFeed/AlertDCList/rss",
+    officialUrl: "https://hsema.dc.gov/featured-content/alert-dc-emap",
+    error: "Recent notifications do not provide a complete register of effective emergency orders. Confirm any temporary burn orders with the Fire Marshal.",
+  },
+  {
+    id: "dc-nps-rock-creek-fire-alerts", state: "DC", scope: "part", stack: "NPS CommonSpot / public JSON embed",
+    mode: "manual", cadence: null, sourceName: "National Park Service, Rock Creek Park",
+    sourceUrl: "https://www.nps.gov/rocr/park-alerts-rocr.json",
+    officialUrl: "https://www.nps.gov/rocr/planyourvisit/conditions.htm",
+    error: "The current embed provides park alerts. A local fire-order example and its geography and effective dates still need review before automation.",
+  },
   {
     id: "hi-hawaii-county-emergency-orders", state: "HI", scope: "part", stack: "Granicus Vision / HTML and signed orders",
     mode: "manual", cadence: null, sourceName: "County of Hawaiʻi Civil Defense Agency",

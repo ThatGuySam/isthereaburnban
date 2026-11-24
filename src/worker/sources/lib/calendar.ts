@@ -3,7 +3,7 @@ import { atLocalTime, localClock, localDayWindow, shiftDay, US_ZONES } from "./d
 
 // Inventory: Alabama and Jefferson County open burning, Alaska burn permits and winter air rules, AZ Area A, Idaho and Utah closed fire seasons, NY DEC Open Burning, GA EPD Summer Open Burning Ban, KY fire hazard seasons, OH DNR Open Burning Regulations,
 // PA state forest fires, VA DOF 4 PM Burning Law, WV Forestry Fire Burning Guidelines, MD DNR Burning Guidance,
-// HI, ME, NE, NH, RI and VT open-burning rules, DE open burning, and MA residential brush burning.
+// DC, DE, HI, ME, NE, NH, RI and VT open-burning rules, and MA residential brush burning.
 export type CalendarRule = {
   state: string;
   officialUrl: string;
@@ -310,6 +310,20 @@ export const CALENDAR_RULES: Record<string, CalendarRule> = {
     scopeNote: "Essential agricultural burning under Missoula County’s permit program",
     label: "Essential agricultural burning season closed", seasons: [["11-01", "02-29"]],
     note: "Missoula Public Health’s regular essential agricultural burning season is March 1 through October 31. Check the permit system for daily decisions for other types of burning.",
+  },
+  DC: {
+    state: "DC", zone: US_ZONES.Eastern, status: "restricted", scope: "state",
+    officialUrl: "https://doee.dc.gov/sites/default/files/dc/sites/ddoe/publication/attachments/aqd.revch6_.pdf#page=4",
+    scopeNote: "Open burning covered by District air-quality rule 20 DCMR § 604",
+    label: "District open-burning limits apply year-round",
+    note: "DC generally prohibits open fires, including burning yard waste. Limited exceptions may apply to recreation such as noncommercial cooking, public safety duties, fire hazard prevention, firefighter training and approved worker heating. Ask the DC Fire Marshal about permits and current site restrictions.",
+  },
+  DC_ROCK_CREEK: {
+    state: "DC", zone: US_ZONES.Eastern, status: "restricted", scope: "part",
+    officialUrl: "https://www.nps.gov/rocr/learn/management/rock-creek-park-superintendent-compendium.htm",
+    scopeNote: "National Park Service land administered by Rock Creek Park in the District",
+    label: "Rock Creek Park limits fires to designated picnic areas",
+    note: "Rock Creek Park limits fires to provided fire or grilling structures and allows suitably sized grills in established picnic groves. Fuel and permit rules apply. Check park alerts for any added restrictions during high fire danger.",
   },
   HI: {
     state: "HI", zone: US_ZONES.Hawaii, status: "restricted", scope: "state",

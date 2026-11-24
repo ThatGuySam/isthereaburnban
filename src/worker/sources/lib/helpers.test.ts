@@ -91,6 +91,14 @@ test("HTML status grids extract only selected rows and keep cell data", async ()
   ]]);
 });
 
+test("HTML status grids can read a direct download URL published apart from the link action", async () => {
+  const markup = '<div class="row"><a href="javascript:postBack()" title="/rule?id=1&amp;rev=2">View text</a></div>';
+  const selectors = { row: ".row", cell: ".row a" };
+  expect((await extractHtmlGrid(markup, selectors))[0][0].href).toBe("javascript:postBack()");
+  expect((await extractHtmlGrid(markup, { ...selectors, linkAttribute: "title" }))[0][0])
+    .toEqual({ text: "View text", className: "", href: "/rule?id=1&rev=2" });
+});
+
 test("legacy number headings isolate a complete, unique rule section", async () => {
   const first = "<p><b>20.2.60.2&nbsp; SCOPE:</b> Town jurisdiction.</p><p>One clause.</p>";
   const next = "<p><b>20.2.60.3 PROVISIONS; EXCEPTIONS:</b></p><p>Different rule.</p>";
