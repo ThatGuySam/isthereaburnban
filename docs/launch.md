@@ -48,10 +48,12 @@ Since 2026-11-24 the Worker also answers on `https://beta.isthereaburnban.com` (
 
 ## Contact mailbox (Cloudflare Email Routing)
 
+Done 2026-11-24: Email Routing and Email Sending are on for the zone. `hello@` and `alerts@isthereaburnban.com` forward to Sam's inbox; the Worker sends through the `EMAIL` binding (`EMAIL_TRANSPORT=cloudflare`), and ops alerts go to the `OPS_ALERT_EMAIL` secret. The notes below are the original setup steps.
+
 Email Routing forwards `hello@` (and any other address Sam picks) to his own inbox. It needs a Wrangler token with the `email_routing:write` scope (`npx wrangler login`), then:
 
 ```sh
-npx wrangler email routing enable isthereaburnban.com          # adds MX/SPF records
+npx wrangler email routing enable isthereaburnban.com          # done 2026-11-24
 npx wrangler email routing addresses create <Sam's inbox>      # Cloudflare emails a verification link
 npx wrangler email routing rules create isthereaburnban.com ...  # hello@ -> that inbox
 ```
