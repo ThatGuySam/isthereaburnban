@@ -100,8 +100,13 @@ import { hiCabNoBurnPeriods, parseHiNoBurnPeriods } from "../src/worker/sources/
 import { hiCabOpenBurning, parseHiOpenBurning } from "../src/worker/sources/hi/open-burning";
 import { dcOpenBurning, parseDcOpenBurning } from "../src/worker/sources/dc/open-burning";
 import { dcRockCreekFireRules, parseRockCreekFireRules } from "../src/worker/sources/dc/rock-creek";
+import { parseTennesseeAirQuality, tnAirQualityPermitHolds } from "../src/worker/sources/tn/air-quality";
+import { latestGatlinburgNotice, parseGatlinburgPermitNotice, tnGatlinburgPermitNotices } from "../src/worker/sources/tn/gatlinburg";
+import { parseHamiltonBurnDecision, tnHamiltonDailyBurning } from "../src/worker/sources/tn/hamilton";
+import { tnLocalCalendars } from "../src/worker/sources/tn/local-rules";
 import { parseTennesseePermitHolds, parseTennesseePermitRoster, tnForestryPermitHolds } from "../src/worker/sources/tn/permit-holds";
 import { parseTennesseePermitSeason, tnSeasonalBurnPermits } from "../src/worker/sources/tn/seasonal";
+import { parseTullahomaForm, parseTullahomaPermitPage, tnTullahomaDailyBurning, tullahomaRows } from "../src/worker/sources/tn/tullahoma";
 import { parseUtahOrders, utFfslFireOrders } from "../src/worker/sources/ut/orders";
 import { parseUtahSeasonal, utClosedFireSeason } from "../src/worker/sources/ut/seasonal";
 import { parseBrunswickNotices, vaBrunswickBurnBan } from "../src/worker/sources/va/brunswick";
@@ -473,6 +478,30 @@ const tnPermitDetails = utf8("tn/fixtures/permit-details-2026-11-24.json");
 const tnPermitSeason = utf8("tn/fixtures/permit-season-2026-11-24.html");
 const parseTnHolds = () => parseTennesseePermitHolds(tnPermitDetails, parseTennesseePermitRoster(tnRoster), tnCaptured);
 const parseTnSeason = async () => parseTennesseePermitSeason(await extractHtml(tnPermitSeason), tnCaptured);
+const tnHamilton = utf8("tn/fixtures/hamilton-burn-widget-2026-11-24.html");
+const parseTnHamilton = () => parseHamiltonBurnDecision(tnHamilton, tnCaptured);
+const tnAirNow = utf8("tn/fixtures/airnow-2026-09-19.dat");
+const parseTnAirNow = () => parseTennesseeAirQuality(tnAirNow, new Date("2026-09-19T14:00:00Z"));
+const tnGatlinburgNews = utf8("tn/fixtures/gatlinburg-news-2026-11-24.html");
+const tnGatlinburgHold = utf8("tn/fixtures/gatlinburg-permit-hold-2026-11-20.html");
+const tnGatlinburgDate = new Date("2026-11-20T21:00:00Z");
+const tnTullahomaPage = utf8("tn/fixtures/tullahoma-permit-page-2026-11-24.html");
+const tnTullahomaForm = utf8("tn/fixtures/tullahoma-closed-form-2026-11-24.html");
+const tnTullahomaDate = new Date("2026-11-25T04:16:19Z");
+const parseTnTullahoma = async () => {
+  const display = await parseTullahomaPermitPage(tnTullahomaPage);
+  const decision = display === "embed" ? await parseTullahomaForm(tnTullahomaForm) : display;
+  return tullahomaRows(decision, tnTullahomaDate);
+};
+const parseTnGatlinburg = async () => {
+  const notice = await latestGatlinburgNotice(tnGatlinburgNews, tnGatlinburgDate);
+  if (!notice) throw new Error("Expected Gatlinburg fixture notice");
+  return parseGatlinburgPermitNotice(tnGatlinburgHold, notice, tnGatlinburgDate);
+};
+const tnLocalFixtures = tnLocalCalendars.map(({ id, kind, source, parse }) => {
+  const body = raw(`tn/fixtures/rule-${id}-2026-11-24.${kind}`);
+  return { id, source, parse: () => parse(new Response(body), tnCaptured) };
+});
 const akPermitLayer = utf8("ak/fixtures/permit-layer-2026-11-24.json");
 const akPermitZones = utf8("ak/fixtures/permit-zones-2026-11-24.json");
 const akFireSeason = utf8("ak/fixtures/as-41-15-050-2026-11-24.html");
@@ -625,6 +654,13 @@ recordedInputs.push(
     source, rows: await parse(), checked: moCountyCaptured.toISOString(),
   }))),
   { source: tnForestryPermitHolds, rows: parseTnHolds(), checked: tnCaptured.toISOString() },
+  { source: tnHamiltonDailyBurning, rows: await parseTnHamilton(), checked: tnCaptured.toISOString() },
+  { source: tnAirQualityPermitHolds, rows: parseTnAirNow(), checked: "2026-09-19T14:00:00Z" },
+  { source: tnGatlinburgPermitNotices, rows: await parseTnGatlinburg(), checked: tnGatlinburgDate.toISOString() },
+  { source: tnTullahomaDailyBurning, rows: await parseTnTullahoma(), checked: tnTullahomaDate.toISOString() },
+  ...await Promise.all(tnLocalFixtures.map(async ({ source, parse }) => ({
+    source, rows: await parse(), checked: tnCaptured.toISOString(),
+  }))),
   { source: tnSeasonalBurnPermits, rows: await parseTnSeason(), checked: tnCaptured.toISOString() },
   { source: nwsFireWeather, rows: [], fireWeather: parseNwsLive(), checked: nwsCaptured.toISOString() },
 );
@@ -742,6 +778,11 @@ const jobs: Array<[string, () => unknown]> = [
   ...moLocalFixtures.map(({ source, parse }): [string, typeof parse] => [source.id, parse]),
   ["TN Forestry fiResponse roster and permit details", parseTnHolds],
   ["TN Forestry permit-season HTML and calendar", parseTnSeason],
+  ["TN Hamilton APCB daily burn bulletin", parseTnHamilton],
+  ["TN Shelby and Knox AirNow forecast holds", parseTnAirNow],
+  ["TN Gatlinburg Apptegy permit notices", parseTnGatlinburg],
+  ["TN Tullahoma Revize and Google Forms permit status", parseTnTullahoma],
+  ...tnLocalFixtures.map<[string, () => unknown]>(({ id, parse }) => [`TN local burn rule (${id})`, parse]),
   ["NY DEC brush rules and Fire Towns", parseNyDecFixture],
   ["NYC 311 outdoor barbecuing rules", parseNyNycFixture],
   ["VA 4 p.m. statute and calendar", () => parseVaStatuteFixture(vaSpring)],

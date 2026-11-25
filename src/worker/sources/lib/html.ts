@@ -213,7 +213,7 @@ export async function extractHtml(input: Response | string, options: HtmlOptions
 
 /** Read CSS-selected status cells. Legacy portals can publish a direct URL outside the href. */
 export async function extractHtmlGrid(input: Response | string, selectors: {
-  row: string; cell: string; linkAttribute?: string;
+  row: string; cell: string; linkAttribute?: string; spaceLineBreaks?: boolean;
 }) {
   const rows: { text: string; className: string; href?: string }[][] = [];
   let row: (typeof rows)[number] | undefined;
@@ -244,6 +244,7 @@ export async function extractHtmlGrid(input: Response | string, selectors: {
         if (cell) cell.text += chunk.text;
       },
     });
+  if (selectors.spaceLineBreaks) rewriter.on("br", { element() { if (cell) cell.text += " "; } });
   const response = rewriter.transform(typeof input === "string" ? new Response(input) : input);
   if (response.body) await response.body.pipeTo(new WritableStream({ write() {} }));
   if (row || cell) throw new Error("Incomplete status grid");

@@ -1,6 +1,6 @@
 import { calendarStatusRows, type CalendarCounty, type CalendarRule } from "./calendar";
 import { reviewedHtmlDigest } from "./html";
-import { fetchSource } from "./http";
+import { fetchSource, isSourceUnavailable } from "./http";
 import { manualPdf } from "./pdf";
 import type { ActiveSource } from "../types";
 
@@ -17,6 +17,7 @@ type ReviewedLocalCalendar = {
   review: LocalCalendarEvidence;
   zone: string;
   hour: number;
+  lastReviewed?: string;
 };
 
 async function matchesReview(input: Response, review: LocalCalendarEvidence): Promise<boolean> {
@@ -32,13 +33,21 @@ async function matchesReview(input: Response, review: LocalCalendarEvidence): Pr
   }
 }
 
+export function staleVerificationNote(note: string, lastReviewed: string) {
+  return `${note} Online verification is stale. The published rule was last manually verified on ${lastReviewed}.`;
+}
+
 /** Poll the reviewed document before applying the standing local restriction. */
-export function reviewedLocalCalendar({ publisher, counties, rule, review, zone, hour }: ReviewedLocalCalendar) {
+export function reviewedLocalCalendar({ publisher, counties, rule, review, zone, hour, lastReviewed }: ReviewedLocalCalendar) {
+  function rowsAt(now: Date, note = rule.note) {
+    return calendarStatusRows({
+      ...rule, note, zone, state: publisher.state, scope: publisher.scope, officialUrl: publisher.officialUrl, status: "restricted",
+    }, counties, publisher, now, { includeTomorrow: true, includeSeasonDates: true });
+  }
+
   async function parse(input: Response, now: Date) {
     if (!await matchesReview(input, review)) throw new Error(`${publisher.id}: reviewed local burning rule changed`);
-    return calendarStatusRows({
-      ...rule, zone, state: publisher.state, scope: publisher.scope, officialUrl: publisher.officialUrl, status: "restricted",
-    }, counties, publisher, now, { includeTomorrow: true, includeSeasonDates: true });
+    return rowsAt(now);
   }
 
   const source: ActiveSource = {
@@ -46,10 +55,16 @@ export function reviewedLocalCalendar({ publisher, counties, rule, review, zone,
     keepRowLinks: counties.some(({ officialUrl }) => officialUrl !== undefined) || undefined,
     cadence: { kind: "daily", zone, hours: [hour] },
     async fetch({ now }) {
-      const reply = await fetchSource(publisher.sourceUrl, {
-        method: review.kind === "pdf-etag" ? "HEAD" : "GET",
-        headers: { accept: review.kind === "html" ? "text/html" : "application/pdf" },
-      });
+      let reply;
+      try {
+        reply = await fetchSource(publisher.sourceUrl, {
+          method: review.kind === "pdf-etag" ? "HEAD" : "GET",
+          headers: { accept: review.kind === "html" ? "text/html" : "application/pdf" },
+        });
+      } catch (error) {
+        if (!lastReviewed || !isSourceUnavailable(error)) throw error;
+        return { rows: rowsAt(now, staleVerificationNote(rule.note, lastReviewed)) };
+      }
       if (reply.notModified) throw new Error(`Unexpected ${publisher.id} 304`);
       return { rows: await parse(reply.response, now) };
     },

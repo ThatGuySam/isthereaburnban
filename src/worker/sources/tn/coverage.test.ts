@@ -1,9 +1,10 @@
 // @ts-nocheck -- bun test types are not installed.
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { countiesInState } from "../../counties";
 import { extractHtml } from "../lib/html";
 import { mergeSources } from "../merge";
+import { parseHamiltonBurnDecision, tnHamiltonDailyBurning } from "./hamilton";
 import { parseTennesseePermitHolds, parseTennesseePermitRoster, tnForestryPermitHolds } from "./permit-holds";
 import { parseTennesseePermitSeason, tnSeasonalBurnPermits } from "./seasonal";
 
@@ -11,6 +12,7 @@ const fixture = (path) => readFileSync(new URL(`./fixtures/${path}`, import.meta
 const roster = fixture("permit-roster-2026-11-24.json");
 const details = fixture("permit-details-2026-11-24.json");
 const guidance = fixture("permit-season-2026-11-24.html");
+const hamilton = fixture("hamilton-burn-widget-2026-11-24.html");
 const captured = new Date("2026-11-24T12:31:02Z");
 const holdsAt = (now = captured) => parseTennesseePermitHolds(details, parseTennesseePermitRoster(roster), now);
 const seasonAt = async (now = captured) => parseTennesseePermitSeason(await extractHtml(guidance), now);
@@ -72,6 +74,39 @@ test("the seasonal requirement observes both Tennessee zones and excludes local 
   expect(() => parseTennesseePermitSeason({ blocks: [] }, captured)).toThrow("guidance changed");
 });
 
+test("the seasonal requirement uses the pinned rule on access blocks and still rejects changed guidance", async () => {
+  const fetch = spyOn(globalThis, "fetch");
+  try {
+    fetch.mockImplementation(async () => new Response("Forbidden", { status: 403 }));
+    const { rows } = await tnSeasonalBurnPermits.fetch({ now: captured });
+    expect(rows).toHaveLength(92);
+    expect(rows[0].note).toContain("Online verification is stale");
+    expect(await tnSeasonalBurnPermits.fetch({ now: new Date("2027-06-01T14:00:00Z") })).toEqual({ rows: [] });
+
+    fetch.mockImplementation(async () => new Response(guidance.replace("through May 15", "through May 16")));
+    await expect(tnSeasonalBurnPermits.fetch({ now: captured })).rejects.toThrow("guidance changed");
+  } finally {
+    fetch.mockRestore();
+  }
+});
+
+test("Hamilton's dated air bureau bulletin applies to permitted open burning", async () => {
+  const rows = await parseHamiltonBurnDecision(hamilton, captured);
+  expect(rows).toHaveLength(1);
+  expect(rows[0]).toMatchObject({
+    fips: "47065", status: "restricted", scope: "part", officialUrl: "https://apcb.org/",
+    validFrom: "2026-11-24T05:00:00.000Z", validUntil: "2026-11-25T05:00:00.000Z",
+  });
+  expect(rows[0].note).toContain("9:00 a.m. to 3:30 p.m. Eastern");
+  const noBurn = hamilton.replace('class="widget-text-b2">Yes', 'class="widget-text-b2">No');
+  expect((await parseHamiltonBurnDecision(noBurn, captured))[0].label).toBe("Hamilton County no-burn day");
+  expect(await parseHamiltonBurnDecision(hamilton, new Date("2026-11-25T05:00:00Z"))).toEqual([]);
+  await expect(parseHamiltonBurnDecision(hamilton.replace("A valid permit is required.", ""), captured)).rejects.toThrow("permit requirement");
+  await expect(parseHamiltonBurnDecision(hamilton.replace('class="widget-text-b2">Yes', 'class="widget-text-b2">Maybe'), captured)).rejects.toThrow("daily burning widget");
+  await expect(parseHamiltonBurnDecision(hamilton + hamilton, captured)).rejects.toThrow("daily burning widget");
+  expect(tnHamiltonDailyBurning.mode).toBe("positive-only");
+});
+
 test("the Tennessee merge reports scoped restrictions and keeps uncovered countywide status unknown", async () => {
   const checked = captured.toISOString();
   const { snapshot } = mergeSources(null, [
@@ -89,10 +124,11 @@ test("the Tennessee merge reports scoped restrictions and keeps uncovered county
   ]);
 });
 
-test("the real Tennessee JSON and calendar fixtures parse below 4 ms p95 thread CPU", async () => {
+test("the real Tennessee JSON, calendar and Hamilton bulletin parse below 4 ms p95 thread CPU", async () => {
   const parse = async () => {
     holdsAt();
     await seasonAt();
+    await parseHamiltonBurnDecision(hamilton, captured);
   };
   for (let index = 0; index < 15; index++) await parse();
   const samples = [];

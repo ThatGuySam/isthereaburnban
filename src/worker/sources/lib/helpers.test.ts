@@ -83,9 +83,11 @@ test("HTML panels distinguish omitted markup from incomplete or ambiguous delimi
 
 test("HTML status grids extract only selected rows and keep cell data", async () => {
   const markup = '<div class="cell">Outside</div><section id="status"><div class="row">' +
-    '<span class="cell">One&nbsp;&amp; <strong>Two</strong></span><span class="cell active">On</span>' +
+    '<span class="cell">One&nbsp;&amp;<br><strong>Two</strong></span><span class="cell active">On</span>' +
     '<a class="cell" href="/order?p=1&amp;n=2">Order</a></div></section>';
-  expect(await extractHtmlGrid(markup, { row: "#status > .row", cell: ".cell" })).toEqual([[
+  const selectors = { row: "#status > .row", cell: ".cell" };
+  expect((await extractHtmlGrid(markup, selectors))[0][0].text).toBe("One &Two");
+  expect(await extractHtmlGrid(markup, { ...selectors, spaceLineBreaks: true })).toEqual([[
     { text: "One & Two", className: "cell" }, { text: "On", className: "cell active" },
     { text: "Order", className: "cell", href: "/order?p=1&n=2" },
   ]]);

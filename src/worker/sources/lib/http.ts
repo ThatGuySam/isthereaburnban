@@ -15,6 +15,16 @@ export class HttpError extends Error {
   }
 }
 
+/** Identify transport errors and temporary publisher outages. */
+export function isSourceUnavailable(error: unknown): boolean {
+  if (error instanceof BlockedError || error instanceof TypeError) return true;
+  if (error instanceof HttpError) return error.status === 408 || error.status === 429 || error.status >= 500;
+  if (!(error instanceof Error)) return false;
+  if (error.name === "TimeoutError" || error.name === "AbortError") return true;
+  return "code" in error &&
+    /^(?:ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|ENOTFOUND|ConnectionClosed|UNABLE_TO_VERIFY_LEAF_SIGNATURE)$/.test(String(error.code));
+}
+
 export type Validators = { etag?: string; lastModified?: string };
 type SourceReply =
   | { notModified: true; validators: Validators }

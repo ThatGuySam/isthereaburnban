@@ -89,8 +89,13 @@ import { scAirQuality } from "./sc/air-quality";
 import { scfcDebris } from "./sc/debris";
 import { sdBlmFireRestrictions } from "./sd/blm";
 import { sdBlackHillsPileBurning } from "./sd/pile-burning";
+import { tnAirQualityPermitHolds } from "./tn/air-quality";
+import { tnGatlinburgPermitNotices } from "./tn/gatlinburg";
+import { tnHamiltonDailyBurning } from "./tn/hamilton";
+import { tnLocalCalendars } from "./tn/local-rules";
 import { tnForestryPermitHolds } from "./tn/permit-holds";
 import { tnSeasonalBurnPermits } from "./tn/seasonal";
+import { tnTullahomaDailyBurning } from "./tn/tullahoma";
 import type { ActiveSource, Source } from "./types";
 import { utFfslFireOrders } from "./ut/orders";
 import { utClosedFireSeason } from "./ut/seasonal";
@@ -205,6 +210,11 @@ export const SOURCES: readonly Source[] = [
   moMountainView,
   ...moLocalCalendars.map(({ source }) => source),
   tnForestryPermitHolds,
+  tnHamiltonDailyBurning,
+  tnAirQualityPermitHolds,
+  tnGatlinburgPermitNotices,
+  tnTullahomaDailyBurning,
+  ...tnLocalCalendars.map(({ source }) => source),
   tnSeasonalBurnPermits,
   nyDecBrushBurning,
   nyNycBarbecuing,

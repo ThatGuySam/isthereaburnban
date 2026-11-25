@@ -3,7 +3,8 @@ import { countiesInState, matchKey } from "../../counties";
 import { CALENDAR_RULES, calendarStatusRows } from "../lib/calendar";
 import { US_ZONES } from "../lib/dates";
 import { extractHtml, type HtmlParts } from "../lib/html";
-import { fetchSource } from "../lib/http";
+import { getText, isSourceUnavailable } from "../lib/http";
+import { staleVerificationNote } from "../lib/local-calendar";
 import type { ActiveSource } from "../types";
 import { tennesseeZone } from "./zones";
 
@@ -27,15 +28,31 @@ export function parseTennesseePermitSeason({ blocks }: HtmlParts, now: Date): Co
     /^From October 15 through May 15, a burn permit from the Tennessee Division of Forestry \(TDF\) is required for debris pile fires and prescribed fires\.$/i.test(text));
   if (!hasHeading || !hasRule) throw new Error("Tennessee Forestry: the seasonal permit guidance changed or is missing");
 
-  return ZONES.flatMap(({ rule, counties }) => calendarStatusRows(rule, counties, META, now, { includeTomorrow: true }));
+  return permitSeasonRows(now);
+}
+
+function permitSeasonRows(now: Date, stale = false): CountyStatus[] {
+  return ZONES.flatMap(({ rule, counties }) => calendarStatusRows({
+    ...rule,
+    note: stale
+      ? staleVerificationNote(rule.note, "November 24, 2026")
+      : rule.note,
+  }, counties, META, now, { includeTomorrow: true }));
 }
 
 export const tnSeasonalBurnPermits: ActiveSource = {
   ...META, recurring: true, mode: "positive-only", coverage: "restrictions",
   cadence: { kind: "daily", zone: US_ZONES.Eastern, hours: [0] },
   async fetch({ now }) {
-    const reply = await fetchSource(META.sourceUrl, { headers: { accept: "text/html" }, maxBytes: 256_000 });
-    if (reply.notModified) throw new Error("Unexpected Tennessee Forestry permit page 304");
-    return { rows: parseTennesseePermitSeason(await extractHtml(reply.response), now) };
+    let guidance: string;
+    try {
+      guidance = await getText(META.sourceUrl, {
+        headers: { accept: "text/html" }, maxBytes: 256_000, timeoutMs: 8_000, attempts: 1,
+      });
+    } catch (error) {
+      if (!isSourceUnavailable(error)) throw error;
+      return { rows: permitSeasonRows(now, true) };
+    }
+    return { rows: parseTennesseePermitSeason(await extractHtml(guidance), now) };
   },
 };
