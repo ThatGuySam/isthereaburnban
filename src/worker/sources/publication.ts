@@ -97,8 +97,8 @@ async function mergeState(env: Env, run: Run, job: StateJob, sources: readonly S
     const inputs = await readSourceInputs(env, state, local, heads, prev, now);
     const encoded = buildStatePublication(prev, inputs, now, state, run.id, signature);
     serialized = encoded.snapshot;
-    const prune = env.DB.prepare(`DELETE FROM snapshot_state WHERE state = ? AND rowid <
-      (SELECT MAX(rowid) FROM snapshot_state WHERE state = ?)`);
+    const prune = env.DB.prepare(`DELETE FROM snapshot_state WHERE state = ? AND revision NOT IN
+      (SELECT revision FROM snapshot_state WHERE state = ? ORDER BY rowid DESC LIMIT 2)`);
     const insert = env.DB.prepare(`INSERT INTO snapshot_state
       (state, revision, snapshot, summary, active, active_pretty, weather_counties, weather, notices) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
     const statements = [prune.bind(state, state), insert.bind(state, run.id, serialized, encoded.summary,
@@ -167,13 +167,17 @@ async function publishCatalog(env: Env, run: Run, sources: readonly Source[]) {
     .all<PublishedState>();
   const heads = await readHeads(env.DB);
   const serialized = JSON.stringify(buildCatalog(run, results, sources, heads));
-  await env.KV.put(INDEX_KEY, serialized);
-  await env.DB.prepare(`INSERT INTO snapshot_publication (singleton, slot, catalog) VALUES (1, ?, ?)
-    ON CONFLICT(singleton) DO UPDATE SET slot = excluded.slot, catalog = excluded.catalog`).bind(run.slot, serialized).run();
+  const result = await env.DB.prepare(`INSERT INTO snapshot_publication (singleton, slot, catalog)
+    SELECT 1, ?, ? WHERE EXISTS (SELECT 1 FROM snapshot_run WHERE id = ? AND cursor = ?)
+    ON CONFLICT(singleton) DO UPDATE SET slot = excluded.slot, catalog = excluded.catalog
+    WHERE snapshot_publication.slot <= excluded.slot`).bind(run.slot, serialized, run.id, run.cursor).run();
+  if (result.meta.changes) await env.KV.put(INDEX_KEY, serialized);
 }
 
 /** Advance one durable step per queue invocation, including a fully cold 51-area rebuild. */
 export async function advancePublication(env: Env, run: Run, sources: readonly Source[], sendNotices: SendNotices): Promise<boolean> {
+  const current = await env.DB.prepare("SELECT cursor FROM snapshot_run WHERE id = ?").bind(run.id).first<number>("cursor");
+  if (current !== run.cursor) return current !== null;
   const job = run.plan[run.cursor];
   if (job) await mergeState(env, run, job, sources);
   else if (run.cursor <= run.plan.length + 1) {
@@ -186,9 +190,9 @@ export async function advancePublication(env: Env, run: Run, sources: readonly S
       .bind(run.id).all<{ notices: string }>();
     const notices = results.flatMap(({ notices }): Notice[] => JSON.parse(notices));
     if (notices.length) await sendNotices(env, `sources-${run.id}`, notices);
-    await env.DB.prepare("DELETE FROM snapshot_run WHERE id = ?").bind(run.id).run();
+    await env.DB.prepare("DELETE FROM snapshot_run WHERE id = ? AND cursor = ?").bind(run.id, run.cursor).run();
     return false;
   }
-  await env.DB.prepare("UPDATE snapshot_run SET cursor = cursor + 1 WHERE id = ?").bind(run.id).run();
+  await env.DB.prepare("UPDATE snapshot_run SET cursor = cursor + 1 WHERE id = ? AND cursor = ?").bind(run.id, run.cursor).run();
   return true;
 }

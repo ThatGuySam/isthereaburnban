@@ -11,7 +11,7 @@ import { CHANNELS } from "./notification-audience";
 import { transitionNotice, type Transition } from "./notification-message";
 import { drainOutbox, enqueueNotices } from "./notification-outbox";
 import { withReportDates } from "./report-dates";
-import { loadActive, loadIndex, loadMapStates, loadState } from "./snapshot-store";
+import { loadActive, loadIndex, loadMapStates, loadState, readPublication, SnapshotRevisionUnavailable } from "./snapshot-store";
 import { lastChangedByState, type ActiveProjection, type SnapshotIndex, type StateSnapshot } from "./snapshot-v2";
 import { withCurrentLinks } from "./source-links";
 import { mergeSources } from "./sources/merge";
@@ -166,6 +166,20 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
     if (value) memo.index = keep(value);
     return value;
   })());
+  async function withCatalog<T>(read: (pinned: SnapshotIndex | null) => Promise<T>): Promise<T> {
+    const pinned = await catalog();
+    try {
+      return await read(pinned);
+    } catch (error) {
+      if (!(error instanceof SnapshotRevisionUnavailable) || !pinned) throw error;
+      const latest = (await readPublication(env.DB))?.catalog;
+      if (!latest || latest.revision === pinned.revision) throw error;
+      console.warn("Snapshot catalog lagged retained revisions", pinned.revision);
+      index = Promise.resolve(latest);
+      memo.index = keep(latest);
+      return read(latest);
+    }
+  }
   const allHeads = async () => {
     if (memo.heads && reusable(memo.heads)) return memo.heads.value;
     const heads = await publicHeads(env);
@@ -195,8 +209,7 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
     return weather ? withFireWeather(published, now.getTime(), idx.weatherChecked) : published;
   }
 
-  async function state(st: string, { checks = true, weather = true } = {}): Promise<SnapshotData> {
-    const idx = await catalog();
+  async function stateAt(idx: SnapshotIndex | null, st: string, { checks = true, weather = true } = {}): Promise<SnapshotData> {
     if (!idx) {
       const snapshot = await old();
       const now = new Date();
@@ -227,6 +240,8 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
     return view;
   }
 
+  const state = (st: string, options?: Parameters<typeof stateAt>[2]) => withCatalog((idx) => stateAt(idx, st, options));
+
   return {
     state,
     nextBoundary: () => nextBoundary,
@@ -235,12 +250,11 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
     },
     async forCounties(fips: string[]) {
       const states = [...new Set(fips.map(countyState))];
-      return new Map(await Promise.all(states.map(async (st) => [st, await state(st)] as const)));
+      return withCatalog(async (idx) => new Map(await Promise.all(states.map(async (st) => [st, await stateAt(idx, st)] as const))));
     },
-    async mapStatus() {
-      const idx = await catalog();
+    mapStatus: () => withCatalog(async (idx) => {
       if (!idx) {
-        const snapshot = await state("");
+        const snapshot = await stateAt(idx, "");
         return projectMapStatus(snapshot.generated, [snapshot], Date.now());
       }
       if (!fresh && memo.map?.revision === idx.revision && Date.now() < memo.map.expiresAt) return memo.map;
@@ -266,7 +280,7 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
       map.expiresAt = Math.min(map.expiresAt, memo.heads?.until ?? Infinity);
       if (shards.length === states.length) memo.map = map;
       return map;
-    },
+    }),
     async coverage() {
       const idx = await catalog();
       if (!idx) return old();
@@ -274,11 +288,10 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
       applySourceChecks(sources, await allHeads());
       return { generated: idx.generated, sources };
     },
-    async bans(stateQuery?: string, format: BanFormat = "compact") {
-      const idx = await catalog();
+    bans: (stateQuery?: string, format: BanFormat = "compact") => withCatalog(async (idx) => {
       const st = stateQuery?.trim().toUpperCase();
       if (!idx || st) {
-        const snapshot = await state(st ?? "");
+        const snapshot = await stateAt(idx, st ?? "");
         if (idx && st) {
           const sources = idx.sources.filter((source) => source.state === st).map((source) => ({ ...source }));
           applySourceChecks(sources, await publicHeads(env, sources.filter((s) => s.mode !== "manual").map(({ id }) => id)));
@@ -296,16 +309,15 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
         until: Math.min(Date.now() + MEMO_MS, result.nextBoundary) };
       recordBoundary(result.nextBoundary, memo.active[format]);
       return result;
-    },
-    async weather() {
-      const idx = await catalog();
-      if (!idx) return state("");
+    }),
+    weather: () => withCatalog(async (idx) => {
+      if (!idx) return stateAt(idx, "");
       const [projection, heads] = await Promise.all([active(idx, "compact"), allHeads()]);
       const now = new Date();
       const view = projectWeather(projection, idx, heads, now);
       recordBoundary(snapshotBoundary(view, now.getTime()), memo.active.compact);
       return view;
-    },
+    }),
     async lastChanged() {
       const idx = await catalog();
       if (!idx) return lastChangedByState((await old()).changed ?? {});

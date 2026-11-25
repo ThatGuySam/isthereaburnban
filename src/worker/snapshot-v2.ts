@@ -81,5 +81,8 @@ export function decodeActive(raw: string): ActiveProjection {
   const newline = raw.indexOf("\n");
   if (newline < 1) throw new Error("Active projection missing its header");
   const header: ActiveHeader = JSON.parse(raw.slice(0, newline));
+  if (!header || typeof header.revision !== "string" || !Array.isArray(header.bans) || !header.counties || !header.fireWeather) {
+    throw new Error("Invalid active projection header");
+  }
   return { ...header, raw, bodyStart: newline + 1 };
 }

@@ -101,7 +101,7 @@ async function legacyPayload(env: Env, id: string, hash: string) {
   return data;
 }
 
-async function weatherWrites(db: D1Database, id: string, weather: FireWeatherReport[]) {
+async function weatherWrites(db: D1Database, id: string, weather: FireWeatherReport[], expected: number) {
   const groups = new Map<string, FireWeatherReport[]>();
   for (const report of weather) {
     const state = COUNTY_BY_FIPS.get(report.fips)?.state;
@@ -113,27 +113,31 @@ async function weatherWrites(db: D1Database, id: string, weather: FireWeatherRep
   const { results } = await db.prepare("SELECT state, hash FROM source_payload WHERE id = ?").bind(id)
     .all<{ state: string; hash: string }>();
   const previous = new Map(results.map(({ state, hash }) => [state, hash]));
-  const insert = payloadUpsert(db);
-  const remove = db.prepare("DELETE FROM source_payload WHERE id = ? AND state = ?");
-  const writes = results.filter(({ state }) => !groups.has(state)).map(({ state }) => remove.bind(id, state));
+  const remove = db.prepare(`DELETE FROM source_payload WHERE id = ? AND state = ? AND ${SLOT_MATCHES}`);
+  const writes = results.filter(({ state }) => !groups.has(state)).map(({ state }) => remove.bind(id, state, id, expected));
   for (const [state, group] of groups) {
     const serialized = serialize(group);
     const hash = await sha256(serialized);
-    if (previous.get(state) !== hash) writes.push(insert.bind(id, state, hash, `{"fireWeather":[${serialized}]}`));
+    if (previous.get(state) !== hash) writes.push(payloadWrite(db, id, state, hash, `{"fireWeather":[${serialized}]}`, expected));
   }
   return writes;
 }
 
-const payloadUpsert = (db: D1Database) => db.prepare(`INSERT INTO source_payload (id, state, hash, payload) VALUES (?, ?, ?, ?)
-  ON CONFLICT(id, state) DO UPDATE SET hash = excluded.hash, payload = excluded.payload`);
+const SLOT_MATCHES = "COALESCE((SELECT slot FROM source_refresh WHERE id = ?), -1) = ?";
+
+function payloadWrite(db: D1Database, id: string, state: string, hash: string, payload: string, expected: number) {
+  return db.prepare(`INSERT INTO source_payload (id, state, hash, payload) SELECT ?, ?, ?, ? WHERE ${SLOT_MATCHES}
+    ON CONFLICT(id, state) DO UPDATE SET hash = excluded.hash, payload = excluded.payload`)
+    .bind(id, state, hash, payload, id, expected);
+}
 
 /** Finish importing a national legacy head before any state uses its partitioned reports. */
 export async function importLegacyWeather(env: Env, head: SourceHead) {
   if (head.stored || !head.hash) return;
   const data = await legacyPayload(env, head.id, head.hash);
   if (!("fireWeather" in data)) throw new Error(`Expected fire-weather revision: ${head.id}`);
-  const writes = await weatherWrites(env.DB, head.id, data.fireWeather);
-  await env.DB.batch([...writes, env.DB.prepare("UPDATE source_refresh SET stored = 1 WHERE id = ?").bind(head.id)]);
+  const writes = await weatherWrites(env.DB, head.id, data.fireWeather, head.slot);
+  await env.DB.batch([...writes, env.DB.prepare("UPDATE source_refresh SET stored = 1 WHERE id = ? AND slot = ?").bind(head.id, head.slot)]);
 }
 
 export async function pollSource(env: Env, source: ActiveSource, slot: number, now: Date): Promise<void> {
@@ -141,6 +145,7 @@ export async function pollSource(env: Env, source: ActiveSource, slot: number, n
     .bind(source.id).first<StoredHead>();
   if (current && current.slot >= slot) return;
   const previous = current ? loadHead(current) : undefined;
+  const expected = previous?.slot ?? -1;
   const checked = now.toISOString();
   let hash = previous?.hash ?? null;
   let health: Health = { checked, lastGood: previous?.lastGood, validators: previous?.validators,
@@ -196,21 +201,27 @@ export async function pollSource(env: Env, source: ActiveSource, slot: number, n
   if (incoming) {
     const next = await sha256(incoming.serialized);
     if (next !== hash || !previous?.stored) {
-      if (incoming.field === "fireWeather") writes.push(...await weatherWrites(env.DB, id, incoming.weather));
-      else writes.push(payloadUpsert(env.DB).bind(id, source.state, next, `{"rows":[${incoming.serialized}]}`));
+      if (incoming.field === "fireWeather") writes.push(...await weatherWrites(env.DB, id, incoming.weather, expected));
+      else writes.push(payloadWrite(env.DB, id, source.state, next, `{"rows":[${incoming.serialized}]}`, expected));
     }
     hash = next;
     health.boundaries = incoming.boundaries;
   } else if (hash && !previous?.stored) {
     const data = await legacyPayload(env, id, hash);
-    if ("fireWeather" in data) writes.push(...await weatherWrites(env.DB, id, data.fireWeather));
-    else writes.push(payloadUpsert(env.DB).bind(id, source.state, hash, JSON.stringify({ rows: data.rows })));
+    if ("fireWeather" in data) writes.push(...await weatherWrites(env.DB, id, data.fireWeather, expected));
+    else writes.push(payloadWrite(env.DB, id, source.state, hash, JSON.stringify({ rows: data.rows }), expected));
   }
-  const update = env.DB.prepare(`INSERT INTO source_refresh (id, slot, hash, health, stored) VALUES (?, ?, ?, ?, 1)
-    ON CONFLICT(id) DO UPDATE SET slot = excluded.slot, hash = excluded.hash, health = excluded.health, stored = 1
-    WHERE source_refresh.slot < excluded.slot`).bind(id, slot, hash, JSON.stringify(health));
-  if (writes.length) await env.DB.batch([...writes, update]);
-  else await update.run();
+  const update = env.DB.prepare(`INSERT INTO source_refresh (id, slot, hash, health, stored)
+    SELECT ?, ?, ?, ?, 1 WHERE ${SLOT_MATCHES}
+    ON CONFLICT(id) DO UPDATE SET slot = excluded.slot, hash = excluded.hash, health = excluded.health, stored = 1`)
+    .bind(id, slot, hash, JSON.stringify(health), id, expected);
+  const result = writes.length ? (await env.DB.batch([...writes, update])).at(-1) : await update.run();
+  if (!result?.meta.changes) {
+    const winner = await env.DB.prepare("SELECT slot FROM source_refresh WHERE id = ?").bind(id).first<number>("slot");
+    // A newer attempt can finish first. If an intermediate slot won, redo the fetch using its validators.
+    if (winner === null || winner < slot) throw new Error(`Source head changed during poll: ${id}`);
+  }
+
 }
 
 export function materialRevisions(sources: readonly Source[], heads: Map<string, SourceHead>, now: Date, weatherHashes?: Map<string, string>) {

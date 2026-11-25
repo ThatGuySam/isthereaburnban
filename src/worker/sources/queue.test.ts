@@ -12,7 +12,7 @@ import { ACTIVE_KEY, INDEX_KEY, PRETTY_ACTIVE_KEY, stateKey } from "../snapshot-
 import { US_ZONES } from "./lib/dates";
 import { mergeSources, STALE_MS } from "./merge";
 import { nwsFireWeather, parseNwsAlerts } from "./nws/alerts";
-import { MAX_CACHED_STATES } from "./publication";
+import { advancePublication, currentRun, MAX_CACHED_STATES } from "./publication";
 import { consumeSourceMessage, consumeSourceQueue, enqueueSources, isDue } from "./queue";
 import { replayDeadLetter, SOURCE_DLQ } from "./dead-letter";
 import { pipelineStatus, runSourceMonitor } from "./monitor";
@@ -40,8 +40,8 @@ function sandbox() {
     const query = sqlite.query(sql);
     return {
       bind: (...args) => prepare(sql, args),
-      execute: () => query.run(...args),
-      run: async () => query.run(...args),
+      execute: () => ({ meta: { changes: query.run(...args).changes } }),
+      run: async () => ({ meta: { changes: query.run(...args).changes } }),
       first: async (field) => {
         const result = query.get(...args);
         return field ? result?.[field] ?? null : result;
@@ -625,4 +625,72 @@ test("a dead letter remains available until replay is successfully enqueued", as
   expect(box.messages).toEqual([{ body }]);
   expect(await replayDeadLetter(box.env, "dead-id")).toBe(false);
   expect((await pipelineStatus(box.env, [])).deadLetters).toEqual([]);
+});
+
+test("KV failures fall back to the pinned D1 snapshot and a pruned catalog re-pins the request", async () => {
+  const box = sandbox();
+  const src = source("or", async ({ now }) => ({ rows: [row("ban", now.toISOString(), { label: `Edition ${now.getTime()}` })] }));
+  for (let i = 0; i < 4; i++) {
+    const slot = initial + i * 3_600_000;
+    await poll(box, src, slot);
+    await merge(box, [src], slot);
+    if (i === 0) box.oldCatalog = box.keys.get(INDEX_KEY);
+  }
+  const latest = box.catalog();
+  const getter = box.env.KV.get;
+  box.env.KV.get = async (key, type) => {
+    if (key === stateKey("OR") || key === ACTIVE_KEY || key === INDEX_KEY) throw new Error("KV failed");
+    return getter(key, type);
+  };
+  expect((await snapshotReader(box.env, { fresh: true }).state("OR", { checks: false })).generated).toBe(latest.generated);
+  expect((await snapshotReader(box.env, { fresh: true }).bans()).generated).toBe(latest.generated);
+
+  box.env.KV.get = async (key, type) => key === INDEX_KEY ? JSON.parse(box.oldCatalog) : getter(key, type);
+  const snapshot = await snapshotReader(box.env, { fresh: true }).forCounties(["41039", "48001"]);
+  expect([...snapshot.values()].map(({ generated }) => generated)).toEqual([latest.generated, latest.generated]);
+});
+
+test("source head and payload stay consistent when an older in-flight poll completes last", async () => {
+  const box = sandbox();
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  const src = source("or", async ({ now }) => {
+    if (now.getTime() === initial) await gate;
+    return { rows: [row(now.getTime() === initial ? "none" : "ban", now.toISOString())] };
+  });
+  const older = poll(box, src, initial);
+  await poll(box, src, nextHour);
+  release();
+  await older;
+  const stored = box.sqlite.query(`SELECT source_refresh.hash = source_payload.hash AS consistent, payload FROM
+    source_refresh JOIN source_payload USING (id) WHERE id = ?`).get(src.id);
+  expect(stored.consistent).toBe(1);
+  expect(JSON.parse(stored.payload).rows[0].status).toBe("ban");
+});
+
+test("concurrent retries of one publication step advance the cursor only once", async () => {
+  const box = sandbox();
+  await run(box, [], { kind: "merge", slot: initial, due: [] }, initial + 120_000);
+  const pending = await currentRun(box.env.DB);
+  const firstKey = stateKey(pending.plan[0].state);
+  const put = box.env.KV.put;
+  let begin;
+  let release;
+  const started = new Promise((resolve) => { begin = resolve; });
+  const blocked = new Promise((resolve) => { release = resolve; });
+  let delayed = false;
+  box.env.KV.put = async (key, ...args) => {
+    if (key === firstKey && !delayed) {
+      delayed = true;
+      begin();
+      await blocked;
+    }
+    return put(key, ...args);
+  };
+  const first = advancePublication(box.env, pending, [], box.sendNotices);
+  await started;
+  await advancePublication(box.env, pending, [], box.sendNotices);
+  release();
+  await first;
+  expect((await currentRun(box.env.DB)).cursor).toBe(1);
 });
