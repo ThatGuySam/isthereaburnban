@@ -1,8 +1,9 @@
+// @ts-nocheck -- matches the existing Bun tests, which run without Bun types in the Worker tsconfig.
 import { expect, test } from "bun:test";
 import { emailConfigured, type Env } from "./env";
 import { sendAlertEmail } from "./email";
 
-const notice = { title: "Burn ban in Tulsa County, OK", body: "A county burn ban is now reported.", url: "/us/ok/tulsa-county/" };
+const notice = { kind: "ops" as const, fips: "40143", title: "Burn ban in Tulsa County, OK", body: "A county burn ban is now reported.", url: "/us/ok/tulsa-county/" };
 
 function env(extra: Partial<Env>): Env {
   return { SITE_URL: "https://example.test", ...extra } as Env;
