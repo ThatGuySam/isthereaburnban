@@ -1,0 +1,163 @@
+{
+  "objectIdFieldName": "OBJECTID",
+  "globalIdFieldName": "",
+  "geometryType": "esriGeometryPolygon",
+  "spatialReference": {
+    "wkid": 102728,
+    "latestWkid": 2271
+  },
+  "fields": [
+    {
+      "name": "MUNINAME",
+      "alias": "MUNINAME",
+      "type": "esriFieldTypeString",
+      "length": 30
+    },
+    {
+      "name": "Burn_Status",
+      "alias": "Burn_Status",
+      "type": "esriFieldTypeString",
+      "length": 100
+    }
+  ],
+  "features": [
+    {
+      "attributes": {
+        "MUNINAME": "Kidder Township",
+        "Burn_Status": "Allowed"
+      }
+    },
+    {
+      "attributes": {
+        "MUNINAME": "Banks Township",
+        "Burn_Status": "Allowed"
+      }
+    },
+    {
+      "attributes": {
+        "MUNINAME": "Beaver Meadows Borough",
+        "Burn_Status": "Allowed"
+      }
+    },
+    {
+      "attributes": {
+        "MUNINAME": "Packer Township",
+        "Burn_Status": "Allowed"
+      }
+    },
+    {
+      "attributes": {
+        "MUNINAME": "Nesquehoning Borough",
+        "Burn_Status": "Limiting Burning Allowed in Accordance by Local Ordinance Only"
+      }
+    },
+    {
+      "attributes": {
+        "MUNINAME": "Summit Hill Borough",
+        "Burn_Status": "Limiting Burning Allowed in Accordance by Local Ordinance Only"
+      }
+    },
+    {
+      "attributes": {
+        "MUNINAME": "Lansford Borough",
+        "Burn_Status": "Not Allowed"
+      }
+    },
+    {
+      "attributes": {
+        "MUNINAME": "Mahoning Township",
+        "Burn_Status": "Allowed"
+      }
+    },
+    {
+      "attributes": {
+        "MUNINAME": "East Penn Township",
+        "Burn_Status": "Allowed"
+      }
+    },
+    {
+      "attributes": {
+        "MUNINAME": "Weissport Borough",
+        "Burn_Status": "Allowed"
+      }
+    },
+    {
+      "attributes": {
+        "MUNINAME": "Lehighton Borough",
+        "Burn_Status": "Limiting Burning Allowed in Accordance by Local Ordinance Only"
+      }
+    },
+    {
+      "attributes": {
+        "MUNINAME": "Towamensing Township",
+        "Burn_Status": "Allowed"
+      }
+    },
+    {
+      "attributes": {
+        "MUNINAME": "Franklin Township",
+        "Burn_Status": "Allowed"
+      }
+    },
+    {
+      "attributes": {
+        "MUNINAME": "Parryville Borough",
+        "Burn_Status": "Allowed"
+      }
+    },
+    {
+      "attributes": {
+        "MUNINAME": "Lower Towamensing Twp",
+        "Burn_Status": "Allowed"
+      }
+    },
+    {
+      "attributes": {
+        "MUNINAME": "Bowmanstown Borough",
+        "Burn_Status": "Allowed"
+      }
+    },
+    {
+      "attributes": {
+        "MUNINAME": "Palmerton Borough",
+        "Burn_Status": "Limiting Burning Allowed in Accordance by Local Ordinance Only"
+      }
+    },
+    {
+      "attributes": {
+        "MUNINAME": "Lehigh Township",
+        "Burn_Status": "Allowed"
+      }
+    },
+    {
+      "attributes": {
+        "MUNINAME": "East Side Borough",
+        "Burn_Status": "Allowed"
+      }
+    },
+    {
+      "attributes": {
+        "MUNINAME": "Lausanne Township",
+        "Burn_Status": "Allowed"
+      }
+    },
+    {
+      "attributes": {
+        "MUNINAME": "Weatherly Borough",
+        "Burn_Status": "Allowed"
+      }
+    },
+    {
+      "attributes": {
+        "MUNINAME": "Penn Forest Township",
+        "Burn_Status": "Allowed"
+      }
+    },
+    {
+      "attributes": {
+        "MUNINAME": "Jim Thorpe Borough",
+        "Burn_Status": "Allowed"
+      }
+    }
+  ]
+}

@@ -102,7 +102,11 @@ import { ohSeasonal, parseOhioSeasonal } from "../src/worker/sources/oh/seasonal
 import { orLrapaHeating, orLrapaOutdoor, parseLrapaHeating, parseLrapaOutdoor } from "../src/worker/sources/or/lrapa";
 import { orOdfPublicUse, parseOdfPublicUse } from "../src/worker/sources/or/odf";
 import { orWillametteBackyard, parseWillametteBackyard } from "../src/worker/sources/or/willamette";
+import { paDepAirBasins, parsePaAirBasins } from "../src/worker/sources/pa/air-basins";
+import { paCarbonMunicipalStatus, parseCarbonBurnStatus } from "../src/worker/sources/pa/carbon";
 import { paCarrollValley, parseCarrollValley } from "../src/worker/sources/pa/carroll-valley";
+import { paLocalBurningRules } from "../src/worker/sources/pa/local-rules";
+import { paPikeWebCad, parsePikeWebCad } from "../src/worker/sources/pa/pike-webcad";
 import { paStateForestSpring, parsePaStateForestSpring } from "../src/worker/sources/pa/seasonal";
 import { parseScAirQuality, scAirQuality } from "../src/worker/sources/sc/air-quality";
 import { parseScfcDebris } from "../src/worker/sources/sc/debris";
@@ -424,6 +428,18 @@ const paCaptured = new Date("2026-11-24T08:11:00Z");
 const paSpringDay = new Date("2026-05-25T15:00:00Z");
 const parsePaNewsFixture = () => parseCarrollValley(paNews, paCaptured);
 const parsePaStatuteFixture = (time = paSpringDay) => extractHtml(paStatute).then((parts) => parsePaStateForestSpring(parts, time));
+const paCountyCaptured = new Date("2026-11-25T20:00:00Z");
+const paCarbon = utf8("pa/fixtures/local/carbon-status.json");
+const paAirRule = utf8("pa/fixtures/local/air-basin-rule.html");
+const paAirBoundaries = utf8("pa/fixtures/local/air-basin-definitions.html");
+const paPike = utf8("pa/fixtures/local/pike-webcad.html");
+const parsePaCarbonFixture = () => parseCarbonBurnStatus(JSON.parse(paCarbon), paCountyCaptured);
+const parsePaAirBasinsFixture = () => parsePaAirBasins(paAirRule, paAirBoundaries, paCountyCaptured);
+const parsePaPikeFixture = () => parsePikeWebCad(paPike, paCountyCaptured);
+const paLocalRuleFixtures = paLocalBurningRules.map(({ source, parse, fixture }) => {
+  const body = raw(`pa/fixtures/local/${fixture}`);
+  return { source, parse: () => parse(new Response(body), paCountyCaptured) };
+});
 const idCaptured = new Date("2026-11-24T08:32:00Z");
 const idLayer = utf8("id/fixtures/idl-layer-2026-11-24.json");
 const idZones = utf8("id/fixtures/idl-zones-2026-11-24.json");
@@ -714,6 +730,10 @@ recordedInputs.push(
   { source: kySeasonal, rows: await parseKyStatuteFixture(), checked: kyCaptured.toISOString() },
   { source: paCarrollValley, rows: await parsePaNewsFixture(), checked: paCaptured.toISOString() },
   { source: paStateForestSpring, rows: await parsePaStatuteFixture(paCaptured), checked: paCaptured.toISOString() },
+  { source: paCarbonMunicipalStatus, rows: parsePaCarbonFixture(), checked: paCountyCaptured.toISOString() },
+  { source: paDepAirBasins, rows: await parsePaAirBasinsFixture(), checked: paCountyCaptured.toISOString() },
+  { source: paPikeWebCad, rows: await parsePaPikeFixture(), checked: paCountyCaptured.toISOString() },
+  ...await Promise.all(paLocalRuleFixtures.map(async ({ source, parse }) => ({ source, rows: await parse(), checked: paCountyCaptured.toISOString() }))),
   { source: idIdlStages, rows: parseIdlFixture(), checked: idCaptured.toISOString() },
   { source: idKootenaiAir, rows: await parseIdForecastFixture(), checked: idCaptured.toISOString() },
   { source: idSeasonal, rows: await parseIdStatuteFixture(idCaptured), checked: idCaptured.toISOString() },
@@ -853,6 +873,10 @@ const jobs: Array<[string, () => unknown]> = [
   ["KY statute PDF and calendar", parseKyStatuteFixture],
   ["PA Carroll Valley CivicPlus", parsePaNewsFixture],
   ["PA state forest statute and calendar", parsePaStatuteFixture],
+  ["PA Carbon County FeatureServer", parsePaCarbonFixture],
+  ["PA DEP air-basin statutes", parsePaAirBasinsFixture],
+  ["PA Pike County WebCAD", parsePaPikeFixture],
+  ...paLocalRuleFixtures.map(({ source, parse }): [string, typeof parse] => [source.id, parse]),
   ["ID IDL stage zones", parseIdlFixture],
   ["ID Kootenai district air forecast", parseIdForecastFixture],
   ["ID closed fire season and calendar", parseIdStatuteFixture],

@@ -1,5 +1,5 @@
 import { parseJson } from "./feeds";
-import { attributes } from "./html";
+import { attributes, extractHtmlGrid } from "./html";
 import { getText } from "./http";
 
 // Inventory: ASP.NET WebForms and DNN, primarily Michigan's township pages and Alabama Forestry.
@@ -36,4 +36,32 @@ export function syncfusionGridRows(html: string): unknown[] {
   const first = matches.next().value;
   if (!first || !matches.next().done) throw new Error("Expected one Syncfusion grid JSON data source");
   return parseJson(first[1], Array.isArray);
+}
+
+/** Read a named group from the WebCAD Public Incident View, omitting other dispatch records. */
+export async function webCadLiveGroup(input: Response | string, group: string) {
+  const tableRow = "#updatePanel table.dxgvControl_Glass tr";
+  const stamp = "#updatePanel .subHeadline";
+  const [refresh, ...grid] = await extractHtmlGrid(input, {
+    row: `${stamp}, ${tableRow}`, cell: `${stamp} #lblPageRefreshed, ${tableRow} > td`, spaceLineBreaks: true,
+  });
+  const columns = ["Incident Number Time Received", "Incident Type", "Location", "Units Assigned"];
+  const headings = (row: (typeof grid)[number] | undefined) => row?.length === columns.length &&
+    row.every((cell, index) => cell.text === columns[index] && cell.className === "dxgvHeader_Glass");
+  if (refresh?.length !== 1 || !refresh[0].text || !grid.some(headings)) {
+    throw new Error("Missing WebCAD live refresh stamp or incident headers");
+  }
+  const isGroup = (row: (typeof grid)[number]) => row.length === 1 && row[0].text === group;
+  const start = grid.findIndex(isGroup);
+  if (start === -1) return { refreshed: refresh[0].text, incidents: [] };
+  if (grid.findLastIndex(isGroup) !== start || !headings(grid[start + 1])) {
+    throw new Error(`Missing or duplicate WebCAD headers for ${group}`);
+  }
+  const end = grid.findIndex((row, index) => index > start + 1 && row.length === 1);
+  const rows = grid.slice(start + 2, end < 0 ? undefined : end);
+  if (rows.some((row) => row.length !== columns.length || row.some(({ className }) => className !== "dxgv"))) {
+    throw new Error(`Incomplete WebCAD incident row for ${group}`);
+  }
+  const incidents = rows.map(([received, type, location]) => ({ received: received.text, type: type.text, location: location.text }));
+  return { refreshed: refresh[0].text, incidents };
 }

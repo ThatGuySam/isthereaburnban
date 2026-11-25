@@ -86,7 +86,11 @@ import { ohSeasonal } from "./oh/seasonal";
 import { orLrapaHeating, orLrapaOutdoor } from "./or/lrapa";
 import { orOdfPublicUse } from "./or/odf";
 import { orWillametteBackyard } from "./or/willamette";
+import { paDepAirBasins } from "./pa/air-basins";
+import { paCarbonMunicipalStatus } from "./pa/carbon";
 import { paCarrollValley } from "./pa/carroll-valley";
+import { paLocalBurningRules } from "./pa/local-rules";
+import { paPikeWebCad } from "./pa/pike-webcad";
 import { paStateForestSpring } from "./pa/seasonal";
 import { riDemForest, riDemParks } from "./ri/dem-rules";
 import { riTownSources } from "./ri/town-rules";
@@ -186,7 +190,11 @@ export const SOURCES: readonly Source[] = [
   orOdfPublicUse,
   kyForestryCountyBans,
   kySeasonal,
+  paDepAirBasins,
+  paCarbonMunicipalStatus,
   paCarrollValley,
+  ...paLocalBurningRules.map(({ source }) => source),
+  paPikeWebCad,
   paStateForestSpring,
   idIdlStages,
   idKootenaiAir,

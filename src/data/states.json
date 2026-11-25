@@ -1020,7 +1020,7 @@
     "abbr": "PA",
     "name": "Pennsylvania",
     "coverage": "restrictions",
-    "publisher": "Pennsylvania DCNR and Carroll Valley Borough",
+    "publisher": "Pennsylvania DCNR, DEP and local authorities",
     "officialUrl": "https://www.pa.gov/agencies/dcnr/programs-and-services/community-outreach-and-development/wildfire/burn-bans",
     "extraUrls": [
       {
@@ -1040,11 +1040,15 @@
         "url": "https://www.pa.gov/agencies/dep/programs-and-services/air/bureau-of-air-quality/open-burning-information"
       },
       {
+        "label": "Municipal boundaries of Pennsylvania air basins",
+        "url": "https://www.pacodeandbulletin.gov/secure/pacode/data/025/chapter121/s121.1.html"
+      },
+      {
         "label": "County emergency management contacts",
         "url": "https://www.pa.gov/agencies/ready/contact/contact-county"
       }
     ],
-    "notes": "County officials can issue temporary bans, and the Governor can issue a statewide proclamation. We track Carroll Valley Borough notices in Adams County and the spring fire-ring and fireplace rule on state forest lands. Check the date on DCNR's county map and ask your county, municipality or land manager about current rules."
+    "notes": "County officials can issue temporary bans. Carbon County publishes municipal burning statuses, and Pike County dispatch lists active local bans. Many county results show standing city, township or air-basin rules. Check the named jurisdiction and activities on your county result, and check the date on DCNR's county map."
   },
   {
     "abbr": "RI",

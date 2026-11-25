@@ -1,7 +1,7 @@
 import { apptegyPageText } from "./apptegy";
 import { calendarStatusRows, type CalendarCounty, type CalendarRule } from "./calendar";
 import { sha256 } from "./hash";
-import { reviewedHeadingDigest, reviewedHtmlDigest } from "./html";
+import { htmlStatusBlocks, reviewedHeadingDigest, reviewedHtmlDigest } from "./html";
 import { fetchSource, isSourceUnavailable } from "./http";
 import { manualPdf } from "./pdf";
 import type { ActiveSource } from "../types";
@@ -9,6 +9,7 @@ import type { ActiveSource } from "../types";
 export type LocalCalendarRule = Pick<CalendarRule, "label" | "note" | "scopeNote" | "seasons" | "hours">;
 export type LocalCalendarEvidence =
   | { kind: "html"; digest: string; selector: string; startsWith?: string }
+  | { kind: "html-blocks"; digest: string; section: string; blocks: string }
   | { kind: "html-heading"; digest: string; selector: string; heading: string }
   | { kind: "html-apptegy-node"; digest: string; pageId: number; nodeId: string }
   | { kind: "pdf"; digest: string }
@@ -22,12 +23,17 @@ type ReviewedLocalCalendar = {
   zone: string;
   hour: number;
   lastReviewed?: string;
+  standing?: true;
 };
 
 async function matchesReview(input: Response, review: LocalCalendarEvidence): Promise<boolean> {
   switch (review.kind) {
     case "html":
       return await reviewedHtmlDigest(input, review.selector, review.startsWith) === review.digest;
+    case "html-blocks": {
+      const blocks = await htmlStatusBlocks(input, review.section, review.blocks);
+      return blocks.length > 0 && await sha256(blocks.join("\n")) === review.digest;
+    }
     case "html-heading":
       return await reviewedHeadingDigest(input, review.selector, review.heading) === review.digest;
     case "html-apptegy-node":
@@ -46,11 +52,12 @@ export function staleVerificationNote(note: string, lastReviewed: string) {
 }
 
 /** Poll the reviewed document before applying the standing local restriction. */
-export function reviewedLocalCalendar({ publisher, counties, rule, review, zone, hour, lastReviewed }: ReviewedLocalCalendar) {
+export function reviewedLocalCalendar({ publisher, counties, rule, review, zone, hour, lastReviewed, standing }: ReviewedLocalCalendar) {
   function rowsAt(now: Date, note = rule.note) {
-    return calendarStatusRows({
+    const rows = calendarStatusRows({
       ...rule, note, zone, state: publisher.state, scope: publisher.scope, officialUrl: publisher.officialUrl, status: "restricted",
     }, counties, publisher, now, { includeTomorrow: true, includeSeasonDates: true });
+    return standing ? rows.map((row) => ({ ...row, standing })) : rows;
   }
 
   async function parse(input: Response, now: Date) {
