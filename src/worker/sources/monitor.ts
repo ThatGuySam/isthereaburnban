@@ -82,7 +82,7 @@ export async function runSourceMonitor(env: Env, sources: readonly Source[], now
     ORDER BY i.opened_at, i.id LIMIT 8`).all<{ id: string; opened_at: number; detail: string }>();
   for (const issue of results) {
     await enqueueOpsNotice(env, `pipeline-${issue.id}-${issue.opened_at}`, {
-      kind: "ops", fips: "", title: "Burn ban pipeline alert", body: issue.detail, url: "/ops",
+      kind: "ops", fips: "", title: "Burn ban pipeline alert", body: issue.detail, url: "/api/v1/coverage",
     }, now);
   }
   return results.length > 0;

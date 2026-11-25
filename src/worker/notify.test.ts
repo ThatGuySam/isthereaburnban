@@ -282,7 +282,7 @@ describe("shared notifier", () => {
     const result = await notify(env, {
       mode: "send", origin: "test", runId: crypto.randomUUID(), audience: { kind: "test" }, channels: ["email"], notices: [testMessage],
     });
-    expect(result).toMatchObject({ accepted: 4, skipped: 1 });
+    expect(result).toMatchObject({ status: "queued", accepted: 4, pending: 1 });
     expect(requests).toHaveLength(4);
   });
 
@@ -534,4 +534,27 @@ describe("dashboard boundary", () => {
     expect((await limited.json()).status).toBe("rate-limited");
     expect(requests.map((r) => r.body.to[0]).sort()).toEqual([firstEmail, secondEmail]);
   });
+});
+
+test("an interrupted operator send leaves its recipients ready to resume", async () => {
+  for (let index = 0; index < 5; index++) addEmail("manual-resume-" + index, { test: true });
+  const runId = crypto.randomUUID();
+  const batch = env.DB.batch;
+  const provider = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    env.DB.batch = async () => { throw new Error("interrupted after provider acceptance"); };
+    return provider(url, init);
+  };
+  await expect(notify(env, {
+    mode: "send", origin: "test", runId, audience: { kind: "test" }, channels: ["email"], notices: [testMessage],
+  })).rejects.toThrow("interrupted after provider acceptance");
+  expect(sqlite.query("SELECT count(*) AS n FROM notification_outbox WHERE run_id = ? AND status = 'pending'").get(runId).n).toBe(5);
+
+  globalThis.fetch = provider;
+  env.DB.batch = batch;
+  const afterLease = Date.now() + 121_000;
+  await drainOutbox(env, afterLease);
+  await drainOutbox(env, afterLease);
+  expect(new Set(requests.map((request) => request.headers.get("idempotency-key"))).size).toBe(5);
+  expect(sqlite.query("SELECT count(*) AS n FROM notification_outbox WHERE run_id = ? AND status = 'accepted'").get(runId).n).toBe(5);
 });

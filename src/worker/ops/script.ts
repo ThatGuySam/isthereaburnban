@@ -193,10 +193,11 @@ async function sendNotice(body, target) {
     throw error;
   }
   const finished = result.status === "finished";
-  const text = finished
-    ? result.accepted + " accepted · " + result.gone + " expired · " + result.error + " errors · " + result.skipped + " skipped"
+  const hasCounts = finished || result.status === "queued";
+  const text = hasCounts
+    ? result.accepted + " accepted · " + result.gone + " expired · " + result.error + " errors · " + result.skipped + " skipped" + (result.pending ? " · " + result.pending + " queued" : "")
     : (sendStatus[result.status] || "Check the delivery log.");
-  message(target, text, !finished || Boolean(result.gone || result.error || result.skipped));
+  message(target, text, !hasCounts || Boolean(result.gone || result.error || result.skipped));
   refreshLog();
   return result;
 }

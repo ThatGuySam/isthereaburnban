@@ -1,8 +1,8 @@
 import type { DeliveryOutcome } from "./delivery";
 import { sendAlertEmail } from "./email";
 import type { Env } from "./env";
-import { maskTarget, type Channel, type Delivery } from "./notification-audience";
-import { alertsPaused } from "./notification-controls";
+import { maskTarget, RESEND_TEST_ADDRESSES, type Audience, type Channel, type Delivery } from "./notification-audience";
+import { alertsPaused, MANUAL_LIMIT } from "./notification-controls";
 import type { Notice } from "./notification-message";
 import { pushVapid, sendPush } from "./push";
 
@@ -53,52 +53,93 @@ export async function enqueueOpsNotice(env: Env, runId: string, notice: Notice, 
   await stageRun(db, runId, notice.fips, now, "ops", statements);
 }
 
+export type OperatorRun = { runId: string; origin: "broadcast" | "test" | "canary"; audience: Audience["kind"]; fips: string };
+
+export async function stageOperatorRun(db: D1Database, run: OperatorRun, deliveries: Delivery[], now: number) {
+  const eligible = run.origin === "broadcast" ? `NOT EXISTS (SELECT 1 FROM notification_runs WHERE origin = 'broadcast'
+    AND (at > ? OR (fips = ? AND at > ?)))` : "1";
+  const cooldown = run.origin === "broadcast" ? [now - 5 * 60_000, run.fips, now - HOUR] : [];
+  const targets = deliveries.map((delivery) => ({
+    channel: delivery.channel,
+    recipient: delivery.channel === "push" ? delivery.target.endpoint
+      : run.audience === "sandbox" ? delivery.target.email : delivery.target.id,
+    notices: delivery.notices,
+  }));
+  const [, result] = await db.batch([
+    db.prepare(`INSERT INTO notification_outbox (run_id, channel, recipient, notices, due_at)
+      SELECT ?, value ->> 'channel', value ->> 'recipient', value ->> 'notices', ?
+      FROM json_each(?) WHERE ${UNCLAIMED} AND ${eligible}`)
+      .bind(run.runId, now, JSON.stringify(targets), run.runId, ...cooldown),
+    db.prepare(`INSERT OR IGNORE INTO notification_runs (id, at, origin, audience, fips, completed_at)
+      SELECT ?, ?, ?, ?, ?, ? WHERE ${eligible}`)
+      .bind(run.runId, now, run.origin, run.audience, run.fips, deliveries.length ? null : now, ...cooldown),
+  ]);
+  if (result.meta.changes) return "claimed";
+  const exists = await db.prepare("SELECT id FROM notification_runs WHERE id = ?").bind(run.runId).first("id");
+  return exists ? "duplicate" : "rate-limited";
+}
+
+type RunInfo = { at: number; audience: Audience["kind"] | "ops" };
+
 type Pending = {
   id: number; run_id: string; channel: Channel; recipient: string; notices: string; attempts: number;
 };
 
-async function currentDelivery(env: Env, item: Pending, ops: boolean): Promise<Delivery | null> {
+async function currentDelivery(env: Env, item: Pending, audience: RunInfo["audience"], notices: Notice[]): Promise<Delivery | null> {
   const { DB: db } = env;
-  const notices: Notice[] = JSON.parse(item.notices);
   const fips = JSON.stringify(notices.map((notice) => notice.fips));
   const follows = `NOT EXISTS (SELECT value FROM json_each(?) EXCEPT SELECT value FROM json_each(fips_json))`;
   if (item.channel === "push") {
-    const target = await db.prepare(`SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE endpoint = ? AND ${ops ? "is_canary = 1" : follows}`)
-      .bind(item.recipient, ...(ops ? [] : [fips])).first<Extract<Delivery, { channel: "push" }>["target"]>();
+    const cohort = audience === "ops" || audience === "canary" ? "AND is_canary = 1"
+      : audience === "all" ? "" : "AND is_test = 1";
+    const target = await db.prepare(`SELECT endpoint, p256dh, auth FROM push_subscriptions
+      WHERE endpoint = ? ${cohort} ${audience === "ops" ? "" : `AND ${follows}`}`)
+      .bind(item.recipient, ...(audience === "ops" ? [] : [fips]))
+      .first<Extract<Delivery, { channel: "push" }>["target"]>();
     return target && { channel: "push", target, notices: [notices[0]] };
   }
-  if (ops) return env.OPS_ALERT_EMAIL ? { channel: "email", target: { id: "ops", email: env.OPS_ALERT_EMAIL, token: null }, notices } : null;
+  if (audience === "ops") {
+    return env.OPS_ALERT_EMAIL ? { channel: "email", target: { id: "ops", email: env.OPS_ALERT_EMAIL, token: null }, notices } : null;
+  }
+  if (audience === "sandbox") {
+    return RESEND_TEST_ADDRESSES.some((email) => email === item.recipient)
+      ? { channel: "email", target: { id: "sandbox", email: item.recipient, token: null }, notices } : null;
+  }
   const target = await db.prepare(`SELECT id, email, token FROM email_subscriptions
-    WHERE id = ? AND confirmed_at IS NOT NULL AND unsubscribed_at IS NULL AND ${follows}`)
+    WHERE id = ? AND confirmed_at IS NOT NULL AND unsubscribed_at IS NULL AND ${follows}
+    ${audience === "test" ? "AND is_test = 1" : ""}`)
     .bind(item.recipient, fips).first<Extract<Delivery, { channel: "email" }>["target"]>();
   return target && { channel: "email", target, notices };
 }
 
 async function deliver(env: Env, item: Pending, d: Delivery): Promise<DeliveryOutcome> {
   return d.channel === "push"
-    ? sendPush(env, d.target, d.notices[0], `alert-${item.id}`)
+    ? sendPush(env, d.target, d.notices[0], d.notices[0].kind === "live" || d.notices[0].kind === "ops" ? `alert-${item.id}` : undefined)
     : sendAlertEmail(env, d.target, d.notices, `alerts/${item.run_id}/${item.id}`);
 }
 
-export async function drainOutbox(env: Env, now = Date.now()): Promise<boolean> {
+export async function drainOutbox(env: Env, now = Date.now(), runId?: string): Promise<boolean> {
   if (await alertsPaused(env)) return false;
   const { DB: db } = env;
   const lease = crypto.randomUUID();
   const channels = JSON.stringify([...(pushVapid(env) ? ["push"] : []), ...(env.RESEND_API_KEY ? ["email"] : [])]);
   // Expire old alerts even when the corresponding provider is unavailable.
-  const ready = "status = 'pending' AND due_at <= ? AND (channel IN (SELECT value FROM json_each(?)) OR run_id IN (SELECT id FROM notification_runs WHERE at <= ?))";
-  const bindings = [now, channels, now - MAX_AGE] as const;
+  const ready = `status = 'pending' AND due_at <= ?
+    AND (channel IN (SELECT value FROM json_each(?)) OR run_id IN (SELECT id FROM notification_runs WHERE at <= ?))
+    ${runId ? "AND run_id = ?" : ""}`;
+  const bindings = [now, channels, now - MAX_AGE, ...(runId ? [runId] : [])];
   const { results } = await db.prepare(`UPDATE notification_outbox SET lease = ?, due_at = ?
     WHERE id IN (SELECT id FROM notification_outbox WHERE ${ready} ORDER BY due_at, id LIMIT ?)
     RETURNING id, run_id, channel, recipient, notices, attempts`).bind(lease, now + LEASE_MS, ...bindings, BATCH_SIZE).all<Pending>();
   if (!results.length) return false;
 
   const changes = await Promise.all(results.map(async (item) => {
-    const run = await db.prepare("SELECT at, origin, audience FROM notification_runs WHERE id = ?")
-      .bind(item.run_id).first<{ at: number; origin: string; audience: string }>();
+    const run = await db.prepare("SELECT at, audience FROM notification_runs WHERE id = ?")
+      .bind(item.run_id).first<RunInfo>();
     const created = run?.at ?? null;
     const expired = created === null || now - created >= MAX_AGE;
-    const delivery = expired ? null : await currentDelivery(env, item, run?.origin === "ops");
+    const notices: Notice[] = JSON.parse(item.notices);
+    const delivery = expired || !run ? null : await currentDelivery(env, item, run.audience, notices);
     const outcome = delivery ? await deliver(env, item, delivery)
       : expired ? { result: "error", error: "Delivery expired", permanent: true } as const
       : { result: "skipped", error: "Recipient no longer eligible" } as const;
@@ -109,7 +150,7 @@ export async function drainOutbox(env: Env, now = Date.now()): Promise<boolean> 
     const statements = [db.prepare(`INSERT INTO notification_delivery_log
       (run_id, at, channel, audience, mode, fips, target_masked, result, provider_id, error)
       SELECT run_id, ?, channel, ?, 'send', ?, ?, ?, ?, ? FROM notification_outbox WHERE id = ? AND lease = ?`)
-      .bind(new Date(now).toISOString(), run?.audience ?? "all", (JSON.parse(item.notices) as Notice[]).map(({ fips }) => fips).join(","),
+      .bind(new Date(now).toISOString(), run?.audience ?? "all", notices.map(({ fips }) => fips).join(","),
         delivery ? maskTarget(delivery) : null, retry ? "retry" : status,
         outcome.result === "accepted" ? outcome.providerId ?? null : null,
         outcome.result === "accepted" ? null : outcome.error, item.id, lease)];
@@ -129,6 +170,17 @@ export async function drainOutbox(env: Env, now = Date.now()): Promise<boolean> 
     .bind(now, JSON.stringify([...new Set(results.map((item) => item.run_id))]))]);
   return results.length === BATCH_SIZE && !!await db.prepare(`SELECT 1 FROM notification_outbox WHERE ${ready} LIMIT 1`)
     .bind(...bindings).first();
+}
+
+export async function drainOperatorRun(env: Env, runId: string) {
+  for (let sent = 0; sent < MANUAL_LIMIT; sent += BATCH_SIZE) {
+    if (!await drainOutbox(env, Date.now(), runId)) break;
+  }
+  return env.DB.prepare(`SELECT count(*) FILTER (WHERE status = 'accepted') AS accepted,
+    count(*) FILTER (WHERE status = 'gone') AS gone, count(*) FILTER (WHERE status = 'error') AS error,
+    count(*) FILTER (WHERE status = 'skipped') AS skipped, count(*) FILTER (WHERE status = 'pending') AS pending
+    FROM notification_outbox WHERE run_id = ?`).bind(runId)
+    .first<{ accepted: number; gone: number; error: number; skipped: number; pending: number }>();
 }
 
 export function outboxStatus(db: D1Database) {

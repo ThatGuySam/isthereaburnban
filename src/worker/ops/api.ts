@@ -175,7 +175,9 @@ export async function opsApi(request: Request, env: Env, url: URL, action: strin
   if (action === "pause") {
     const { paused } = pause.parse(await readBody(request));
     await setAlertsPaused(env, paused);
-    return { paused: await alertsPaused(env) };
+    const current = await alertsPaused(env);
+    if (!current) await env.SOURCE_QUEUE?.send({ kind: "deliver" }).catch(() => console.warn("Could not wake alert outbox on resume"));
+    return { paused: current };
   }
   if (action === "test-device") {
     const { fips, canary, subscription } = browser.parse(await readBody(request));
