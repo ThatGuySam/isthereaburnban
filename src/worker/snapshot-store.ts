@@ -1,4 +1,5 @@
 import { ACTIVE_KEY, decodeActive, encodeActive, INDEX_KEY, PRETTY_ACTIVE_KEY, stateKey, type ActiveProjection, type SnapshotIndex, type StateSnapshot } from "./snapshot-v2";
+import { readStateParts } from "./snapshot-chunks";
 import type { BanFormat } from "./active-bans";
 import type { Env } from "./env";
 
@@ -19,20 +20,38 @@ export async function readPublication(db: D1Database): Promise<{ slot: number; c
 }
 
 export async function readStateRevision(db: D1Database, state: string, revision: string): Promise<StateSnapshot | null> {
-  const text = await db.prepare("SELECT snapshot FROM snapshot_state WHERE state = ? AND revision = ?")
-    .bind(state, revision).first<string>("snapshot");
-  return text ? JSON.parse(text) : null;
+  const row = await db.prepare("SELECT snapshot, chunked FROM snapshot_state WHERE state = ? AND revision = ?")
+    .bind(state, revision).first<{ snapshot: string; chunked: number }>();
+  if (!row) return null;
+  const serialized = row.chunked ? (await readStateParts(db, [{ state, revision }], ["snapshot"])).get(state)?.snapshot?.join("") : row.snapshot;
+  return serialized ? JSON.parse(serialized) : null;
 }
 
 export async function readActiveFragments(db: D1Database, format: BanFormat, index?: SnapshotIndex) {
-  const fields = `${format === "pretty" ? "active_pretty" : "active"} AS active, weather, weather_counties AS weatherCounties`;
+  const active = format === "pretty" ? "active_pretty" : "active";
+  const fields = `shard.state, shard.revision, chunked, ${active} AS active, weather, weather_counties AS weatherCounties`;
   const query = index
     ? db.prepare(`SELECT ${fields} FROM snapshot_state AS shard
         JOIN json_each(?) AS ref ON shard.state = ref.key AND shard.revision = (ref.value ->> '$.revision')
         ORDER BY shard.state`).bind(JSON.stringify(index.states))
-    : db.prepare(`SELECT ${fields} FROM snapshot_state
+    : db.prepare(`SELECT ${fields} FROM snapshot_state AS shard
         WHERE rowid IN (SELECT MAX(rowid) FROM snapshot_state GROUP BY state) ORDER BY state`);
-  return (await query.all<{ active: string; weatherCounties: string; weather: string }>()).results;
+  const { results } = await query.all<{ state: string; revision: string; chunked: number;
+    active: string; weatherCounties: string; weather: string }>();
+  const parts = await readStateParts(db, results.filter((row) => row.chunked), [active, "weather_counties", "weather"]);
+  return results.map((row) => {
+    const chunk = parts.get(row.state);
+    return row.chunked ? { active: chunk?.[active]?.join("") || "\n",
+      weatherCounties: chunk?.weather_counties?.join("") ?? "", weather: chunk?.weather?.join("") ?? "" } : row;
+  });
+}
+
+export async function readStateNotices(db: D1Database, revision: string) {
+  const { results } = await db.prepare(`SELECT state, revision, chunked, notices FROM snapshot_state
+    WHERE revision = ? AND (chunked = 1 OR notices <> '[]')`).bind(revision)
+    .all<{ state: string; revision: string; chunked: number; notices: string }>();
+  const parts = await readStateParts(db, results.filter((row) => row.chunked), ["notices"]);
+  return results.map((row) => row.chunked ? parts.get(row.state)?.notices?.join("") ?? "[]" : row.notices);
 }
 
 export async function loadIndex(env: Env) {
@@ -71,11 +90,17 @@ export async function loadMapStates(env: Env, index: SnapshotIndex, states: stri
     else missing[st] = ref.revision;
   }
   if (!Object.keys(missing).length) return shards;
-  const { results } = await env.DB.prepare(`SELECT snapshot FROM snapshot_state AS shard
+  const { results } = await env.DB.prepare(`SELECT shard.state, shard.revision, shard.chunked, snapshot FROM snapshot_state AS shard
     JOIN json_each(?) AS ref ON shard.state = ref.key AND shard.revision = ref.value`)
-    .bind(JSON.stringify(missing)).all<{ snapshot: string }>();
+    .bind(JSON.stringify(missing)).all<{ state: string; revision: string; chunked: number; snapshot: string }>();
   if (results.length !== Object.keys(missing).length) throw new SnapshotRevisionUnavailable(`Map snapshots unavailable: ${index.revision}`);
-  return shards.concat(results.map(({ snapshot }) => JSON.parse(snapshot)));
+  const parts = await readStateParts(env.DB, results.filter((row) => row.chunked), ["snapshot"]);
+  for (const row of results) {
+    const serialized = row.chunked ? parts.get(row.state)?.snapshot?.join("") : row.snapshot;
+    if (!serialized) throw new SnapshotRevisionUnavailable(`Map snapshot unavailable: ${row.state}/${row.revision}`);
+    shards.push(JSON.parse(serialized));
+  }
+  return shards;
 }
 
 export async function loadActive(env: Env, index: SnapshotIndex, format: BanFormat): Promise<ActiveProjection> {

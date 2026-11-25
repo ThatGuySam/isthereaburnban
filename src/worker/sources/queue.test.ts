@@ -26,7 +26,8 @@ afterEach(() => { for (const store of stores.splice(0)) store.close(); });
 function sandbox() {
   const sqlite = new Database(":memory:");
   stores.push(sqlite);
-  for (const file of ["0001_init.sql", "0002_notification_ops.sql", "0003_source_refresh.sql", "0004_state_snapshots.sql", "0005_notification_outbox.sql", "0006_pipeline_monitor.sql"]) {
+  sqlite.exec("PRAGMA foreign_keys = ON;");
+  for (const file of ["0001_init.sql", "0002_notification_ops.sql", "0003_source_refresh.sql", "0004_state_snapshots.sql", "0005_notification_outbox.sql", "0006_pipeline_monitor.sql", "0008_snapshot_chunks.sql"]) {
     sqlite.exec(readFileSync(new URL(`../../../migrations/${file}`, import.meta.url), "utf8"));
   }
   const keys = new Map();
@@ -693,4 +694,23 @@ test("concurrent retries of one publication step advance the cursor only once", 
   release();
   await first;
   expect((await currentRun(box.env.DB)).cursor).toBe(1);
+});
+
+test("oversized state rows split into byte-safe chunks and remain readable through D1", async () => {
+  const box = sandbox();
+  const note = "🌲".repeat(350_000);
+  const src = source("or", async ({ now }) => ({ rows: [row("ban", now.toISOString(), { note })] }));
+  await poll(box, src, initial);
+  await merge(box, [src], initial);
+  const stored = box.sqlite.query("SELECT chunked, encoded_bytes, snapshot FROM snapshot_state WHERE state = 'OR'").get();
+  expect(stored.chunked).toBe(1);
+  expect(stored.encoded_bytes).toBeGreaterThan(2_000_000);
+  expect(stored.snapshot).toBe("");
+  expect(box.sqlite.query("SELECT max(length(CAST(value AS BLOB))) AS bytes FROM snapshot_state_part").get().bytes).toBeLessThan(1_000_000);
+
+  box.keys.delete(stateKey("OR"));
+  box.keys.delete(ACTIVE_KEY);
+  const reader = snapshotReader(box.env, { fresh: true });
+  expect((await reader.state("OR")).counties["41039"].note).toBe(note);
+  expect(JSON.parse((await reader.bans()).body.join("")).counties[0].note).toBe(note);
 });

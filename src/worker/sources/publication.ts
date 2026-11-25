@@ -4,7 +4,8 @@ import type { SnapshotData, SourceHealth } from "../../shared/types";
 import type { Env } from "../env";
 import type { Notice } from "../notification-message";
 import { alertNotices, transitionInsert } from "../snapshot";
-import { readActiveFragments, readPublication } from "../snapshot-store";
+import { SNAPSHOT_KV_LIMIT_BYTES, writeStateParts } from "../snapshot-chunks";
+import { readActiveFragments, readPublication, readStateNotices, readStateRevision } from "../snapshot-store";
 import { ACTIVE_KEY, encodeActive, encodeState, INDEX_KEY, PRETTY_ACTIVE_KEY, stateKey,
   type SnapshotIndex, type StateSnapshot, type StateSummary } from "../snapshot-v2";
 import { readLegacyState, resumeLegacyPublication } from "./legacy-publication";
@@ -89,9 +90,9 @@ async function mergeState(env: Env, run: Run, job: StateJob, sources: readonly S
   let serialized: string | null = null;
   if (!staged) {
     const local = stateSources(sources, state);
-    const prevText = await env.DB.prepare("SELECT snapshot FROM snapshot_state WHERE state = ? ORDER BY rowid DESC LIMIT 1")
-      .bind(state).first<string>("snapshot");
-    const prev: SnapshotData | null = prevText ? JSON.parse(prevText) : await readLegacyState(env.DB, state);
+    const previousRevision = await env.DB.prepare("SELECT revision FROM snapshot_state WHERE state = ? ORDER BY rowid DESC LIMIT 1")
+      .bind(state).first<string>("revision");
+    const prev = previousRevision ? await readStateRevision(env.DB, state, previousRevision) : await readLegacyState(env.DB, state);
     const now = new Date(run.generated);
     const heads = await readHeads(env.DB, local.map(({ id }) => id));
     const inputs = await readSourceInputs(env, state, local, heads, prev, now);
@@ -99,20 +100,25 @@ async function mergeState(env: Env, run: Run, job: StateJob, sources: readonly S
     serialized = encoded.snapshot;
     const prune = env.DB.prepare(`DELETE FROM snapshot_state WHERE state = ? AND revision NOT IN
       (SELECT revision FROM snapshot_state WHERE state = ? ORDER BY rowid DESC LIMIT 2)`);
-    const insert = env.DB.prepare(`INSERT INTO snapshot_state
-      (state, revision, snapshot, summary, active, active_pretty, weather_counties, weather, notices) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-    const statements = [prune.bind(state, state), insert.bind(state, run.id, serialized, encoded.summary,
-      encoded.active, encoded.pretty, encoded.weatherCounties, encoded.weather, JSON.stringify(encoded.notices))];
+    const { writes, snapshotBytes } = writeStateParts(env.DB, state, run.id, encoded.summary, {
+      snapshot: serialized, active: encoded.active, active_pretty: encoded.pretty,
+      weather_counties: encoded.weatherCounties, weather: encoded.weather, notices: JSON.stringify(encoded.notices),
+    });
+    const statements = [prune.bind(state, state), ...writes];
+    if (snapshotBytes >= SNAPSHOT_KV_LIMIT_BYTES) serialized = null;
     if (encoded.transitions.length) statements.push(transitionInsert(env.DB, encoded.transitions));
     await env.DB.batch(statements);
   }
   if (cache && !staged?.cached) {
     const key = stateKey(state);
-    const metadata = staged ? (await env.KV.getWithMetadata<{ revision: string }>(key, "text")).metadata : null;
+    const metadata = staged ? (await env.KV.getWithMetadata<{ revision: string }>(key, "text").catch(() => null))?.metadata : null;
     if (metadata?.revision !== run.id) {
-      serialized ??= await env.DB.prepare("SELECT snapshot FROM snapshot_state WHERE state = ? AND revision = ?")
-        .bind(state, run.id).first<string>("snapshot");
-      if (!serialized) throw new Error(`Staged snapshot missing: ${state}`);
+      if (staged) {
+        const stored = await readStateRevision(env.DB, state, run.id);
+        serialized = stored ? JSON.stringify(stored) : null;
+        if (!serialized) throw new Error(`Staged snapshot missing: ${state}`);
+      }
+      if (!serialized || Buffer.byteLength(serialized) >= SNAPSHOT_KV_LIMIT_BYTES) return;
       await env.KV.put(key, serialized, { metadata: { revision: run.id } });
     }
     await env.DB.prepare("UPDATE snapshot_state SET cached = 1 WHERE state = ? AND revision = ?").bind(state, run.id).run();
@@ -186,9 +192,7 @@ export async function advancePublication(env: Env, run: Run, sources: readonly S
     await env.KV.put(format === "pretty" ? PRETTY_ACTIVE_KEY : ACTIVE_KEY, encodeActive(run.id, rows));
   } else if (run.cursor === run.plan.length + 2) await publishCatalog(env, run, sources);
   else {
-    const { results } = await env.DB.prepare("SELECT notices FROM snapshot_state WHERE revision = ? AND notices <> '[]'")
-      .bind(run.id).all<{ notices: string }>();
-    const notices = results.flatMap(({ notices }): Notice[] => JSON.parse(notices));
+    const notices = (await readStateNotices(env.DB, run.id)).flatMap((serialized): Notice[] => JSON.parse(serialized));
     if (notices.length) await sendNotices(env, `sources-${run.id}`, notices);
     await env.DB.prepare("DELETE FROM snapshot_run WHERE id = ? AND cursor = ?").bind(run.id, run.cursor).run();
     return false;
