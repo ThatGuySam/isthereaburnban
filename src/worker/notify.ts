@@ -23,7 +23,7 @@ type Send = Dispatch & {
   mode: "send";
   runId: string;
 } & (
-  | { origin: "cron" | "test" | "canary" }
+  | { origin: "test" | "canary" }
   | { origin: "broadcast"; preview: { at: number; fingerprint: string } }
 );
 
@@ -124,7 +124,7 @@ async function claim(env: Env, req: Send, now: number): Promise<"claimed" | "dup
 }
 
 function validateSend(req: Send) {
-  const live = req.origin === "cron" || req.origin === "broadcast";
+  const live = req.origin === "broadcast";
   const isValid = live ? req.audience.kind === "all" && req.notices.every((n) => n.kind === "live")
     : req.origin === "canary" ? req.audience.kind === "canary" && req.notices.every((n) => n.kind === "canary")
     : ["test", "push-devices", "sandbox"].includes(req.audience.kind) && req.notices.every((n) => n.kind === "test");
@@ -143,7 +143,6 @@ async function send(env: Env, req: Send) {
   const configured = providerStatus(env);
   const channels = req.channels.filter((channel) => configured[channel]);
   if (!channels.length) {
-    if (req.origin === "cron") return { ...counts, status: "unconfigured" };
     if (req.origin !== "canary") throw new NotificationError("No selected provider is configured.", 503);
   }
   if (!req.notices.length) return { ...counts, status: "empty" };
@@ -156,11 +155,10 @@ async function send(env: Env, req: Send) {
     return { ...counts, status: "paused" };
   }
 
-  const manual = req.origin !== "cron";
-  const plans = await plan(env, { ...req, channels }, manual ? { limit: MANUAL_LIMIT + 1, offset: 0 } : undefined);
+  const plans = await plan(env, { ...req, channels }, { limit: MANUAL_LIMIT + 1, offset: 0 });
   const total = plans.reduce((sum, p) => sum + p.subscriptions, 0);
   const deliveries = plans.flatMap((p) => p.deliveries);
-  if (manual && (total > MANUAL_LIMIT || deliveries.length > MANUAL_LIMIT)) {
+  if (total > MANUAL_LIMIT || deliveries.length > MANUAL_LIMIT) {
     const message = `This send exceeds the ${MANUAL_LIMIT}-delivery limit.`;
     if (req.origin !== "canary") throw new NotificationError(message, 409);
     await writeLog(env, req.runId, req, "send", describe("blocked", message));

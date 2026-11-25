@@ -158,7 +158,7 @@ export default {
     ctx.waitUntil(controller.cron === CANARY_CRON
       ? runCanary(env, controller.scheduledTime)
       : env.SOURCE_QUEUE
-        ? enqueueSources(env, controller.scheduledTime)
+        ? Promise.all([enqueueSources(env, controller.scheduledTime), env.SOURCE_QUEUE.send({ kind: "deliver" })])
         : refresh(env, undefined, controller.scheduledTime));
   },
   queue: consumeSourceQueue,

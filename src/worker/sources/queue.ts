@@ -1,7 +1,7 @@
 import type { Env } from "../env";
 import { CHANNELS } from "../notification-audience";
 import type { Notice } from "../notification-message";
-import { notify } from "../notify";
+import { drainOutbox, enqueueNotices } from "../notification-outbox";
 import { localClock } from "./lib/dates";
 import { advancePublication, currentRun, planPublication } from "./publication";
 import { SOURCES } from "./registry";
@@ -11,7 +11,8 @@ import { isActive, type ActiveSource, type Source } from "./types";
 export type SourceMessage =
   | { kind: "source"; id: string; slot: number }
   | { kind: "merge"; slot: number; due: string[] }
-  | { kind: "publish"; id: string };
+  | { kind: "publish"; id: string }
+  | { kind: "deliver" };
 
 const MERGE_DELAY = 120; // Let one poll per source finish and new KV revisions propagate.
 const READINESS_TIMEOUT_MS = 15 * 60_000;
@@ -54,9 +55,8 @@ export async function enqueueSources(env: Env, slot: number, { sources = SOURCES
 }
 
 async function sendCronNotices(env: Env, runId: string, notices: Notice[]) {
-  await notify(env, {
-    mode: "send", origin: "cron", runId, audience: { kind: "all" }, channels: CHANNELS, notices,
-  });
+  await enqueueNotices(env, runId, notices, CHANNELS);
+  await env.SOURCE_QUEUE?.send({ kind: "deliver" });
 }
 
 export async function consumeSourceMessage(env: Env, message: SourceMessage, {
@@ -75,6 +75,10 @@ export async function consumeSourceMessage(env: Env, message: SourceMessage, {
 
   const queue = env.SOURCE_QUEUE;
   if (!queue) throw new Error("Missing SOURCE_QUEUE binding");
+  if (message.kind === "deliver") {
+    if (await drainOutbox(env)) await queue.send(message);
+    return "done";
+  }
   const run = await currentRun(env.DB);
   if (message.kind === "publish") {
     if (run?.id !== message.id) return "done";

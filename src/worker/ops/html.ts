@@ -66,6 +66,7 @@ export function dashboardHtml(nonce: string): string {
 <main>
 <section aria-labelledby="delivery-status">
   <h2 id="delivery-status">Delivery status</h2>
+  <p>Automatic alert backlog <span id="outbox-status">Loading…</span></p>
   <div class="summary">
     <p><strong>Web Push</strong><span id="push-status">Loading…</span><br><small id="push-count"></small></p>
     <p><strong>Email · Resend</strong><span id="email-status">Loading…</span><br><small id="email-count"></small></p>

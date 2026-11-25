@@ -9,7 +9,7 @@ import { projectMapStatus, snapshotBoundary } from "./map-status";
 import { countyState } from "./lookup";
 import { CHANNELS } from "./notification-audience";
 import { transitionNotice, type Transition } from "./notification-message";
-import { notify } from "./notify";
+import { drainOutbox, enqueueNotices } from "./notification-outbox";
 import { withReportDates } from "./report-dates";
 import { loadActive, loadIndex, loadMapStates, loadState } from "./snapshot-store";
 import { lastChangedByState, type ActiveProjection, type SnapshotIndex, type StateSnapshot } from "./snapshot-v2";
@@ -105,16 +105,12 @@ export async function refresh(env: Env, adapters?: Adapter[], scheduledTime?: nu
     try {
       await transitionInsert(env.DB, transitions).run();
       const notices = alertNotices(transitions, snapshot);
-      if (notices.length) {
-        await notify(env, {
-          mode: "send", origin: "cron", runId: `cron-${scheduledTime ?? snapshot.generated}`,
-          audience: { kind: "all" }, channels: CHANNELS, notices,
-        });
-      }
+      await enqueueNotices(env, `cron-${scheduledTime ?? snapshot.generated}`, notices, CHANNELS);
     } catch (err) {
       console.error("transition handling failed", err);
     }
   }
+  if (scheduledTime !== undefined) await drainOutbox(env);
   return snapshot;
 }
 

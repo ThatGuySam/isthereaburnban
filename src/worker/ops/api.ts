@@ -4,6 +4,7 @@ import type { Env } from "../env";
 import { CHANNELS, maskPush, RESEND_TEST_ADDRESSES, type Channel } from "../notification-audience";
 import { alertsPaused, MANUAL_LIMIT, setAlertsPaused } from "../notification-controls";
 import { countyBulletin, testNotice } from "../notification-message";
+import { outboxStatus } from "../notification-outbox";
 import { NotificationError, notify, providerStatus } from "../notify";
 import { subscribePush } from "../push";
 import { statusFor } from "../lookup";
@@ -38,17 +39,18 @@ const pause = z.object({ paused: z.boolean() });
 
 async function status(env: Env) {
   type Counts = { total: number; test: number; confirmed?: number; canary?: number };
-  const [push, email, paused] = await Promise.all([
+  const [push, email, paused, outbox] = await Promise.all([
     env.DB.prepare(`SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE is_test = 1) AS test,
       COUNT(*) FILTER (WHERE is_canary = 1) AS canary FROM push_subscriptions`).first<Counts>(),
     env.DB.prepare(`SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE is_test = 1) AS test,
       COUNT(*) FILTER (WHERE confirmed_at IS NOT NULL) AS confirmed FROM email_subscriptions
       WHERE unsubscribed_at IS NULL`).first<Counts>(),
     alertsPaused(env),
+    outboxStatus(env.DB),
   ]);
   const providers = providerStatus(env);
   return {
-    providers, counts: { push, email }, paused, limit: MANUAL_LIMIT,
+    providers, counts: { push, email }, outbox: outbox.results, paused, limit: MANUAL_LIMIT,
     vapidPublicKey: providers.push ? env.VAPID_PUBLIC_KEY : null,
     canary: { enabled: env.PUSH_CANARY_ENABLED === "true", fips: env.PUSH_CANARY_FIPS ?? null },
   };

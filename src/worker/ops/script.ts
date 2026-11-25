@@ -62,6 +62,9 @@ async function loadStatus() {
   el("canary-status").textContent = settings.canary.enabled
     ? "17:17 UTC · county " + settings.canary.fips
     : "Off · county " + (settings.canary.fips || "unset");
+  el("outbox-status").textContent = settings.outbox.map((row) => row.channel + " · " + row.pending +
+    " pending · " + row.retrying + " retrying · " + row.failed + " failed" +
+    (row.oldest === null ? "" : " · oldest " + new Date(row.oldest).toISOString())).join(" | ") || "Empty";
   el("pause-status").textContent = settings.paused ? "Paused" : "Enabled";
   el("pause").textContent = settings.paused ? "Resume alert sending" : "Pause alert sending";
   el("pause").classList.toggle("danger", !settings.paused);

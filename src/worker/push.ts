@@ -51,11 +51,11 @@ export async function unsubscribePush(env: Env, body: unknown): Promise<{ ok: bo
   return { ok: true };
 }
 
-export async function sendPush(env: Env, target: PushTarget, notice: Notice): Promise<DeliveryOutcome> {
+export async function sendPush(env: Env, target: PushTarget, notice: Notice, eventTag?: string): Promise<DeliveryOutcome> {
   const vapid = pushVapid(env);
   if (!vapid) return { result: "error", error: "VAPID is unavailable" };
   const { kind, fips, title, body, url } = notice;
-  const tag = kind === "live" ? undefined : `${kind}-${fips}`;
+  const tag = eventTag ?? (kind === "live" ? undefined : `${kind}-${fips}`);
   const subscription: PushSubscription = {
     endpoint: target.endpoint, expirationTime: null, keys: { p256dh: target.p256dh, auth: target.auth },
   };
@@ -67,14 +67,15 @@ export async function sendPush(env: Env, target: PushTarget, notice: Notice): Pr
       data, options: { ttl: 6 * 3600, urgency: "high", topic: tag ?? `f${fips}` },
     }, subscription, vapid);
   } catch {
-    return { result: "error", error: "Push encryption or VAPID signing failed" };
+    return { result: "error", error: "Push encryption or VAPID signing failed", permanent: true };
   }
 
   try {
     const res = await fetch(target.endpoint, { ...payload, redirect: "error", signal: AbortSignal.timeout(10_000) });
     if (res.ok) return { result: "accepted" };
     const error = `Push HTTP ${res.status}`;
-    return { result: res.status === 404 || res.status === 410 ? "gone" : "error", error };
+    return { result: res.status === 404 || res.status === 410 ? "gone" : "error", error,
+      permanent: [400, 413, 422].includes(res.status) };
   } catch {
     return { result: "error", error: "Push request failed" };
   }

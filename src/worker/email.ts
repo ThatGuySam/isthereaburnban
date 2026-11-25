@@ -30,7 +30,7 @@ async function sendEmail(
 }
 
 class ResendError extends Error {
-  constructor(status: number) {
+  constructor(readonly status: number) {
     super(`Resend HTTP ${status}`);
   }
 }
@@ -99,6 +99,7 @@ export async function sendAlertEmail(
     const providerId = await sendEmail(env, target.email, subject, text, idempotencyKey);
     return { result: "accepted", providerId };
   } catch (err) {
-    return { result: "error", error: err instanceof ResendError ? err.message : "Resend request failed" };
+    return { result: "error", error: err instanceof ResendError ? err.message : "Resend request failed",
+      permanent: err instanceof ResendError && [400, 422].includes(err.status) };
   }
 }

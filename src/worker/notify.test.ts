@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { SNAPSHOT_KEY } from "./env";
 import { ALERTS_PAUSED_KEY, setAlertsPaused } from "./notification-controls";
 import { testNotice, transitionNotice } from "./notification-message";
+import { drainOutbox, enqueueNotices } from "./notification-outbox";
 import { notify, runCanary } from "./notify";
 import { handleOps, validToken } from "./ops";
 import { subscribePush } from "./push";
@@ -32,7 +33,7 @@ const publicKey = async (key) => Buffer.from(await crypto.subtle.exportKey("raw"
 const receiverKey = await publicKey(receiver.publicKey);
 const authSecret = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString("base64url");
 
-const migrations = ["0001_init.sql", "0002_notification_ops.sql", "0003_source_refresh.sql", "0004_state_snapshots.sql"].map((file) =>
+const migrations = ["0001_init.sql", "0002_notification_ops.sql", "0003_source_refresh.sql", "0004_state_snapshots.sql", "0005_notification_outbox.sql"].map((file) =>
   readFileSync(new URL("../../migrations/" + file, import.meta.url), "utf8"));
 let sqlite: Database;
 let kv: Map<string, string>;
@@ -87,6 +88,7 @@ function ops(action, body, headers = { Origin: ORIGIN }, token = SECRET) {
 
 beforeEach(async () => {
   sqlite = new Database(":memory:");
+  sqlite.exec("PRAGMA foreign_keys = ON;");
   sqlite.exec(migrations.join("\n"));
   kv = new Map();
   env = {
@@ -205,18 +207,13 @@ describe("shared notifier", () => {
     await setAlertsPaused(env, true);
     expect(kv.get(ALERTS_PAUSED_KEY)).toBe("1");
     kv.delete(ALERTS_PAUSED_KEY);
-    const result = await notify(env, {
-      mode: "send", origin: "cron", runId: "paused-cron", audience: { kind: "all" }, channels: ["email"], notices: [liveMessage],
-    });
-    expect(result.status).toBe("paused");
+    await enqueueNotices(env, "paused-cron", [liveMessage], ["email"]);
+    expect(await drainOutbox(env)).toBe(false);
+    expect(sqlite.query("SELECT status FROM notification_outbox").get().status).toBe("pending");
     expect(requests).toEqual([]);
-    expect(sqlite.query("SELECT result FROM notification_delivery_log").get().result).toBe("paused");
     await setAlertsPaused(env, false);
     kv.set(ALERTS_PAUSED_KEY, "1");
-    const kvPaused = await notify(env, {
-      mode: "send", origin: "cron", runId: "kv-paused-cron", audience: { kind: "all" }, channels: ["email"], notices: [liveMessage],
-    });
-    expect(kvPaused.status).toBe("paused");
+    expect(await drainOutbox(env)).toBe(false);
     expect(requests).toEqual([]);
   });
 
@@ -232,7 +229,7 @@ describe("shared notifier", () => {
     }], 123);
     expect(snapshot.counties[FIPS].status).toBe("ban");
     expect(sqlite.query("SELECT old_status, new_status FROM transitions").get()).toEqual({ old_status: "none", new_status: "ban" });
-    expect(sqlite.query("SELECT DISTINCT result FROM notification_delivery_log").all()).toEqual([{ result: "paused" }]);
+    expect(sqlite.query("SELECT DISTINCT status FROM notification_outbox").all()).toEqual([{ status: "pending" }]);
     expect(requests).toEqual([]);
   });
 
@@ -249,7 +246,9 @@ describe("shared notifier", () => {
       id: "ok", state: "OK", mode: "full", sourceName: "OFS", sourceUrl: ORIGIN, officialUrl: ORIGIN,
       fetch: async () => [{ ...county }, { ...other }],
     }], 456);
-    expect(requests.filter((r) => r.url === endpoint).map((r) => r.headers.get("topic")).sort()).toEqual(["f40001", "f40143"]);
+    const topics = requests.filter((r) => r.url === endpoint).map((r) => r.headers.get("topic"));
+    expect(new Set(topics).size).toBe(2);
+    expect(topics.every((topic) => /^alert-\d+$/.test(topic))).toBe(true);
     const messages = requests.filter((r) => r.url === "https://api.resend.com/emails");
     expect(messages).toHaveLength(1);
     expect(messages[0].body).toMatchObject({ to: [email], subject: "Burn ban changes in 2 counties" });
@@ -323,6 +322,66 @@ describe("shared notifier", () => {
     expect(requests.map((r) => r.url)).toEqual([canary]);
     expect(requests[0].headers.get("topic")).toBe("canary-40143");
   });
+});
+
+test("the cron outbox resumes an interrupted batch without resending completed recipients", async () => {
+  for (let index = 0; index < 6; index++) addEmail("outbox" + index);
+  await enqueueNotices(env, "durable-run", [liveMessage], ["email"], 1_000);
+  await enqueueNotices(env, "durable-run", [liveMessage], ["email"], 1_000);
+  expect(sqlite.query("SELECT count(*) AS n FROM notification_outbox").get().n).toBe(6);
+  expect(requests).toHaveLength(0);
+
+  await drainOutbox(env, 1_000);
+  expect(requests).toHaveLength(4);
+  await drainOutbox(env, 1_001);
+  expect(requests).toHaveLength(6);
+  expect(new Set(requests.map((r) => r.headers.get("idempotency-key"))).size).toBe(6);
+  expect(sqlite.query("SELECT completed_at FROM notification_runs WHERE id = 'durable-run'").get().completed_at).not.toBeNull();
+});
+
+test("transient failures keep their idempotency key and opted-out recipients are skipped", async () => {
+  const email = addEmail("retry");
+  const provider = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    await provider(url, init);
+    return new Response(null, { status: 503 });
+  };
+  await enqueueNotices(env, "retry-run", [liveMessage], ["email"], 1_000);
+  await drainOutbox(env, 1_000);
+  expect(requests).toHaveLength(1);
+  expect(sqlite.query("SELECT status, attempts FROM notification_outbox").get()).toEqual({ status: "pending", attempts: 1 });
+  await drainOutbox(env, 1_001);
+  expect(requests).toHaveLength(1);
+  globalThis.fetch = provider;
+  await drainOutbox(env, 3_601_000);
+  expect(requests).toHaveLength(2);
+  expect(requests[0].headers.get("idempotency-key")).toBe(requests[1].headers.get("idempotency-key"));
+
+  await enqueueNotices(env, "opt-out-run", [liveMessage], ["email"], 3_601_000);
+  sqlite.query("UPDATE email_subscriptions SET unsubscribed_at = ? WHERE email = ?").run(at, email);
+  await drainOutbox(env, 3_601_000);
+  expect(requests).toHaveLength(2);
+  expect(sqlite.query("SELECT status FROM notification_outbox WHERE run_id = 'opt-out-run'").get().status).toBe("skipped");
+});
+
+test("a worker interrupted after provider acceptance retries with the same email key and push topic", async () => {
+  const endpoint = addPush("lost-receipt");
+  addEmail("lost-receipt");
+  await enqueueNotices(env, "lost-receipt", [liveMessage], ["email", "push"], 1_000);
+  const batch = env.DB.batch;
+  env.DB.batch = async () => { throw new Error("write interrupted"); };
+  await expect(drainOutbox(env, 1_000)).rejects.toThrow("write interrupted");
+  expect(requests).toHaveLength(2);
+
+  env.DB.batch = batch;
+  expect(await drainOutbox(env, 2_000)).toBe(false);
+  await drainOutbox(env, 121_000);
+  const keys = requests.filter((r) => r.url !== endpoint).map((r) => r.headers.get("idempotency-key"));
+  const topics = requests.filter((r) => r.url === endpoint).map((r) => r.headers.get("topic"));
+  expect(keys).toHaveLength(2);
+  expect(new Set(keys).size).toBe(1);
+  expect(topics).toHaveLength(2);
+  expect(new Set(topics).size).toBe(1);
 });
 
 describe("dashboard boundary", () => {
