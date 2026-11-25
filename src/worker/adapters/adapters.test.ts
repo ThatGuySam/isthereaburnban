@@ -154,6 +154,19 @@ for (const [key, parse] of [["tx", parseTx], ["ok", parseOk], ["fl", parseFl], [
   });
 }
 
+test("full ArcGIS editions reject status fields and transfer flags with the wrong types", () => {
+  for (const [key, parse, field] of [
+    ["tx", parseTx, "BurnBan"], ["ok", parseOk, "Burn_Ban_Status"], ["fl", parseFl, "Burn_Ban"],
+    ["la", parseLa, "Burn_Ban1"], ["in", parseIn, "countyburnbanstatus"],
+  ]) {
+    const edition = fx(`${key}.json`);
+    expect(() => parse({ ...edition, exceededTransferLimit: "false" }, checked)).toThrow(/transfer/i);
+    const { attributes } = edition.features.find(({ attributes }) => typeof attributes[field] === "string");
+    attributes[field] = [attributes[field]];
+    expect(() => parse(edition, checked)).toThrow(/unrecognized.*code/i);
+  }
+});
+
 test("TX rejects a name paired with the wrong FIPS", () => {
   const data = fx("tx.json");
   data.features[0].attributes.County = "Travis";

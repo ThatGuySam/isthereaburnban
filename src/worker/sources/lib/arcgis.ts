@@ -29,6 +29,9 @@ export function arcgisRows(json: unknown, { allowEmpty = false, requireComplete 
     const message = isRecord(json.error) && typeof json.error.message === "string" ? json.error.message : "unknown";
     throw new Error(`ArcGIS error: ${message}`);
   }
+  if (json.exceededTransferLimit != null && typeof json.exceededTransferLimit !== "boolean") {
+    throw new Error("Invalid ArcGIS transfer limit flag");
+  }
   if (requireComplete && json.exceededTransferLimit === true) throw new Error("Incomplete ArcGIS response");
   if (!Array.isArray(json.features) || (!allowEmpty && !json.features.length)) {
     throw new Error("ArcGIS returned no features");

@@ -47,7 +47,7 @@ export async function completeLayer(layer: string, fields: string[]): Promise<Ar
 }
 
 export function str(v: unknown): string {
-  return v == null ? "" : String(v).trim();
+  return typeof v === "string" ? v.trim() : "";
 }
 
 export function byFips(fips: string): County | undefined {
@@ -57,8 +57,8 @@ export function byFips(fips: string): County | undefined {
 export { countyByName };
 
 export function byPublisherFips(state: string, prefix: string, name: unknown, code: unknown): County {
-  const raw = str(code);
-  const county = (typeof code === "string" || typeof code === "number") && /^\d{1,3}$/.test(raw)
+  const raw = typeof code === "number" ? String(code) : str(code);
+  const county = /^\d{1,3}$/.test(raw)
     ? byFips(prefix + raw.padStart(3, "0")) : undefined;
   if (!county || typeof name !== "string" || countyByName(state, name) !== county) {
     throw new Error(`${state}: county name ${str(name)} does not match FIPS ${raw}`);
