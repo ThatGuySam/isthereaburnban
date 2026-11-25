@@ -705,10 +705,11 @@ test("concurrent retries of one publication step advance the cursor only once", 
 
 test("oversized state rows split into byte-safe chunks and remain readable through D1", async () => {
   const box = sandbox();
+  const start = Date.now() - 3_600_000;
   const note = "🌲".repeat(350_000);
   const src = source("or", async ({ now }) => ({ rows: [row("ban", now.toISOString(), { note })] }));
-  await poll(box, src, initial);
-  await merge(box, [src], initial);
+  await poll(box, src, start);
+  await merge(box, [src], start);
   const stored = box.sqlite.query("SELECT chunked, encoded_bytes, snapshot FROM snapshot_state WHERE state = 'OR'").get();
   expect(stored.chunked).toBe(1);
   expect(stored.encoded_bytes).toBeGreaterThan(2_000_000);
