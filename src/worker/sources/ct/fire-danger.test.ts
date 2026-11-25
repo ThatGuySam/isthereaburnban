@@ -1,6 +1,8 @@
 // @ts-nocheck -- bun test types are not installed; this file runs under Bun.
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { renderStatusHtml } from "../../../shared/render";
+import { resultSentence, statusFor } from "../../lookup";
 import { mergeSources } from "../merge";
 import { SOURCES } from "../registry";
 import { ctDeepFireDanger, parseCtFireDanger } from "./fire-danger";
@@ -70,6 +72,17 @@ test("Connecticut retries a rejected 200 with the current report's public embed 
   } finally {
     globalThis.fetch = original;
   }
+});
+
+test("an unavailable Connecticut report shows check failure even on the first poll", () => {
+  const { snapshot } = mergeSources(null, [{
+    source: ctDeepFireDanger, rows: [], checked: captured.toISOString(), error: "Origin rejected the request",
+  }], captured);
+  const answer = statusFor(snapshot, "09003", captured.getTime());
+  expect(answer).toMatchObject({ status: "unknown", checked: null, sourceId: ctDeepFireDanger.id,
+    sourceFailedSince: captured.toISOString(), officialUrl: ctDeepFireDanger.officialUrl });
+  expect(renderStatusHtml(answer)).toContain("couldn&#39;t check since");
+  expect(resultSentence(answer)).toContain("Couldn't check since");
 });
 
 test("Connecticut's dated HTML parser stays below 4 ms p95 thread CPU", async () => {

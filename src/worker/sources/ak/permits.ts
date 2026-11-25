@@ -33,8 +33,9 @@ export function parseAlaskaPermitZones(metadata: LayerMetadata, features: Record
   if (features.length !== ZONES.size) throw new Error("Alaska Forestry: changed permit zone inventory");
 
   // The publisher exposes a layer edit date and no per-zone decision timestamp.
-  const report = reportWindow(dataLastEditDate(metadata), now, MAX_EDIT_AGE_MS);
-  if (!report) throw new Error("Alaska Forestry: stale or undated permit zone report");
+  const edited = dataLastEditDate(metadata);
+  const report = reportWindow(edited, now, MAX_EDIT_AGE_MS);
+  if (!report) throw new Error(`Alaska Forestry: stale or undated permit zone report${edited ? ` (layer edit ${edited})` : ""}. Check your area Forestry office.`);
 
   const checked = now.toISOString();
   const seen = new Set<number>();
@@ -74,6 +75,7 @@ export function parseAlaskaPermitZones(metadata: LayerMetadata, features: Record
 
 export const akDnrPermitZones: ActiveSource = {
   ...META, coverage: "restrictions", mode: "positive-only", keepRowLinks: true,
+  reportingFips: [...new Set(zoneCounties.flatMap(({ countyFips }) => countyFips))],
   cadence: { kind: "daily", zone: US_ZONES.Alaska, hours: [0, 6, 12, 18] },
   async fetch({ now }) {
     const readText = pacedTextReader({ headers: { accept: "application/json", "cache-control": "no-cache" }, maxBytes: 100_000 });

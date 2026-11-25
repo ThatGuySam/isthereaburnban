@@ -9,6 +9,7 @@ import { projectMapStatus } from "./map-status";
 import { ACTIVE_KEY, decodeActive, encodeActive, encodeState, INDEX_KEY, stateKey } from "./snapshot-v2";
 import { mergeSources } from "./sources/merge";
 import { applyChecks } from "./sources/state";
+import { ilCrawfordCountyOrders } from "./sources/il/crawford";
 
 const started = "2026-11-24T18:00:00.000Z";
 const at = (hours: number) => new Date(Date.parse(started) + hours * 3_600_000);
@@ -40,6 +41,22 @@ test("a failed negative immediately becomes unknown with its last good check and
   expect(renderStatusHtml(answer, { relativeTimeBase: at(2).getTime() })).toContain("couldn&#39;t check since");
   expect(resultSentence(answer)).toContain(failedSince);
   expect(projectMapStatus("rev", [snapshot], at(2).getTime()).counties[fips]).toBeUndefined();
+});
+
+test("a failed local order check remains visible beside an independent restriction", () => {
+  const guidance = input("il-epa", "restricted");
+  guidance.source.state = "IL";
+  Object.assign(guidance.rows[0], { fips: "17033", state: "IL", county: "Crawford" });
+  const { snapshot } = mergeSources(null, [guidance, {
+    source: ilCrawfordCountyOrders, checked: started, rows: [], error: "Report unavailable",
+  }], at(0));
+  const result = statusFor(snapshot, "17033", at(0).getTime());
+  expect(result).toMatchObject({ status: "restricted", sourceOutages: [
+    { sourceId: ilCrawfordCountyOrders.id, sourceFailedSince: started },
+  ] });
+  expect(statusFor(snapshot, "17035", at(0).getTime()).sourceOutages).toBeUndefined();
+  expect(renderReportDetailsHtml(result)).toContain(ilCrawfordCountyOrders.officialUrl);
+  expect(resultSentence(result)).toContain("Couldn't check since");
 });
 
 test("a source-specific deadline removes the main and embedded reports at the same instant", () => {

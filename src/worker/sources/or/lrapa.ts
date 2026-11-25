@@ -10,7 +10,8 @@ const PACIFIC = US_ZONES.Pacific;
 const META = {
   state: "OR", stack: "ASP.NET MVC / Syncfusion embedded JSON", sourceName: "Lane Regional Air Protection Agency",
   scope: "part", coverage: "restrictions", mode: "positive-only", staleMs: 30 * 3_600_000,
-} satisfies Pick<ActiveSource, "state" | "stack" | "sourceName" | "scope" | "coverage" | "mode" | "staleMs">;
+  reportingFips: ["41039"],
+} satisfies Pick<ActiveSource, "state" | "stack" | "sourceName" | "scope" | "coverage" | "mode" | "staleMs" | "reportingFips">;
 const outdoor = {
   ...META,
   id: "or-lrapa-outdoor",

@@ -488,6 +488,18 @@
           "reviewBy": { "type": "string", "format": "date-time" }
         }
       },
+      "SourceOutage": {
+        "type": "object",
+        "description": "A source with a known reporting footprint could not be checked for this county.",
+        "required": ["sourceId", "sourceName", "officialUrl", "sourceFailedSince", "lastAttemptedAt"],
+        "properties": {
+          "sourceId": { "type": "string" },
+          "sourceName": { "type": "string" },
+          "officialUrl": { "type": "string" },
+          "sourceFailedSince": { "type": "string", "format": "date-time" },
+          "lastAttemptedAt": { "type": "string", "format": "date-time" }
+        }
+      },
       "CountyStatus": {
         "type": "object",
         "required": [
@@ -588,6 +600,11 @@
               "$ref": "#/components/schemas/FireWeatherAlert"
             },
             "description": "Selected published NWS fire-weather signals. Check onset and alert boundaries. A verified local rule may separately trigger scoped restrictions."
+          },
+          "sourceOutages": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/SourceOutage" },
+            "description": "Additional failed source checks for the county."
           },
           "orders": {
             "type": "array",
@@ -796,6 +813,11 @@
           },
           "ruleReview": {
             "$ref": "#/components/schemas/RuleReview"
+          },
+          "ruleChanged": {
+            "type": "boolean",
+            "const": true,
+            "description": "The publisher's current rule needs review before the statutory fallback may be used."
           },
           "cadence": {
             "type": [

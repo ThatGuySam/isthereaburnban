@@ -351,6 +351,12 @@ export function renderReportDetailsHtml(row: CountyStatus, now = Date.now()): st
   const countywide = broader ? `<p>${escapeHtml(statusSentence({ ...row, ...broader, scope: "county", scopeNote: undefined }))}.
     ${broader.officialUrl ? `<a href="${escapeHtml(broader.officialUrl)}" target="_blank" rel="noopener">County reporting source</a>` : ""}</p>` : "";
   const orders = row.orders?.filter((order) => order.status === "ban" || order.status === "restricted");
+  const outages = row.sourceOutages?.map((outage) => {
+    const failure = failedCheckText({ ...outage, sourceCheckFailed: true });
+    const name = escapeHtml(outage.sourceName);
+    const source = outage.officialUrl ? `<a href="${escapeHtml(outage.officialUrl)}" target="_blank" rel="noopener">${name}</a>` : name;
+    return `<li>${source} · ${escapeHtml(failure)}</li>`;
+  }).join("");
   return `<div class="report-details">
     ${row.scopeNote ? `<p>${escapeHtml(row.scopeNote)}</p>` : ""}
     ${row.note && !row.conflict ? `<p>${escapeHtml(row.note)}</p>` : ""}
@@ -360,6 +366,7 @@ export function renderReportDetailsHtml(row: CountyStatus, now = Date.now()): st
       ? `<h3>Conflicting reports</h3><ul class="report-orders">${row.conflict.reports.map(renderConflict).join("")}</ul>`
       : renderReportDates(row)}
     ${orders?.length ? `<h3>Reported orders and rules</h3><ul class="report-orders">${orders.map(renderOrder).join("")}</ul>` : ""}
+    ${outages ? `<h3>Source checks</h3><ul>${outages}</ul>` : ""}
     ${renderAlertLineHtml(row, now)}
   </div>`;
 }

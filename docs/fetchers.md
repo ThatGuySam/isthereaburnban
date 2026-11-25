@@ -33,6 +33,8 @@ Give each town, city, fire or air district, tribal authority, or land manager a 
 
 `checked` records the last successful check. Use `sourceUpdated` for a publisher timestamp, `since` for an effective date supplied by the publisher, and `expires` for a stated end. The merge records its own observations in `firstSeenAt` and `statusChangedAt`. Optional `validFrom` and `validUntil` UTC instants guard short-lived decisions. Dated upcoming local reports can appear in notes before activation. A failure keeps the last verified rows through the freshness window. Stale data become unknown and missing evidence gives no permission to burn.
 
+Use `reportingFips` for a positive-only source with a verified county footprint so an outage can appear on those county results, including before a first successful poll. A reviewed statutory fallback keeps its own review dates and local validity window. The last live check remains separate, and a confirmed change in the publisher's rule suspends the fallback pending verification.
+
 ### Stack groups
 
 | Inventory stack or shape | Shared helper | Sources and use |

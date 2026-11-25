@@ -55,6 +55,7 @@ export function parseRapidanAlerts({ blocks, tables }: HtmlParts, now: Date): Co
 
 export const vaRapidanAlerts: ActiveSource = {
   ...META, mode: "positive-only", coverage: "restrictions", cadence: { kind: "hourly" }, staleMs: SIX_HOURS,
+  reportingFips: COUNTIES.map(({ fips }) => fips),
   async fetch({ now }) {
     const reply = await fetchSource(META.sourceUrl, {
       headers: { accept: "text/html" }, maxBytes: 256_000, maxResponseAgeMs: SIX_HOURS,

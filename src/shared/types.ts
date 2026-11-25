@@ -32,6 +32,14 @@ export type EvidenceTiming = {
   sourceFailedSince?: string;
 };
 
+export type SourceOutage = {
+  sourceId: string;
+  sourceName: string;
+  officialUrl: string;
+  sourceFailedSince: string;
+  lastAttemptedAt: string;
+};
+
 export type CountyStatus = EvidenceTiming & {
   fips: string; // 5-digit county FIPS, string with leading zeros
   state: string; // "OK"
@@ -55,13 +63,14 @@ export type CountyStatus = EvidenceTiming & {
   issuerFor?: string; // aggregator reporting the same county order
   documentId?: string; // independently verified issuer document or notice
   conflict?: { kind: "issuer" | "degraded"; reports: [ConflictReport, ConflictReport] };
+  sourceOutages?: SourceOutage[];
   /** Broader report when a scoped order supplies the headline. */
   countywide?: Pick<CountyStatus, "status" | "label" | "checked" | "sourceId" | "sourceName" | "sourceUpdated" | "officialUrl">;
   orders?: ScopedOrder[];
   alerts?: FireWeatherAlert[];
 };
 
-export type CountyReport = Omit<CountyStatus, "fips" | "state" | "county" | "firstSeenAt" | "statusChangedAt" | "countywide" | "orders" | "alerts" | "conflict">;
+export type CountyReport = Omit<CountyStatus, "fips" | "state" | "county" | "firstSeenAt" | "statusChangedAt" | "countywide" | "orders" | "alerts" | "conflict" | "sourceOutages">;
 export type StoredCountyStatus = CountyStatus & { candidates?: CountyReport[] };
 export type ConflictReport = EvidenceTiming & Pick<CountyReport, "status" | "label" | "note" | "since" | "expires" |
   "sourceId" | "sourceName" | "sourceUpdated" | "sourceUrl" | "officialUrl" | "scopeNote" | "documentId">;

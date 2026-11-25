@@ -54,6 +54,7 @@ export async function parseCtFireDanger(input: Response | string, now: Date): Pr
 
 export const ctDeepFireDanger: ActiveSource = {
   ...META, mode: "positive-only", coverage: "restrictions", keepRowLinks: true,
+  reportingFips: COUNTIES.map(({ fips }) => fips),
   // DEEP normally publishes before 8 a.m. Eastern. Recheck for late reports and revisions.
   cadence: { kind: "daily", zone: ZONE, hours: [8, 11, 15] },
   staleMs: 24 * 3_600_000,

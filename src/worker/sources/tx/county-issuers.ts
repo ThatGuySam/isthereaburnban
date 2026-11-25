@@ -79,6 +79,7 @@ export async function parseBexarRescission(notice: string, advisory: string, now
 
 export const txArcherCountyIssuer: ActiveSource = {
   ...ARCHER, cadence: { kind: "daily", zone: ZONE, hours: [10, 16] },
+  reportingFips: ["48009"],
   async fetch({ now }) {
     const html = await getText(ARCHER_PAGE, { headers: { accept: "text/html" }, maxBytes: 96_000, attempts: 1 });
     return { rows: await parseArcherRescission(html, now, async (url) => {
@@ -91,6 +92,7 @@ export const txArcherCountyIssuer: ActiveSource = {
 
 export const txBexarCountyIssuer: ActiveSource = {
   ...BEXAR, cadence: { kind: "daily", zone: ZONE, hours: [11, 16] },
+  reportingFips: ["48029"],
   async fetch({ now }) {
     const read = pacedTextReader({ headers: { accept: "text/html" }, maxBytes: 400_000, attempts: 1 });
     return { rows: await parseBexarRescission(await read(BEXAR_NOTICE), await read(BEXAR_MARSHAL), now) };

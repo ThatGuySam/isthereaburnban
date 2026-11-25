@@ -43,7 +43,8 @@ function currentReport<T extends Report>(report: T, now: number): T {
 
 export function toCountyReport(row: StoredCountyStatus): CountyReport {
   const { fips: _fips, state: _state, county: _county, firstSeenAt: _first, statusChangedAt: _change,
-    countywide: _broad, orders: _orders, alerts: _alerts, candidates: _candidates, conflict: _conflict, ...report } = row;
+    countywide: _broad, orders: _orders, alerts: _alerts, candidates: _candidates, conflict: _conflict,
+    sourceOutages: _outages, ...report } = row;
   return report;
 }
 

@@ -1,4 +1,4 @@
-import type { CountyStatus, LookupResult, SnapshotData } from "../shared/types";
+import type { CountyStatus, LookupResult, SnapshotData, SourceOutage } from "../shared/types";
 import { cityRulesUrl } from "../shared/city-rules";
 import { DEPENDS_SENTENCE, locationConfirmation, placeName, placeStatus, statusSentence, statusTheme, unknownStatus } from "../shared/render";
 import { countyDecision } from "./county-decision";
@@ -7,6 +7,8 @@ import type { Env } from "./env";
 import { resolveCity } from "./places";
 import { withReportDates } from "./report-dates";
 import type { SnapshotReader } from "./snapshot";
+import { SOURCES } from "./sources/registry";
+import { isActive } from "./sources/types";
 
 export const DISCLAIMER = "Informational only. Always confirm with the official source before burning.";
 
@@ -16,6 +18,26 @@ export class LookupError extends Error {
   }
 }
 
+const ACTIVE_SOURCES = new Map(SOURCES.filter(isActive).map((source) => [source.id, source]));
+
+function outagesFor(snapshot: SnapshotData, fips: string, state: string, decision?: CountyStatus): SourceOutage[] {
+  const outages: SourceOutage[] = [];
+  for (const health of snapshot.sources) {
+    if (health.ok || health.state !== state || health.mode === "manual" || !health.lastAttemptedAt) continue;
+    const source = ACTIVE_SOURCES.get(health.id);
+    const fipsList = health.mode === "full" ? source?.expectedFips : source?.reportingFips;
+    if (!(fipsList?.includes(fips) ?? (health.mode === "full"))) continue;
+    const showsFailure = (report: Pick<CountyStatus, "sourceId" | "sourceCheckFailed">) =>
+      report.sourceId === health.id && report.sourceCheckFailed;
+    if (decision && (showsFailure(decision) || decision.orders?.some(showsFailure) || decision.conflict?.reports.some(showsFailure))) continue;
+    outages.push({ sourceId: health.id, sourceName: source?.sourceName ?? health.id,
+      officialUrl: health.officialUrl ?? source?.officialUrl ?? "",
+      sourceFailedSince: health.failedSince ?? health.lastAttemptedAt,
+      lastAttemptedAt: health.lastAttemptedAt });
+  }
+  return outages;
+}
+
 /** Status for one county. Never defaults to "none": anything we can't vouch for is "unknown". */
 export function statusFor(snapshot: SnapshotData, fips: string, now = Date.now()): CountyStatus {
   const hit = snapshot.counties[fips];
@@ -23,12 +45,14 @@ export function statusFor(snapshot: SnapshotData, fips: string, now = Date.now()
     const decision = countyDecision(withReportDates(hit), now);
     const checked = decision.sourceUrl ? decision.checked : null;
     const health = decision.sourceId ? snapshot.sources.find((s) => s.id === decision.sourceId) : undefined;
-    return { ...decision, checked, lastAttemptedAt: decision.lastAttemptedAt ?? health?.lastAttemptedAt ?? undefined };
+    const outages = outagesFor(snapshot, fips, hit.state, decision);
+    return { ...decision, checked, lastAttemptedAt: decision.lastAttemptedAt ?? health?.lastAttemptedAt ?? undefined,
+      ...(outages.length ? { sourceOutages: outages } : {}) };
   }
   const c = COUNTY_BY_FIPS.get(fips);
   if (!c) throw new LookupError(`unknown county FIPS ${fips}`, 404);
   const dir = STATE_DIR_BY_ABBR.get(c.state);
-  const unavailable = snapshot.sources.find((source) => source.state === c.state && source.mode === "full" && !source.ok && source.lastAttemptedAt);
+  const [unavailable, ...outages] = outagesFor(snapshot, fips, c.state);
   return {
     fips,
     state: c.state,
@@ -41,13 +65,15 @@ export function statusFor(snapshot: SnapshotData, fips: string, now = Date.now()
     checked: null,
     firstSeenAt: null,
     statusChangedAt: null,
-    sourceName: dir?.publisher ?? "",
-    sourceUrl: "",
-    officialUrl: dir?.officialUrl ?? "",
+    sourceId: unavailable?.sourceId,
+    sourceName: unavailable?.sourceName ?? dir?.publisher ?? "",
+    sourceUrl: unavailable ? ACTIVE_SOURCES.get(unavailable.sourceId)?.sourceUrl ?? "" : "",
+    officialUrl: unavailable?.officialUrl || dir?.officialUrl || "",
     note: dir?.notes,
-    lastAttemptedAt: unavailable?.lastAttemptedAt ?? undefined,
+    lastAttemptedAt: unavailable?.lastAttemptedAt,
     sourceCheckFailed: unavailable ? true : undefined,
-    sourceFailedSince: unavailable?.failedSince ?? unavailable?.lastAttemptedAt ?? undefined,
+    sourceFailedSince: unavailable?.sourceFailedSince,
+    ...(outages.length ? { sourceOutages: outages } : {}),
   };
 }
 
@@ -154,6 +180,8 @@ export function countyState(fips: string): string {
 export function resultSentence(r: CountyStatus): string {
   const checked = r.checked?.replace(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}):.*Z$/, "$1Z");
   const head = `${statusTheme(r.status).word}: ${statusSentence(r)}.`;
+  const outages = r.sourceOutages?.map((outage) =>
+    `${outage.sourceName}: Couldn't check since ${outage.sourceFailedSince}. ${outage.officialUrl}`.trim()) ?? [];
   if (r.conflict) {
     return [head, ...r.conflict.reports.map((report) => [
       `${report.sourceName} reports ${report.label}.`,
@@ -162,7 +190,7 @@ export function resultSentence(r: CountyStatus): string {
       report.checked && `Checked ${report.checked}.`,
       report.sourceFailedSince && `Couldn't check since ${report.sourceFailedSince}.`,
       report.note, report.officialUrl, report.sourceUrl !== report.officialUrl && report.sourceUrl,
-    ].filter(Boolean).join(" "))].join("\n");
+    ].filter(Boolean).join(" ")), ...outages].join("\n");
   }
   const src = r.sourceUrl && r.sourceName ? ` Source: ${r.sourceName}${checked ? `, checked ${checked}` : ""}.` : "";
   const dates = [
@@ -177,7 +205,8 @@ export function resultSentence(r: CountyStatus): string {
     const end = alert.ends ?? alert.expires;
     return ` NWS fire weather: ${alert.event}${end ? ` until ${end}` : ""}.`;
   }).join("") ?? "";
-  return `${head}${exp}${src}${dates ? ` ${dates}` : ""}${weather}${r.note ? ` ${r.note}` : ""}${r.officialUrl ? ` ${r.sourceUrl ? "Official source" : "Official directory"}: ${r.officialUrl}` : ""}`;
+  return [`${head}${exp}${src}${dates ? ` ${dates}` : ""}${weather}${r.note ? ` ${r.note}` : ""}${r.officialUrl ? ` ${r.sourceUrl ? "Official source" : "Official directory"}: ${r.officialUrl}` : ""}`,
+    ...outages].join("\n");
 }
 
 /** Share the place qualifier and county answers across the text API and MCP. */
