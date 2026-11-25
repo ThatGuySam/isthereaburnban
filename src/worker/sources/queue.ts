@@ -2,50 +2,36 @@ import type { Env } from "../env";
 import { CHANNELS } from "../notification-audience";
 import type { Notice } from "../notification-message";
 import { drainOutbox, enqueueNotices } from "../notification-outbox";
-import { localClock } from "./lib/dates";
+import { consumeDeadLetters, SOURCE_DLQ } from "./dead-letter";
+import { runSourceMonitor } from "./monitor";
+import { cachedLocalClock, isDue, READINESS_TIMEOUT_MS } from "./schedule";
 import { advancePublication, currentRun, planPublication } from "./publication";
 import { SOURCES } from "./registry";
 import { pollSource, readHeads } from "./state";
-import { isActive, type ActiveSource, type Source } from "./types";
+import { isActive, type Source } from "./types";
 
 export type SourceMessage =
   | { kind: "source"; id: string; slot: number }
   | { kind: "merge"; slot: number; due: string[] }
   | { kind: "publish"; id: string }
-  | { kind: "deliver" };
+  | { kind: "deliver" }
+  | { kind: "monitor" };
 
 const MERGE_DELAY = 120; // Let one poll per source finish and new KV revisions propagate.
-const READINESS_TIMEOUT_MS = 15 * 60_000;
+export { isDue } from "./schedule";
 type Dependencies = {
   sources?: readonly Source[];
   now?: Date;
   sendNotices?: (env: Env, runId: string, notices: Notice[]) => Promise<unknown>;
 };
 
-export function isDue(source: ActiveSource, slot: number, previous?: number, clock = localClock): boolean {
-  if (previous != null && previous >= slot) return false;
-  const cadence = source.cadence;
-  if (cadence.kind === "hourly") return true;
-  const { date, minute } = clock(new Date(slot), cadence.zone);
-  const latest = cadence.hours.findLast((hour) => minute >= hour * 60);
-  if (latest === undefined) return false;
-  const last = previous == null ? undefined : clock(new Date(previous), cadence.zone);
-  return !last || last.date !== date || last.minute < latest * 60;
-}
-
 export async function enqueueSources(env: Env, slot: number, { sources = SOURCES }: Dependencies = {}): Promise<void> {
   if (!env.SOURCE_QUEUE) throw new Error("Missing SOURCE_QUEUE binding");
   const heads = await readHeads(env.DB);
-  const localTimes = new Map<string, ReturnType<typeof localClock>>();
-  const clock = (at: Date, zone: string) => {
-    const key = `${zone}/${at.getTime()}`;
-    const cached = localTimes.get(key);
-    if (cached) return cached;
-    const time = localClock(at, zone);
-    localTimes.set(key, time);
-    return time;
-  };
+  const clock = cachedLocalClock();
   const due = sources.filter(isActive).filter((source) => isDue(source, slot, heads.get(source.id)?.slot, clock)).map((source) => source.id);
+  await env.DB.prepare(`INSERT OR IGNORE INTO source_jobs (source_id, slot)
+    SELECT value, ? FROM json_each(?)`).bind(slot, JSON.stringify(due)).run();
   // Send source messages first. A failed send can safely be retried with the same slot.
   for (let i = 0; i < due.length; i += 100) {
     const batch = due.slice(i, i + 100).map((id) => ({ body: { kind: "source" as const, id, slot } }));
@@ -70,11 +56,16 @@ export async function consumeSourceMessage(env: Env, message: SourceMessage, {
       if (active) return "waiting";
       await pollSource(env, source, message.slot, now);
     }
+    await env.DB.prepare("DELETE FROM source_jobs WHERE source_id = ? AND slot <= ?").bind(message.id, message.slot).run();
     return "done";
   }
 
   const queue = env.SOURCE_QUEUE;
   if (!queue) throw new Error("Missing SOURCE_QUEUE binding");
+  if (message.kind === "monitor") {
+    if (await runSourceMonitor(env, sources, now.getTime())) await queue.send({ kind: "deliver" });
+    return "done";
+  }
   if (message.kind === "deliver") {
     if (await drainOutbox(env)) await queue.send(message);
     return "done";
@@ -102,6 +93,7 @@ export async function consumeSourceMessage(env: Env, message: SourceMessage, {
 }
 
 export async function consumeSourceQueue(batch: MessageBatch<SourceMessage>, env: Env) {
+  if (batch.queue === SOURCE_DLQ) return consumeDeadLetters(batch, env);
   for (const message of batch.messages) {
     try {
       if (await consumeSourceMessage(env, message.body) === "waiting") message.retry({ delaySeconds: 60 });

@@ -20,6 +20,8 @@ type Health = {
   blocked?: boolean;
   validators?: Validators;
   boundaries?: string[];
+  consecutiveFailures?: number;
+  mappedCount?: number;
 };
 
 export type SourceHead = Health & { id: string; slot: number; hash: string | null; stored: number };
@@ -144,6 +146,7 @@ export async function pollSource(env: Env, source: ActiveSource, slot: number, n
   let health: Health = { checked, lastGood: previous?.lastGood, validators: previous?.validators,
     boundaries: previous?.boundaries, ruleReview: previous?.ruleReview, ruleChanged: previous?.ruleChanged };
   let incoming: ReturnType<typeof normalize> | undefined;
+  let mappedCount: number | undefined;
   const failedSince = previous?.error ? previous.failedSince ?? previous.checked : checked;
 
   try {
@@ -151,11 +154,19 @@ export async function pollSource(env: Env, source: ActiveSource, slot: number, n
     if ("notModified" in result) {
       if (!hash || previous?.ruleReview || previous?.ruleChanged) throw new Error("Source returned 304 without a verified current revision");
     } else {
+      if ("rows" in result && source.mode === "full") {
+        const expected = new Set(source.expectedFips ?? countiesInState(source.state).map(({ fips }) => fips));
+        const mapped = new Set(result.rows.filter(({ fips, county }) => expected.has(fips) && COUNTY_BY_FIPS.get(fips)?.name === county)
+          .map(({ fips }) => fips));
+        mappedCount = mapped.size;
+      }
       if ("fallback" in result && result.fallback && previous?.ruleChanged) {
         throw new Error(RULE_CHANGED);
       }
       incoming = normalize(source, result, now);
     }
+    mappedCount ??= "notModified" in result ? previous?.mappedCount :
+      new Set(("rows" in result ? result.rows : result.fireWeather).map(({ fips }) => fips)).size;
     if ("fallback" in result && result.fallback) {
       const { reviewedAt, reviewBy, reason } = result.fallback;
       health = { ...health, error: errorText(reason), failedSince, ruleReview: { reviewedAt, reviewBy }, validators: undefined };
@@ -164,6 +175,9 @@ export async function pollSource(env: Env, source: ActiveSource, slot: number, n
     }
   } catch (reason) {
     health.error = errorText(reason);
+    // State adapters may reject a partial roster before returning normalized rows.
+    const missing = source.mode === "full" && /full edition missing (\d+) counties/.exec(health.error);
+    if (missing) mappedCount = Math.max(0, (source.expectedFips?.length ?? countiesInState(source.state).length) - Number(missing[1]));
     health.failedSince = failedSince;
     health.blocked = reason instanceof BlockedError;
     if (reason instanceof RuleChangedError) {
@@ -173,6 +187,9 @@ export async function pollSource(env: Env, source: ActiveSource, slot: number, n
     }
     console.warn(`source ${source.id} failed: ${health.error}`);
   }
+
+  health.mappedCount = mappedCount;
+  health.consecutiveFailures = health.error ? (previous?.consecutiveFailures ?? (previous?.error ? 1 : 0)) + 1 : 0;
 
   const writes: D1PreparedStatement[] = [];
   const id = source.id;

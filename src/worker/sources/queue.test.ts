@@ -13,7 +13,9 @@ import { US_ZONES } from "./lib/dates";
 import { mergeSources, STALE_MS } from "./merge";
 import { nwsFireWeather, parseNwsAlerts } from "./nws/alerts";
 import { MAX_CACHED_STATES } from "./publication";
-import { consumeSourceMessage, enqueueSources, isDue } from "./queue";
+import { consumeSourceMessage, consumeSourceQueue, enqueueSources, isDue } from "./queue";
+import { replayDeadLetter, SOURCE_DLQ } from "./dead-letter";
+import { pipelineStatus, runSourceMonitor } from "./monitor";
 import { SOURCES } from "./registry";
 import { applyChecks, readHeads } from "./state";
 import { isActive } from "./types";
@@ -24,7 +26,7 @@ afterEach(() => { for (const store of stores.splice(0)) store.close(); });
 function sandbox() {
   const sqlite = new Database(":memory:");
   stores.push(sqlite);
-  for (const file of ["0001_init.sql", "0003_source_refresh.sql", "0004_state_snapshots.sql"]) {
+  for (const file of ["0001_init.sql", "0002_notification_ops.sql", "0003_source_refresh.sql", "0004_state_snapshots.sql", "0005_notification_outbox.sql", "0006_pipeline_monitor.sql"]) {
     sqlite.exec(readFileSync(new URL(`../../../migrations/${file}`, import.meta.url), "utf8"));
   }
   const keys = new Map();
@@ -254,7 +256,7 @@ test("a partial full edition records failure and retains the last complete paylo
   const first = (await readHeads(box.env.DB)).get(src.id);
   await poll(box, src, nextHour);
   expect((await readHeads(box.env.DB)).get(src.id)).toMatchObject({
-    hash: first.hash, lastGood: first.lastGood, error: expect.stringContaining("missing 1 counties"),
+    hash: first.hash, lastGood: first.lastGood, error: expect.stringContaining("missing 1 counties"), mappedCount: 1, consecutiveFailures: 1,
   });
   await merge(box, [src], nextHour);
   expect(box.snapshot().counties["41039"].status).toBe("ban");
@@ -579,4 +581,48 @@ test("public expiration safety holds during a D1 health lookup failure", async (
   box.env.DB = { prepare: () => { throw new Error("D1 temporarily unavailable"); } };
   const result = await snapshotReader(box.env, { fresh: true }).state("OR");
   expect(statusFor(result, "41039")).toMatchObject({ status: "unknown", label: "Source decision expired" });
+});
+
+test("ops alerts once per overdue or incomplete roster incident and excludes public recipients", async () => {
+  const box = sandbox();
+  box.env.OPS_ALERT_EMAIL = "ops@example.test";
+  const full = source("or", async ({ now }) => ({ rows: now.getTime() === initial ? [
+    row("none", now.toISOString()),
+    row("none", now.toISOString(), { fips: "41051", county: "Multnomah County" }),
+  ] : [row("none", now.toISOString())] }), { expectedFips: ["41039", "41051"] });
+  await poll(box, full, initial);
+  expect(await runSourceMonitor(box.env, [full], initial + 16 * 60_000)).toBe(false);
+  await poll(box, full, nextHour);
+  const oneMiss = nextHour + 16 * 60_000;
+  expect(await runSourceMonitor(box.env, [full], oneMiss)).toBe(true);
+  expect(await runSourceMonitor(box.env, [full], oneMiss)).toBe(false);
+  const twoMisses = oneMiss + 3_600_000;
+  expect(await runSourceMonitor(box.env, [full], twoMisses)).toBe(true);
+  const status = await pipelineStatus(box.env, [full], twoMisses);
+  expect(status.issues.map(({ id }) => id).sort()).toEqual(["overdue/or", "roster/OR"]);
+  expect(status.sources[0]).toMatchObject({ mapped: 1, expected: 2, consecutiveFailures: 1,
+    lastAttempt: new Date(nextHour).toISOString(), lastSuccess: new Date(initial).toISOString(), nextDue: nextHour + 2 * 3_600_000 });
+  expect(box.sqlite.query("SELECT origin, audience FROM notification_runs").all()).toEqual([
+    { origin: "ops", audience: "ops" }, { origin: "ops", audience: "ops" },
+  ]);
+  expect(box.sqlite.query("SELECT DISTINCT recipient FROM notification_outbox").all()).toEqual([{ recipient: "ops" }]);
+});
+
+test("a dead letter remains available until replay is successfully enqueued", async () => {
+  const box = sandbox();
+  const body = { kind: "source", id: "fixture", slot: initial };
+  let acknowledged = false;
+  const batch = { queue: SOURCE_DLQ, messages: [{ id: "dead-id", body }], ackAll: () => { acknowledged = true; } };
+  await consumeSourceQueue(batch, box.env);
+  await consumeSourceQueue(batch, box.env);
+  expect(acknowledged).toBe(true);
+  const send = box.env.SOURCE_QUEUE.send;
+  box.env.SOURCE_QUEUE.send = async () => { throw new Error("queue unavailable"); };
+  await expect(replayDeadLetter(box.env, "dead-id")).rejects.toThrow("queue unavailable");
+  expect((await pipelineStatus(box.env, [])).deadLetters).toHaveLength(1);
+  box.env.SOURCE_QUEUE.send = send;
+  expect(await replayDeadLetter(box.env, "dead-id")).toBe(true);
+  expect(box.messages).toEqual([{ body }]);
+  expect(await replayDeadLetter(box.env, "dead-id")).toBe(false);
+  expect((await pipelineStatus(box.env, [])).deadLetters).toEqual([]);
 });

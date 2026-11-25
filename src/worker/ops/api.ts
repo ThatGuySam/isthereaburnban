@@ -9,6 +9,9 @@ import { NotificationError, notify, providerStatus } from "../notify";
 import { subscribePush } from "../push";
 import { statusFor } from "../lookup";
 import { snapshotReader } from "../snapshot";
+import { replayDeadLetter } from "../sources/dead-letter";
+import { pipelineStatus } from "../sources/monitor";
+import { SOURCES } from "../sources/registry";
 import { evidenceInEffect } from "../../shared/evidence";
 
 const fips = z.string().regex(/^\d{5}$/).refine((value) => COUNTY_BY_FIPS.has(value));
@@ -173,10 +176,16 @@ export async function opsApi(request: Request, env: Env, url: URL, action: strin
   if (request.method === "GET") {
     if (action === "status") return status(env);
     if (action === "devices") return devices(env, url);
+    if (action === "pipeline") return pipelineStatus(env, SOURCES);
     if (action === "log") return deliveryLog(env, url);
     return;
   }
   if (request.method !== "POST") return;
+  if (action === "replay") {
+    const { id } = z.object({ id: z.string().min(1).max(128) }).parse(await readBody(request));
+    if (!await replayDeadLetter(env, id)) throw new NotificationError("No pending dead letter with that ID.", 404);
+    return { replayed: true };
+  }
   if (action === "notice") return sendNotice(env, notices.parse(await readBody(request)));
   if (action === "pause") {
     const { paused } = pause.parse(await readBody(request));

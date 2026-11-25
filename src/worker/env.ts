@@ -11,6 +11,7 @@ export interface Env {
   VAPID_SUBJECT: string;
   RESEND_API_KEY?: string; // secret; when absent, email signups are stored but not sent
   EMAIL_FROM?: string;
+  OPS_ALERT_EMAIL?: string; // optional operational recipient
   DASH_TOKEN?: string;
   PUSH_CANARY_ENABLED?: string;
   PUSH_CANARY_FIPS?: string;

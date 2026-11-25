@@ -6,7 +6,7 @@ import { countyPath, COUNTY_BY_FIPS } from "./counties";
 export type Transition = { fips: string; oldStatus: BanStatus; newStatus: BanStatus; at: string; notice?: Notice };
 
 export type Notice = {
-  kind: "live" | "test" | "canary";
+  kind: "live" | "test" | "canary" | "ops";
   fips: string;
   title: string;
   body: string;

@@ -76,6 +76,35 @@ async function loadStatus() {
   el("send-simulation").disabled = !settings.providers.email && !settings.providers.push;
   updateConfirmation();
 }
+function stamp(value) {
+  return value === null ? "—" : new Date(value).toISOString().replace("T", " ").slice(0, 16) + " UTC";
+}
+async function loadPipeline() {
+  const pipeline = await api("pipeline");
+  el("pending-slot").textContent = pipeline.oldestPendingSlot === null ? "No pending source slots"
+    : "Oldest pending slot " + stamp(pipeline.oldestPendingSlot);
+  el("source-issues").replaceChildren(...pipeline.issues.map((issue) => element("li", issue.detail)));
+  el("source-health").replaceChildren(...pipeline.sources.map((source) => {
+    const row = element("tr", "");
+    const counts = (source.mapped ?? "—") + " / " + (source.expected ?? "—");
+    for (const value of [source.id, stamp(source.lastAttempt), stamp(source.lastSuccess), stamp(source.nextDue),
+      source.consecutiveFailures, counts, source.error || "—"]) row.append(element("td", value));
+    return row;
+  }));
+  el("dead-letters").replaceChildren(...pipeline.deadLetters.map((dead) => {
+    const row = element("li", stamp(dead.receivedAt) + " · " + dead.kind + (dead.subject ? " · " + dead.subject : "") + " ");
+    const button = element("button", "Replay");
+    button.type = "button";
+    button.onclick = () => work(button, "pipeline-message", async () => {
+      await api("replay", { id: dead.id });
+      await loadPipeline();
+      message("pipeline-message", "Message requeued.");
+    });
+    row.append(button);
+    return row;
+  }));
+  if (!pipeline.deadLetters.length) el("dead-letters").append(element("li", "No messages awaiting replay."));
+}
 async function preparePushRegistration() {
   if (pushRegistration || registeringWorker) return;
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
@@ -297,6 +326,8 @@ el("broadcast").onsubmit = (event) => {
 };
 el("refresh-log").onclick = () => work(el("refresh-log"), "log-message", () => loadLog());
 el("older-log").onclick = () => work(el("older-log"), "log-message", () => loadLog(olderLog));
+el("refresh-pipeline").onclick = () => work(el("refresh-pipeline"), "pipeline-message", loadPipeline);
+loadPipeline().catch((error) => message("pipeline-message", error.message, true));
 loadStatus().catch((error) => message("status-message", error.message, true));
 loadDevices().catch((error) => message("test-message", error.message, true));
 refreshLog();

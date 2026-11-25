@@ -108,6 +108,12 @@ The current registry has 84 entries and schedules 465 polls on a normal day. If 
 
 The v1 compatibility data reflect the cutover point. Rolling back to a v1-only Worker after new source heads have been written requires reconciling those D1 heads with their older KV payloads and preserving notification claims.
 
+## Pipeline operations
+
+The authenticated ops dashboard shows source check times, scheduled due times, roster counts, pending slots, dead letters, and automatic delivery backlog. Provision the `isthereaburnban-sources-dlq` Cloudflare queue before deploying the consumer configuration. The consumer stores exhausted messages in D1. Use **Replay** on the dashboard after correcting the underlying failure. Replays use the original source slot or publication ID.
+
+Operational alerts open after a full feed misses two scheduled checks, or a previously verified full feed falls below its expected roster. They go to canary devices registered on the ops dashboard and to `OPS_ALERT_EMAIL` if configured with Resend. They respect the alert pause. The dashboard records incidents even when a notification recipient has yet to be configured.
+
 ### California verification
 
 On November 23 Pacific time, the local cron and delayed merge loaded all seven existing sources and mapped CARB's November 24 decisions to 31 California counties. The Lake County page displayed the upcoming agricultural and prescribed burn day and left countywide status unconfirmed. CAL FIRE returned an Akamai 403 and its listing remains manual. PFIRS polls after Pacific midnight and again after the deadline for deferred morning decisions. [CARB PFIRS](https://ssl.arb.ca.gov/pfirs/cb3/cb3.php), [CARB decision rules](https://ww2.arb.ca.gov/our-work/programs/agricultural-prescribed-burning/about).

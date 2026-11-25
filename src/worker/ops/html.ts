@@ -62,7 +62,7 @@ export function dashboardHtml(nonce: string): string {
 </style>
 </head>
 <body>
-<header><div><p>Is There a Burn Ban?</p><h1>Notification operations</h1></div></header>
+<header><div><p>Is There a Burn Ban?</p><h1>Burn ban operations</h1></div></header>
 <main>
 <section aria-labelledby="delivery-status">
   <h2 id="delivery-status">Delivery status</h2>
@@ -77,6 +77,21 @@ export function dashboardHtml(nonce: string): string {
     </div>
   </div>
   <p class="message" id="status-message" role="status"></p>
+</section>
+<section aria-labelledby="pipeline-heading">
+  <h2 id="pipeline-heading">Source pipeline</h2>
+  <p id="pending-slot">Loading…</p>
+  <ul id="source-issues"></ul>
+  <div class="scroll" role="region" aria-label="Source checks" tabindex="0">
+  <table>
+    <thead><tr><th>Source</th><th>Last attempt</th><th>Last success</th><th>Next due</th><th>Consecutive failures</th><th>Mapped / expected</th><th>Latest error</th></tr></thead>
+    <tbody id="source-health"></tbody>
+  </table>
+  </div>
+  <h3>Dead letters</h3>
+  <ul id="dead-letters"></ul>
+  <p class="message" id="pipeline-message" role="status"></p>
+  <button id="refresh-pipeline" type="button">Refresh source pipeline</button>
 </section>
 <div class="columns">
   <section aria-labelledby="test-heading">

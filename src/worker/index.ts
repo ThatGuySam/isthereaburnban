@@ -158,7 +158,8 @@ export default {
     ctx.waitUntil(controller.cron === CANARY_CRON
       ? runCanary(env, controller.scheduledTime)
       : env.SOURCE_QUEUE
-        ? Promise.all([enqueueSources(env, controller.scheduledTime), env.SOURCE_QUEUE.send({ kind: "deliver" })])
+        ? Promise.all([enqueueSources(env, controller.scheduledTime), env.SOURCE_QUEUE.send({ kind: "deliver" }),
+          env.SOURCE_QUEUE.send({ kind: "monitor" }, { delaySeconds: 15 * 60 })])
         : refresh(env, undefined, controller.scheduledTime));
   },
   queue: consumeSourceQueue,
