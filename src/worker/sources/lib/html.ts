@@ -258,6 +258,21 @@ export async function htmlStatusBlocks(input: Response | string, section: string
   return cells.map(({ text }) => text).filter(Boolean);
 }
 
+/** Read one explicit choice from a dedicated, visible status panel. */
+export async function htmlStatusChoice<const Status extends string>(
+  input: Response | string,
+  { section, blocks, choices }: {
+    section: string;
+    blocks: string;
+    choices: readonly (readonly [Status, RegExp])[];
+  },
+): Promise<Status> {
+  const content = (await htmlStatusBlocks(input, section, blocks)).join("\n");
+  const [match, ...extra] = choices.filter(([, pattern]) => pattern.test(content));
+  if (!match || extra.length) throw new Error(`Unrecognized or ambiguous status in ${section}`);
+  return match[0];
+}
+
 export function blockAfterHeading(
   blocks: Block[], pattern: string | RegExp,
   { requireUnique = false, headingTag }: { requireUnique?: boolean; headingTag?: `h${1 | 2 | 3 | 4 | 5 | 6}` } = {},

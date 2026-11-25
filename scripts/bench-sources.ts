@@ -130,6 +130,7 @@ import { parseWestVirginiaSeasonal, wvForestryFireSeason } from "../src/worker/s
 import { parseEcologyAir, waEcologyAir } from "../src/worker/sources/wa/ecology-air";
 import { parseKingFireSafety, waKingFireSafety } from "../src/worker/sources/wa/king-fire-safety";
 import { parsePugetSound, waPugetSoundAir } from "../src/worker/sources/wa/puget-sound";
+import { wiLocalStatuses } from "../src/worker/sources/wi/local-status";
 import { parseWisconsinPermits, wiPermits } from "../src/worker/sources/wi/permits";
 import { parseWyomingCountyOrders, wyCountyOrders } from "../src/worker/sources/wy/county-orders";
 import { parseWyomingStateLands, wyStateLands } from "../src/worker/sources/wy/state-lands";
@@ -157,6 +158,10 @@ const miMap = utf8("mi/fixtures/permits-2026-11-24.json");
 const njDivisions = utf8("nj/fixtures/divisions-2026-11-24.json");
 const njCounties = utf8("nj/fixtures/counties-2026-11-24.json");
 const wiPermitsJson = utf8("wi/fixtures/permits-2026-11-24.json");
+const wiLocalStatusJobs = ["burlington-fire", "somerset-permits"].map((name, index): [string, () => unknown] => {
+  const html = utf8(`wi/fixtures/${name}.html`);
+  return [wiLocalStatuses[index].source.id, () => wiLocalStatuses[index].parse(html, now)];
+});
 const mnRestrictionsJson = utf8("mn/fixtures/restrictions-2026-11-24.json");
 const nwsLive = utf8("nws/fixtures/active-2026-11-24.json");
 const nwsArchive = utf8("nws/fixtures/archive-2026-11-18-to-19.json");
@@ -776,6 +781,7 @@ const jobs: Array<[string, () => unknown]> = [
   ["MI DNR ArcGIS", parseMiFixture],
   ["NJ Forest Fire Service ArcGIS", parseNjFixture],
   ["WI DNR permit feed", parseWiFixture],
+  ...wiLocalStatusJobs,
   ["MN DNR restriction feed", parseMnFixture],
   ["MN Olmsted current sheriff archive", () => parseMnOlmsted(now)],
   ["MN Olmsted order and effective lift", () => parseMnOlmsted(new Date("2023-09-07T12:00:00Z"))],
