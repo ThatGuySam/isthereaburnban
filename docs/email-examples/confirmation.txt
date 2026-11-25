@@ -1,0 +1,16 @@
+Subject: Confirm your burn ban alerts
+
+Confirm your email to start receiving burn ban alerts.
+
+Your selected counties
+
+Adair County, OK
+Tulsa County, OK
+
+This link expires on Nov 25, 2026 at 16:05 UTC.
+
+Confirm your subscription
+https://isthereaburnban.example/api/v1/email/confirm?token=00000000-0000-4000-8000-000000000001
+
+Sent by Is There a Burn Ban?
+Someone entered this email address when signing up. If that wasn’t you, you can ignore this message.

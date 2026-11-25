@@ -1,6 +1,7 @@
 import { bansPage } from "./bans-page";
 import { activeFireWeather, coverage } from "./api";
-import { confirmEmail, subscribeEmail, unsubscribeEmail } from "./email";
+import { confirmEmail, subscribeEmail, unsubscribeEmailFromForm } from "./email";
+import { EMAIL_UNSUBSCRIBE_PATH, UNSUBSCRIBE_FIELD, UNSUBSCRIBE_VALUE } from "./email-message";
 import type { Env } from "./env";
 import { DISCLAIMER, lookup, LookupError, lookupText, statusFor } from "./lookup";
 import { serveMachineDocs } from "./machine-docs";
@@ -40,10 +41,14 @@ function error(message: string, status = 400): Response {
   return json({ error: message, disclaimer: DISCLAIMER }, status, "no-store");
 }
 
-function page(title: string, message: string, status = 200): Response {
+function page(title: string, message: string, status = 200, unsubscribeAction?: string): Response {
   const esc = (s: string) => s.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${esc(title)}</title><style>body{font:18px/1.5 system-ui,sans-serif;max-width:32rem;margin:15vh auto;padding:0 1rem;color:#123646}a{color:inherit}</style></head><body><h1>${esc(title)}</h1><p>${esc(message)}</p><p><a href="/">Is there a burn ban?</a></p></body></html>`;
-  return new Response(html, { status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+  const form = unsubscribeAction
+    ? `<form method="post" action="${esc(unsubscribeAction)}"><button type="submit" name="${UNSUBSCRIBE_FIELD}" value="${UNSUBSCRIBE_VALUE}">Unsubscribe</button></form>` : "";
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${esc(title)}</title><style>body{font:18px/1.5 system-ui,sans-serif;max-width:32rem;margin:15vh auto;padding:0 1rem;color:#123646}a{color:inherit}button{font:inherit;padding:.4em .8em}</style></head><body><h1>${esc(title)}</h1><p>${esc(message)}</p>${form}<p><a href="/">Is there a burn ban?</a></p></body></html>`;
+  return new Response(html, { status, headers: {
+    "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "referrer-policy": "no-referrer",
+  } });
 }
 
 async function api(request: Request, env: Env, url: URL): Promise<Response> {
@@ -59,9 +64,11 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
         ? page("You're subscribed", "Your subscription is active for eligible changes in the counties you picked.")
         : page("Link not valid", "This confirmation link is invalid, expired, or was already unsubscribed.", 404);
     }
-    if (path === "/api/v1/email/unsubscribe") {
-      return (await unsubscribeEmail(env, p.get("token") ?? ""))
-        ? page("Unsubscribed", "The subscription for this link is now disabled. Messages already queued may still arrive.")
+    if (path === EMAIL_UNSUBSCRIBE_PATH) {
+      const token = p.get("token");
+      return token
+        ? page("Unsubscribe from burn ban alerts", "Stop email alerts for the county selection linked to this message.", 200,
+          `${EMAIL_UNSUBSCRIBE_PATH}?${new URLSearchParams({ token })}`)
         : page("Link not valid", "This unsubscribe link is invalid.", 404);
     }
 
@@ -109,6 +116,15 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
   }
 
   if (method === "POST") {
+    if (path === EMAIL_UNSUBSCRIBE_PATH) {
+      const removed = await unsubscribeEmailFromForm(env, request, p.get("token") ?? "");
+      if (request.headers.get("accept")?.includes("text/html")) {
+        return removed
+          ? page("Unsubscribed", "Email alerts for this county selection are off. A message already being sent may still arrive.")
+          : page("Link not valid", "This unsubscribe link is invalid.", 404);
+      }
+      return new Response(null, { status: removed ? 204 : 404, headers: { "cache-control": "no-store" } });
+    }
     let r: { ok: boolean; error?: string };
     if (path === "/api/v1/push/subscribe") r = await subscribePush(env, await readJsonBody(request, 16_384));
     else if (path === "/api/v1/push/unsubscribe") r = await unsubscribePush(env, await readJsonBody(request, 16_384));

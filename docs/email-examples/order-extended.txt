@@ -1,0 +1,18 @@
+Subject: Burn order extended in Tulsa County, OK
+
+Burn order extended in Tulsa County, OK.
+
+⚠️ Burn ban extended: Unincorporated areas
+
+Burn ban extended through Nov 30, 2026.
+Source: Oklahoma Forestry Services.
+
+View county status and official sources
+https://isthereaburnban.example/us/ok/tulsa-county/
+
+Sent by Is There a Burn Ban?
+You signed up for burn ban alerts for the counties you selected.
+Check the official source before burning.
+
+Unsubscribe from these alerts
+https://isthereaburnban.example/api/v1/email/unsubscribe?token=00000000-0000-4000-8000-000000000001

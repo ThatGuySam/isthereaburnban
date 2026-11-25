@@ -1,5 +1,6 @@
 import { countiesInState } from "../counties";
 import type { Env } from "../env";
+import type { Notice } from "../notification-message";
 import { enqueueOpsNotice } from "../notification-outbox";
 import { readPublication } from "../snapshot-store";
 import { cachedLocalClock, pollingSlots } from "./schedule";
@@ -49,7 +50,8 @@ export async function runSourceMonitor(env: Env, sources: readonly Source[], now
     readHeads(db),
     readPublication(db),
   ]);
-  const issues = new Map<string, string>();
+  type Issue = Omit<NonNullable<Notice["incident"]>, "openedAt"> & { detail: string };
+  const issues = new Map<string, Issue>();
   const clock = cachedLocalClock();
   const roster = new Map(published?.catalog.sources.map((source) => [source.id, source.counties]));
   for (const source of sources) {
@@ -60,30 +62,44 @@ export async function runSourceMonitor(env: Env, sources: readonly Source[], now
       head?.lastGood ? Date.parse(head.lastGood) < overdue[1]
         : failures(head) >= 2 || (startedAt !== null && startedAt <= overdue[1])
     );
-    if (pastDue) issues.set(`overdue/${source.id}`, `${source.id} missed two scheduled source checks.`);
+    if (pastDue) issues.set(`overdue/${source.id}`, {
+      state: source.state, sourceIds: [source.id], detail: `${source.id} missed two scheduled source checks.`,
+      nextStep: "Open your private dashboard bookmark. In Source pipeline, check the last attempt, last success, and dead letters for this source.",
+    });
     const expected = expectedCount(source) ?? 0;
     const mapped = Math.min(head?.mappedCount ?? Infinity, roster.get(source.id) ?? Infinity);
     if (head?.lastGood && mapped < expected) {
       const id = `roster/${source.state}`;
       const detail = `${source.state} roster coverage dropped. ${source.id} mapped ${mapped} of ${expected} expected counties.`;
-      issues.set(id, issues.has(id) ? `${issues.get(id)} ${detail}` : detail);
+      const previous = issues.get(id);
+      issues.set(id, {
+        state: source.state, sourceIds: [...(previous?.sourceIds ?? []), source.id],
+        detail: previous ? `${previous.detail} ${detail}` : detail,
+        nextStep: "Open your private dashboard bookmark. In Source pipeline, compare mapped and expected county counts, then inspect the source feed for missing counties.",
+      });
     }
   }
   const update = db.prepare(`INSERT INTO source_issues (id, opened_at, detail) VALUES (?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET detail = excluded.detail WHERE source_issues.detail <> excluded.detail`);
   await db.batch([
     db.prepare("DELETE FROM source_issues WHERE id NOT IN (SELECT value FROM json_each(?))").bind(JSON.stringify([...issues.keys()])),
-    ...[...issues].map(([id, detail]) => update.bind(id, now, detail)),
+    ...[...issues].map(([id, issue]) => update.bind(id, now, issue.detail)),
   ]);
 
   if (!env.OPS_ALERT_EMAIL && !await db.prepare("SELECT 1 FROM push_subscriptions WHERE is_canary = 1 LIMIT 1").first()) return false;
   const { results } = await db.prepare(`SELECT i.id, i.opened_at, i.detail FROM source_issues i
     WHERE NOT EXISTS (SELECT 1 FROM notification_runs r WHERE r.id = 'pipeline-' || i.id || '-' || i.opened_at)
     ORDER BY i.opened_at, i.id LIMIT 8`).all<{ id: string; opened_at: number; detail: string }>();
+  let notified = false;
   for (const issue of results) {
+    const current = issues.get(issue.id);
+    if (!current || current.detail !== issue.detail) continue;
+    const { detail, ...incident } = current;
     await enqueueOpsNotice(env, `pipeline-${issue.id}-${issue.opened_at}`, {
-      kind: "ops", fips: "", title: "Burn ban pipeline alert", body: issue.detail, url: "/api/v1/coverage",
+      kind: "ops", fips: "", title: "Burn ban pipeline alert", body: detail, url: "/api/v1/coverage",
+      incident: { ...incident, openedAt: issue.opened_at },
     }, now);
+    notified = true;
   }
-  return results.length > 0;
+  return notified;
 }

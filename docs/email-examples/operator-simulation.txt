@@ -1,0 +1,14 @@
+Subject: Delivery check for Tulsa County, OK
+
+Operator email delivery check for Tulsa County, OK.
+
+Simulated notice: Burn ban: Tulsa County, OK
+
+View county status and official sources
+https://isthereaburnban.example/us/ok/tulsa-county/
+
+Sent by Is There a Burn Ban?
+This subscription is enrolled in delivery checks.
+
+Unsubscribe from these alerts
+https://isthereaburnban.example/api/v1/email/unsubscribe?token=00000000-0000-4000-8000-000000000001

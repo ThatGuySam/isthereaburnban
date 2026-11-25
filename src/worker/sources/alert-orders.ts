@@ -82,7 +82,7 @@ export function orderTracker(prev: SnapshotData | null, recurring: Set<string>, 
       if (rescission || scoped || decision.status !== "none" || decision.sourceId !== report.sourceId) {
         const scope = scoped ? report.scopeNote : `${report.county}, ${report.state}`;
         const message = transitionNotice(event, report);
-        event.notice = { ...message, title: `${oldStatus === "ban" ? "Burn ban" : "Burning restrictions"} lifted: ${scope}`,
+        event.notice = { ...message, emailStatus: "order-lifted", title: `${oldStatus === "ban" ? "Burn ban" : "Burning restrictions"} lifted: ${scope}`,
           body: `${report.sourceName} confirmed the lift. Check the official page for other rules before burning.` };
       }
       events.push(event);
@@ -117,7 +117,7 @@ export function orderTracker(prev: SnapshotData | null, recurring: Set<string>, 
         }
         const notice = transitionNotice(event, row);
         const subject = key.status === "ban" ? "Burn ban" : "Burning restrictions";
-        event.notice = extended ? { ...notice, title: `${subject} extended: ${report.scopeNote ?? `${report.county}, ${report.state}`}`,
+        event.notice = extended ? { ...notice, emailStatus: "order-extended", title: `${subject} extended: ${report.scopeNote ?? `${report.county}, ${report.state}`}`,
           body: `${subject} extended through ${shortDate(report.expires ?? key.end)}. Source: ${report.sourceName}. Check the official page before burning.` } : notice;
       }
       events.push(event);

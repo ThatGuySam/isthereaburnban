@@ -604,6 +604,16 @@ test("ops alerts once per overdue or incomplete roster incident and excludes pub
     { origin: "ops", audience: "ops" }, { origin: "ops", audience: "ops" },
   ]);
   expect(box.sqlite.query("SELECT DISTINCT recipient FROM notification_outbox").all()).toEqual([{ recipient: "ops" }]);
+  const [roster, overdue] = box.sqlite.query("SELECT notices FROM notification_outbox ORDER BY id").all()
+    .map(({ notices }) => JSON.parse(notices)[0]);
+  expect(roster).toMatchObject({
+    body: expect.stringContaining("or mapped 1 of 2 expected counties"),
+    incident: { sourceIds: ["or"], state: "OR", openedAt: oneMiss, nextStep: expect.stringContaining("compare mapped and expected") },
+  });
+  expect(overdue).toMatchObject({
+    body: "or missed two scheduled source checks.",
+    incident: { sourceIds: ["or"], state: "OR", openedAt: twoMisses, nextStep: expect.stringContaining("last attempt") },
+  });
 });
 
 test("a dead letter remains available until replay is successfully enqueued", async () => {

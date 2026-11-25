@@ -1,0 +1,18 @@
+Subject: Burn status bulletin for Tulsa County, OK
+
+Burn status bulletin for Tulsa County, OK.
+
+Source report
+
+Burn ban reported for Tulsa County, OK.
+Source: Oklahoma Forestry Services, checked 2026-11-24 16:05 UTC.
+
+View county status and official sources
+https://isthereaburnban.example/us/ok/tulsa-county/
+
+Sent by Is There a Burn Ban?
+You signed up for burn ban alerts for the counties you selected.
+Check the official source before burning.
+
+Unsubscribe from these alerts
+https://isthereaburnban.example/api/v1/email/unsubscribe?token=00000000-0000-4000-8000-000000000001

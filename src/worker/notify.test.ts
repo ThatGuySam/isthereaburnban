@@ -4,6 +4,7 @@ import { Database } from "bun:sqlite";
 import { readFileSync } from "node:fs";
 import { confirmEmail, subscribeEmail, unsubscribeEmail } from "./email";
 import { SNAPSHOT_KEY } from "./env";
+import worker from "./index";
 import { ALERTS_PAUSED_KEY, setAlertsPaused } from "./notification-controls";
 import { testNotice, transitionNotice } from "./notification-message";
 import { drainOutbox, enqueueNotices } from "./notification-outbox";
@@ -182,7 +183,7 @@ describe("shared notifier", () => {
     expect(pushRequest.headers.get("ttl")).toBe("21600");
     expect(pushRequest.headers.get("urgency")).toBe("high");
     expect(pushRequest.headers.get("topic")).toBe("test-40143");
-    expect(emailRequest.body).toMatchObject({ to: [email], subject: "Test burn ban notification" });
+    expect(emailRequest.body).toMatchObject({ to: [email], subject: "Delivery check for Tulsa County, OK" });
     expect(emailRequest.body.text).toContain("/api/v1/email/unsubscribe?token=");
     expect(emailRequest.headers.get("idempotency-key")).toMatch(/^alerts\//);
     const addressed = await notify(env, {
@@ -252,8 +253,9 @@ describe("shared notifier", () => {
     expect(topics.every((topic) => /^alert-\d+$/.test(topic))).toBe(true);
     const messages = requests.filter((r) => r.url === "https://api.resend.com/emails");
     expect(messages).toHaveLength(1);
-    expect(messages[0].body).toMatchObject({ to: [email], subject: "Burn ban changes in 2 counties" });
-    expect(messages[0].body.text).toContain("Burning restricted: Adair County");
+    expect(messages[0].body).toMatchObject({ to: [email], subject: "Burn status updates in 2 counties" });
+    expect(messages[0].body.text).toContain("Burning restrictions in Adair County");
+    expect(messages[0].body.html).toContain("Burning restrictions in Adair County");
     expect(sqlite.query("SELECT channel, count(*) AS n FROM notification_delivery_log GROUP BY channel ORDER BY channel").all())
       .toEqual([{ channel: "email", n: 1 }, { channel: "push", n: 2 }]);
   });
@@ -398,6 +400,10 @@ test("concurrent equivalent email signups coalesce, throttle other selections an
   expect(first).toHaveLength(1);
   expect(first[0].email).toBe("resident@example.test");
   expect(first[0].confirmed_at).toBeNull();
+  const confirmationUrl = `${ORIGIN}/api/v1/email/confirm?token=${first[0].token}`;
+  expect(requests[0].body.text).toContain(confirmationUrl);
+  expect(requests[0].body.html).toContain(`href="${confirmationUrl}"`);
+  expect(requests[0].body.headers).toBeUndefined();
   expect(await confirmEmail(env, first[0].token, now + 24 * 3_600_000)).toBe(false);
   await subscribeEmail(env, signup, now + 24 * 3_600_000);
   expect(requests).toHaveLength(2);
@@ -425,6 +431,73 @@ test("legacy duplicate email rows keep a working opt-out link", async () => {
   } finally {
     legacy.close();
   }
+});
+
+test("Resend subscriber headers opt out exactly that selection and tolerate repeated one-click POSTs", async () => {
+  const email = addEmail("reader");
+  sqlite.query(`INSERT INTO email_subscriptions (id, email, fips_json, token, confirmed_at, created)
+    VALUES ('another-selection', ?, ?, 'another-token', ?, ?)`).run(email, JSON.stringify([OTHER]), at, at);
+  await enqueueNotices(env, "unsubscribe-run", [liveMessage], ["email"], 1_000);
+  await drainOutbox(env, 1_000);
+  const { headers, html } = requests[0].body;
+  const token = sqlite.query("SELECT token FROM email_subscriptions WHERE id != 'another-selection'").get().token;
+  const url = `${ORIGIN}/api/v1/email/unsubscribe?token=${token}`;
+  expect(headers).toEqual({
+    "List-Unsubscribe": `<${url}>, <mailto:alerts@isthereaburnban.com?subject=Unsubscribe%20${token}>`,
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  });
+  expect(html).toContain(`href="${url}"`);
+
+  const get = await worker.fetch(new Request(url), env, {});
+  expect(get.status).toBe(200);
+  expect(get.headers.get("referrer-policy")).toBe("no-referrer");
+  expect(await get.text()).toContain(`<form method="post" action="/api/v1/email/unsubscribe?token=${token}">`);
+  const rows = () => sqlite.query("SELECT token, unsubscribed_at FROM email_subscriptions ORDER BY token").all();
+  expect(rows().every((r) => r.unsubscribed_at === null)).toBe(true);
+
+  const oneClick = (body, headers) => worker.fetch(new Request(url, { method: "POST", body, headers }), env, {});
+  const first = await oneClick(new URLSearchParams(headers["List-Unsubscribe-Post"]));
+  expect(first.status).toBe(204);
+  expect(first.headers.get("cache-control")).toBe("no-store");
+  expect(first.headers.get("location")).toBeNull();
+  expect(await first.text()).toBe("");
+  const removed = rows();
+  expect(removed.find((r) => r.token === token).unsubscribed_at).not.toBeNull();
+  expect(removed.find((r) => r.token === "another-token").unsubscribed_at).toBeNull();
+  const multipart = new FormData();
+  multipart.set("List-Unsubscribe", "One-Click");
+  expect((await oneClick(multipart)).status).toBe(204);
+  const browser = await oneClick(new URLSearchParams(headers["List-Unsubscribe-Post"]), { Accept: "text/html" });
+  expect(browser.status).toBe(200);
+  expect(await browser.text()).toContain("<h1>Unsubscribed</h1>");
+  expect(rows()).toEqual(removed);
+
+  await enqueueNotices(env, "unsubscribed-run", [liveMessage], ["email"], 2_000);
+  await drainOutbox(env, 2_000);
+  expect(requests).toHaveLength(1);
+});
+
+test("unsubscribe rejects invalid form data and unknown tokens without changing a subscription", async () => {
+  addEmail("reader");
+  const token = sqlite.query("SELECT token FROM email_subscriptions").get().token;
+  const post = (body, headers, value = token) => worker.fetch(new Request(
+    `${ORIGIN}/api/v1/email/unsubscribe?token=${value}`, { method: "POST", body, headers },
+  ), env, {});
+  for (const [body, headers, status, value] of [
+    [new URLSearchParams({ "List-Unsubscribe": "wrong" }), undefined, 400],
+    [new URLSearchParams("List-Unsubscribe=One-Click&List-Unsubscribe=One-Click"), undefined, 400],
+    ["{}", { "content-type": "application/json" }, 415],
+    ["broken", { "content-type": "multipart/form-data" }, 400],
+    [new URLSearchParams({ data: "x".repeat(8193) }), undefined, 413],
+    [new URLSearchParams("List-Unsubscribe=One-Click"), undefined, 404, "invalid"],
+    [new URLSearchParams("List-Unsubscribe=One-Click"), undefined, 404, ""],
+  ]) {
+    const response = await post(body, headers, value);
+    expect(response.status).toBe(status);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+  }
+  expect(sqlite.query("SELECT unsubscribed_at FROM email_subscriptions").get().unsubscribed_at).toBeNull();
+  expect(requests).toHaveLength(0);
 });
 
 test("push enrollment and delivery enforce the provider boundary and subscription credentials", async () => {
@@ -496,7 +569,8 @@ describe("dashboard boundary", () => {
     });
     expect((await response.json()).accepted).toBe(1);
     expect(requests.map((r) => r.body.to[0])).toEqual([confirmedEmail]);
-    expect(requests[0].body.subject).toContain("Test: Burn ban: Tulsa County");
+    expect(requests[0].body.subject).toBe("Delivery check for Tulsa County, OK");
+    expect(requests[0].body.text).toContain("Simulated notice: Burn ban: Tulsa County");
     expect(sqlite.query("SELECT * FROM transitions").all()).toEqual([]);
     expect(kv.has(SNAPSHOT_KEY)).toBe(false);
     expect(sqlite.query("SELECT is_test FROM email_subscriptions WHERE email = ?").get(publicEmail).is_test).toBe(0);
@@ -510,6 +584,7 @@ describe("dashboard boundary", () => {
     expect(requests).toHaveLength(1);
     expect(requests[0].body.to).toEqual(["bounced@resend.dev"]);
     expect(requests[0].body.text).not.toContain("unsubscribe?token=");
+    expect(requests[0].body.headers).toBeUndefined();
   });
 
   test("real broadcast requires county confirmation and rechecks the preview before a single rate-capped send", async () => {

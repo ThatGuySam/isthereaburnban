@@ -1,22 +1,24 @@
-import { cleanFipsList, COUNTY_BY_FIPS } from "./counties";
+import { cleanFipsList } from "./counties";
 import type { DeliveryOutcome } from "./delivery";
+import { DEFAULT_EMAIL_FROM, renderAlertEmail, renderConfirmationEmail, UNSUBSCRIBE_FIELD, UNSUBSCRIBE_VALUE, type EmailMessage } from "./email-message";
 import { emailConfigured, type Env } from "./env";
 import type { Notice } from "./notification-message";
+import { readLimitedBody, RequestBodyError } from "./request-body";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function from(env: Env): string {
-  return env.EMAIL_FROM || "Is There a Burn Ban? <alerts@isthereaburnban.com>";
+  return env.EMAIL_FROM || DEFAULT_EMAIL_FROM;
 }
 
 async function sendEmail(
-  env: Env, to: string, subject: string, text: string, idempotencyKey?: string,
+  env: Env, to: string, message: EmailMessage, idempotencyKey: string,
 ): Promise<string | undefined> {
   if (env.EMAIL && env.EMAIL_TRANSPORT === "cloudflare") {
     try {
       const sent = await env.EMAIL.send({
-        from: parseFrom(from(env)), to, subject, text,
-        ...(idempotencyKey ? { headers: { "X-Entity-Ref-ID": idempotencyKey } } : {}),
+        from: parseFrom(from(env)), to, ...message,
+        headers: { ...message.headers, "X-Entity-Ref-ID": idempotencyKey },
       });
       return sent.messageId;
     } catch (err) {
@@ -29,10 +31,10 @@ async function sendEmail(
     headers: {
       authorization: `Bearer ${env.RESEND_API_KEY}`,
       "content-type": "application/json",
-      ...(idempotencyKey ? { "idempotency-key": idempotencyKey } : {}),
+      "idempotency-key": idempotencyKey,
     },
     signal: AbortSignal.timeout(10_000),
-    body: JSON.stringify({ from: from(env), to: [to], subject, text }),
+    body: JSON.stringify({ from: from(env), to: [to], ...message }),
   });
   if (!res.ok) throw new EmailProviderError(res.status, `Resend HTTP ${res.status}`);
   const body: unknown = await res.json().catch(() => null);
@@ -50,10 +52,6 @@ class EmailProviderError extends Error {
   constructor(readonly status: number, message: string) {
     super(message);
   }
-}
-
-function countyNames(fips: string[]): string {
-  return fips.map((f) => { const c = COUNTY_BY_FIPS.get(f); return c ? `${c.name}, ${c.state}` : f; }).join("; ");
 }
 
 const CONFIRM_TTL_MS = 24 * 60 * 60_000;
@@ -92,16 +90,8 @@ export async function subscribeEmail(env: Env, body: unknown, now = Date.now()):
   const confirmation = pending.results[0];
   if (confirmation) {
     const expiry = new Date(Date.parse(confirmation.created) + CONFIRM_TTL_MS).toISOString();
-    const base = env.SITE_URL.replace(/\/$/, "");
-    await sendEmail(
-      env,
-      email,
-      "Confirm your burn ban alerts",
-      `A request was made for burn ban alerts for ${countyNames(fips)}. The link expires on ${expiry.replace("T", " ").slice(0, 16)} UTC.\n\n` +
-        `Confirm: ${base}/api/v1/email/confirm?token=${confirmation.token}\n\n` +
-        `If you did not request these alerts, you can ignore this email.\n`,
-      `confirm/${nonce}`,
-    );
+    const message = renderConfirmationEmail(env.SITE_URL, fips, confirmation.token, expiry);
+    await sendEmail(env, email, message, `confirm/${nonce}`);
   }
   // Use the same reply for active, already pending and newly requested selections.
   return { ok: true, emailEnabled: true };
@@ -118,25 +108,35 @@ export async function confirmEmail(env: Env, token: string, now = Date.now()): P
 
 export async function unsubscribeEmail(env: Env, token: string): Promise<boolean> {
   if (!token) return false;
-  const r = await env.DB.prepare(`UPDATE email_subscriptions SET unsubscribed_at = COALESCE(unsubscribed_at, ?)
-    WHERE id = (SELECT COALESCE(merged_into, id) FROM email_subscriptions WHERE token = ?)`)
+  const removed = await env.DB.prepare(`UPDATE email_subscriptions SET unsubscribed_at = COALESCE(unsubscribed_at, ?)
+    WHERE id = (SELECT COALESCE(merged_into, id) FROM email_subscriptions WHERE token = ?) RETURNING id`)
     .bind(new Date().toISOString(), token)
-    .run();
-  return (r.meta.changes ?? 0) > 0;
+    .first<string>("id");
+  return removed !== null;
+}
+
+export async function unsubscribeEmailFromForm(env: Env, request: Request, token: string): Promise<boolean> {
+  const contentType = request.headers.get("content-type") ?? "";
+  const type = contentType.split(";")[0].trim().toLowerCase();
+  if (type !== "application/x-www-form-urlencoded" && type !== "multipart/form-data") {
+    throw new RequestBodyError("The unsubscribe request must be form data.", 415);
+  }
+  const body = await readLimitedBody(request, 8_192);
+  const form = await new Response(body, { headers: { "content-type": contentType } }).formData().catch(() => null);
+  const values = form?.getAll(UNSUBSCRIBE_FIELD);
+  if (values?.length !== 1 || values[0] !== UNSUBSCRIBE_VALUE) {
+    throw new RequestBodyError("The unsubscribe request is invalid.");
+  }
+  return unsubscribeEmail(env, token);
 }
 
 export async function sendAlertEmail(
   env: Env, target: { email: string; token: string | null }, notices: Notice[], idempotencyKey: string,
 ): Promise<DeliveryOutcome> {
   if (!emailConfigured(env)) return { result: "error", error: "Email is not configured" };
-  const base = env.SITE_URL.replace(/\/$/, "");
-  const footer = target.token
-    ? `\nUnsubscribe: ${base}/api/v1/email/unsubscribe?token=${target.token}\n` : "";
-  const text = notices.map((m) => `${m.title}\n${m.body}\n${base}${m.url}`).join("\n\n") +
-    "\n\nInformational only. Always confirm with the official source before burning." + footer;
-  const subject = notices.length === 1 ? notices[0].title : `Burn ban changes in ${notices.length} counties`;
   try {
-    const providerId = await sendEmail(env, target.email, subject, text, idempotencyKey);
+    const message = renderAlertEmail(env.SITE_URL, notices, target.token);
+    const providerId = await sendEmail(env, target.email, message, idempotencyKey);
     return { result: "accepted", providerId };
   } catch (err) {
     return { result: "error", error: err instanceof EmailProviderError ? err.message : "Email request failed",

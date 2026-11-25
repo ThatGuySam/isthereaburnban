@@ -11,9 +11,11 @@ export type Notice = {
   title: string;
   body: string;
   url: string;
+  emailStatus?: "ban" | "restricted" | "lifted" | "updated" | "bulletin" | "order-lifted" | "order-extended";
+  incident?: { sourceIds: string[]; state: string; openedAt: number; nextStep: string };
 };
 
-function countyLabel(fips: string): string {
+export function countyLabel(fips: string): string {
   const county = COUNTY_BY_FIPS.get(fips);
   return county ? `${county.name}, ${county.state}` : fips;
 }
@@ -29,7 +31,11 @@ export function transitionNotice(t: Transition, county?: CountyStatus): Notice {
   const body = county
     ? `${statusSentence(county)}. Source: ${county.sourceName}. Check the official page before burning.`
     : "Check the official source before burning.";
-  return { kind: "live", fips: t.fips, title, body, url: countyPath(t.fips) };
+  const emailStatus = county?.conflict ? "updated"
+    : t.newStatus === "ban" ? (county && isScopedBan(county) ? "restricted" : "ban")
+    : t.newStatus === "restricted" ? "restricted"
+    : t.oldStatus === "ban" && t.newStatus === "none" ? "lifted" : "updated";
+  return { kind: "live", fips: t.fips, title, body, url: countyPath(t.fips), emailStatus };
 }
 
 export function countyBulletin(county: CountyStatus): Notice {
@@ -40,6 +46,7 @@ export function countyBulletin(county: CountyStatus): Notice {
     title: `Burn status update: ${county.county}, ${county.state}`,
     body: `${statusSentence(county)}. Source: ${county.sourceName}${checked ? `, checked ${checked} UTC` : ""}. Check the official page before burning.`,
     url: countyPath(county.fips),
+    emailStatus: "bulletin",
   };
 }
 
