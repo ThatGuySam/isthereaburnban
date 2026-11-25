@@ -30,10 +30,11 @@ test("South Dakota publishes ten scoped summaries and keeps both orders where sc
     "46019", "46033", "46047", "46055", "46081", "46093", "46103", "46105", "46117", "46137",
   ]);
   expect(blmRows[0]).toMatchObject({
-    scope: "part", scopeNote: expect.stringContaining("BLM lands"),
+    scope: "part",
     status: "restricted", since: "2026-10-01", expires: null, validFrom: "2026-10-01T06:01:00.000Z",
-    sourceUrl: expect.stringContaining("FPO-SD-Stage1-Oct01-2026.pdf"),
   });
+  expect(blmRows[0].scopeNote).toContain("BLM lands");
+  expect(blmRows[0].sourceUrl).toContain("FPO-SD-Stage1-Oct01-2026.pdf");
 
   const checked = now.toISOString();
   const inputs = [

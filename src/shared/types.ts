@@ -112,6 +112,16 @@ export type SourceHealth = {
   product?: "fire-weather";
 };
 
+/** Last verified temporary orders, carried through upstream outages and omissions. */
+export type VerifiedOrder = {
+  source: string;
+  scope: string;
+  document?: string;
+  start?: string;
+  end?: string;
+  status: "ban" | "restricted";
+};
+
 export type SnapshotData = {
   generated: string; // ISO
   /** keyed by 5-digit FIPS; counties missing here are "unknown" */
@@ -121,6 +131,7 @@ export type SnapshotData = {
   changed: Record<string, string>;
   /** Normalized source revisions used to publish this snapshot. */
   sourceVersions?: Record<string, string>;
+  verifiedOrders?: Record<string, VerifiedOrder[]>;
   /** Weather evidence used to decorate county results at read time. */
   fireWeather?: Record<string, { alerts: FireWeatherAlert[]; orders?: FireWeatherOrder[] }>;
   weatherChecked?: string;

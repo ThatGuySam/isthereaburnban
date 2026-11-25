@@ -112,8 +112,8 @@ test("Illinois merges the current ban with the standing restrictions and retains
     return { source, rows: await parseIllinoisGuidance(pages[key], key, captured), checked: captured.toISOString() };
   }));
   expect(SOURCES).toContain(ilCrawfordCountyOrders);
-  const baseline = mergeSources(null, inputs, captured).snapshot;
   const orderInput = { source: ilCrawfordCountyOrders, rows: orders(), checked: captured.toISOString() };
+  const baseline = mergeSources(null, [...inputs, { ...orderInput, rows: [] }], captured).snapshot;
   const { snapshot, transitions } = mergeSources(baseline, [...inputs, orderInput], captured);
   const statuses = Object.values(snapshot.counties).map(({ status }) => status);
   expect(statuses.filter((status) => status === "ban")).toHaveLength(1);

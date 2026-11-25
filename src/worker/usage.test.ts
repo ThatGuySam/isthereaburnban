@@ -1,7 +1,7 @@
 // @ts-nocheck -- bun test types are not installed; this file runs under `bun test`, not the Worker build.
 import { describe, expect, test } from "bun:test";
 import worker from "./index";
-import { classifyClient, peekMcp, recordUsage, routeName } from "./usage";
+import { classifyClient, mcpCall, recordUsage, routeName } from "./usage";
 
 describe("usage counts", () => {
   test("client classes never keep the user agent", () => {
@@ -22,13 +22,12 @@ describe("usage counts", () => {
     expect(routeName("/mcp")).toBe("/mcp");
   });
 
-  test("reads the MCP tool name without consuming the request body", async () => {
+  test("reads only the MCP method and tool name", async () => {
     const req = new Request("https://x.test/mcp", {
       method: "POST",
       body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "check_burn_ban", arguments: { zip: "74103" } } }),
     });
-    expect(await peekMcp(req)).toEqual({ method: "tools/call", tool: "check_burn_ban" });
-    expect((await req.json()).params.arguments.zip).toBe("74103");
+    expect(mcpCall(await req.text())).toEqual({ method: "tools/call", tool: "check_burn_ban" });
   });
 
   test("writes one data point with no IP, UA or query values, and no-ops without a binding", () => {
@@ -60,4 +59,32 @@ test("analytics bucket unrecognized MCP method and tool values", () => {
   recordUsage(env, req, new Response(null, { status: 400 }), { method: "account@example.test", tool: "40143" });
   recordUsage(env, req, new Response(null, { status: 400 }), { method: "tools/call", tool: "my address" });
   expect(points.map((p) => p.blobs.slice(2, 4))).toEqual([["other", ""], ["tools/call", "other"]]);
+});
+
+test("streamed API and MCP bodies are bounded without trusting Content-Length", async () => {
+  const env = { SITE_URL: "https://isthereaburnban.com" };
+  const ctx = { waitUntil() {} };
+  for (const path of ["/api/v1/email/subscribe", "/mcp"]) {
+    const body = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new Uint8Array(24_000));
+        controller.enqueue(new Uint8Array(48_000));
+        controller.close();
+      },
+    });
+    const res = await worker.fetch(new Request(env.SITE_URL + path, {
+      method: "POST", headers: { "content-type": "application/json", "content-length": "8" }, body, duplex: "half",
+    }), env, ctx);
+    expect(res.status).toBe(413);
+  }
+});
+
+test("here lookup errors are marked private in both response formats", async () => {
+  for (const format of ["text", "json"]) {
+    const res = await worker.fetch(new Request(`https://isthereaburnban.com/api/v1/status?here=1&format=${format}`), {
+      KV: {}, SITE_URL: "https://isthereaburnban.com",
+    }, {});
+    expect(res.status).toBe(422);
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
+  }
 });

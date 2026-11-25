@@ -8,12 +8,14 @@ import { RuleChangedError } from "./statutory-fallback";
 import { withFireWeather } from "../fire-weather";
 import { lookup, statusFor } from "../lookup";
 import { snapshotReader } from "../snapshot";
-import { ACTIVE_KEY, INDEX_KEY, PRETTY_ACTIVE_KEY, stateKey } from "../snapshot-v2";
+import { ACTIVE_KEY, INDEX_KEY, stateKey } from "../snapshot-v2";
 import { US_ZONES } from "./lib/dates";
 import { mergeSources, STALE_MS } from "./merge";
 import { nwsFireWeather, parseNwsAlerts } from "./nws/alerts";
-import { MAX_CACHED_STATES } from "./publication";
-import { consumeSourceMessage, enqueueSources, isDue } from "./queue";
+import { advancePublication, currentRun } from "./publication";
+import { consumeSourceMessage, consumeSourceQueue, enqueueSources, isDue } from "./queue";
+import { replayDeadLetter, SOURCE_DLQ } from "./dead-letter";
+import { pipelineStatus, runSourceMonitor } from "./monitor";
 import { SOURCES } from "./registry";
 import { applyChecks, readHeads } from "./state";
 import { isActive } from "./types";
@@ -24,7 +26,8 @@ afterEach(() => { for (const store of stores.splice(0)) store.close(); });
 function sandbox() {
   const sqlite = new Database(":memory:");
   stores.push(sqlite);
-  for (const file of ["0001_init.sql", "0003_source_refresh.sql", "0004_state_snapshots.sql"]) {
+  sqlite.exec("PRAGMA foreign_keys = ON;");
+  for (const file of ["0001_init.sql", "0002_notification_ops.sql", "0003_source_refresh.sql", "0004_state_snapshots.sql", "0005_notification_outbox.sql", "0006_pipeline_monitor.sql", "0008_snapshot_chunks.sql"]) {
     sqlite.exec(readFileSync(new URL(`../../../migrations/${file}`, import.meta.url), "utf8"));
   }
   const keys = new Map();
@@ -38,8 +41,8 @@ function sandbox() {
     const query = sqlite.query(sql);
     return {
       bind: (...args) => prepare(sql, args),
-      execute: () => query.run(...args),
-      run: async () => query.run(...args),
+      execute: () => ({ meta: { changes: query.run(...args).changes } }),
+      run: async () => ({ meta: { changes: query.run(...args).changes } }),
       first: async (field) => {
         const result = query.get(...args);
         return field ? result?.[field] ?? null : result;
@@ -129,7 +132,6 @@ test("registry and states.json agree in both directions, and source IDs are uniq
   expect([...new Set(active.filter(({ coverage }) => coverage === "live").map(({ state }) => state))].sort()).toEqual(live);
   expect(new Set(SOURCES.map(({ id }) => id)).size).toBe(SOURCES.length);
   const dailyPolls = active.reduce((total, { cadence }) => total + (cadence.kind === "hourly" ? 24 : cadence.hours.length), 0);
-  expect(23 * (MAX_CACHED_STATES + 3) + 51 + 3).toBeLessThan(1000); // one full KV bootstrap and 23 capped publications
   expect((dailyPolls + 24 * (1 + 51 + 4)) * 3).toBeLessThanOrEqual(10000); // enqueue, dequeue, delete
   for (const item of active) {
     if (item.product === "fire-weather") {
@@ -187,7 +189,7 @@ test("queued NWS changes leave ban history alone and preserve a verified midnigh
   await poll(box, weather, active);
   await merge(box, sources, active);
   const during = box.snapshot();
-  expect(box.puts).toEqual([stateKey("CO"), ACTIVE_KEY, PRETTY_ACTIVE_KEY, INDEX_KEY]);
+  expect(box.puts).toEqual([stateKey("CO"), ACTIVE_KEY, INDEX_KEY]);
   expect(during.counties["08059"].status).toBe("none");
   expect(withFireWeather(during, active).counties["08059"]).toMatchObject({
     status: "restricted", expires: "2026-11-19T07:00:00.000Z", alerts: [expect.objectContaining({ event: "Red Flag Warning" })],
@@ -225,8 +227,8 @@ test("queue stores one revision, absorbs duplicate deliveries and skips unchange
   await poll(box, src, initial);
   await merge(box, [src], initial);
   expect(called).toBe(1);
-  expect(box.puts).toHaveLength(51 + 3);
-  expect(box.puts.slice(-3)).toEqual([ACTIVE_KEY, PRETTY_ACTIVE_KEY, INDEX_KEY]);
+  expect(box.puts).toHaveLength(51 + 2);
+  expect(box.puts.slice(-2)).toEqual([ACTIVE_KEY, INDEX_KEY]);
   expect(box.sqlite.query("SELECT count(*) as count FROM snapshot_state").get().count).toBe(51);
   expect(box.sqlite.query("SELECT count(*) as count FROM source_payload").get().count).toBe(1);
   expect(box.snapshot().sources[0]).toMatchObject({ ok: true, counties: 2 });
@@ -236,7 +238,7 @@ test("queue stores one revision, absorbs duplicate deliveries and skips unchange
   await merge(box, [src], nextHour + 3_600_000);
   await poll(box, src, initial - 1);
   expect(called).toBe(3);
-  expect(box.puts).toHaveLength(51 + 3);
+  expect(box.puts).toHaveLength(51 + 2);
   const snapshot = box.snapshot();
   applyChecks(snapshot, await readHeads(box.env.DB), new Date(nextHour + 3_600_000));
   expect(snapshot.counties["41039"].checked).toBe(new Date(nextHour + 3_600_000).toISOString());
@@ -254,7 +256,7 @@ test("a partial full edition records failure and retains the last complete paylo
   const first = (await readHeads(box.env.DB)).get(src.id);
   await poll(box, src, nextHour);
   expect((await readHeads(box.env.DB)).get(src.id)).toMatchObject({
-    hash: first.hash, lastGood: first.lastGood, error: expect.stringContaining("missing 1 counties"),
+    hash: first.hash, lastGood: first.lastGood, error: expect.stringContaining("missing 1 counties"), mappedCount: 1, consecutiveFailures: 1,
   });
   await merge(box, [src], nextHour);
   expect(box.snapshot().counties["41039"].status).toBe("ban");
@@ -398,7 +400,7 @@ test("one dirty state rewrites only its shard and readers pin the catalog revisi
   await poll(box, or, next);
   await poll(box, tx, next);
   await merge(box, [or, tx], next);
-  expect(box.puts).toEqual([stateKey("OR"), ACTIVE_KEY, PRETTY_ACTIVE_KEY, INDEX_KEY]);
+  expect(box.puts).toEqual([stateKey("OR"), ACTIVE_KEY, INDEX_KEY]);
   expect(box.catalog().states.TX).toEqual(before.states.TX);
 
   const freshOr = box.keys.get(stateKey("OR"));
@@ -406,7 +408,7 @@ test("one dirty state rewrites only its shard and readers pin the catalog revisi
   box.keys.set(ACTIVE_KEY, old.get(ACTIVE_KEY));
   const current = snapshotReader(box.env, { fresh: true });
   expect((await current.state("OR")).counties["41039"].status).toBe("ban");
-  expect(JSON.parse((await current.bans()).body.join("")).counties.map(({ fips }) => fips)).toEqual(["41039"]);
+  expect((await current.bans()).data.counties.map(({ fips }) => fips)).toEqual(["41039"]);
 
   box.keys.set(INDEX_KEY, old.get(INDEX_KEY)); // Edge sees the previous catalog with a newer shard.
   box.keys.set(stateKey("OR"), freshOr);
@@ -419,7 +421,7 @@ test("one dirty state rewrites only its shard and readers pin the catalog revisi
   expect(box.gets.every((key) => [INDEX_KEY, stateKey("OR"), stateKey("TX")].includes(key))).toBe(true);
 });
 
-test("a busy hour limits KV writes and still serves every changed state", async () => {
+test("all dirty state shards are cached in a 53-write Paid publication", async () => {
   const box = sandbox();
   const start = Date.now() - 7_200_000;
   const next = start + 3_600_000;
@@ -434,13 +436,12 @@ test("a busy hour limits KV writes and still serves every changed state", async 
   status = "ban";
   for (const src of sources) await poll(box, src, next);
   await merge(box, sources, next);
-  expect(box.puts).toHaveLength(MAX_CACHED_STATES + 3);
-  const overflow = Object.keys(box.catalog().states).filter((state) => !box.catalog().states[state].cached);
-  expect(overflow).toHaveLength(51 - MAX_CACHED_STATES);
-  const state = overflow[0];
+  expect(box.puts).toHaveLength(51 + 2);
+  expect(Object.values(box.catalog().states).every(({ cached }) => cached)).toBe(true);
+  const [state, county] = counties.entries().next().value;
   const result = await snapshotReader(box.env, { fresh: true }).state(state);
-  expect(result.counties[counties.get(state).fips].status).toBe("ban");
-  expect(box.gets).not.toContain(stateKey(state));
+  expect(result.counties[county.fips].status).toBe("ban");
+  expect(box.gets).toContain(stateKey(state));
 });
 
 test("v1 KV remains readable and the first v2 merge preserves history and resumes pending legacy notices", async () => {
@@ -486,8 +487,7 @@ test("unchanged scoped orders take the latest matching check without rewriting t
   expect(box.catalog().states.OR).toEqual(previous);
   const { lastAttemptedAt: _attempt, ...county } = statusFor(await reader().state("OR"), "41039");
   expect(county.orders[0].checked).toBe(new Date(next).toISOString());
-  expect(JSON.parse((await reader().bans()).body.join("")).counties[0]).toEqual(JSON.parse(JSON.stringify(county)));
-  expect(JSON.parse(JSON.parse((await reader().bans(undefined, "pretty")).body.join(""))).counties[0]).toEqual(JSON.parse(JSON.stringify(county)));
+  expect(JSON.parse(JSON.stringify((await reader().bans()).data.counties[0]))).toEqual(JSON.parse(JSON.stringify(county)));
 });
 
 test("out-of-order merge replay leaves a newer incomplete hourly refresh unpublished", async () => {
@@ -579,4 +579,135 @@ test("public expiration safety holds during a D1 health lookup failure", async (
   box.env.DB = { prepare: () => { throw new Error("D1 temporarily unavailable"); } };
   const result = await snapshotReader(box.env, { fresh: true }).state("OR");
   expect(statusFor(result, "41039")).toMatchObject({ status: "unknown", label: "Source decision expired" });
+});
+
+test("ops alerts once per overdue or incomplete roster incident and excludes public recipients", async () => {
+  const box = sandbox();
+  box.env.OPS_ALERT_EMAIL = "ops@example.test";
+  const full = source("or", async ({ now }) => ({ rows: now.getTime() === initial ? [
+    row("none", now.toISOString()),
+    row("none", now.toISOString(), { fips: "41051", county: "Multnomah County" }),
+  ] : [row("none", now.toISOString())] }), { expectedFips: ["41039", "41051"] });
+  await poll(box, full, initial);
+  expect(await runSourceMonitor(box.env, [full], initial + 16 * 60_000)).toBe(false);
+  await poll(box, full, nextHour);
+  const oneMiss = nextHour + 16 * 60_000;
+  expect(await runSourceMonitor(box.env, [full], oneMiss)).toBe(true);
+  expect(await runSourceMonitor(box.env, [full], oneMiss)).toBe(false);
+  const twoMisses = oneMiss + 3_600_000;
+  expect(await runSourceMonitor(box.env, [full], twoMisses)).toBe(true);
+  const status = await pipelineStatus(box.env, [full], twoMisses);
+  expect(status.issues.map(({ id }) => id).sort()).toEqual(["overdue/or", "roster/OR"]);
+  expect(status.sources[0]).toMatchObject({ mapped: 1, expected: 2, consecutiveFailures: 1,
+    lastAttempt: new Date(nextHour).toISOString(), lastSuccess: new Date(initial).toISOString(), nextDue: nextHour + 2 * 3_600_000 });
+  expect(box.sqlite.query("SELECT origin, audience FROM notification_runs").all()).toEqual([
+    { origin: "ops", audience: "ops" }, { origin: "ops", audience: "ops" },
+  ]);
+  expect(box.sqlite.query("SELECT DISTINCT recipient FROM notification_outbox").all()).toEqual([{ recipient: "ops" }]);
+});
+
+test("a dead letter remains available until replay is successfully enqueued", async () => {
+  const box = sandbox();
+  const body = { kind: "source", id: "fixture", slot: initial };
+  let acknowledged = false;
+  const batch = { queue: SOURCE_DLQ, messages: [{ id: "dead-id", body }], ackAll: () => { acknowledged = true; } };
+  await consumeSourceQueue(batch, box.env);
+  await consumeSourceQueue(batch, box.env);
+  expect(acknowledged).toBe(true);
+  const send = box.env.SOURCE_QUEUE.send;
+  box.env.SOURCE_QUEUE.send = async () => { throw new Error("queue unavailable"); };
+  await expect(replayDeadLetter(box.env, "dead-id")).rejects.toThrow("queue unavailable");
+  expect((await pipelineStatus(box.env, [])).deadLetters).toHaveLength(1);
+  box.env.SOURCE_QUEUE.send = send;
+  expect(await replayDeadLetter(box.env, "dead-id")).toBe(true);
+  expect(box.messages).toEqual([{ body }]);
+  expect(await replayDeadLetter(box.env, "dead-id")).toBe(false);
+  expect((await pipelineStatus(box.env, [])).deadLetters).toEqual([]);
+});
+
+test("KV failures fall back to the pinned D1 snapshot and a pruned catalog re-pins the request", async () => {
+  const box = sandbox();
+  const src = source("or", async ({ now }) => ({ rows: [row("ban", now.toISOString(), { label: `Edition ${now.getTime()}` })] }));
+  for (let i = 0; i < 4; i++) {
+    const slot = initial + i * 3_600_000;
+    await poll(box, src, slot);
+    await merge(box, [src], slot);
+    if (i === 0) box.oldCatalog = box.keys.get(INDEX_KEY);
+  }
+  const latest = box.catalog();
+  const getter = box.env.KV.get;
+  box.env.KV.get = async (key, type) => {
+    if (key === stateKey("OR") || key === ACTIVE_KEY || key === INDEX_KEY) throw new Error("KV failed");
+    return getter(key, type);
+  };
+  expect((await snapshotReader(box.env, { fresh: true }).state("OR", { checks: false })).generated).toBe(latest.generated);
+  expect((await snapshotReader(box.env, { fresh: true }).bans()).generated).toBe(latest.generated);
+
+  box.env.KV.get = async (key, type) => key === INDEX_KEY ? JSON.parse(box.oldCatalog) : getter(key, type);
+  const snapshot = await snapshotReader(box.env, { fresh: true }).forCounties(["41039", "48001"]);
+  expect([...snapshot.values()].map(({ generated }) => generated)).toEqual([latest.generated, latest.generated]);
+});
+
+test("source head and payload stay consistent when an older in-flight poll completes last", async () => {
+  const box = sandbox();
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  const src = source("or", async ({ now }) => {
+    if (now.getTime() === initial) await gate;
+    return { rows: [row(now.getTime() === initial ? "none" : "ban", now.toISOString())] };
+  });
+  const older = poll(box, src, initial);
+  await poll(box, src, nextHour);
+  release();
+  await older;
+  const stored = box.sqlite.query(`SELECT source_refresh.hash = source_payload.hash AS consistent, payload FROM
+    source_refresh JOIN source_payload USING (id) WHERE id = ?`).get(src.id);
+  expect(stored.consistent).toBe(1);
+  expect(JSON.parse(stored.payload).rows[0].status).toBe("ban");
+});
+
+test("concurrent retries of one publication step advance the cursor only once", async () => {
+  const box = sandbox();
+  await run(box, [], { kind: "merge", slot: initial, due: [] }, initial + 120_000);
+  const pending = await currentRun(box.env.DB);
+  const firstKey = stateKey(pending.plan[0].state);
+  const put = box.env.KV.put;
+  let begin;
+  let release;
+  const started = new Promise((resolve) => { begin = resolve; });
+  const blocked = new Promise((resolve) => { release = resolve; });
+  let delayed = false;
+  box.env.KV.put = async (key, ...args) => {
+    if (key === firstKey && !delayed) {
+      delayed = true;
+      begin();
+      await blocked;
+    }
+    return put(key, ...args);
+  };
+  const first = advancePublication(box.env, pending, [], box.sendNotices);
+  await started;
+  await advancePublication(box.env, pending, [], box.sendNotices);
+  release();
+  await first;
+  expect((await currentRun(box.env.DB)).cursor).toBe(1);
+});
+
+test("oversized state rows split into byte-safe chunks and remain readable through D1", async () => {
+  const box = sandbox();
+  const note = "🌲".repeat(350_000);
+  const src = source("or", async ({ now }) => ({ rows: [row("ban", now.toISOString(), { note })] }));
+  await poll(box, src, initial);
+  await merge(box, [src], initial);
+  const stored = box.sqlite.query("SELECT chunked, encoded_bytes, snapshot FROM snapshot_state WHERE state = 'OR'").get();
+  expect(stored.chunked).toBe(1);
+  expect(stored.encoded_bytes).toBeGreaterThan(2_000_000);
+  expect(stored.snapshot).toBe("");
+  expect(box.sqlite.query("SELECT max(length(CAST(value AS BLOB))) AS bytes FROM snapshot_state_part").get().bytes).toBeLessThan(1_000_000);
+
+  box.keys.delete(stateKey("OR"));
+  box.keys.delete(ACTIVE_KEY);
+  const reader = snapshotReader(box.env, { fresh: true });
+  expect((await reader.state("OR")).counties["41039"].note).toBe(note);
+  expect((await reader.bans()).data.counties[0].note).toBe(note);
 });

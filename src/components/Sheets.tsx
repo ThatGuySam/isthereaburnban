@@ -402,7 +402,7 @@ function AlertSheet({ detail, pickPlace }: { detail: OpenDetail; pickPlace: () =
     setEmailMsg("Signing you up…");
     try {
       const res = await postJson<{ emailEnabled?: boolean }>("/api/v1/email/subscribe", { email, fips: [fips] });
-      setEmailMsg(res.emailEnabled === false ? "Your signup is pending. Email delivery is unavailable." : "Check your inbox to confirm.");
+      setEmailMsg(res.emailEnabled === false ? "Email signup is unavailable." : "Check your inbox if you still need to confirm.");
       form.reset();
     } catch (err) {
       setEmailMsg(err instanceof Error ? `Couldn't sign up: ${err.message}` : "Couldn't sign up.");

@@ -1,17 +1,18 @@
 import type { CountyStatus, MapStatus, Snapshot, SnapshotData } from "../shared/types";
 import type { Adapter } from "./adapters";
-import { formatNationalBans, projectWeather, type BanFormat } from "./active-bans";
+import { formatNationalBans, projectWeather } from "./active-bans";
+import { bansPage, type BansPage, pageFields, pageStart } from "./bans-page";
 import { countyDecision } from "./county-decision";
 import { activeBans } from "./api";
 import { SNAPSHOT_KEY, type Env } from "./env";
 import { withFireWeather } from "./fire-weather";
 import { projectMapStatus, snapshotBoundary } from "./map-status";
-import { countyState } from "./lookup";
+import { countyState, LookupError } from "./lookup";
 import { CHANNELS } from "./notification-audience";
 import { transitionNotice, type Transition } from "./notification-message";
-import { notify } from "./notify";
+import { drainOutbox, enqueueNotices } from "./notification-outbox";
 import { withReportDates } from "./report-dates";
-import { loadActive, loadIndex, loadMapStates, loadState } from "./snapshot-store";
+import { loadActive, loadIndex, loadMapStates, loadState, readPublication, SnapshotRevisionUnavailable } from "./snapshot-store";
 import { lastChangedByState, type ActiveProjection, type SnapshotIndex, type StateSnapshot } from "./snapshot-v2";
 import { withCurrentLinks } from "./source-links";
 import { mergeSources } from "./sources/merge";
@@ -78,7 +79,7 @@ export function alertNotices(transitions: Transition[], snapshot: SnapshotData) 
     .filter((t) => t.oldStatus === "ban" || t.newStatus === "ban" || t.oldStatus === "restricted" || t.newStatus === "restricted")
     .map((transition) => {
       const row = snapshot.counties[transition.fips];
-      return transitionNotice(transition, row && countyDecision(row, Date.parse(snapshot.generated)));
+      return transition.notice ?? transitionNotice(transition, row && countyDecision(row, Date.parse(snapshot.generated)));
     });
 }
 
@@ -105,16 +106,12 @@ export async function refresh(env: Env, adapters?: Adapter[], scheduledTime?: nu
     try {
       await transitionInsert(env.DB, transitions).run();
       const notices = alertNotices(transitions, snapshot);
-      if (notices.length) {
-        await notify(env, {
-          mode: "send", origin: "cron", runId: `cron-${scheduledTime ?? snapshot.generated}`,
-          audience: { kind: "all" }, channels: CHANNELS, notices,
-        });
-      }
+      await enqueueNotices(env, `cron-${scheduledTime ?? snapshot.generated}`, notices, CHANNELS);
     } catch (err) {
       console.error("transition handling failed", err);
     }
   }
+  if (scheduledTime !== undefined) await drainOutbox(env);
   return snapshot;
 }
 
@@ -133,8 +130,8 @@ type Memo<T> = { until: number; value: T };
 type ReadCache = {
   index?: Memo<SnapshotIndex>;
   heads?: Memo<Map<string, SourceHead>>;
-  active: Partial<Record<BanFormat, Memo<ActiveProjection>>>;
-  bans: Partial<Record<BanFormat, Memo<ReturnType<typeof formatNationalBans>> & { revision: string; heads: Map<string, SourceHead> }>>;
+  active?: Memo<ActiveProjection>;
+  bans?: Memo<ReturnType<typeof formatNationalBans>> & { revision: string; key: string; heads: Map<string, SourceHead> };
   map?: MapStatus;
   states: Map<string, Memo<StateSnapshot> & { heads?: Map<string, SourceHead> }>;
 };
@@ -151,7 +148,7 @@ function publicHeads(env: Env, ids?: string[]) {
 /** A request pins one catalog, so even border lookups follow the same publication. */
 export function snapshotReader(env: Env, { fresh = false, initialize = true } = {}) {
   let cache = readCache.get(env.KV);
-  if (!cache) readCache.set(env.KV, cache = { active: {}, bans: {}, states: new Map() });
+  if (!cache) readCache.set(env.KV, cache = { states: new Map() });
   const memo = cache;
   const reusable = (entry: Memo<unknown> | undefined) => !fresh && entry && Date.now() < entry.until;
   let index: Promise<SnapshotIndex | null> | undefined;
@@ -170,17 +167,31 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
     if (value) memo.index = keep(value);
     return value;
   })());
+  async function withCatalog<T>(read: (pinned: SnapshotIndex | null) => Promise<T>): Promise<T> {
+    const pinned = await catalog();
+    try {
+      return await read(pinned);
+    } catch (error) {
+      if (!(error instanceof SnapshotRevisionUnavailable) || !pinned) throw error;
+      const latest = (await readPublication(env.DB))?.catalog;
+      if (!latest || latest.revision === pinned.revision) throw error;
+      console.warn("Snapshot catalog lagged retained revisions", pinned.revision);
+      index = Promise.resolve(latest);
+      memo.index = keep(latest);
+      return read(latest);
+    }
+  }
   const allHeads = async () => {
     if (memo.heads && reusable(memo.heads)) return memo.heads.value;
     const heads = await publicHeads(env);
     memo.heads = keep(heads);
     return heads;
   };
-  const active = async (idx: SnapshotIndex, format: BanFormat) => {
-    const cached = memo.active[format];
+  const active = async (idx: SnapshotIndex) => {
+    const cached = memo.active;
     if (cached && reusable(cached) && cached.value.revision === idx.revision) return cached.value;
-    const projection = await loadActive(env, idx, format);
-    memo.active[format] = keep(projection);
+    const projection = await loadActive(env, idx);
+    memo.active = keep(projection);
     return projection;
   };
 
@@ -199,8 +210,7 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
     return weather ? withFireWeather(published, now.getTime(), idx.weatherChecked) : published;
   }
 
-  async function state(st: string, { checks = true, weather = true } = {}): Promise<SnapshotData> {
-    const idx = await catalog();
+  async function stateAt(idx: SnapshotIndex | null, st: string, { checks = true, weather = true } = {}): Promise<SnapshotData> {
     if (!idx) {
       const snapshot = await old();
       const now = new Date();
@@ -231,6 +241,8 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
     return view;
   }
 
+  const state = (st: string, options?: Parameters<typeof stateAt>[2]) => withCatalog((idx) => stateAt(idx, st, options));
+
   return {
     state,
     nextBoundary: () => nextBoundary,
@@ -239,12 +251,11 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
     },
     async forCounties(fips: string[]) {
       const states = [...new Set(fips.map(countyState))];
-      return new Map(await Promise.all(states.map(async (st) => [st, await state(st)] as const)));
+      return withCatalog(async (idx) => new Map(await Promise.all(states.map(async (st) => [st, await stateAt(idx, st)] as const))));
     },
-    async mapStatus() {
-      const idx = await catalog();
+    mapStatus: () => withCatalog(async (idx) => {
       if (!idx) {
-        const snapshot = await state("");
+        const snapshot = await stateAt(idx, "");
         return projectMapStatus(snapshot.generated, [snapshot], Date.now());
       }
       if (!fresh && memo.map?.revision === idx.revision && Date.now() < memo.map.expiresAt) return memo.map;
@@ -270,7 +281,7 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
       map.expiresAt = Math.min(map.expiresAt, memo.heads?.until ?? Infinity);
       if (shards.length === states.length) memo.map = map;
       return map;
-    },
+    }),
     async coverage() {
       const idx = await catalog();
       if (!idx) return old();
@@ -278,38 +289,47 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
       applySourceChecks(sources, await allHeads());
       return { generated: idx.generated, sources };
     },
-    async bans(stateQuery?: string, format: BanFormat = "compact") {
-      const idx = await catalog();
+    bans: (stateQuery?: string, page?: BansPage) => withCatalog(async (idx) => {
       const st = stateQuery?.trim().toUpperCase();
+      if (st && page) throw new LookupError("Pagination applies to the national list.", 400);
       if (!idx || st) {
-        const snapshot = await state(st ?? "");
+        const snapshot = await stateAt(idx, st ?? "");
         if (idx && st) {
           const sources = idx.sources.filter((source) => source.state === st).map((source) => ({ ...source }));
           applySourceChecks(sources, await publicHeads(env, sources.filter((s) => s.mode !== "manual").map(({ id }) => id)));
           snapshot.sources = sources;
         }
         const data = activeBans(snapshot, st);
-        const body = format === "pretty" ? JSON.stringify(JSON.stringify(data, null, 2)) : JSON.stringify(data);
-        return { body: [body], generated: data.generated, count: data.counties.length, nextBoundary };
+        let paging;
+        if (!st) {
+          const window = page ?? bansPage();
+          const revision = `legacy-${Date.parse(snapshot.generated)}`;
+          const start = pageStart(window, revision, data.counties.length);
+          const length = data.counties.length;
+          data.counties = data.counties.slice(start, start + window.limit);
+          paging = pageFields(revision, data.counties.length, start + data.counties.length, length);
+        }
+        return { data: { ...data, ...paging }, generated: data.generated, count: data.counties.length, nextBoundary };
       }
-      const [projection, heads] = await Promise.all([active(idx, format), allHeads()]);
-      const cached = memo.bans[format];
-      const result = cached && reusable(cached) && cached.revision === idx.revision && cached.heads === heads
-        ? cached.value : formatNationalBans(projection, idx, heads, new Date(), format);
-      if (result !== cached?.value) memo.bans[format] = { value: result, revision: idx.revision, heads,
+      const window = page ?? bansPage();
+      const [projection, heads] = await Promise.all([active(idx), allHeads()]);
+      const cached = memo.bans;
+      const key = `${window.limit}:${window.cursor ?? ""}`;
+      const result = cached && reusable(cached) && cached.revision === idx.revision && cached.heads === heads && cached.key === key
+        ? cached.value : formatNationalBans(projection, idx, heads, new Date(), window);
+      if (result !== cached?.value) memo.bans = { value: result, revision: idx.revision, heads, key,
         until: Math.min(Date.now() + MEMO_MS, result.nextBoundary) };
-      recordBoundary(result.nextBoundary, memo.active[format]);
+      recordBoundary(result.nextBoundary, memo.active);
       return result;
-    },
-    async weather() {
-      const idx = await catalog();
-      if (!idx) return state("");
-      const [projection, heads] = await Promise.all([active(idx, "compact"), allHeads()]);
+    }),
+    weather: () => withCatalog(async (idx) => {
+      if (!idx) return stateAt(idx, "");
+      const [projection, heads] = await Promise.all([active(idx), allHeads()]);
       const now = new Date();
       const view = projectWeather(projection, idx, heads, now);
-      recordBoundary(snapshotBoundary(view, now.getTime()), memo.active.compact);
+      recordBoundary(snapshotBoundary(view, now.getTime()), memo.active);
       return view;
-    },
+    }),
     async lastChanged() {
       const idx = await catalog();
       if (!idx) return lastChangedByState((await old()).changed ?? {});

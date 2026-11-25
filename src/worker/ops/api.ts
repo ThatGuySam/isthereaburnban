@@ -4,10 +4,15 @@ import type { Env } from "../env";
 import { CHANNELS, maskPush, RESEND_TEST_ADDRESSES, type Channel } from "../notification-audience";
 import { alertsPaused, MANUAL_LIMIT, setAlertsPaused } from "../notification-controls";
 import { countyBulletin, testNotice } from "../notification-message";
+import { outboxStatus } from "../notification-outbox";
 import { NotificationError, notify, providerStatus } from "../notify";
+import { readJsonBody, RequestBodyError } from "../request-body";
 import { subscribePush } from "../push";
 import { statusFor } from "../lookup";
 import { snapshotReader } from "../snapshot";
+import { replayDeadLetter } from "../sources/dead-letter";
+import { pipelineStatus } from "../sources/monitor";
+import { SOURCES } from "../sources/registry";
 import { evidenceInEffect } from "../../shared/evidence";
 
 const fips = z.string().regex(/^\d{5}$/).refine((value) => COUNTY_BY_FIPS.has(value));
@@ -38,17 +43,18 @@ const pause = z.object({ paused: z.boolean() });
 
 async function status(env: Env) {
   type Counts = { total: number; test: number; confirmed?: number; canary?: number };
-  const [push, email, paused] = await Promise.all([
+  const [push, email, paused, outbox] = await Promise.all([
     env.DB.prepare(`SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE is_test = 1) AS test,
       COUNT(*) FILTER (WHERE is_canary = 1) AS canary FROM push_subscriptions`).first<Counts>(),
     env.DB.prepare(`SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE is_test = 1) AS test,
       COUNT(*) FILTER (WHERE confirmed_at IS NOT NULL) AS confirmed FROM email_subscriptions
       WHERE unsubscribed_at IS NULL`).first<Counts>(),
     alertsPaused(env),
+    outboxStatus(env.DB),
   ]);
   const providers = providerStatus(env);
   return {
-    providers, counts: { push, email }, paused, limit: MANUAL_LIMIT,
+    providers, counts: { push, email }, outbox: outbox.results, paused, limit: MANUAL_LIMIT,
     vapidPublicKey: providers.push ? env.VAPID_PUBLIC_KEY : null,
     canary: { enabled: env.PUSH_CANARY_ENABLED === "true", fips: env.PUSH_CANARY_FIPS ?? null },
   };
@@ -143,27 +149,11 @@ async function readBody(request: Request): Promise<unknown> {
   if (request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json") {
     throw new NotificationError("Use application/json.", 415);
   }
-  const limit = 8192;
-  if (Number(request.headers.get("content-length")) > limit) throw new NotificationError("Request is too large.", 413);
-  const input = request.body?.getReader();
-  if (!input) throw new NotificationError("A JSON body is required.", 400);
-  const decoder = new TextDecoder();
-  let size = 0;
-  let text = "";
-  for (;;) {
-    const { done, value } = await input.read();
-    if (done) break;
-    size += value.length;
-    if (size > limit) {
-      await input.cancel();
-      throw new NotificationError("Request is too large.", 413);
-    }
-    text += decoder.decode(value, { stream: true });
-  }
   try {
-    return JSON.parse(text + decoder.decode());
-  } catch {
-    throw new NotificationError("The request must contain valid JSON.", 400);
+    return await readJsonBody(request, 8192);
+  } catch (error) {
+    if (error instanceof RequestBodyError) throw new NotificationError(error.message, error.status);
+    throw error;
   }
 }
 
@@ -171,15 +161,23 @@ export async function opsApi(request: Request, env: Env, url: URL, action: strin
   if (request.method === "GET") {
     if (action === "status") return status(env);
     if (action === "devices") return devices(env, url);
+    if (action === "pipeline") return pipelineStatus(env, SOURCES);
     if (action === "log") return deliveryLog(env, url);
     return;
   }
   if (request.method !== "POST") return;
+  if (action === "replay") {
+    const { id } = z.object({ id: z.string().min(1).max(128) }).parse(await readBody(request));
+    if (!await replayDeadLetter(env, id)) throw new NotificationError("No pending dead letter with that ID.", 404);
+    return { replayed: true };
+  }
   if (action === "notice") return sendNotice(env, notices.parse(await readBody(request)));
   if (action === "pause") {
     const { paused } = pause.parse(await readBody(request));
     await setAlertsPaused(env, paused);
-    return { paused: await alertsPaused(env) };
+    const current = await alertsPaused(env);
+    if (!current) await env.SOURCE_QUEUE?.send({ kind: "deliver" }).catch(() => console.warn("Could not wake alert outbox on resume"));
+    return { paused: current };
   }
   if (action === "test-device") {
     const { fips, canary, subscription } = browser.parse(await readBody(request));

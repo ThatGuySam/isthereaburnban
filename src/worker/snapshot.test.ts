@@ -109,10 +109,11 @@ test("a district ban overrides a county-level negative in public answers and ale
   const t1 = new Date("2026-11-24T11:00:00Z");
   const expires = "2026-11-24T12:00:00.000Z";
   const county = row("40143", "none", t0.toISOString(), { county: "Tulsa County", scope: "county" });
-  const first = buildSnapshot(null, A, [ok([county])], t0);
+  const districtAdapter = adapter("district", "OK");
+  const first = buildSnapshot(null, [...A, districtAdapter], [ok([county]), ok([])], t0);
   const district = row("40143", "ban", t1.toISOString(), { county: "Tulsa County", label: "Burn ban",
     scope: "part", scopeNote: "Example Fire District", sourceName: "Example Fire District", validUntil: expires });
-  const next = buildSnapshot(first.snapshot, [...A, adapter("district", "OK")], [ok([county]), ok([district])], t1);
+  const next = buildSnapshot(first.snapshot, [...A, districtAdapter], [ok([county]), ok([district])], t1);
   const answer = statusFor(_wcl(next.snapshot), county.fips, t1.getTime());
   expect(answer).toMatchObject({ status: "restricted", scope: "part", scopeNote: "Example Fire District",
     countywide: { status: "none" }, orders: [{ status: "ban", scopeNote: "Example Fire District" }] });
@@ -125,16 +126,11 @@ test("a district ban overrides a county-level negative in public answers and ale
 
   const index = { ...next.snapshot, revision: "fixture", version: 2, states: {}, orderChecks: {} };
   const encoded = encodeState({ ...index, state: "OK" }, "signature");
-  for (const format of ["compact", "pretty"]) {
-    const projection = decodeActive(encodeActive(index.revision, [{ ...encoded, active: format === "pretty" ? encoded.pretty : encoded.active }]));
-    const bans = (now: Date) => {
-      const { body } = formatNationalBans(projection, index, new Map(), now, format);
-      return JSON.parse(format === "pretty" ? JSON.parse(body.join("")) : body.join("")).counties;
-    };
-    const { lastAttemptedAt: _attempt, ...expected } = answer;
-    expect(bans(t1)).toEqual([JSON.parse(JSON.stringify(expected))]);
-    expect(bans(new Date(expires))).toEqual([]);
-  }
+  const projection = decodeActive(encodeActive(index.revision, [encoded]));
+  const bans = (now: Date) => formatNationalBans(projection, index, new Map(), now).data.counties;
+  const { lastAttemptedAt: _attempt, ...expected } = answer;
+  expect(JSON.parse(JSON.stringify(bans(t1)))).toEqual([JSON.parse(JSON.stringify(expected))]);
+  expect(bans(new Date(expires))).toEqual([]);
 });
 
 test("standing activity rules are reported separately from the temporary county feed", () => {

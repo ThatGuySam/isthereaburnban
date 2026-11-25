@@ -1,17 +1,14 @@
 import { createHmac } from "node:crypto";
 import { COUNTY_BY_FIPS } from "./counties";
-import type { DeliveryOutcome } from "./delivery";
-import { sendAlertEmail } from "./email";
 import type { Env } from "./env";
 import { maskTarget, planAudience, type Audience, type AudienceWindow, type Channel, type Delivery } from "./notification-audience";
-import { alertsPaused, alertsPausedInDb, MANUAL_LIMIT } from "./notification-controls";
+import { alertsPaused, MANUAL_LIMIT } from "./notification-controls";
+import { drainOperatorRun, stageOperatorRun } from "./notification-outbox";
 import { testNotice, type Notice } from "./notification-message";
-import { pushVapid, sendPush } from "./push";
+import { pushVapid } from "./push";
 
 const PAGE_SIZE = 20;
 const PREVIEW_MS = 5 * 60_000;
-const COUNTY_COOLDOWN_MS = 60 * 60_000;
-const DELIVERY_BATCH_SIZE = 4;
 
 type Dispatch = {
   audience: Audience;
@@ -23,13 +20,13 @@ type Send = Dispatch & {
   mode: "send";
   runId: string;
 } & (
-  | { origin: "cron" | "test" | "canary" }
+  | { origin: "test" | "canary" }
   | { origin: "broadcast"; preview: { at: number; fingerprint: string } }
 );
 
 type DryRun = Dispatch & { mode: "dry-run"; offset: number };
 type LogRow = {
-  channel: Channel; fips: string; masked?: string; result: string; providerId?: string; error?: string;
+  channel: Channel; fips: string; result: string; error?: string;
 };
 
 export class NotificationError extends Error {
@@ -60,19 +57,18 @@ function fingerprint(env: Env, deliveries: Delivery[], dispatch: Dispatch, at: n
 }
 
 async function writeLog(
-  env: Env, runId: string, req: Dispatch, mode: "dry-run" | "send", rows: LogRow[], changes: D1PreparedStatement[] = [],
+  env: Env, runId: string, req: Dispatch, mode: "dry-run" | "send", rows: LogRow[],
 ) {
   if (!rows.length) return;
   const stmt = env.DB.prepare(
     `INSERT INTO notification_delivery_log
-       (run_id, at, channel, audience, mode, fips, target_masked, result, provider_id, error)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (run_id, at, channel, audience, mode, fips, result, error)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
   );
   const at = new Date().toISOString();
-  await env.DB.batch([...rows.map((row) => stmt.bind(
-    runId, at, row.channel, req.audience.kind, mode, row.fips, row.masked ?? null, row.result,
-    row.providerId ?? null, row.error ?? null,
-  )), ...changes]);
+  await env.DB.batch(rows.map((row) => stmt.bind(
+    runId, at, row.channel, req.audience.kind, mode, row.fips, row.result, row.error ?? null,
+  )));
 }
 
 function fipsList(notices: Notice[]): string {
@@ -107,43 +103,20 @@ async function preview(env: Env, req: DryRun) {
   };
 }
 
-async function claim(env: Env, req: Send, now: number): Promise<"claimed" | "duplicate" | "rate-limited"> {
-  const fips = fipsList(req.notices);
-  const result = await env.DB.prepare(
-    `INSERT OR IGNORE INTO notification_runs (id, at, origin, audience, fips)
-     SELECT ?, ?, ?, ?, ?
-     WHERE ? <> 'broadcast' OR NOT EXISTS (
-       SELECT 1 FROM notification_runs WHERE origin = 'broadcast' AND
-       (at > ? OR (fips = ? AND at > ?))
-     )`,
-  ).bind(req.runId, now, req.origin, req.audience.kind, fips, req.origin,
-    now - PREVIEW_MS, fips, now - COUNTY_COOLDOWN_MS).run();
-  if (result.meta.changes) return "claimed";
-  const exists = await env.DB.prepare("SELECT id FROM notification_runs WHERE id = ?").bind(req.runId).first("id");
-  return exists ? "duplicate" : "rate-limited";
-}
-
 function validateSend(req: Send) {
-  const live = req.origin === "cron" || req.origin === "broadcast";
+  const live = req.origin === "broadcast";
   const isValid = live ? req.audience.kind === "all" && req.notices.every((n) => n.kind === "live")
     : req.origin === "canary" ? req.audience.kind === "canary" && req.notices.every((n) => n.kind === "canary")
     : ["test", "push-devices", "sandbox"].includes(req.audience.kind) && req.notices.every((n) => n.kind === "test");
   if (!isValid) throw new NotificationError("This notice and audience cannot be sent together.", 400);
 }
 
-async function deliver(env: Env, d: Delivery, runId: string): Promise<DeliveryOutcome> {
-  return d.channel === "push"
-    ? sendPush(env, d.target, d.notices[0])
-    : sendAlertEmail(env, d.target, d.notices, `alerts/${runId}/${d.target.id}`);
-}
-
 async function send(env: Env, req: Send) {
   validateSend(req);
-  const counts = { accepted: 0, gone: 0, error: 0, skipped: 0 };
+  const counts = { accepted: 0, gone: 0, error: 0, skipped: 0, pending: 0 };
   const configured = providerStatus(env);
   const channels = req.channels.filter((channel) => configured[channel]);
   if (!channels.length) {
-    if (req.origin === "cron") return { ...counts, status: "unconfigured" };
     if (req.origin !== "canary") throw new NotificationError("No selected provider is configured.", 503);
   }
   if (!req.notices.length) return { ...counts, status: "empty" };
@@ -156,11 +129,10 @@ async function send(env: Env, req: Send) {
     return { ...counts, status: "paused" };
   }
 
-  const manual = req.origin !== "cron";
-  const plans = await plan(env, { ...req, channels }, manual ? { limit: MANUAL_LIMIT + 1, offset: 0 } : undefined);
+  const plans = await plan(env, { ...req, channels }, { limit: MANUAL_LIMIT + 1, offset: 0 });
   const total = plans.reduce((sum, p) => sum + p.subscriptions, 0);
   const deliveries = plans.flatMap((p) => p.deliveries);
-  if (manual && (total > MANUAL_LIMIT || deliveries.length > MANUAL_LIMIT)) {
+  if (total > MANUAL_LIMIT || deliveries.length > MANUAL_LIMIT) {
     const message = `This send exceeds the ${MANUAL_LIMIT}-delivery limit.`;
     if (req.origin !== "canary") throw new NotificationError(message, 409);
     await writeLog(env, req.runId, req, "send", describe("blocked", message));
@@ -175,37 +147,17 @@ async function send(env: Env, req: Send) {
   }
   if (!deliveries.length && req.origin !== "canary") return { ...counts, status: "empty" };
 
-  const claimed = await claim(env, req, Date.now());
+  const claimed = await stageOperatorRun(env.DB, {
+    runId: req.runId, origin: req.origin, audience: req.audience.kind, fips: fipsList(req.notices),
+  }, deliveries, Date.now());
   if (claimed !== "claimed") return { ...counts, status: claimed };
-  if (!deliveries.length) await writeLog(env, req.runId, req, "send", describe(channels.length ? "no audience" : "unconfigured"));
-
-  const gone = new Set<string>();
-  const remove = env.DB.prepare("DELETE FROM push_subscriptions WHERE endpoint = ? AND p256dh = ? AND auth = ?");
-  for (let offset = 0; offset < deliveries.length; offset += DELIVERY_BATCH_SIZE) {
-    if (await alertsPausedInDb(env)) {
-      counts.skipped += deliveries.length - offset;
-      await writeLog(env, req.runId, req, "send", describe("paused", `${counts.skipped} deliveries skipped`));
-      break;
-    }
-    const batch = deliveries.slice(offset, offset + DELIVERY_BATCH_SIZE);
-    const expired: D1PreparedStatement[] = [];
-    const rows = await Promise.all(batch.map(async (d): Promise<LogRow> => {
-      if (d.channel === "push" && gone.has(d.target.endpoint)) {
-        counts.skipped++;
-        return { channel: d.channel, fips: fipsList(d.notices), masked: maskTarget(d), result: "skipped", error: "Push subscription is gone" };
-      }
-      const outcome = await deliver(env, d, req.runId);
-      counts[outcome.result]++;
-      if (outcome.result === "gone" && d.channel === "push") {
-        gone.add(d.target.endpoint);
-        expired.push(remove.bind(d.target.endpoint, d.target.p256dh, d.target.auth));
-      }
-      return { ...outcome, channel: d.channel, fips: fipsList(d.notices), masked: maskTarget(d) };
-    }));
-    await writeLog(env, req.runId, req, "send", rows, expired);
+  if (!deliveries.length) {
+    await writeLog(env, req.runId, req, "send", describe(channels.length ? "no audience" : "unconfigured"));
+    return { ...counts, status: "empty" };
   }
-  await env.DB.prepare("UPDATE notification_runs SET completed_at = ? WHERE id = ?").bind(Date.now(), req.runId).run();
-  return { ...counts, status: deliveries.length ? "finished" : "empty" };
+
+  const result = await drainOperatorRun(env, req.runId) ?? counts;
+  return { ...result, status: result.pending ? "queued" : "finished" };
 }
 
 export function notify(env: Env, req: DryRun): ReturnType<typeof preview>;

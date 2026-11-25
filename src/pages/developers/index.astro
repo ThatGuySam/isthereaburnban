@@ -83,11 +83,11 @@ const sample = JSON.stringify(
     <h2 id="tools">What your agent can do</h2>
     <ul>
       <li><code>check_burn_ban</code> looks up county reports for a ZIP, coordinates, FIPS or incorporated place. Confirm the county when the location is approximate.</li>
-      <li><code>list_active_bans</code> lists published bans and restrictions, including scoped orders. Pass a state to narrow the list.</li>
+      <li><code>list_active_bans</code> lists published bans and restrictions, including scoped orders. Pass a state for the state list or pass <code>nextCursor</code> back as <code>cursor</code> to keep paging through the national list.</li>
       <li><code>coverage</code> shows the scope, cadence and health of the sources we check.</li>
       <li><code>subscribe_email_alerts</code> requests alerts. When email delivery is enabled, the first email asks you to confirm.</li>
     </ul>
-    <p>The subscription tool stores a pending signup, so clients may ask you before it runs.</p>
+    <p>The subscription tool can send a confirmation link, so clients may ask you before it runs. The link expires after 24 hours.</p>
 
     <h2 id="alerts">Get an alert</h2>
     <p>Use a scheduled lookup or subscribe on the site.</p>

@@ -5,7 +5,7 @@ import { activeBans } from "./api";
 import { decodeActive, encodeActive, encodeState } from "./snapshot-v2";
 import { applyChecks } from "./sources/state";
 
-test("prepared bans retain the public JSON for partial and complete scoped-order expiry", () => {
+test("published bans retain the public JSON for partial and complete scoped-order expiry", () => {
   const generated = "2026-11-24T11:09:00.000Z";
   const first = "2026-11-24T12:00:00.000Z";
   const last = "2026-11-24T13:00:00.000Z";
@@ -27,11 +27,9 @@ test("prepared bans retain the public JSON for partial and complete scoped-order
     const old = structuredClone(snapshot);
     applyChecks(old, heads, now, index.orderChecks);
     const expected = activeBans(old, undefined, now.getTime());
-    for (const format of ["compact", "pretty"]) {
-      const projection = decodeActive(encodeActive(index.revision, [{ ...pub, active: format === "pretty" ? pub.pretty : pub.active }]));
-      const body = formatNationalBans(projection, index, heads, now, format).body.join("");
-      expect(format === "pretty" ? JSON.parse(body) : body).toBe(JSON.stringify(expected, null, format === "pretty" ? 2 : undefined));
-    }
+    const projection = decodeActive(encodeActive(index.revision, [pub]));
+    const { data } = formatNationalBans(projection, index, heads, now);
+    expect(JSON.stringify(data)).toBe(JSON.stringify(expected));
   }
 });
 
@@ -45,8 +43,28 @@ test("an active list already in KV hides legacy synthetic effective dates", () =
   const active = JSON.stringify([[row.fips, row.sourceId, generated, null, null, body]]).slice(1, -1) + "\n" + encoded;
   const index = { version: 2, revision: "legacy", generated, sources: [], states: {}, orderChecks: {} };
   const projection = decodeActive(encodeActive(index.revision, [{ active, weather: "", weatherCounties: "" }]));
-  const result = formatNationalBans(projection, index, new Map(), new Date(generated), "compact");
-  expect(JSON.parse(result.body.join("")).counties[0]).toMatchObject({
+  const result = formatNationalBans(projection, index, new Map(), new Date(generated));
+  expect(result.data.counties[0]).toMatchObject({
     status: "ban", since: null, firstSeenAt: null, statusChangedAt: null,
   });
+});
+
+test("a sparse national page can continue without rechecking expired candidates", () => {
+  const generated = "2026-11-24T11:09:00.000Z";
+  const now = new Date(generated);
+  const counties = Object.fromEntries(Array.from({ length: 251 }, (_, i) => {
+    const fips = String(70000 + i);
+    return [fips, { fips, state: "TX", county: `County ${fips}`, status: "ban", label: "Burn ban",
+      checked: generated, since: null, expires: null, sourceUpdated: null, sourceName: "Example",
+      sourceUrl: "https://example.gov", officialUrl: "https://example.gov", validUntil: i < 250 ? "2026-11-23T00:00:00Z" : undefined }];
+  }));
+  const index = { version: 2, revision: "sparse", generated, sources: [], states: {}, orderChecks: {} };
+  const encoded = encodeState({ ...index, state: "TX", counties, changed: {} }, "signature");
+  const projection = decodeActive(encodeActive(index.revision, [encoded]));
+  const first = formatNationalBans(projection, index, new Map(), now, { limit: 50 }).data;
+  expect(first.counties).toEqual([]);
+  expect(first.nextCursor).toBeTruthy();
+  const second = formatNationalBans(projection, index, new Map(), now, { limit: 50, cursor: first.nextCursor }).data;
+  expect(second.counties.map(({ fips }) => fips)).toEqual(["70250"]);
+  expect(second.nextCursor).toBeNull();
 });

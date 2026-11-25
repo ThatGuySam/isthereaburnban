@@ -22,12 +22,11 @@ const input = (id, status, extra = {}, options = {}) => ({
   ...options,
 });
 const county = (snapshot, time) => statusFor(snapshot, fips, time.getTime());
-const national = (snapshot, time, heads = new Map(), format = "compact") => {
+const national = (snapshot, time, heads = new Map()) => {
   const index = { ...snapshot, version: 2, revision: "fixture", states: {}, orderChecks: {} };
   const encoded = encodeState({ ...index, state: "TX" }, "fixture");
-  const projection = decodeActive(encodeActive(index.revision, [{ ...encoded, active: format === "pretty" ? encoded.pretty : encoded.active }]));
-  const { body } = formatNationalBans(projection, index, heads, time, format);
-  return JSON.parse(format === "pretty" ? JSON.parse(body.join("")) : body.join(""));
+  const projection = decodeActive(encodeActive(index.revision, [encoded]));
+  return formatNationalBans(projection, index, heads, time).data;
 };
 
 test("a failed negative immediately becomes unknown with its last good check and outage time", () => {
@@ -68,10 +67,8 @@ test("a source-specific deadline removes the main and embedded reports at the sa
   expect(ended.status).toBe("unknown");
   expect(ended.orders ?? []).toHaveLength(0);
   expect(activeBans(snapshot, undefined, at(6).getTime()).counties).toEqual([]);
-  for (const format of ["compact", "pretty"]) {
-    expect(national(snapshot, at(5), new Map(), format).counties).toHaveLength(1);
-    expect(national(snapshot, at(6), new Map(), format).counties).toEqual([]);
-  }
+  expect(national(snapshot, at(5)).counties).toHaveLength(1);
+  expect(national(snapshot, at(6)).counties).toEqual([]);
 });
 
 test("a scheduled county ban activates and promotes the next current report at expiry without a new publication", () => {
@@ -141,7 +138,7 @@ test("weather alert visibility and its cache honor the weather source deadline",
   const heads = new Map();
   expect(projectWeather(projection, index, heads, at(2)).counties[fips].alerts).toEqual([alert]);
   expect(projectWeather(projection, index, heads, at(3)).counties[fips].alerts).toBeUndefined();
-  expect(formatNationalBans(projection, index, heads, at(2), "compact").nextBoundary).toBe(at(3).getTime());
+  expect(formatNationalBans(projection, index, heads, at(2)).nextBoundary).toBe(at(3).getTime());
 });
 
 test("a verified county rescission conflicts with the aggregator's active order", () => {

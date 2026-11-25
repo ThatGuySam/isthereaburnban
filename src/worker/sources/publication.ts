@@ -4,18 +4,17 @@ import type { SnapshotData, SourceHealth } from "../../shared/types";
 import type { Env } from "../env";
 import type { Notice } from "../notification-message";
 import { alertNotices, transitionInsert } from "../snapshot";
-import { readActiveFragments, readPublication } from "../snapshot-store";
-import { ACTIVE_KEY, encodeActive, encodeState, INDEX_KEY, PRETTY_ACTIVE_KEY, stateKey,
+import { SNAPSHOT_KV_LIMIT_BYTES, writeStateParts } from "../snapshot-chunks";
+import { readActiveFragments, readPublication, readStateNotices, readStateRevision } from "../snapshot-store";
+import { ACTIVE_KEY, encodeActive, encodeState, INDEX_KEY, stateKey,
   type SnapshotIndex, type StateSnapshot, type StateSummary } from "../snapshot-v2";
 import { readLegacyState, resumeLegacyPublication } from "./legacy-publication";
 import { mergeSources, type SourceInput } from "./merge";
 import { importLegacyWeather, materialRevisions, readHeads, readSourceInputs, type SourceHead } from "./state";
 import type { Source } from "./types";
 
-// Leave room for retries, a refresh straddling midnight, and operational writes.
-export const MAX_CACHED_STATES = 32;
 // Bump when the same material revisions need a different state projection.
-const MERGE_VERSION = 4;
+const MERGE_VERSION = 6;
 
 type StateJob = { state: string; signature: string; cache: boolean };
 type RunRow = { id: string; slot: number; generated: string; plan: string; cursor: number };
@@ -24,8 +23,8 @@ type SendNotices = (env: Env, runId: string, notices: Notice[]) => Promise<unkno
 type PublishedState = { state: string; revision: string; cached: number; summary: string };
 
 export function buildStatePublication(prev: SnapshotData | null, inputs: SourceInput[], now: Date, state: string, revision: string, signature: string) {
-  const { snapshot, transitions, answers } = mergeSources(prev, inputs, now);
-  return { ...encodeState({ ...snapshot, version: 2, state, revision }, signature, answers), transitions, notices: alertNotices(transitions, snapshot) };
+  const { snapshot, transitions } = mergeSources(prev, inputs, now);
+  return { ...encodeState({ ...snapshot, version: 2, state, revision }, signature), transitions, notices: alertNotices(transitions, snapshot) };
 }
 
 export async function currentRun(db: D1Database): Promise<Run | null> {
@@ -59,14 +58,11 @@ export async function planPublication(env: Env, slot: number, now: Date, sources
     hashes.set(id, hash);
   }
   const plan: StateJob[] = [];
-  // Rotate which states are cached if a busy hour needs the D1 overflow path.
-  const offset = Math.floor(slot / 3_600_000) % STATES.length;
-  for (let i = 0; i < STATES.length; i++) {
-    const state = STATES[(offset + i + STATES.length) % STATES.length].abbr;
+  for (const { abbr: state } of STATES) {
     const material = materialRevisions(stateSources(sources, state), heads, now, weather.get(state) ?? new Map());
     const signature = createHash("sha256").update(JSON.stringify([MERGE_VERSION, material])).digest("hex");
     if (signature !== previous?.states[state]?.signature) {
-      plan.push({ state, signature, cache: !previous || plan.length < MAX_CACHED_STATES });
+      plan.push({ state, signature, cache: true });
     }
   }
   // Refresh a global health-only change (for example a failing NWS poll with an empty feed).
@@ -89,30 +85,35 @@ async function mergeState(env: Env, run: Run, job: StateJob, sources: readonly S
   let serialized: string | null = null;
   if (!staged) {
     const local = stateSources(sources, state);
-    const prevText = await env.DB.prepare("SELECT snapshot FROM snapshot_state WHERE state = ? ORDER BY rowid DESC LIMIT 1")
-      .bind(state).first<string>("snapshot");
-    const prev: SnapshotData | null = prevText ? JSON.parse(prevText) : await readLegacyState(env.DB, state);
+    const previousRevision = await env.DB.prepare("SELECT revision FROM snapshot_state WHERE state = ? ORDER BY rowid DESC LIMIT 1")
+      .bind(state).first<string>("revision");
+    const prev = previousRevision ? await readStateRevision(env.DB, state, previousRevision) : await readLegacyState(env.DB, state);
     const now = new Date(run.generated);
     const heads = await readHeads(env.DB, local.map(({ id }) => id));
     const inputs = await readSourceInputs(env, state, local, heads, prev, now);
     const encoded = buildStatePublication(prev, inputs, now, state, run.id, signature);
     serialized = encoded.snapshot;
-    const prune = env.DB.prepare(`DELETE FROM snapshot_state WHERE state = ? AND rowid <
-      (SELECT MAX(rowid) FROM snapshot_state WHERE state = ?)`);
-    const insert = env.DB.prepare(`INSERT INTO snapshot_state
-      (state, revision, snapshot, summary, active, active_pretty, weather_counties, weather, notices) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-    const statements = [prune.bind(state, state), insert.bind(state, run.id, serialized, encoded.summary,
-      encoded.active, encoded.pretty, encoded.weatherCounties, encoded.weather, JSON.stringify(encoded.notices))];
+    const prune = env.DB.prepare(`DELETE FROM snapshot_state WHERE state = ? AND revision NOT IN
+      (SELECT revision FROM snapshot_state WHERE state = ? ORDER BY rowid DESC LIMIT 2)`);
+    const { writes, snapshotBytes } = writeStateParts(env.DB, state, run.id, encoded.summary, {
+      snapshot: serialized, active: encoded.active, active_pretty: "",
+      weather_counties: encoded.weatherCounties, weather: encoded.weather, notices: JSON.stringify(encoded.notices),
+    });
+    const statements = [prune.bind(state, state), ...writes];
+    if (snapshotBytes >= SNAPSHOT_KV_LIMIT_BYTES) serialized = null;
     if (encoded.transitions.length) statements.push(transitionInsert(env.DB, encoded.transitions));
     await env.DB.batch(statements);
   }
   if (cache && !staged?.cached) {
     const key = stateKey(state);
-    const metadata = staged ? (await env.KV.getWithMetadata<{ revision: string }>(key, "text")).metadata : null;
+    const metadata = staged ? (await env.KV.getWithMetadata<{ revision: string }>(key, "text").catch(() => null))?.metadata : null;
     if (metadata?.revision !== run.id) {
-      serialized ??= await env.DB.prepare("SELECT snapshot FROM snapshot_state WHERE state = ? AND revision = ?")
-        .bind(state, run.id).first<string>("snapshot");
-      if (!serialized) throw new Error(`Staged snapshot missing: ${state}`);
+      if (staged) {
+        const stored = await readStateRevision(env.DB, state, run.id);
+        serialized = stored ? JSON.stringify(stored) : null;
+        if (!serialized) throw new Error(`Staged snapshot missing: ${state}`);
+      }
+      if (!serialized || Buffer.byteLength(serialized) >= SNAPSHOT_KV_LIMIT_BYTES) return;
       await env.KV.put(key, serialized, { metadata: { revision: run.id } });
     }
     await env.DB.prepare("UPDATE snapshot_state SET cached = 1 WHERE state = ? AND revision = ?").bind(state, run.id).run();
@@ -167,28 +168,31 @@ async function publishCatalog(env: Env, run: Run, sources: readonly Source[]) {
     .all<PublishedState>();
   const heads = await readHeads(env.DB);
   const serialized = JSON.stringify(buildCatalog(run, results, sources, heads));
-  await env.KV.put(INDEX_KEY, serialized);
-  await env.DB.prepare(`INSERT INTO snapshot_publication (singleton, slot, catalog) VALUES (1, ?, ?)
-    ON CONFLICT(singleton) DO UPDATE SET slot = excluded.slot, catalog = excluded.catalog`).bind(run.slot, serialized).run();
+  const result = await env.DB.prepare(`INSERT INTO snapshot_publication (singleton, slot, catalog)
+    SELECT 1, ?, ? WHERE EXISTS (SELECT 1 FROM snapshot_run WHERE id = ? AND cursor = ?)
+    ON CONFLICT(singleton) DO UPDATE SET slot = excluded.slot, catalog = excluded.catalog
+    WHERE snapshot_publication.slot <= excluded.slot`).bind(run.slot, serialized, run.id, run.cursor).run();
+  if (result.meta.changes) await env.KV.put(INDEX_KEY, serialized);
 }
 
 /** Advance one durable step per queue invocation, including a fully cold 51-area rebuild. */
 export async function advancePublication(env: Env, run: Run, sources: readonly Source[], sendNotices: SendNotices): Promise<boolean> {
+  const current = await env.DB.prepare("SELECT cursor FROM snapshot_run WHERE id = ?").bind(run.id).first<number>("cursor");
+  if (current !== run.cursor) return current !== null;
   const job = run.plan[run.cursor];
   if (job) await mergeState(env, run, job, sources);
-  else if (run.cursor <= run.plan.length + 1) {
-    const format = run.cursor === run.plan.length ? "compact" : "pretty";
-    const rows = await readActiveFragments(env.DB, format);
-    await env.KV.put(format === "pretty" ? PRETTY_ACTIVE_KEY : ACTIVE_KEY, encodeActive(run.id, rows));
+  else if (run.cursor === run.plan.length) {
+    const body = encodeActive(run.id, await readActiveFragments(env.DB));
+    if (Buffer.byteLength(body) < SNAPSHOT_KV_LIMIT_BYTES) await env.KV.put(ACTIVE_KEY, body);
+  } else if (run.cursor === run.plan.length + 1) {
+    // Preserve the cursor numbers of in-flight runs that used a separate pretty projection.
   } else if (run.cursor === run.plan.length + 2) await publishCatalog(env, run, sources);
   else {
-    const { results } = await env.DB.prepare("SELECT notices FROM snapshot_state WHERE revision = ? AND notices <> '[]'")
-      .bind(run.id).all<{ notices: string }>();
-    const notices = results.flatMap(({ notices }): Notice[] => JSON.parse(notices));
+    const notices = (await readStateNotices(env.DB, run.id)).flatMap((serialized): Notice[] => JSON.parse(serialized));
     if (notices.length) await sendNotices(env, `sources-${run.id}`, notices);
-    await env.DB.prepare("DELETE FROM snapshot_run WHERE id = ?").bind(run.id).run();
+    await env.DB.prepare("DELETE FROM snapshot_run WHERE id = ? AND cursor = ?").bind(run.id, run.cursor).run();
     return false;
   }
-  await env.DB.prepare("UPDATE snapshot_run SET cursor = cursor + 1 WHERE id = ?").bind(run.id).run();
+  await env.DB.prepare("UPDATE snapshot_run SET cursor = cursor + 1 WHERE id = ? AND cursor = ?").bind(run.id, run.cursor).run();
   return true;
 }

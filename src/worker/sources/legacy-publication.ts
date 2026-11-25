@@ -28,10 +28,14 @@ export async function readLegacyState(db: D1Database, state: string): Promise<Sn
   const row = await db.prepare(`SELECT
     snapshot ->> '$.generated' AS generated,
     (SELECT json_group_object(key, json(value)) FROM json_each(snapshot, '$.counties') WHERE substr(key, 1, 2) = ?1) AS counties,
+    (SELECT json_group_array(json(value)) FROM json_each(snapshot, '$.sources') WHERE value ->> 'state' = ?2) AS sources,
+    (SELECT json_group_object(key, json(value)) FROM json_each(snapshot, '$.verifiedOrders') WHERE substr(key, 1, 2) = ?1) AS verified,
+    snapshot ->> '$.verifiedOrders' IS NOT NULL AS tracked,
     (SELECT json_group_object(key, value) FROM json_each(snapshot, '$.changed') WHERE substr(key, 1, 2) = ?1) AS changed,
     (SELECT json_group_object(key, json(value)) FROM json_each(snapshot, '$.fireWeather') WHERE substr(key, 1, 2) = ?1) AS weather
-    FROM source_snapshot WHERE singleton = 1`).bind(prefix).first<{ generated: string; counties: string; changed: string; weather: string }>();
+    FROM source_snapshot WHERE singleton = 1`).bind(prefix, state).first<{ generated: string; counties: string; changed: string; weather: string; sources: string; verified: string; tracked: number }>();
   if (!row) return null;
   const counties: SnapshotData["counties"] = JSON.parse(row.counties);
-  return { version: 1, generated: row.generated, counties, sources: [], changed: JSON.parse(row.changed), fireWeather: JSON.parse(row.weather) };
+  return { version: 1, generated: row.generated, counties, sources: JSON.parse(row.sources), changed: JSON.parse(row.changed),
+    fireWeather: JSON.parse(row.weather), verifiedOrders: row.tracked ? JSON.parse(row.verified) : undefined };
 }

@@ -1,11 +1,10 @@
-import type { CountyStatus, SnapshotData, SourceHealth } from "../shared/types";
+import type { SnapshotData, SourceHealth } from "../shared/types";
 import { COUNTY_BY_FIPS } from "./counties";
-import { prepareBanEntries, type BanEntry } from "./active-bans";
+import { encodeCounties, type BanEntry } from "./active-bans";
 
 export const INDEX_KEY = "snapshot:v2:index";
 // A separate body keeps coverage, sitemap and county requests off the national list.
 export const ACTIVE_KEY = "snapshot:v2:active";
-export const PRETTY_ACTIVE_KEY = "snapshot:v2:active:pretty";
 export const stateKey = (state: string) => `snapshot:v2:${state}`;
 
 export type StateSnapshot = SnapshotData & { version: 2; state: string; revision: string };
@@ -52,14 +51,14 @@ export function lastChangedByState(changed: SnapshotData["changed"]) {
 
 type ActiveFragments = { active: string; weatherCounties: string; weather: string };
 
-export function encodeState(snapshot: StateSnapshot, signature: string, answers?: Record<string, CountyStatus>) {
+export function encodeState(snapshot: StateSnapshot, signature: string) {
   const { sources, sourceVersions, fireWeather, changed } = snapshot;
   const summary: StateSummary = { signature, reportDates: true, sources, sourceVersions, lastChanged: latest(Object.values(changed)) };
-  const { compact, pretty, weatherCounties } = prepareBanEntries(snapshot, answers);
+  const { counties: _counties, ...metadata } = snapshot;
+  const { compact, counties, weatherCounties } = encodeCounties(snapshot);
+  const serialized = `${JSON.stringify(metadata).slice(0, -1)},"counties":{${counties}}}`;
   return {
-    snapshot: JSON.stringify(snapshot), summary: JSON.stringify(summary),
-    active: compact, pretty,
-    weatherCounties: JSON.stringify(weatherCounties).slice(1, -1),
+    snapshot: serialized, summary: JSON.stringify(summary), active: compact, weatherCounties,
     weather: fireWeather ? JSON.stringify(fireWeather).slice(1, -1) : "",
   };
 }
@@ -81,5 +80,8 @@ export function decodeActive(raw: string): ActiveProjection {
   const newline = raw.indexOf("\n");
   if (newline < 1) throw new Error("Active projection missing its header");
   const header: ActiveHeader = JSON.parse(raw.slice(0, newline));
+  if (!header || typeof header.revision !== "string" || !Array.isArray(header.bans) || !header.counties || !header.fireWeather) {
+    throw new Error("Invalid active projection header");
+  }
   return { ...header, raw, bodyStart: newline + 1 };
 }

@@ -17,7 +17,11 @@
   "triggers": { "crons": ["7 * * * *", "17 17 * * *"] },
   "queues": {
     "producers": [{ "binding": "SOURCE_QUEUE", "queue": "isthereaburnban-sources" }],
-    "consumers": [{ "queue": "isthereaburnban-sources", "max_batch_size": 1, "max_concurrency": 1, "max_retries": 15 }]
+    "consumers": [
+      { "queue": "isthereaburnban-sources", "max_batch_size": 1, "max_concurrency": 1, "max_retries": 15,
+        "dead_letter_queue": "isthereaburnban-sources-dlq" },
+      { "queue": "isthereaburnban-sources-dlq", "max_batch_size": 10, "max_concurrency": 1, "max_retries": 100 }
+    ]
   },
   "kv_namespaces": [{ "binding": "KV", "id": "0e241f78e10a4066aafc2d3a41e8588c" }],
   // Aggregate API/MCP request counts (src/worker/usage.ts). The dataset is created on the first write after deploy.
