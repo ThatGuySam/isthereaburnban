@@ -24,12 +24,13 @@ function preferred(current: Report | undefined, report: Report): Report {
   return report.scope === "county" && current.scope === "state" ? report : current;
 }
 
-function currentReport<T extends Report>(report: T, now: number): T {
+function currentReport<T extends Report>(report: T, now: number, start = report.validFrom ? Date.parse(report.validFrom) : -Infinity,
+  deadline = evidenceDeadline(report)): T {
   if (report.status === "unknown") return report;
-  if (report.validFrom && Date.parse(report.validFrom) > now) {
+  if (start > now) {
     return { ...report, status: "unknown", label: "Scheduled order has not started" };
   }
-  if (!(now < evidenceDeadline(report))) {
+  if (!(now < deadline)) {
     const ended = report.validUntil && Date.parse(report.validUntil) <= now;
     const label = ended ? "Source decision expired" : report.ruleReview ? "Statutory rule needs review" : "Last successful source check is too old";
     return { ...report, status: "unknown", label,
@@ -41,7 +42,7 @@ function currentReport<T extends Report>(report: T, now: number): T {
   return report;
 }
 
-export function toCountyReport(row: StoredCountyStatus): CountyReport {
+function toCountyReport(row: StoredCountyStatus): CountyReport {
   const { fips: _fips, state: _state, county: _county, firstSeenAt: _first, statusChangedAt: _change,
     countywide: _broad, orders: _orders, alerts: _alerts, candidates: _candidates, conflict: _conflict,
     sourceOutages: _outages, ...report } = row;
@@ -50,7 +51,12 @@ export function toCountyReport(row: StoredCountyStatus): CountyReport {
 
 function order(report: Report): ScopedOrder | undefined {
   if (!report.checked && !report.ruleReview) return;
+  if (isOrder(report)) return report;
   return { ...report, scope: report.scope ?? "county", scopeNote: report.scopeNote ?? report.label };
+}
+
+function isOrder(report: Report): report is ScopedOrder {
+  return report.scope !== undefined && report.scopeNote !== undefined;
 }
 
 function describeConflict(report: Report): ConflictReport {
@@ -84,7 +90,9 @@ function selectReports(base: CountyStatus, reports: Report[], now: number, saveD
   let visibleOrders: ScopedOrder[] | undefined;
   for (const raw of reports) {
     const scoped = raw.scope === "part" || raw.standing;
-    const current = currentReport(raw, now);
+    const start = raw.validFrom ? Date.parse(raw.validFrom) : -Infinity;
+    const deadline = evidenceDeadline(raw);
+    const current = currentReport(raw, now, start, deadline);
     if ("issuerFor" in raw && raw.issuerFor && raw.documentId && (raw.status === "ban" || raw.status === "none")) {
       (issuers ??= []).push(raw);
       if (raw.status === "none") {
@@ -93,7 +101,7 @@ function selectReports(base: CountyStatus, reports: Report[], now: number, saveD
       }
     }
     if (scoped) {
-      const fresh = evidenceDeadline(raw) > now;
+      const fresh = deadline > now;
       if (!fresh && saveDecision) visibleOrders ??= orders.slice();
       const entry = (fresh || saveDecision) && order(raw);
       if (entry) orders.push(entry);
@@ -102,7 +110,7 @@ function selectReports(base: CountyStatus, reports: Report[], now: number, saveD
     if (scoped && activeStatus(current.status)) {
       local = preferred(local, current);
       if (isScopedBan(current)) localBan = preferred(localBan, current);
-    } else if (!scoped && evidenceInEffect(raw, now)) {
+    } else if (!scoped && start <= now && now < deadline) {
       broad = preferred(broad, current);
       if (current.status === "ban" && current.sourceCheckFailed) failedBan = current;
       if (current.status === "none") confirmedClear = current;
@@ -131,9 +139,14 @@ function selectReports(base: CountyStatus, reports: Report[], now: number, saveD
     }
     let note = report.note;
     if (publishing && orders.length) {
-      const other = [...new Set(orders.filter((item) => item.status !== "unknown").map((item) =>
-        `${item.validFrom && Date.parse(item.validFrom) > now ? "Upcoming " : ""}${item.label} (${item.scopeNote})`))].filter((text) => text !== label);
-      if (other.length) note = [note, `Local reports include ${other.join(". ")}.`].filter(Boolean).join(" ");
+      const other: string[] = [];
+      for (const item of orders) {
+        if (item.status === "unknown") continue;
+        const upcoming = item.validFrom && Date.parse(item.validFrom) > now ? "Upcoming " : "";
+        const text = `${upcoming}${item.label} (${item.scopeNote})`;
+        if (text !== label && !other.includes(text)) other.push(text);
+      }
+      if (other.length) note = `${note ? `${note} ` : ""}Local reports include ${other.join(". ")}.`;
     }
     const countywide = broad && broad !== report ? {
       status: broad.status, label: broad.label, checked: broad.checked, sourceId: broad.sourceId, sourceName: broad.sourceName,

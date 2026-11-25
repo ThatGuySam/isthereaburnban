@@ -1,4 +1,4 @@
-import type { CountyStatus, FireWeatherReport, RuleReview, Snapshot, SnapshotData, SourceHealth } from "../../shared/types";
+import type { CountyStatus, EvidenceTiming, FireWeatherReport, RuleReview, Snapshot, SnapshotData, SourceHealth } from "../../shared/types";
 import { countyDecision, isScopedBan, storeCountyReports } from "../county-decision";
 import { checkDeadline, evidenceInEffect } from "../../shared/evidence";
 export { STALE_MS } from "../county-decision";
@@ -47,8 +47,11 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
     const outage = error && attempted ? failedSince ?? checked : undefined;
     const health = { checked, lastAttemptedAt: attempted ? checked : null,
       lastSuccessfulAt: successful, ok: !error, error, failedSince: outage, staleMs, ruleReview, ruleChanged };
-    const timing = { ...(staleMs === undefined ? {} : { staleMs }),
-      ...(outage ? { sourceCheckFailed: true as const, sourceFailedSince: outage, lastAttemptedAt: checked } : {}) };
+    const timing: Partial<Pick<EvidenceTiming, "staleMs" | "ruleReview" | "sourceCheckFailed" | "sourceFailedSince" | "lastAttemptedAt">> = {};
+    if (staleMs !== undefined) timing.staleMs = staleMs;
+    if (ruleReview) timing.ruleReview = ruleReview;
+    if (outage) Object.assign(timing, { sourceCheckFailed: true, sourceFailedSince: outage, lastAttemptedAt: checked });
+    const overrideTiming = staleMs !== undefined || ruleReview || outage;
     if (source.product === "fire-weather") {
       weatherChecked = successful ?? undefined;
       for (const { fips, alerts, orders } of reports ?? []) {
@@ -65,9 +68,10 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
         ended.add(value.fips);
         continue;
       }
-      const row: CountyStatus = { ...value, ...timing, ...(ruleReview ? { ruleReview } : {}),
+      const row: CountyStatus = { ...value,
         checked: ruleReview ? successful : lastGood ?? value.checked ?? successful,
         scope: value.scope ?? source.scope, sourceId: source.id };
+      if (overrideTiming) Object.assign(row, timing);
       mapped.add(row.fips);
       if (row.status === "ban" && row.scope !== "part" && evidenceInEffect(row, clock)) bans.add(row.fips);
       const group = groups.get(row.fips);
