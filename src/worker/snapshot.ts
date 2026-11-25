@@ -78,7 +78,7 @@ export function alertNotices(transitions: Transition[], snapshot: SnapshotData) 
     .filter((t) => t.oldStatus === "ban" || t.newStatus === "ban" || t.oldStatus === "restricted" || t.newStatus === "restricted")
     .map((transition) => {
       const row = snapshot.counties[transition.fips];
-      return transitionNotice(transition, row && countyDecision(row, Date.parse(snapshot.generated)));
+      return transition.notice ?? transitionNotice(transition, row && countyDecision(row, Date.parse(snapshot.generated)));
     });
 }
 

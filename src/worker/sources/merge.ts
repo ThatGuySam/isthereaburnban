@@ -2,6 +2,7 @@ import type { CountyStatus, EvidenceTiming, FireWeatherReport, RuleReview, Snaps
 import { countyDecision, isScopedBan, storeCountyReports } from "../county-decision";
 import { checkDeadline, evidenceInEffect } from "../../shared/evidence";
 export { STALE_MS } from "../county-decision";
+import { orderTracker } from "./alert-orders";
 import type { Transition } from "../notification-message";
 import type { ActiveSource, Source } from "./types";
 
@@ -36,6 +37,9 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
   let weatherChecked: string | undefined;
   const transitions: Transition[] = [];
   const recurring = new Set(inputs.filter((i) => i.source.recurring).map((i) => i.source.id));
+
+  const full = new Set(inputs.filter((i) => i.source.mode === "full").map((i) => i.source.id));
+  const tracker = orderTracker(prev, recurring, full, now);
 
   for (const { source, rows, fireWeather: reports, checked, lastGood, staleMs = source.staleMs, error,
     failedSince, ruleReview, ruleChanged, version } of inputs) {
@@ -115,14 +119,11 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
       // A scheduled calendar window opened or closed: not news, no alert, no lastmod churn.
     } else if (statusChanged || newScopedBan) {
       changed[fips] = at;
-      const retainedAuthority = !before.sourceId || before.sourceId === decision.sourceId ||
-        (Array.isArray(group) && group.some((candidate) => !candidate.sourceCheckFailed && candidate.sourceId === before.sourceId));
-      const lostAuthority = !newScopedBan && (!retainedAuthority || (before.status === "ban" && decision.scope === "part"));
-      const repeatsDisputedBan = decision.status === "ban" && before.conflict?.reports.some((report) =>
-        report.status === "ban" && report.sourceId === decision.sourceId && report.since === decision.since);
-      if (!decision.sourceCheckFailed && !lostAuthority && !repeatsDisputedBan && decision.status !== "unknown") {
-        transitions.push({ fips, oldStatus: before.status, newStatus: decision.status, at });
-      }
+    }
+    const events = tracker.observe(group, decision, before);
+    if (events.length) {
+      transitions.push(...events);
+      changed[fips] = at;
     }
     counties[fips] = row;
     decision.firstSeenAt = row.firstSeenAt;
@@ -131,7 +132,7 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
   }
   for (const fips of ended) if (!counties[fips] && prev?.counties[fips]) changed[fips] = at;
 
-  const snapshot: Snapshot = { version: 1, generated: at, counties, sources, changed, sourceVersions,
+  const snapshot: Snapshot = { version: 1, generated: at, counties, sources, changed, sourceVersions, verifiedOrders: tracker.ledger,
     ...(Object.keys(fireWeather).length ? { fireWeather, weatherChecked } : {}) };
   return { snapshot, transitions, answers };
 }

@@ -3,7 +3,7 @@ import type { BanStatus, CountyStatus } from "../shared/types";
 import { isScopedBan } from "./county-decision";
 import { countyPath, COUNTY_BY_FIPS } from "./counties";
 
-export type Transition = { fips: string; oldStatus: BanStatus; newStatus: BanStatus; at: string };
+export type Transition = { fips: string; oldStatus: BanStatus; newStatus: BanStatus; at: string; notice?: Notice };
 
 export type Notice = {
   kind: "live" | "test" | "canary";
