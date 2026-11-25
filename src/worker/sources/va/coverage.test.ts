@@ -60,6 +60,8 @@ test("NPS omits absent, expired, lifted and disabled alerts and rejects unexpect
 });
 
 test("Rapidan confirms an open-ended order inside the WMA and handles changed notices safely", async () => {
+  const titled = rapidan.replace("Rapidan WMA:</span>", "Rapidan WMA: Fires Prohibited</span>");
+  expect((await rapidanAt(titled)).map(({ fips }) => fips)).toEqual(["51079", "51113"]);
   const rows = await rapidanAt();
   expect(rows.map(({ fips }) => fips).sort()).toEqual(["51079", "51113"]);
   for (const row of rows) expect(row).toMatchObject({

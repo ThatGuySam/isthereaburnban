@@ -29,8 +29,8 @@ test("today's DES map supports scoped restrictions and keeps the remaining count
   ].map((name) => `${name} County`));
   expect(rows.every(({ status, scope }) => status === "restricted" && scope === "part")).toBe(true);
   const { snapshot } = mergeSources(null, [{ source: ndDesRestrictions, rows, checked: captured.toISOString() }], captured);
-  expect(countiesInState("ND").filter(({ fips }) => statusFor(snapshot, fips).status === "unknown")).toHaveLength(31);
-  expect(statusFor(snapshot, "38017").status).toBe("unknown");
+  expect(countiesInState("ND").filter(({ fips }) => statusFor(snapshot, fips, Date.parse(snapshot.generated)).status === "unknown")).toHaveLength(31);
+  expect(statusFor(snapshot, "38017", Date.parse(snapshot.generated)).status).toBe("unknown");
   expect(rows.find(({ county }) => county === "McKenzie County")).toMatchObject({
     label: "Open burning ban", note: expect.stringContaining("propane, gas and electric grills"),
   });

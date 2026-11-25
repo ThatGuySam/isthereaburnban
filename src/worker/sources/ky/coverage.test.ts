@@ -33,7 +33,7 @@ test("Kentucky's current SharePoint edition yields two reported county orders wi
   const recentlyChecked = new Date(expiry.getTime() - 60_000);
   const lastSeen = { source: kyForestryCountyBans, rows: await parseCountyBans(recentlyChecked), checked: recentlyChecked.toISOString() };
   const expired = mergeSources(null, [lastSeen], expiry);
-  expect(statusFor(expired.snapshot, "21061").status).toBe("unknown");
+  expect(statusFor(expired.snapshot, "21061", Date.parse(expired.snapshot.generated)).status).toBe("unknown");
 });
 
 test("The archived empty wording publishes no rows, even if the last edit is old", async () => {
@@ -43,7 +43,7 @@ test("The archived empty wording publishes no rows, even if the last edit is old
   expect(rows).toEqual([]);
   const previous = mergeSources(null, [input(kyForestryCountyBans, await parseCountyBans())], captured);
   const empty = mergeSources(previous.snapshot, [input(kyForestryCountyBans, rows)], captured);
-  expect(statusFor(empty.snapshot, "21061").status).toBe("unknown");
+  expect(statusFor(empty.snapshot, "21061", Date.parse(empty.snapshot.generated)).status).toBe("unknown");
   expect(empty.transitions).toEqual([]);
 });
 

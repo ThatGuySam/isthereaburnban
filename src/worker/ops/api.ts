@@ -7,7 +7,8 @@ import { countyBulletin, testNotice } from "../notification-message";
 import { NotificationError, notify, providerStatus } from "../notify";
 import { subscribePush } from "../push";
 import { statusFor } from "../lookup";
-import { snapshotReader, STALE_MS } from "../snapshot";
+import { snapshotReader } from "../snapshot";
+import { evidenceInEffect } from "../../shared/evidence";
 
 const fips = z.string().regex(/^\d{5}$/).refine((value) => COUNTY_BY_FIPS.has(value));
 const channelSelection = z.enum(["push", "email", "both"]);
@@ -117,8 +118,7 @@ async function sendNotice(env: Env, action: z.infer<typeof notices>) {
   const county = COUNTY_BY_FIPS.get(fips);
   const current = county ? statusFor(await snapshotReader(env, { fresh: true, initialize: false })
     .state(county.state, { weather: false }), fips) : undefined;
-  const age = current?.checked ? Date.now() - Date.parse(current.checked) : NaN;
-  const bulletin = current && current.status !== "unknown" && age >= 0 && age <= STALE_MS
+  const bulletin = current && current.status !== "unknown" && !current.sourceCheckFailed && evidenceInEffect(current, Date.now())
     ? countyBulletin(current) : null;
   const audience = { kind: "all" } as const;
   const channels: ReadonlyArray<Channel> = action.channels === "both" ? CHANNELS : [action.channels];

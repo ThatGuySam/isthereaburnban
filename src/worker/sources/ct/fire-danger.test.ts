@@ -1,6 +1,8 @@
 // @ts-nocheck -- bun test types are not installed; this file runs under Bun.
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { renderStatusHtml } from "../../../shared/render";
+import { resultSentence, statusFor } from "../../lookup";
 import { mergeSources } from "../merge";
 import { SOURCES } from "../registry";
 import { ctDeepFireDanger, parseCtFireDanger } from "./fire-danger";
@@ -21,7 +23,7 @@ test("Connecticut maps DEEP's High report to scoped restrictions across the eigh
       status: "restricted", scope: "part", checked: captured.toISOString(),
       label: "Brush burning restricted by high fire danger",
       scopeNote: "Brush burning within 100 feet of woodland or grassland",
-      sourceUpdated: null, validFrom: "2026-11-24T05:00:00.000Z", validUntil: midnightEastern.toISOString(),
+      sourceUpdated: "2026-11-24", validFrom: "2026-11-24T05:00:00.000Z", validUntil: midnightEastern.toISOString(),
     });
   }
   const input = { source: ctDeepFireDanger, rows, checked: captured.toISOString() };
@@ -52,6 +54,35 @@ test("Connecticut rejects stale and future reports, changed layout and uncertain
   for (const geography of ["", "All counties MODERATE", "All counties HIGH except Litchfield County west of Route 8"]) {
     await expect(parseCtFireDanger(fixture.replace("All counties HIGH", geography), captured)).rejects.toThrow("all-counties rating");
   }
+});
+
+test("Connecticut retries a rejected 200 with the current report's public embed headers", async () => {
+  const requests = [];
+  const original = globalThis.fetch;
+  globalThis.fetch = async (url, { headers }) => {
+    requests.push({ url, referer: headers.get("referer"), cache: headers.get("cache-control") });
+    return new Response(requests.length === 1 ? "<h1>The requested URL was rejected</h1>" : fixture);
+  };
+  try {
+    const { rows } = await ctDeepFireDanger.fetch({ now: captured });
+    expect(rows).toHaveLength(8);
+    expect(requests).toHaveLength(2);
+    expect(requests[1]).toMatchObject({ referer: ctDeepFireDanger.officialUrl, cache: "no-cache" });
+    expect(rows[0].officialUrl).toBe(ctDeepFireDanger.sourceUrl);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test("an unavailable Connecticut report shows check failure even on the first poll", () => {
+  const { snapshot } = mergeSources(null, [{
+    source: ctDeepFireDanger, rows: [], checked: captured.toISOString(), error: "Origin rejected the request",
+  }], captured);
+  const answer = statusFor(snapshot, "09003", captured.getTime());
+  expect(answer).toMatchObject({ status: "unknown", checked: null, sourceId: ctDeepFireDanger.id,
+    sourceFailedSince: captured.toISOString(), officialUrl: ctDeepFireDanger.officialUrl });
+  expect(renderStatusHtml(answer)).toContain("couldn&#39;t check since");
+  expect(resultSentence(answer)).toContain("Couldn't check since");
 });
 
 test("Connecticut's dated HTML parser stays below 4 ms p95 thread CPU", async () => {

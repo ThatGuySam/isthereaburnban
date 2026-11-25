@@ -24,8 +24,8 @@ type SendNotices = (env: Env, runId: string, notices: Notice[]) => Promise<unkno
 type PublishedState = { state: string; revision: string; cached: number; summary: string };
 
 export function buildStatePublication(prev: SnapshotData | null, inputs: SourceInput[], now: Date, state: string, revision: string, signature: string) {
-  const { snapshot, transitions } = mergeSources(prev, inputs, now);
-  return { ...encodeState({ ...snapshot, version: 2, state, revision }, signature), transitions, notices: alertNotices(transitions, snapshot) };
+  const { snapshot, transitions, answers } = mergeSources(prev, inputs, now);
+  return { ...encodeState({ ...snapshot, version: 2, state, revision }, signature, answers), transitions, notices: alertNotices(transitions, snapshot) };
 }
 
 export async function currentRun(db: D1Database): Promise<Run | null> {
@@ -151,7 +151,10 @@ export function buildCatalog(run: Pick<Run, "id" | "generated">, states: Publish
     if (head) {
       row.ok = !head.error;
       row.error = head.error;
-      if (head.hash && head.hash === sourceVersions[id]) index.orderChecks[id] = head.lastGood ?? head.checked;
+      row.failedSince = head.error ? head.failedSince ?? head.checked : undefined;
+      row.ruleReview = head.ruleReview;
+      row.ruleChanged = head.ruleChanged;
+      if (!head.ruleReview && head.hash && head.hash === sourceVersions[id]) index.orderChecks[id] = head.lastGood ?? head.checked;
       if (row.product === "fire-weather" && head.hash) index.weatherChecked = head.lastGood ?? head.checked;
     }
     return [row];

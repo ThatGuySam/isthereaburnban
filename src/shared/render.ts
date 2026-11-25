@@ -1,6 +1,7 @@
 // Status wording, colors and hero markup. Pure functions shared by the Worker (HTMLRewriter
 // injection) and the browser (client-side lookups), so every surface says the same thing.
-import type { BanStatus, CountyStatus, FireWeatherAlert, LookupResult, PlaceStatus, ScopedOrder, StateDirectoryEntry } from "./types";
+import type { BanStatus, ConflictReport, CountyStatus, FireWeatherAlert, LookupResult, PlaceStatus, ScopedOrder, StateDirectoryEntry } from "./types";
+import { fireWeatherDeadline } from "./evidence";
 
 export type HeroStatus = PlaceStatus | "checking";
 
@@ -68,6 +69,7 @@ function negativeReport(cs: CountyStatus): string {
 
 export function statusSentence(cs: CountyStatus): string {
   const place = placeName(cs);
+  if (cs.conflict) return `Conflicting reports for ${place}`;
   switch (cs.status) {
     case "ban": {
       const label = cs.label && !GENERIC_BAN_LABEL.test(cs.label.trim()) ? ` (${cs.label})` : "";
@@ -122,6 +124,12 @@ function timeTag(iso: string, text: string): string {
   return `<time datetime="${escapeHtml(iso)}" data-relative>${escapeHtml(text)}</time>`;
 }
 
+function failedCheckText(report: Pick<CountyStatus, "sourceCheckFailed" | "sourceFailedSince" | "lastAttemptedAt">): string {
+  const since = report.sourceFailedSince ?? report.lastAttemptedAt;
+  if (!report.sourceCheckFailed || !since || !shortDate(since)) return "";
+  return `couldn't check since ${shortDate(since)} at ${new Date(since).toISOString().slice(11, 16)} UTC`;
+}
+
 /** Hero markup: big word, sentence, and one quiet official-source / checked line. All text escaped. */
 export function renderStatusHtml(cs: CountyStatus, opts: RenderOptions = {}): string {
   const theme = statusTheme(opts.lastKnown ? "unknown" : cs.status);
@@ -134,8 +142,13 @@ export function renderStatusHtml(cs: CountyStatus, opts: RenderOptions = {}): st
   if (official) meta.push(official);
   // A county with no feed (sourceUrl empty) was never "checked"; don't imply it was.
   if (cs.checked && cs.sourceUrl) meta.push(`<span>checked ${timeTag(cs.checked, relativeTime(cs.checked, base))}</span>`);
+  const failure = failedCheckText(cs);
+  if (failure) meta.push(`<span>${escapeHtml(failure)}</span>`);
 
-  const sentence = opts.lastKnown ? `Last known on ${shortDate(cs.checked)} · ${statusSentence(cs)}` : statusSentence(cs);
+  const knownDate = opts.lastKnown && shortDate(cs.checked ?? cs.ruleReview?.reviewedAt);
+  const sentence = opts.lastKnown
+    ? `${knownDate ? `Last known on ${knownDate}` : "Last report"} · ${statusSentence(cs)}`
+    : statusSentence(cs);
   const lines: string[] = [
     `<p class="status-word${theme.word.length > 5 ? " status-word--long" : ""}">${escapeHtml(theme.word)}</p>`,
     `<p class="status-sentence">${escapeHtml(sentence)}</p>`,
@@ -151,8 +164,7 @@ export function renderStatusHtml(cs: CountyStatus, opts: RenderOptions = {}): st
 export function currentAlerts(cs: Pick<CountyStatus, "alerts">, now: number = Date.now()): FireWeatherAlert[] {
   const seen = new Set<string>();
   return (cs.alerts ?? []).filter((a) => {
-    const end = a.ends ?? a.expires;
-    if (!a.event || (end && !(Date.parse(end) > now)) || seen.has(a.event)) return false;
+    if (!a.event || !(fireWeatherDeadline(a) > now) || seen.has(a.event)) return false;
     seen.add(a.event);
     return true;
   });
@@ -267,7 +279,8 @@ export function renderCityHtml(list: (CountyStatus & { url?: string })[], city: 
       ? `<a href="${escapeHtml(row.officialUrl)}" target="_blank" rel="noopener">${row.sourceUrl ? "Official source" : "Official directory"}</a>` : "";
     const checked = row.sourceUrl && row.checked ? `<span>checked ${timeTag(row.checked, relativeTime(row.checked, now))}</span>` : "";
     const details = row.url ? `<a href="${escapeHtml(row.url)}">County details</a>` : "";
-    const meta = [official, checked, details].filter(Boolean).join('<span aria-hidden="true"> · </span>');
+    const failure = failedCheckText(row);
+    const meta = [official, checked, failure && `<span>${escapeHtml(failure)}</span>`, details].filter(Boolean).join('<span aria-hidden="true"> · </span>');
     return `<li><strong>${escapeHtml(statusTheme(row.status).word)}</strong> · ${escapeHtml(statusSentence(row))}.${meta ? ` <span class="status-meta">${meta}</span>` : ""}</li>`;
   }).join("");
   return `<div class="status" data-status="${status}">
@@ -294,7 +307,7 @@ export function answerMeta(question: string, list: CountyStatus[], cityName?: st
 }
 
 type ReportDates = Pick<CountyStatus, "since" | "expires" | "checked" | "sourceUpdated" |
-  "lastAttemptedAt" | "firstSeenAt" | "statusChangedAt" | "validFrom" | "validUntil">;
+  "lastAttemptedAt" | "firstSeenAt" | "statusChangedAt" | "validFrom" | "validUntil" | "ruleReview">;
 
 function renderReportDates(report: ReportDates): string {
   const dates = [
@@ -303,6 +316,7 @@ function renderReportDates(report: ReportDates): string {
     ["First recorded", report.firstSeenAt], ["Published status changed", report.statusChangedAt],
     ["Last successful check", report.checked],
     ["Latest check attempt", report.lastAttemptedAt !== report.checked ? report.lastAttemptedAt : null],
+    ["Statutory rule reviewed", report.ruleReview?.reviewedAt],
     ["Decision starts", report.validFrom !== report.since ? report.validFrom : null],
     ["Decision valid until", report.validUntil],
   ];
@@ -318,8 +332,18 @@ function renderReportDates(report: ReportDates): string {
 
 function renderOrder(order: ScopedOrder): string {
   const source = order.officialUrl ? `<a href="${escapeHtml(order.officialUrl)}" target="_blank" rel="noopener">${escapeHtml(order.sourceName)}</a>` : escapeHtml(order.sourceName);
+  const failure = failedCheckText(order);
   return `<li><strong>${escapeHtml(order.label)}</strong><p>${escapeHtml(order.scopeNote)}</p>
-    ${order.note ? `<p>${escapeHtml(order.note)}</p>` : ""}<p>${source}</p>${renderReportDates(order)}</li>`;
+    ${order.note ? `<p>${escapeHtml(order.note)}</p>` : ""}${failure ? `<p>${escapeHtml(failure)}</p>` : ""}<p>${source}</p>${renderReportDates(order)}</li>`;
+}
+
+function renderConflict(report: ConflictReport): string {
+  const source = `<a href="${escapeHtml(report.officialUrl)}" target="_blank" rel="noopener">${escapeHtml(report.sourceName)}</a>`;
+  const publication = report.sourceUrl && report.sourceUrl !== report.officialUrl
+    ? ` · <a href="${escapeHtml(report.sourceUrl)}" target="_blank" rel="noopener">Publisher report</a>` : "";
+  const failure = failedCheckText(report);
+  return `<li><strong>${escapeHtml(report.label)}</strong><p>${source}${publication}</p>
+    ${report.note ? `<p>${escapeHtml(report.note)}</p>` : ""}${failure ? `<p>${escapeHtml(failure)}</p>` : ""}${renderReportDates(report)}</li>`;
 }
 
 export function renderReportDetailsHtml(row: CountyStatus, now = Date.now()): string {
@@ -327,13 +351,22 @@ export function renderReportDetailsHtml(row: CountyStatus, now = Date.now()): st
   const countywide = broader ? `<p>${escapeHtml(statusSentence({ ...row, ...broader, scope: "county", scopeNote: undefined }))}.
     ${broader.officialUrl ? `<a href="${escapeHtml(broader.officialUrl)}" target="_blank" rel="noopener">County reporting source</a>` : ""}</p>` : "";
   const orders = row.orders?.filter((order) => order.status === "ban" || order.status === "restricted");
+  const outages = row.sourceOutages?.map((outage) => {
+    const failure = failedCheckText({ ...outage, sourceCheckFailed: true });
+    const name = escapeHtml(outage.sourceName);
+    const source = outage.officialUrl ? `<a href="${escapeHtml(outage.officialUrl)}" target="_blank" rel="noopener">${name}</a>` : name;
+    return `<li>${source} · ${escapeHtml(failure)}</li>`;
+  }).join("");
   return `<div class="report-details">
     ${row.scopeNote ? `<p>${escapeHtml(row.scopeNote)}</p>` : ""}
-    ${row.note ? `<p>${escapeHtml(row.note)}</p>` : ""}
+    ${row.note && !row.conflict ? `<p>${escapeHtml(row.note)}</p>` : ""}
     ${countywide}
-    ${row.sourceCheckFailed ? "<p>The latest source check failed.</p>" : ""}
-    ${renderReportDates(row)}
+    ${failedCheckText(row) ? `<p>${escapeHtml(failedCheckText(row))}</p>` : ""}
+    ${row.conflict
+      ? `<h3>Conflicting reports</h3><ul class="report-orders">${row.conflict.reports.map(renderConflict).join("")}</ul>`
+      : renderReportDates(row)}
     ${orders?.length ? `<h3>Reported orders and rules</h3><ul class="report-orders">${orders.map(renderOrder).join("")}</ul>` : ""}
+    ${outages ? `<h3>Source checks</h3><ul>${outages}</ul>` : ""}
     ${renderAlertLineHtml(row, now)}
   </div>`;
 }

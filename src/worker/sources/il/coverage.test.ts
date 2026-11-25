@@ -97,6 +97,13 @@ test("Crawford rejects future, malformed and unrecognized notices and excludes o
   expect(orders(captured, news.replaceAll("Crawford County", "Lawrence County"))).toEqual([]);
 });
 
+test("Crawford uses the publisher's stable post URL when WordPress supplies a different permalink", () => {
+  const [post] = JSON.parse(news);
+  const changed = JSON.stringify([{ ...post, link: "https://www.wtyefm.com/countywide-burn-ban-now-in-effect-2/" }]);
+  expect(orders(captured, changed)[0].officialUrl).toBe("https://www.wtyefm.com/?p=257114");
+  expect(() => orders(captured, changed.replace("www.wtyefm.com", "untrusted.example"))).toThrow("station");
+});
+
 test("Illinois merges the current ban with the standing restrictions and retains local scopes", async () => {
   const sources = Object.entries(illinoisGuidanceSources);
   const inputs = await Promise.all(sources.map(async ([key, source]) => {

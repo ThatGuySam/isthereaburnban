@@ -80,8 +80,7 @@ test("the seasonal requirement uses the pinned rule on access blocks and still r
     fetch.mockImplementation(async () => new Response("Forbidden", { status: 403 }));
     const { rows } = await tnSeasonalBurnPermits.fetch({ now: captured });
     expect(rows).toHaveLength(92);
-    expect(rows[0].note).toContain("Online verification is stale");
-    expect(await tnSeasonalBurnPermits.fetch({ now: new Date("2027-06-01T14:00:00Z") })).toEqual({ rows: [] });
+    expect(rows[0].note).toContain("Current guidance could not be verified");
 
     fetch.mockImplementation(async () => new Response(guidance.replace("through May 15", "through May 16")));
     await expect(tnSeasonalBurnPermits.fetch({ now: captured })).rejects.toThrow("guidance changed");
@@ -122,6 +121,23 @@ test("the Tennessee merge reports scoped restrictions and keeps uncovered county
   expect(snapshot.counties["47025"].orders.map(({ sourceId }) => sourceId)).toEqual([
     tnForestryPermitHolds.id, tnSeasonalBurnPermits.id,
   ]);
+});
+
+test("blocked Tennessee guidance keeps the reviewed statutory season and its local exceptions", async () => {
+  const fetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response("Forbidden", { status: 403 });
+  try {
+    const result = await tnSeasonalBurnPermits.fetch({ now: captured });
+    expect(result.fallback).toMatchObject({ reviewedAt: expect.stringContaining("2026-11-24"), reason: expect.stringContaining("403") });
+    expect(result.rows).toHaveLength(92);
+    expect(result.rows.find(({ fips }) => fips === "47001")).toMatchObject({
+      status: "restricted", note: expect.stringContaining("last reviewed"), validUntil: expect.any(String),
+    });
+    expect(result.rows.some(({ county }) => /Davidson|Knox|Shelby/.test(county))).toBe(false);
+    await expect(tnSeasonalBurnPermits.fetch({ now: new Date("2027-06-02T12:00Z") })).rejects.toThrow("review window");
+  } finally {
+    globalThis.fetch = fetch;
+  }
 });
 
 test("the real Tennessee JSON, calendar and Hamilton bulletin parse below 4 ms p95 thread CPU", async () => {

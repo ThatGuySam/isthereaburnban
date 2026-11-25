@@ -5,7 +5,7 @@ import { ADAPTERS } from "./adapters";
 import { parse as fl } from "./adapters/fl";
 import { parse as in_ } from "./adapters/in";
 import { parse as la } from "./adapters/la";
-import { parse as ms } from "./adapters/ms";
+import { parse as ms, msEditionIds } from "./adapters/ms";
 import { parse as ok } from "./adapters/ok";
 import { parse as tx } from "./adapters/tx";
 import { countiesInState } from "./counties";
@@ -17,11 +17,12 @@ test("the map and county API agree for every county in every full-feed state", a
   const generated = now.toISOString();
   const states = {};
   const keys = new Map();
-  const parsers = { fl, in: in_, la, ms, ok, tx };
+  const msIds = msEditionIds(readFileSync(new URL("./adapters/fixtures/ms-edition.html", import.meta.url), "utf8"));
+  const parsers = { fl, in: in_, la, ok, tx };
   for (const adapter of ADAPTERS.filter(({ mode }) => mode === "full")) {
     const { id, state } = adapter;
     const data = JSON.parse(readFileSync(new URL(`./adapters/fixtures/${id}.json`, import.meta.url), "utf8"));
-    const rows = parsers[id](data, generated, "2026-11-24");
+    const rows = id === "ms" ? ms(data, generated, msIds) : parsers[id](data, generated);
     const counties = Object.fromEntries(rows.map((row) => [row.fips, { ...row, sourceId: id }]));
     if (state === "LA") {
       delete counties["22045"]; // absent parish in a healthy full feed

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import zoneCounties from "../../../data/nws-zone-counties.json";
+import { fireWeatherDeadline } from "../../../shared/evidence";
 import type { FireWeatherAlert, FireWeatherReport } from "../../../shared/types";
 import { COUNTY_BY_FIPS } from "../../counties";
 import { fetchSource, type HttpFetch } from "../lib/http";
@@ -119,7 +120,7 @@ export function parseNwsAlerts(value: unknown, now: Date, {
     const orders: NonNullable<FireWeatherReport["orders"]> = [];
     for (const { alert, effective, withdrawn } of [...entries.values()].sort((a, b) =>
       a.alert.event.localeCompare(b.alert.event) || a.alert.url.localeCompare(b.alert.url))) {
-      if (withdrawn || !alertIsCurrent(alert, clock)) continue;
+      if (withdrawn || !(fireWeatherDeadline(alert) > clock)) continue;
       alerts.push(alert);
       const order = redFlagOrder(fips, alert, effective);
       if (order) orders.push(order);
@@ -128,10 +129,6 @@ export function parseNwsAlerts(value: unknown, now: Date, {
     reports.push({ fips, alerts, ...(orders.length ? { orders } : {}) });
   }
   return reports;
-}
-
-export function alertIsCurrent({ expires, ends }: FireWeatherAlert, clock: number) {
-  return Boolean((expires || ends) && (!expires || Date.parse(expires) > clock) && (!ends || Date.parse(ends) > clock));
 }
 
 export async function fetchNwsAlerts(now: Date, fetchImpl?: HttpFetch) {

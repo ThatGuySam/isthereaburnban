@@ -1,11 +1,12 @@
 import type { BanStatus, CountyStatus } from "../../shared/types";
-import { type Adapter, type ArcgisResponse, arcgisRows, arcgisUrl, countyByName, getJson, msToIso, str, toStatuses } from "./common";
+import { type Adapter, type ArcgisResponse, arcgisRows, arcgisUrl, completeLayer, countyByName, publisherDate, str, toStatuses } from "./common";
 
 const LAYER = "https://services3.arcgis.com/yrIZ0Nv0mSGTWJsH/arcgis/rest/services/OklahomaBurnBan__Data_Layer__v_9_0__View/FeatureServer/0";
+const FIELDS = ["county_nam", "Burn_Ban_Status", "EditDate"];
 const meta = {
   state: "OK",
   sourceName: "Oklahoma Forestry Services",
-  sourceUrl: arcgisUrl(LAYER, ["county_nam", "Burn_Ban_Status", "EditDate"]),
+  sourceUrl: arcgisUrl(LAYER, FIELDS),
   officialUrl: "https://experience.arcgis.com/experience/8bdc59b2a54a4383a9a2996fb9407580/",
 };
 
@@ -20,19 +21,19 @@ export function classify(raw: string): { status: BanStatus; label: string } {
 }
 
 export function parse(json: ArcgisResponse, checked: string): CountyStatus[] {
-  const rows = arcgisRows(json).map((a) => ({
-    county: countyByName("OK", str(a.county_nam)),
-    ...classify(str(a.Burn_Ban_Status)),
-    sourceUpdated: msToIso(a.EditDate),
-  }));
-  return toStatuses(meta, rows, checked);
+  const rows = arcgisRows(json, { requireComplete: true }).map((a) => {
+    const decision = classify(str(a.Burn_Ban_Status));
+    if (decision.status === "unknown") throw new Error(`OK: unrecognized burn ban code ${decision.label}`);
+    return { county: countyByName("OK", str(a.county_nam)), ...decision, sourceUpdated: publisherDate("OK", a.EditDate) };
+  });
+  return toStatuses(meta, rows, checked, true);
 }
 
 export const ok: Adapter = {
   id: "ok",
   mode: "full",
   ...meta,
-  async fetch() {
-    return parse(await getJson(meta.sourceUrl), new Date().toISOString());
+  async fetch(now = new Date()) {
+    return parse(await completeLayer(LAYER, FIELDS), now.toISOString());
   },
 };

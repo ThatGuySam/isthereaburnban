@@ -57,7 +57,8 @@ export function parseDnrcRestrictions(metadata: unknown, data: unknown, now: Dat
     if (seen.has(order.OBJECTID)) throw new Error("Montana DNRC: duplicate jurisdiction feature");
     seen.add(order.OBJECTID);
     const label = STAGES.get(order.RestrictionType ?? "");
-    const county = countyByName(META.state, order.NAME_1 ?? "");
+    const name = order.NAME_1 ?? "";
+    const county = countyByName(META.state, /^Lewis\s*&\s*Clark$/i.test(name) ? "Lewis and Clark" : name);
     const area = order.AreaSubUnit?.trim();
     const manager = order.JurisdictionalUnitName?.trim();
     const agency = order.JurisdictionalUnitAgency?.trim();

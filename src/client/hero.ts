@@ -48,17 +48,44 @@ export function initHero(): void {
       savePlace({ fips: result.fips, label: placeName(result), url: result.url });
       if (result.url && (result.fips !== pageFips || document.documentElement.dataset.city)) location.href = result.url;
     });
-    // Static previews can fetch the same place API if the Worker hasn't injected a report.
-    if (pageFips && slot.querySelector('[data-status="checking"]')) {
+    if (pageFips) {
       const link = document.querySelector<HTMLLinkElement>('link[rel="alternate"][type="application/json"]');
       const params = link ? Object.fromEntries(new URL(link.href).searchParams) : { fips: pageFips };
-      void lookupStatus(params).then((result) => {
-        if (!result.results.length) return;
-        const city = result.place;
-        paint(placeStatus(result.results), city
-          ? renderCityHtml(result.results, `${city.name}, ${city.state}`, city.localRulesUrl)
-          : renderStatusHtml(result.results[0]));
-      }).catch(() => undefined);
+      let boundary = Number(slot.dataset.answerUntil ?? Infinity);
+      let timer: ReturnType<typeof setTimeout>;
+      let checking = false;
+      let latest: Result | undefined;
+      const schedulePage = () => {
+        clearTimeout(timer);
+        timer = setTimeout(checkPage, Math.max(0, Math.min(HOME_ANSWER_TTL_MS, boundary - Date.now())));
+      };
+      async function checkPage() {
+        if (checking || document.visibilityState !== "visible") return;
+        checking = true;
+        if (Date.now() >= boundary) paint("checking", renderCheckingHtml(latest && placeName(latest)), "checking");
+        try {
+          const result = await lookupStatus(params);
+          if (!result.results.length) throw new Error("No county found");
+          const city = result.place;
+          latest = result.results[0];
+          boundary = result.nextChangeAt ?? Infinity;
+          paint(placeStatus(result.results), city
+            ? renderCityHtml(result.results, `${city.name}, ${city.state}`, city.localRulesUrl)
+            : renderStatusHtml(latest));
+        } catch {
+          boundary = Infinity;
+          paint("unknown", latest
+            ? renderStatusHtml(latest, { lastKnown: true })
+            : '<div class="status" data-status="unknown"><p class="status-word status-word--long">Unsure</p><p class="status-sentence">We couldn\'t check the status.</p></div>');
+        } finally {
+          checking = false;
+          schedulePage();
+        }
+      }
+      document.addEventListener("visibilitychange", checkPage);
+      addEventListener("pageshow", (event) => { if (event.persisted) void checkPage(); });
+      if (slot.querySelector('[data-status="checking"]')) void checkPage();
+      else schedulePage();
     }
     return;
   }

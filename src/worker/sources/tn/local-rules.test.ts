@@ -77,7 +77,7 @@ test("county sources cover the local-program gaps in the statewide permit fallba
     const { rows } = await tnSeasonalBurnPermits.fetch({ now: captured });
     const { snapshot } = mergeSources(null, [...local, { source: tnSeasonalBurnPermits, rows, checked }], captured);
     expect(countiesInState("TN").filter(({ fips }) => snapshot.counties[fips]?.status === "restricted")).toHaveLength(95);
-    expect(snapshot.counties["47003"].note).toContain("Online verification is stale");
+    expect(snapshot.counties["47003"].note).toContain("Current guidance could not be verified");
   } finally {
     fetch.mockRestore();
   }

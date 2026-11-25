@@ -479,6 +479,27 @@
         ],
         "description": "ban means a reported burn ban. restricted means a local, activity-specific or permit restriction. none means no applicable temporary county order was reported within the checked feed coverage. unknown means the status is unconfirmed because evidence is missing, unreported, expired or unavailable."
       },
+      "RuleReview": {
+        "type": "object",
+        "description": "Reviewed statutory rule used while the live source is unavailable. The review window is separate from the source check and the rule's local validity window.",
+        "required": ["reviewedAt", "reviewBy"],
+        "properties": {
+          "reviewedAt": { "type": "string", "format": "date-time" },
+          "reviewBy": { "type": "string", "format": "date-time" }
+        }
+      },
+      "SourceOutage": {
+        "type": "object",
+        "description": "A source with a known reporting footprint could not be checked for this county.",
+        "required": ["sourceId", "sourceName", "officialUrl", "sourceFailedSince", "lastAttemptedAt"],
+        "properties": {
+          "sourceId": { "type": "string" },
+          "sourceName": { "type": "string" },
+          "officialUrl": { "type": "string" },
+          "sourceFailedSince": { "type": "string", "format": "date-time" },
+          "lastAttemptedAt": { "type": "string", "format": "date-time" }
+        }
+      },
       "CountyStatus": {
         "type": "object",
         "required": [
@@ -554,6 +575,9 @@
             "description": "Last successful source check for the report. Null for a directory fallback or an unavailable check time.",
             "format": "date-time"
           },
+          "ruleReview": {
+            "$ref": "#/components/schemas/RuleReview"
+          },
           "sourceName": {
             "type": "string",
             "description": "Publisher or issuing authority associated with this report."
@@ -576,6 +600,11 @@
               "$ref": "#/components/schemas/FireWeatherAlert"
             },
             "description": "Selected published NWS fire-weather signals. Check onset and alert boundaries. A verified local rule may separately trigger scoped restrictions."
+          },
+          "sourceOutages": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/SourceOutage" },
+            "description": "Additional failed source checks for the county."
           },
           "orders": {
             "type": "array",
@@ -781,6 +810,14 @@
             ],
             "description": "Latest successful automated check, if known.",
             "format": "date-time"
+          },
+          "ruleReview": {
+            "$ref": "#/components/schemas/RuleReview"
+          },
+          "ruleChanged": {
+            "type": "boolean",
+            "const": true,
+            "description": "The publisher's current rule needs review before the statutory fallback may be used."
           },
           "cadence": {
             "type": [
@@ -1128,6 +1165,9 @@
             ],
             "description": "Last successful source check for the report. Null for a directory fallback or an unavailable check time.",
             "format": "date-time"
+          },
+          "ruleReview": {
+            "$ref": "#/components/schemas/RuleReview"
           },
           "sourceId": {
             "type": "string",

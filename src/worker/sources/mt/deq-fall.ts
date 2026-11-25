@@ -64,7 +64,7 @@ export function parseDeqFall(data: unknown, now: Date): CountyStatus[] {
     seen.add(decision.objectid);
     const label = LIMITS.get(decision.restrictions ?? -1);
     if (!label && decision.restrictions !== 0) continue;
-    const county = countyByName(META.state, decision.area_name);
+    const county = countyByName(META.state, decision.area_name === "Lewis & Clark" ? "Lewis and Clark" : decision.area_name);
     const sourceUpdated = msToIso(decision.last_edited_date);
     const weekday = /^(?:On|For) ([a-z]+)\b/i.exec(decision.area_notes?.trim() ?? "")?.[1];
     if (!county || !sourceUpdated || sourceUpdated > checked || !weekday) continue;

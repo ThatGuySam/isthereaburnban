@@ -3,6 +3,7 @@ import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { countiesInState } from "../../counties";
 import { extractHtml } from "../lib/html";
+import { statusFor } from "../../lookup";
 import { mergeSources } from "../merge";
 import { mdSummerAir, parseMdSummerAir } from "./summer-air";
 import { mdDnrWoodland, parseMdWoodland } from "./woodland";
@@ -68,7 +69,7 @@ test("overlapping recurring rules preserve the woodland scope and avoid alerts o
   for (const source of sources) expect(source).toMatchObject({ recurring: true, mode: "positive-only" });
   const prior = mergeSources(null, inputs, new Date("2027-06-01T03:59:59Z"));
   const next = mergeSources(prior.snapshot, inputs, summer);
-  expect(prior.snapshot.counties["24510"]).toBeUndefined();
+  expect(statusFor(prior.snapshot, "24510", Date.parse(prior.snapshot.generated)).status).toBe("unknown");
   expect(next.snapshot.counties["24510"]).toMatchObject({ status: "restricted", sourceId: mdSummerAir.id });
   expect(next.snapshot.counties["24005"]).toMatchObject({
     status: "restricted", sourceId: mdSummerAir.id, orders: [{ scope: "part", sourceId: mdDnrWoodland.id }],

@@ -5,13 +5,12 @@ import { countyDecision } from "./county-decision";
 import { activeBans } from "./api";
 import { SNAPSHOT_KEY, type Env } from "./env";
 import { withFireWeather } from "./fire-weather";
-import { projectMapStatus } from "./map-status";
+import { projectMapStatus, snapshotBoundary } from "./map-status";
 import { countyState } from "./lookup";
 import { CHANNELS } from "./notification-audience";
 import { transitionNotice, type Transition } from "./notification-message";
 import { notify } from "./notify";
 import { withReportDates } from "./report-dates";
-import { withPublishedChecks } from "./published-checks";
 import { loadActive, loadIndex, loadMapStates, loadState } from "./snapshot-store";
 import { lastChangedByState, type ActiveProjection, type SnapshotIndex, type StateSnapshot } from "./snapshot-v2";
 import { withCurrentLinks } from "./source-links";
@@ -39,17 +38,24 @@ export function buildSnapshot(
     if (result.status === "fulfilled") return { source, rows: result.value, checked: now.toISOString() };
     const rows = Object.values(prev?.counties ?? {}).filter((row) =>
       row.sourceId ? row.sourceId === source.id : row.state === source.state);
-    return { source, rows: rows.map(withReportDates), checked: now.toISOString(), error: errorText(result.reason) };
+    const prior = prev?.sources.find(({ id }) => id === source.id);
+    return { source, rows: rows.map(withReportDates), checked: now.toISOString(), error: errorText(result.reason),
+      lastGood: prior?.lastSuccessfulAt ?? undefined, failedSince: prior?.failedSince };
   }), now);
 }
 
 // Parsing the core snapshot costs a few ms of CPU. Reuse it within an isolate for a minute.
-const memo = new WeakMap<KVNamespace, { at: number; snapshot: Snapshot }>();
+const memo = new WeakMap<KVNamespace, { until: number; snapshot: Snapshot }>();
 const MEMO_MS = 60_000;
+
+function memoizeLegacy(env: Env, snapshot: Snapshot) {
+  const now = Date.now();
+  memo.set(env.KV, { snapshot, until: Math.min(now + MEMO_MS, snapshotBoundary(snapshot, now)) });
+}
 
 export async function readSnapshot(env: Env, fresh = false): Promise<Snapshot | null> {
   const cached = memo.get(env.KV);
-  if (!fresh && cached && Date.now() - cached.at < MEMO_MS) return cached.snapshot;
+  if (!fresh && cached && Date.now() < cached.until) return cached.snapshot;
   const snapshot = await env.KV.get<Snapshot>(SNAPSHOT_KEY, { type: "json" });
   if (!snapshot) return null;
   withCurrentLinks(snapshot);
@@ -57,7 +63,7 @@ export async function readSnapshot(env: Env, fresh = false): Promise<Snapshot | 
     const heads = await publicHeads(env);
     applyChecks(snapshot, heads, new Date());
   }
-  memo.set(env.KV, { at: Date.now(), snapshot });
+  memoizeLegacy(env, snapshot);
   return snapshot;
 }
 
@@ -79,7 +85,7 @@ export function alertNotices(transitions: Transition[], snapshot: SnapshotData) 
 export async function refresh(env: Env, adapters?: Adapter[], scheduledTime?: number): Promise<Snapshot> {
   const prev = await readSnapshot(env, true);
   const now = new Date();
-  let result: ReturnType<typeof mergeSources>;
+  let result: Pick<ReturnType<typeof mergeSources>, "snapshot" | "transitions">;
   if (adapters) {
     const results: PromiseSettledResult<CountyStatus[]>[] = [];
     for (const adapter of adapters) {
@@ -92,7 +98,7 @@ export async function refresh(env: Env, adapters?: Adapter[], scheduledTime?: nu
   }
   const { snapshot, transitions } = result;
   await env.KV.put(SNAPSHOT_KEY, JSON.stringify(snapshot));
-  memo.set(env.KV, { at: Date.now(), snapshot });
+  memoizeLegacy(env, snapshot);
   for (const s of snapshot.sources) if (!s.ok && s.mode !== "manual") console.warn(`source ${s.id} failed: ${s.error}`);
 
   if (transitions.length) {
@@ -128,6 +134,7 @@ type ReadCache = {
   index?: Memo<SnapshotIndex>;
   heads?: Memo<Map<string, SourceHead>>;
   active: Partial<Record<BanFormat, Memo<ActiveProjection>>>;
+  bans: Partial<Record<BanFormat, Memo<ReturnType<typeof formatNationalBans>> & { revision: string; heads: Map<string, SourceHead> }>>;
   map?: MapStatus;
   states: Map<string, Memo<StateSnapshot> & { heads?: Map<string, SourceHead> }>;
 };
@@ -144,11 +151,18 @@ function publicHeads(env: Env, ids?: string[]) {
 /** A request pins one catalog, so even border lookups follow the same publication. */
 export function snapshotReader(env: Env, { fresh = false, initialize = true } = {}) {
   let cache = readCache.get(env.KV);
-  if (!cache) readCache.set(env.KV, cache = { active: {}, states: new Map() });
+  if (!cache) readCache.set(env.KV, cache = { active: {}, bans: {}, states: new Map() });
   const memo = cache;
   const reusable = (entry: Memo<unknown> | undefined) => !fresh && entry && Date.now() < entry.until;
   let index: Promise<SnapshotIndex | null> | undefined;
   let legacy: Promise<Snapshot> | undefined;
+  let nextBoundary = Infinity;
+  const recordBoundary = (boundary: number, entry?: Memo<unknown>) => {
+    nextBoundary = Math.min(nextBoundary, boundary);
+    if (entry) entry.until = Math.min(entry.until, boundary);
+    if (memo.heads) memo.heads.until = Math.min(memo.heads.until, boundary);
+    if (memo.index) memo.index.until = Math.min(memo.index.until, boundary);
+  };
   const old = () => (legacy ??= legacyOrInitial(env, fresh, initialize));
   const catalog = () => (index ??= (async () => {
     if (memo.index && reusable(memo.index)) return memo.index.value;
@@ -170,18 +184,18 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
     return projection;
   };
 
-  function countyView<T extends SnapshotData>(snapshot: T, heads: Map<string, SourceHead>, now: Date): T {
+  function countyView<T extends SnapshotData>(snapshot: T, heads: Map<string, SourceHead>, now: Date, published?: Record<string, string>): T {
     const counties: SnapshotData["counties"] = {};
     for (const row of Object.values(snapshot.counties)) counties[row.fips] = { ...row };
     const view = { ...snapshot, counties, sources: snapshot.sources.map((source) => ({ ...source })) };
     withCurrentLinks(view);
-    applyChecks(view, heads, now);
+    applyChecks(view, heads, now, published);
     return view;
   }
 
   function stateView(shard: StateSnapshot, idx: SnapshotIndex, heads: Map<string, SourceHead> | undefined, now: Date, weather: boolean): SnapshotData {
-    const view = { ...shard, generated: idx.generated };
-    const published = heads ? withPublishedChecks(countyView(view, heads, now), idx.orderChecks) : view;
+    const view = { ...shard, generated: idx.generated, weatherChecked: idx.weatherChecked ?? shard.weatherChecked };
+    const published = heads ? countyView(view, heads, now, idx.orderChecks) : view;
     return weather ? withFireWeather(published, now.getTime(), idx.weatherChecked) : published;
   }
 
@@ -189,8 +203,11 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
     const idx = await catalog();
     if (!idx) {
       const snapshot = await old();
-      const view = checks ? countyView(snapshot, new Map(), new Date()) : snapshot;
-      return weather ? withFireWeather(view) : view;
+      const now = new Date();
+      const checked = checks ? countyView(snapshot, new Map(), now) : snapshot;
+      const view = weather ? withFireWeather(checked, now.getTime()) : checked;
+      if (checks) recordBoundary(snapshotBoundary(view, now.getTime()));
+      return view;
     }
     let entry = memo.states.get(st);
     if (!entry || !reusable(entry) || entry.value.revision !== idx.states[st]?.revision) {
@@ -208,11 +225,15 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
           shard.sources.filter((source) => source.mode !== "manual").map(({ id }) => id));
       }
     }
-    return stateView(shard, idx, heads, new Date(), weather);
+    const now = new Date();
+    const view = stateView(shard, idx, heads, now, weather);
+    if (checks) recordBoundary(snapshotBoundary(view, now.getTime()), entry);
+    return view;
   }
 
   return {
     state,
+    nextBoundary: () => nextBoundary,
     async county(fips: string, options?: Parameters<typeof state>[1]) {
       return state(countyState(fips), options);
     },
@@ -269,16 +290,25 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
         }
         const data = activeBans(snapshot, st);
         const body = format === "pretty" ? JSON.stringify(JSON.stringify(data, null, 2)) : JSON.stringify(data);
-        return { body: [body], generated: data.generated, count: data.counties.length };
+        return { body: [body], generated: data.generated, count: data.counties.length, nextBoundary };
       }
       const [projection, heads] = await Promise.all([active(idx, format), allHeads()]);
-      return formatNationalBans(projection, idx, heads, new Date(), format);
+      const cached = memo.bans[format];
+      const result = cached && reusable(cached) && cached.revision === idx.revision && cached.heads === heads
+        ? cached.value : formatNationalBans(projection, idx, heads, new Date(), format);
+      if (result !== cached?.value) memo.bans[format] = { value: result, revision: idx.revision, heads,
+        until: Math.min(Date.now() + MEMO_MS, result.nextBoundary) };
+      recordBoundary(result.nextBoundary, memo.active[format]);
+      return result;
     },
     async weather() {
       const idx = await catalog();
-      if (!idx) return withFireWeather(await old());
+      if (!idx) return state("");
       const [projection, heads] = await Promise.all([active(idx, "compact"), allHeads()]);
-      return projectWeather(projection, idx, heads, new Date());
+      const now = new Date();
+      const view = projectWeather(projection, idx, heads, now);
+      recordBoundary(snapshotBoundary(view, now.getTime()), memo.active.compact);
+      return view;
     },
     async lastChanged() {
       const idx = await catalog();

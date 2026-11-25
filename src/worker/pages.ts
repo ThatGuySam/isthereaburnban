@@ -7,6 +7,7 @@ import { STATES, STATE_BY_ABBR } from "../shared/states-fips";
 import type { CountyStatus, SnapshotData } from "../shared/types";
 import { countyPath } from "./counties";
 import { statusFor } from "./lookup";
+import { statusCacheControl } from "./map-status";
 import type { Env } from "./env";
 import type { SnapshotReader } from "./snapshot";
 import { latest } from "./snapshot-v2";
@@ -78,7 +79,6 @@ export async function handlePage(request: Request, env: Env, snapshots: Snapshot
   if (asset.status !== 200 || !type.includes("text/html")) return asset;
 
   const headers = new Headers(asset.headers);
-  headers.set("cache-control", PAGE_CACHE);
   headers.delete("etag");
   headers.delete("content-length");
   const link = apiLink(url.pathname);
@@ -87,6 +87,8 @@ export async function handlePage(request: Request, env: Env, snapshots: Snapshot
   const snapshot = link && state && STATE_BY_ABBR[state] ? await snapshots.state(state) : null;
 
   const now = Date.now();
+  const nextBoundary = snapshots.nextBoundary();
+  headers.set("cache-control", snapshot ? statusCacheControl(nextBoundary, now) : PAGE_CACHE);
   let answer: PageAnswer | null = null;
   let ldFor: JsonLdDateModified | undefined;
   const setMeta = (value: (a: PageAnswer) => string | undefined) => ({
@@ -135,6 +137,7 @@ export async function handlePage(request: Request, env: Env, snapshots: Snapshot
       element(el) {
         const c = COUNTY_BY_FIPS.get(el.getAttribute("data-fips") ?? "");
         if (!c || !snapshot) return;
+        if (Number.isFinite(nextBoundary)) el.setAttribute("data-answer-until", String(nextBoundary));
         if (answer?.city) {
           el.setInnerContent(renderCityHtml(answer.list, answer.city, cityRulesUrl(url.pathname), now), { html: true });
           return;

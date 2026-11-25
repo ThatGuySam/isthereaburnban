@@ -1,9 +1,4 @@
 import { ADAPTERS } from "../adapters";
-import { parse as parseFl } from "../adapters/fl";
-import { parse as parseIa } from "../adapters/ia";
-import { parse as parseIn } from "../adapters/in";
-import { parse as parseLa } from "../adapters/la";
-import { parse as parseOk } from "../adapters/ok";
 import { akDnrPermitZones } from "./ak/permits";
 import { akDecWinterBurning, akDnrFireSeason } from "./ak/seasonal";
 import { alAdemOpenBurning, alJeffersonOpenBurning } from "./al/air-rules";
@@ -40,8 +35,6 @@ import { ksDickinsonDistricts } from "./ks/dickinson";
 import { ksAprilBurning, ksFranklinPermits, ksOpenBurning } from "./ks/open-burning";
 import { kyForestryCountyBans } from "./ky/county-bans";
 import { kySeasonal } from "./ky/seasonal";
-import type { ArcgisResponse } from "./lib/arcgis";
-import { fetchSource } from "./lib/http";
 import { maAirAdvisories } from "./ma/air-advisories";
 import { maOpenBurning } from "./ma/open-burning";
 import { mdSummerAir } from "./md/summer-air";
@@ -96,6 +89,7 @@ import { tnLocalCalendars } from "./tn/local-rules";
 import { tnForestryPermitHolds } from "./tn/permit-holds";
 import { tnSeasonalBurnPermits } from "./tn/seasonal";
 import { tnTullahomaDailyBurning } from "./tn/tullahoma";
+import { txArcherCountyIssuer, txBexarCountyIssuer } from "./tx/county-issuers";
 import type { ActiveSource, Source } from "./types";
 import { utFfslFireOrders } from "./ut/orders";
 import { utClosedFireSeason } from "./ut/seasonal";
@@ -116,10 +110,6 @@ import { wvForestryFireSeason } from "./wv/seasonal";
 import { wyCountyOrders } from "./wy/county-orders";
 import { wyStateLands } from "./wy/state-lands";
 
-const ARCGIS_PARSERS = new Map([
-  ["fl", parseFl], ["ia", parseIa], ["in", parseIn], ["la", parseLa], ["ok", parseOk],
-]);
-
 /** The scheduled publishers and known manual sources. Candidates stay in the research inventory. */
 export const SOURCES: readonly Source[] = [
   ...ADAPTERS.map((adapter) => ({
@@ -130,16 +120,11 @@ export const SOURCES: readonly Source[] = [
     stack: adapter.id === "ms" ? "WordPress / Ninja Tables" : adapter.id === "tx" ? "ArcGIS / UTF-16 text" : "ArcGIS",
     cadence: { kind: "hourly" } as const,
     async fetch({ now }) {
-      const parse = ARCGIS_PARSERS.get(adapter.id);
-      // TX has a fallback feed. MS recalculates active orders on the local calendar.
-      if (!parse) return { rows: await adapter.fetch() };
-      // Full-feed JSON is small. Parse each edition so code changes take effect even when the publisher's bytes are unchanged.
-      const reply = await fetchSource(adapter.sourceUrl, { headers: { accept: "application/json" } });
-      if (reply.notModified) throw new Error(`${adapter.id}: unexpected ArcGIS 304`);
-      const json = await reply.response.json<ArcgisResponse>();
-      return { rows: parse(json, now.toISOString()) };
+      return { rows: await adapter.fetch(now) };
     },
   } satisfies ActiveSource)),
+  txArcherCountyIssuer,
+  txBexarCountyIssuer,
   nwsFireWeather,
   ...iaCountyBulletins.map(({ source }) => source),
   ...iaLocalCalendars.map(({ source }) => source),

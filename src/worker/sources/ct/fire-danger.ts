@@ -2,7 +2,7 @@ import type { CountyStatus } from "../../../shared/types";
 import { countiesInState } from "../../counties";
 import { localClock, localDayWindow, parseWeekdayDate, US_ZONES } from "../lib/dates";
 import { extractHtml } from "../lib/html";
-import { fetchSource } from "../lib/http";
+import { getText } from "../lib/http";
 import type { ActiveSource } from "../types";
 
 const ZONE = US_ZONES.Eastern;
@@ -47,19 +47,31 @@ export async function parseCtFireDanger(input: Response | string, now: Date): Pr
     scope: META.scope, scopeNote: "Brush burning within 100 feet of woodland or grassland",
     label: `Brush burning restricted by ${rating.toLowerCase()} fire danger`,
     note: "DEEP's rating limits brush burning within 100 feet of woodland or grassland even with a permit. Ask your town's open-burning official or fire marshal about your permit, air quality and other local restrictions.",
-    sourceName: META.sourceName, sourceUrl: META.sourceUrl, officialUrl: META.officialUrl,
-    checked, sourceUpdated: null, since: null, expires: null,
+    sourceName: META.sourceName, sourceUrl: META.sourceUrl, officialUrl: META.sourceUrl,
+    checked, sourceUpdated: date, since: null, expires: null,
   }));
 }
 
 export const ctDeepFireDanger: ActiveSource = {
-  ...META, mode: "positive-only", coverage: "restrictions",
+  ...META, mode: "positive-only", coverage: "restrictions", keepRowLinks: true,
+  reportingFips: COUNTIES.map(({ fips }) => fips),
   // DEEP normally publishes before 8 a.m. Eastern. Recheck for late reports and revisions.
   cadence: { kind: "daily", zone: ZONE, hours: [8, 11, 15] },
   staleMs: 24 * 3_600_000,
   async fetch({ now }) {
-    const reply = await fetchSource(META.sourceUrl, { headers: { accept: "text/html" }, maxBytes: 64_000 });
-    if (reply.notModified) throw new Error("Unexpected Connecticut DEEP fire danger 304");
-    return { rows: await parseCtFireDanger(reply.response, now) };
+    const read = async (headers: HeadersInit) => {
+      const html = await getText(META.sourceUrl, { headers, maxBytes: 64_000, attempts: 1 });
+      if (/the requested URL was rejected/i.test(html)) throw new Error("Connecticut DEEP: origin rejected the report request");
+      return parseCtFireDanger(html, now);
+    };
+    try {
+      return { rows: await read({ accept: "text/html" }) };
+    } catch (first) {
+      try {
+        return { rows: await read({ accept: "text/html, application/xhtml+xml;q=0.9", referer: META.officialUrl, "cache-control": "no-cache" }) };
+      } catch (second) {
+        throw new Error(`Connecticut DEEP report unavailable after same-day retry (${String(first)}; ${String(second)})`);
+      }
+    }
   },
 };

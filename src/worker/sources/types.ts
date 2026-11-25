@@ -1,4 +1,4 @@
-import type { CountyStatus, Coverage, FireWeatherReport, SourceHealth } from "../../shared/types";
+import type { CountyStatus, Coverage, FireWeatherReport, RuleReview, SourceHealth } from "../../shared/types";
 import type { Validators } from "./lib/http";
 
 export type Cadence =
@@ -20,7 +20,7 @@ type Metadata = {
 };
 
 export type SourceResult =
-  | { rows: CountyStatus[]; validators?: Validators }
+  | { rows: CountyStatus[]; validators?: Validators; fallback?: RuleReview & { reason: string } }
   | { fireWeather: FireWeatherReport[]; validators?: Validators }
   | { notModified: true; validators: Validators };
 
@@ -28,6 +28,10 @@ export type ActiveSource = Metadata & {
   mode: Exclude<SourceHealth["mode"], "manual">;
   coverage: Exclude<Coverage, "directory">;
   cadence: Cadence;
+  /** Full sources cover the state roster unless the publisher defines a smaller one. */
+  expectedFips?: readonly string[];
+  /** County footprints of a positive-only check, even when no restrictions were published. */
+  reportingFips?: readonly string[];
   /** Default 48 hours. Use a shorter window and row validity for daily permit decisions. */
   staleMs?: number;
   fetch(context: { now: Date; validators?: Validators }): Promise<SourceResult>;

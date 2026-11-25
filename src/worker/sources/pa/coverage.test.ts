@@ -36,10 +36,10 @@ test("Carroll Valley's current notice reports one borough ban and no countywide 
     since: null, expires: null, sourceUpdated: "2026-11-20", validUntil: "2026-12-04T05:00:00.000Z",
   });
   const { snapshot } = mergeSources(null, [{ source: paCarrollValley, rows, checked: captured.toISOString() }], captured);
-  const statuses = countiesInState("PA").map(({ fips }) => statusFor(snapshot, fips));
+  const statuses = countiesInState("PA").map(({ fips }) => statusFor(snapshot, fips, Date.parse(snapshot.generated)));
   expect(statuses.filter(({ status }) => status === "restricted").map(({ fips }) => fips)).toEqual(["42001"]);
   expect(statuses.filter(({ status }) => status === "unknown")).toHaveLength(66);
-  expect(statusFor(snapshot, "42001").orders).toMatchObject([{ status: "ban", scope: "part" }]);
+  expect(statusFor(snapshot, "42001", Date.parse(snapshot.generated)).orders).toMatchObject([{ status: "ban", scope: "part" }]);
 });
 
 test("A later borough lift clears the report, and unknown, future and stale notices cannot create a ban", async () => {

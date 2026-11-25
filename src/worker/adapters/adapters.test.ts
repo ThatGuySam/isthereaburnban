@@ -7,11 +7,13 @@ import { parse as parseTx, parseTxt } from "./tx";
 import { parse as parseFl } from "./fl";
 import { parse as parseIn } from "./in";
 import { parse as parseLa } from "./la";
-import { parse as parseMs, msDate } from "./ms";
+import { parse as parseMs, msDate, msEditionIds } from "./ms";
 import { parse as parseIa } from "./ia";
+import { withCurrentLinks } from "../source-links";
 import type { CountyStatus } from "../../shared/types";
 
 const fx = (name: string) => JSON.parse(readFileSync(join(import.meta.dir, "fixtures", name), "utf8"));
+const msIds = msEditionIds(readFileSync(join(import.meta.dir, "fixtures", "ms-edition.html"), "utf8"));
 const checked = "2026-11-23T19:07:00.000Z";
 const count = (rows: CountyStatus[], s: string) => rows.filter((r) => r.status === s).length;
 const fips = (rows: CountyStatus[]) => new Set(rows.map((r) => r.fips));
@@ -50,6 +52,9 @@ describe("TX", () => {
     const fsBans = new Set(rows.filter((r) => r.status === "ban").map((r) => r.fips));
     expect(txt.filter((r) => r.status === "ban").every((r) => fsBans.has(r.fips))).toBe(true);
     expect(txt[0].sourceUpdated).toBe("2026-11-23T16:52:12.000Z");
+    const { counties } = withCurrentLinks({ counties: { [txt[0].fips]: txt[0] } });
+    expect(counties[txt[0].fips].officialUrl).toMatch(/\/BURNBAN\.txt$/);
+    expect(counties[txt[0].fips].sourceUrl).toBe(counties[txt[0].fips].officialUrl);
   });
 });
 
@@ -89,15 +94,17 @@ describe("MS", () => {
   test("dates", () => {
     expect(msDate("9/16/26")).toBe("2026-09-16");
     expect(msDate("1214/26")).toBeNull();
+    expect(msDate("2/29/26")).toBeNull();
   });
   test("listed counties are bans, rest none, expired dropped", () => {
-    const rows = parseMs(fx("ms.json"), checked, "2026-11-23");
+    const rows = parseMs(fx("ms.json"), checked, msIds);
     expect(rows.length).toBe(82);
     expect(count(rows, "ban")).toBe(49);
     const harrison = rows.find((r) => r.county === "Harrison County");
     expect(harrison?.status).toBe("ban"); // expires today: still active
     expect(harrison?.expires).toBe("2026-11-23");
-    const later = parseMs(fx("ms.json"), checked, "2026-11-24");
+    expect(harrison?.validUntil).toBe("2026-11-24T06:00:00.000Z");
+    const later = parseMs(fx("ms.json"), "2026-11-24T06:00:00.000Z", msIds);
     expect(later.find((r) => r.county === "Harrison County")?.status).toBe("none");
     expect(rows.find((r) => r.county === "Humphreys County")?.note).toContain("1-5");
   });
@@ -129,10 +136,64 @@ test("Indiana local orders retain their limited scope and do not use a report ti
   expect(rows.find((r) => r.fips === "18153")).toMatchObject({ status: "restricted", scope: "part", scopedBan: true,
     scopeNote: expect.stringContaining("part of"), since: null, sourceUpdated: expect.any(String) });
   record.attributes.countyburnbanstatus = "No open burning allowed";
-  expect(parseIn(j, checked).find((r) => r.fips === "18153")?.status).toBe("unknown");
+  expect(() => parseIn(j, checked)).toThrow(/unrecognized/);
 });
 
 test("unrecognized publisher codes remain unknown", () => {
   expect(okClassify("No Burn Ban").status).toBe("unknown");
   expect(okClassify("County Burn Ban Lifted").status).toBe("unknown");
+});
+
+for (const [key, parse] of [["tx", parseTx], ["ok", parseOk], ["fl", parseFl], ["la", parseLa], ["in", parseIn]]) {
+  test(`${key} rejects incomplete, truncated, or duplicate editions`, () => {
+    const complete = fx(`${key}.json`);
+    const [, ...features] = complete.features;
+    expect(() => parse({ ...complete, features }, checked)).toThrow(/missing/i);
+    expect(() => parse({ ...complete, exceededTransferLimit: true }, checked)).toThrow(/Incomplete ArcGIS/);
+    expect(() => parse({ ...complete, features: [...complete.features, complete.features[0]] }, checked)).toThrow(/duplicate/i);
+  });
+}
+
+test("full ArcGIS editions reject status fields and transfer flags with the wrong types", () => {
+  for (const [key, parse, field] of [
+    ["tx", parseTx, "BurnBan"], ["ok", parseOk, "Burn_Ban_Status"], ["fl", parseFl, "Burn_Ban"],
+    ["la", parseLa, "Burn_Ban1"], ["in", parseIn, "countyburnbanstatus"],
+  ]) {
+    const edition = fx(`${key}.json`);
+    expect(() => parse({ ...edition, exceededTransferLimit: "false" }, checked)).toThrow(/transfer/i);
+    const { attributes } = edition.features.find(({ attributes }) => typeof attributes[field] === "string");
+    attributes[field] = [attributes[field]];
+    expect(() => parse(edition, checked)).toThrow(/unrecognized.*code/i);
+  }
+});
+
+test("TX rejects a name paired with the wrong FIPS", () => {
+  const data = fx("tx.json");
+  data.features[0].attributes.County = "Travis";
+  expect(() => parseTx(data, checked)).toThrow(/does not match/);
+});
+
+test("TX text rejects stale bulletins and duplicate entries", () => {
+  const encode = (value) => Buffer.from(value, "utf16le");
+  expect(() => parseTxt(encode("0 Texas Burn Bans - 11/23/2020 10:52:12 AM"), checked)).toThrow(/stale/);
+  expect(() => parseTxt(encode("1 Texas Burn Bans - 11/23/2026 10:52:12 AM\nArcher\nArcher"), checked)).toThrow(/duplicate/);
+});
+
+test("MS rejects an empty, renamed, or duplicate list", () => {
+  const rows = fx("ms.json");
+  expect(() => parseMs([], checked, msIds)).toThrow(/empty/i);
+  expect(() => parseMs([{ value: { county: "Hinds" } }], checked, msIds)).toThrow(/schema/i);
+  expect(() => parseMs([...rows, rows[0]], checked, msIds)).toThrow(/duplicate/i);
+  expect(() => parseMs(rows.slice(1), checked, msIds)).toThrow(/incomplete/i);
+  expect(() => msEditionIds('<table id="footable_1776"></table>')).toThrow(/identity/i);
+  expect(() => msEditionIds('<table id="footable_1775"></table><style id="ninja_table_custom_css_1775"></style>')).toThrow(/empty/i);
+});
+
+test("MS gates future orders and flags malformed publisher dates", () => {
+  const rows = fx("ms.json");
+  const hinds = rows.find((row) => row.value.counties === "Hinds");
+  hinds.value.issued = "11/25/26";
+  const reports = parseMs(rows, checked, msIds);
+  expect(reports.find((row) => row.fips === "28049")).toMatchObject({ validFrom: "2026-11-25T06:00:00.000Z" });
+  expect(reports.find((row) => row.fips === "28077")).toMatchObject({ expires: null, note: expect.stringContaining("1214/26") });
 });

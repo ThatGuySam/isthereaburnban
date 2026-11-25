@@ -3,6 +3,7 @@ import { confirmEmail, subscribeEmail, unsubscribeEmail } from "./email";
 import type { Env } from "./env";
 import { DISCLAIMER, lookup, LookupError, lookupText, statusFor } from "./lookup";
 import { serveMachineDocs } from "./machine-docs";
+import { statusCacheControl } from "./map-status";
 import { handleMcp } from "./mcp";
 import { handleOps } from "./ops";
 import { CANARY_CRON, runCanary } from "./notify";
@@ -86,22 +87,28 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
             lon: p.has("lon") ? Number(p.get("lon")) : undefined,
           };
       const result = await lookup(env, snapshots, q);
-      const cache = here || q.lat !== undefined || q.lon !== undefined ? "private, no-store" : undefined;
+      const cache = here || q.lat !== undefined || q.lon !== undefined ? "private, no-store" : statusCacheControl(snapshots.nextBoundary());
       if (p.get("format") === "text") return text(lookupText(result) + `\n${DISCLAIMER}\n`, 200, cache);
       return json(result, 200, cache);
     }
     if (path === "/api/v1/map-status") {
       const map = await snapshots.mapStatus();
-      const maxAge = Math.max(0, Math.floor((map.expiresAt - Date.now()) / 1000));
-      return json(map, 200, `public, max-age=${maxAge}, must-revalidate`);
+      return json(map, 200, statusCacheControl(map.expiresAt));
     }
-    if (path === "/api/v1/bans") return jsonResponse((await snapshots.bans(p.get("state") ?? undefined)).body.join(""));
-    if (path === "/api/v1/fire-weather") return json(activeFireWeather(await snapshots.weather(), p.get("state") ?? undefined));
+    if (path === "/api/v1/bans") {
+      const bans = await snapshots.bans(p.get("state") ?? undefined);
+      return jsonResponse(bans.body.join(""), 200, statusCacheControl(bans.nextBoundary));
+    }
+    if (path === "/api/v1/fire-weather") {
+      const weather = activeFireWeather(await snapshots.weather(), p.get("state") ?? undefined);
+      return json(weather, 200, statusCacheControl(snapshots.nextBoundary()));
+    }
     if (path === "/api/v1/coverage") return json(coverage(await snapshots.coverage()));
     const m = path.match(/^\/api\/v1\/counties\/(\d{5})$/);
     if (m) {
       const snapshot = await snapshots.county(m[1]);
-      return json({ ...statusFor(snapshot, m[1]), generated: snapshot.generated, disclaimer: DISCLAIMER });
+      return json({ ...statusFor(snapshot, m[1]), generated: snapshot.generated, disclaimer: DISCLAIMER },
+        200, statusCacheControl(snapshots.nextBoundary()));
     }
   }
 

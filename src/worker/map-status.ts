@@ -1,29 +1,28 @@
 import type { MapStatus, SnapshotData } from "../shared/types";
-import { countyDecision, STALE_MS } from "./county-decision";
+import { countyBoundary, countyDecision } from "./county-decision";
+import { weatherBoundary } from "./fire-weather";
 
 export const MAP_TTL_MS = 60_000;
 
+export function statusCacheControl(boundary: number, now = Date.now()): string {
+  const seconds = Math.max(0, Math.floor(Math.min(MAP_TTL_MS, boundary - now) / 1_000));
+  return `public, max-age=${seconds}, must-revalidate`;
+}
+
+export function snapshotBoundary(snapshot: SnapshotData, now: number): number {
+  let next = weatherBoundary(snapshot, now);
+  for (const row of Object.values(snapshot.counties)) next = Math.min(next, countyBoundary(row, now));
+  return next;
+}
+
 export function projectMapStatus(revision: string, snapshots: SnapshotData[], now: number): MapStatus {
   const result: MapStatus = { revision, expiresAt: now + MAP_TTL_MS, counties: {} };
-  const boundary = (at: number) => {
-    if (now < at && at < result.expiresAt) result.expiresAt = at;
-  };
-  const validWindow = ({ validFrom, validUntil }: { validFrom?: string; validUntil?: string }) => {
-    if (validFrom) boundary(Date.parse(validFrom));
-    if (validUntil) boundary(Date.parse(validUntil));
-  };
   for (const snapshot of snapshots) {
+    result.expiresAt = Math.min(result.expiresAt, weatherBoundary(snapshot, now));
     for (const row of Object.values(snapshot.counties)) {
       const decision = countyDecision(row, now);
-      if (decision.status !== "unknown") {
-        result.counties[row.fips] = decision.status;
-        if (decision.checked) boundary(Date.parse(decision.checked) + STALE_MS);
-      }
-      validWindow(row);
-      for (const order of row.orders ?? []) validWindow(order);
-    }
-    for (const report of Object.values(snapshot.fireWeather ?? {})) {
-      for (const order of report.orders ?? []) validWindow(order);
+      if (decision.status !== "unknown") result.counties[row.fips] = decision.status;
+      result.expiresAt = Math.min(result.expiresAt, countyBoundary(row, now));
     }
   }
   return result;

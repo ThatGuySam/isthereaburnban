@@ -42,7 +42,7 @@ export async function parseGallatin(input: Response | string, now: Date): Promis
   // The table is a snapshot and publishes no expiry. Allow the report date
   // and the following day, bounded by the end of the county permit season.
   if (!day || !inPermitSeason(day) || day > today || today > shiftDay(day, 1)) {
-    throw new Error("Gallatin County: stale or invalid district status date");
+    throw new Error(`Gallatin County: stale or invalid district status date${day ? ` (table dated ${day})` : ""}. Confirm with the permit office at 406-548-0144.`);
   }
   const { validFrom } = localDayWindow(day, ZONE);
   const lastDay = day.slice(5) === "11-30" ? day : shiftDay(day, 1);
@@ -69,7 +69,7 @@ export async function parseGallatin(input: Response | string, now: Date): Promis
         scope: META.scope, scopeNote: `${name} within ${county.name}, county open-burning permits`,
         status: "restricted", label: "Open burning closed by fire district",
         note: `The county's ${day} report lists this district as closed to permitted open burning. Confirm current permit activation and recreational fire rules with the local fire agency.`,
-        checked, sourceUpdated: null, since: null, expires: null, validFrom, validUntil,
+        checked, sourceUpdated: day, since: null, expires: null, validFrom, validUntil,
         sourceName: META.sourceName, sourceUrl: META.sourceUrl, officialUrl: META.officialUrl,
       });
     }
@@ -80,6 +80,7 @@ export async function parseGallatin(input: Response | string, now: Date): Promis
 
 export const mtGallatinOpenBurning: ActiveSource = {
   ...META, coverage: "restrictions", mode: "positive-only",
+  reportingFips: [GALLATIN, MADISON],
   cadence: { kind: "daily", zone: ZONE, hours: [7, 12, 17] },
   staleMs: 24 * 3_600_000,
   async fetch({ now }) {

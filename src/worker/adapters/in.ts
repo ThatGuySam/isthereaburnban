@@ -1,11 +1,12 @@
 import type { BanStatus, CountyStatus } from "../../shared/types";
-import { type Adapter, type ArcgisResponse, arcgisRows, arcgisUrl, countyByName, getJson, msToIso, str, toStatuses } from "./common";
+import { type Adapter, type ArcgisResponse, type Row, arcgisRows, arcgisUrl, completeLayer, countyByName, publisherDate, str, toStatuses } from "./common";
 
 const LAYER = "https://services8.arcgis.com/mRWfR9ONMmLivkAh/arcgis/rest/services/WebEOC_prod_BurnBans/FeatureServer/0";
+const FIELDS = ["orginating_county", "countyburnbanstatus", "burnbandatetime"];
 const meta = {
   state: "IN",
   sourceName: "Indiana Department of Homeland Security",
-  sourceUrl: arcgisUrl(LAYER, ["orginating_county", "countyburnbanstatus", "burnbandatetime"]),
+  sourceUrl: arcgisUrl(LAYER, FIELDS),
   officialUrl: "https://www.in.gov/dhs/burn-ban-map/",
 };
 
@@ -20,28 +21,36 @@ export function classify(raw: string): { status: BanStatus; label: string } {
 }
 
 export function parse(json: ArcgisResponse, checked: string): CountyStatus[] {
-  // Non-county rows (e.g. "Pokagon Band") don't match a county and are dropped by toStatuses.
-  const rows = arcgisRows(json).map((a) => {
-    const county = countyByName("IN", str(a.orginating_county));
+  let seenPokagon = false;
+  const rows = arcgisRows(json, { requireComplete: true }).flatMap((a): Row[] => {
+    const name = str(a.orginating_county);
     const c = classify(str(a.countyburnbanstatus));
+    if (c.status === "unknown") throw new Error(`IN: unrecognized burn ban code ${c.label}`);
+    const reported = publisherDate("IN", a.burnbandatetime);
+    // WebEOC also lists the Pokagon Band, whose reports aren't countywide decisions.
+    if (name === "Pokagon Band") {
+      if (seenPokagon) throw new Error("IN: duplicate Pokagon Band report");
+      seenPokagon = true;
+      return [];
+    }
+    const county = countyByName("IN", name);
     const scopeNote = `part of ${county?.name ?? "the county"} (area unspecified)`;
-    const reported = msToIso(a.burnbandatetime);
-    return {
+    return [{
       county,
       ...c,
       ...(c.status === "restricted" ? { scope: "part" as const, scopedBan: true as const, scopeNote, label: `Burn ban in ${scopeNote}` } : {}),
       sourceUpdated: reported,
       note: "Fire chiefs, cities and towns can issue their own restrictions.",
-    };
+    }];
   });
-  return toStatuses(meta, rows, checked);
+  return toStatuses(meta, rows, checked, true);
 }
 
 export const in_: Adapter = {
   id: "in",
   mode: "full",
   ...meta,
-  async fetch() {
-    return parse(await getJson(meta.sourceUrl), new Date().toISOString());
+  async fetch(now = new Date()) {
+    return parse(await completeLayer(LAYER, FIELDS), now.toISOString());
   },
 };

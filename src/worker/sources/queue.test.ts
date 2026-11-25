@@ -4,8 +4,9 @@ import { afterEach, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { COUNTIES, STATES_DIR } from "../counties";
 import { SNAPSHOT_KEY } from "../env";
+import { RuleChangedError } from "./statutory-fallback";
 import { withFireWeather } from "../fire-weather";
-import { lookup } from "../lookup";
+import { lookup, statusFor } from "../lookup";
 import { snapshotReader } from "../snapshot";
 import { ACTIVE_KEY, INDEX_KEY, PRETTY_ACTIVE_KEY, stateKey } from "../snapshot-v2";
 import { US_ZONES } from "./lib/dates";
@@ -107,7 +108,7 @@ const row = (status, checked, extra = {}) => ({
 });
 const source = (id, fetch, extra = {}) => ({
   id, state: "OR", coverage: "live", scope: "county", cadence: { kind: "hourly" }, mode: "full",
-  stack: "HTML", sourceName: id, sourceUrl: "https://www.example.gov/feed", officialUrl: "https://www.example.gov/status",
+  expectedFips: ["41039"], stack: "HTML", sourceName: id, sourceUrl: "https://www.example.gov/feed", officialUrl: "https://www.example.gov/status",
   fetch, ...extra,
 });
 const run = (box, sources, message, clock = message.slot) =>
@@ -171,7 +172,7 @@ test("queued NWS changes leave ban history alone and preserve a verified midnigh
   const active = before + 3_600_000;
   const after = Date.parse("2026-11-18T23:07Z");
   const county = source("co-example", async () => ({ rows: [row("none", new Date(before).toISOString(),
-    { state: "CO", fips: "08059", county: "Jefferson County" })] }), { state: "CO" });
+    { state: "CO", fips: "08059", county: "Jefferson County" })] }), { state: "CO", expectedFips: ["08059"] });
   const weather = { ...nwsFireWeather, fetch: async ({ now }) => ({ fireWeather: parseNwsAlerts({
     type: "FeatureCollection", features: now.getTime() === active ? [warning] : [],
   }, now) }) };
@@ -219,7 +220,7 @@ test("queue stores one revision, absorbs duplicate deliveries and skips unchange
       return { notModified: true, validators };
     }
     return { rows: called === 2 ? [b, a] : [a, b], validators: { etag: '"v1"' } };
-  });
+  }, { expectedFips: ["41039", "41051"] });
   await poll(box, src, initial);
   await poll(box, src, initial);
   await merge(box, [src], initial);
@@ -242,11 +243,113 @@ test("queue stores one revision, absorbs duplicate deliveries and skips unchange
   expect(box.alerts).toEqual([]);
 });
 
+test("a partial full edition records failure and retains the last complete payload", async () => {
+  const box = sandbox();
+  const src = source("or", async ({ now }) => {
+    const checked = now.toISOString();
+    const second = row("none", checked, { fips: "41051", county: "Multnomah County" });
+    return { rows: now.getTime() === initial ? [row("ban", checked), second] : [row("none", checked)] };
+  }, { expectedFips: ["41039", "41051"] });
+  await poll(box, src, initial);
+  const first = (await readHeads(box.env.DB)).get(src.id);
+  await poll(box, src, nextHour);
+  expect((await readHeads(box.env.DB)).get(src.id)).toMatchObject({
+    hash: first.hash, lastGood: first.lastGood, error: expect.stringContaining("missing 1 counties"),
+  });
+  await merge(box, [src], nextHour);
+  expect(box.snapshot().counties["41039"].status).toBe("ban");
+});
+
+test("a positive-only issuer rescission survives normalization and does not send a lift alert", async () => {
+  const box = sandbox();
+  const aggregator = source("or", async ({ now }) => ({ rows: [row("ban", now.toISOString(), { since: "2026-11-20" })] }));
+  const county = source("lane-issuer", async ({ now }) => ({ rows: now.getTime() === initial ? [] : [
+    row("none", now.toISOString(), { issuerFor: aggregator.id, documentId: "signed-lift",
+      since: "2026-11-23", validFrom: new Date(nextHour - 60_000).toISOString() }),
+  ] }), { mode: "positive-only" });
+  const sources = [aggregator, county];
+  for (const time of [initial, nextHour]) {
+    for (const src of sources) await poll(box, src, time);
+    await merge(box, sources, time);
+  }
+  expect(statusFor(box.snapshot(), "41039", nextHour + 120_000)).toMatchObject({
+    status: "unknown", conflict: { kind: "issuer", reports: [{ documentId: "signed-lift" }, { sourceId: "or" }] },
+  });
+  expect(box.alerts).toEqual([]);
+});
+
+test("a reviewed calendar fallback publishes evidence without recording a successful live check", async () => {
+  const box = sandbox();
+  const reviewedAt = new Date(initial - 7 * 86400_000).toISOString();
+  const reviewBy = new Date(nextHour + 2 * 3_600_000).toISOString();
+  const src = source("or-review", async ({ now }) => now.getTime() === initial
+    ? { rows: [row("restricted", now.toISOString())] }
+    : { rows: [row("restricted", now.toISOString(), { note: "Reviewed statutory rule" })],
+      fallback: { reviewedAt, reviewBy, reason: "Official site HTTP 520" } },
+  { mode: "positive-only", recurring: true });
+  await poll(box, src, initial);
+  await merge(box, [src], initial);
+  await poll(box, src, nextHour);
+  await merge(box, [src], nextHour);
+
+  const snapshot = box.snapshot();
+  const heads = await readHeads(box.env.DB);
+  expect(heads.get(src.id)).toMatchObject({ lastGood: new Date(initial).toISOString(), ruleReview: { reviewedAt, reviewBy } });
+  expect(snapshot.sources[0]).toMatchObject({ ok: false, error: "Official site HTTP 520", ruleReview: { reviewedAt, reviewBy } });
+  applyChecks(snapshot, heads, new Date(nextHour));
+  expect(statusFor(snapshot, "41039", nextHour)).toMatchObject({
+    status: "restricted", checked: new Date(initial).toISOString(), sourceCheckFailed: true,
+    ruleReview: { reviewedAt, reviewBy },
+  });
+  expect(statusFor(snapshot, "41039", Date.parse(reviewBy)).status).toBe("unknown");
+  expect(box.alerts).toEqual([]);
+});
+
+test("a first-poll statutory fallback leaves the last successful check empty", async () => {
+  const box = sandbox();
+  const reviewedAt = new Date(initial - 7 * 86_400_000).toISOString();
+  const reviewBy = new Date(initial + 2 * 3_600_000).toISOString();
+  const src = source("or-review", async ({ now }) => ({
+    rows: [row("restricted", now.toISOString(), { scope: "part", scopeNote: "District" })],
+    fallback: { reviewedAt, reviewBy, reason: "Official site HTTP 520" },
+  }), { mode: "positive-only", recurring: true });
+  await poll(box, src, initial);
+  await merge(box, [src], initial);
+
+  const snapshot = box.snapshot();
+  expect(snapshot.sources[0].lastSuccessfulAt).toBeNull();
+  const answer = statusFor(snapshot, "41039", initial);
+  expect(answer).toMatchObject({ status: "restricted", checked: null, ruleReview: { reviewedAt, reviewBy },
+    orders: [{ checked: null, ruleReview: { reviewedAt, reviewBy } }] });
+  expect(statusFor(snapshot, "41039", Date.parse(reviewBy)).status).toBe("unknown");
+});
+
+test("changed statutory terms invalidate a pinned fallback even during a subsequent outage", async () => {
+  const box = sandbox();
+  const reviewedAt = new Date(initial - 7 * 86_400_000).toISOString();
+  const reviewBy = new Date(initial + 86_400_000).toISOString();
+  const src = source("or-review", async ({ now }) => {
+    if (now.getTime() === nextHour) throw new RuleChangedError("Publisher changed the rule");
+    return { rows: [row("restricted", now.toISOString())], fallback: { reviewedAt, reviewBy, reason: "Origin blocked" } };
+  }, { mode: "positive-only", recurring: true });
+  await poll(box, src, initial);
+  await merge(box, [src], initial);
+  await poll(box, src, nextHour);
+
+  const prior = box.snapshot();
+  applyChecks(prior, await readHeads(box.env.DB), new Date(nextHour));
+  expect(statusFor(prior, "41039", nextHour).status).toBe("unknown");
+  const later = nextHour + 3_600_000;
+  await poll(box, src, later);
+  await merge(box, [src], later);
+  expect(statusFor(box.snapshot(), "41039", later).status).toBe("unknown");
+});
+
 test("journal handles KV and D1 interruption without duplicating a transition or alert run", async () => {
   const box = sandbox();
   let status = "none";
   const src = source("or", async ({ now }) => ({ rows: [row(status, now.toISOString())] }));
-  const tx = source("tx-test", async ({ now }) => ({ rows: [row(status, now.toISOString(), { state: "TX", fips: "48001", county: "Anderson County" })] }), { state: "TX" });
+  const tx = source("tx-test", async ({ now }) => ({ rows: [row(status, now.toISOString(), { state: "TX", fips: "48001", county: "Anderson County" })] }), { state: "TX", expectedFips: ["48001"] });
   const sources = [src, tx];
   await poll(box, src, initial);
   await poll(box, tx, initial);
@@ -284,7 +387,7 @@ test("one dirty state rewrites only its shard and readers pin the catalog revisi
   const next = start + 3_600_000;
   let status = "none";
   const or = source("or-fixture", async ({ now }) => ({ rows: [row(status, now.toISOString())] }));
-  const tx = source("tx-fixture", async ({ now }) => ({ rows: [row("none", now.toISOString(), { state: "TX", fips: "48001" })] }), { state: "TX" });
+  const tx = source("tx-fixture", async ({ now }) => ({ rows: [row("none", now.toISOString(), { state: "TX", fips: "48001", county: "Anderson County" })] }), { state: "TX", expectedFips: ["48001"] });
   await poll(box, or, start);
   await poll(box, tx, start);
   await merge(box, [or, tx], start);
@@ -323,7 +426,7 @@ test("a busy hour limits KV writes and still serves every changed state", async 
   const counties = new Map(COUNTIES.map(({ state, fips, name }) => [state, { state, fips, county: name }]));
   let status = "none";
   const sources = [...counties].map(([state, county]) =>
-    source(`fixture-${state}`, async ({ now }) => ({ rows: [row(status, now.toISOString(), county)] }), { state }));
+    source(`fixture-${state}`, async ({ now }) => ({ rows: [row(status, now.toISOString(), county)] }), { state, expectedFips: [county.fips] }));
   for (const src of sources) await poll(box, src, start);
   await merge(box, sources, start);
   expect(Object.values(box.catalog().states).every(({ cached }) => cached)).toBe(true);
@@ -361,7 +464,7 @@ test("v1 KV remains readable and the first v2 merge preserves history and resume
   ]);
 });
 
-test("unchanged scoped orders take the published check time without rewriting their shard", async () => {
+test("unchanged scoped orders take the latest matching check without rewriting their shard", async () => {
   const box = sandbox();
   const start = Date.now() - 7_200_000;
   const next = start + 3_600_000;
@@ -369,22 +472,22 @@ test("unchanged scoped orders take the published check time without rewriting th
   const or = source("or-district", async ({ now }) => ({ rows: [row("restricted", now.toISOString(), {
     label: 'Fire restrictions in the district — check "today"', scopeNote: "County district", validUntil: new Date(start + 86_400_000).toISOString(),
   })] }), { mode: "positive-only", scope: "part" });
-  const tx = source("tx-test", async ({ now }) => ({ rows: [row(status, now.toISOString(), { state: "TX", fips: "48001" })] }), { state: "TX" });
+  const tx = source("tx-test", async ({ now }) => ({ rows: [row(status, now.toISOString(), { state: "TX", fips: "48001", county: "Anderson County" })] }), { state: "TX", expectedFips: ["48001"] });
   await poll(box, or, start);
   await poll(box, tx, start);
   await merge(box, [or, tx], start);
   const previous = box.catalog().states.OR;
   await poll(box, or, next);
   const reader = () => snapshotReader(box.env, { fresh: true });
-  expect((await reader().state("OR")).counties["41039"].orders[0].checked).toBe(new Date(start).toISOString());
+  expect((await reader().state("OR")).counties["41039"].orders[0].checked).toBe(new Date(next).toISOString());
   status = "ban";
   await poll(box, tx, next);
   await merge(box, [or, tx], next);
   expect(box.catalog().states.OR).toEqual(previous);
-  const county = (await reader().state("OR")).counties["41039"];
+  const { lastAttemptedAt: _attempt, ...county } = statusFor(await reader().state("OR"), "41039");
   expect(county.orders[0].checked).toBe(new Date(next).toISOString());
-  expect(JSON.parse((await reader().bans()).body.join("")).counties[0]).toEqual(county);
-  expect(JSON.parse(JSON.parse((await reader().bans(undefined, "pretty")).body.join(""))).counties[0]).toEqual(county);
+  expect(JSON.parse((await reader().bans()).body.join("")).counties[0]).toEqual(JSON.parse(JSON.stringify(county)));
+  expect(JSON.parse(JSON.parse((await reader().bans(undefined, "pretty")).body.join(""))).counties[0]).toEqual(JSON.parse(JSON.stringify(county)));
 });
 
 test("out-of-order merge replay leaves a newer incomplete hourly refresh unpublished", async () => {
@@ -475,5 +578,5 @@ test("public expiration safety holds during a D1 health lookup failure", async (
   expect(box.snapshot().counties["41039"].status).toBe("ban");
   box.env.DB = { prepare: () => { throw new Error("D1 temporarily unavailable"); } };
   const result = await snapshotReader(box.env, { fresh: true }).state("OR");
-  expect(result.counties["41039"]).toMatchObject({ status: "unknown", label: "Source decision expired" });
+  expect(statusFor(result, "41039")).toMatchObject({ status: "unknown", label: "Source decision expired" });
 });

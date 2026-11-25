@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { CountyStatus } from "../../../shared/types";
-import { countyByName } from "../../counties";
+import { countiesInState, countyByName } from "../../counties";
 import { atLocalTime, localClock, shiftDay, US_ZONES } from "../lib/dates";
 import { parseDotNetJsonDate, parseJson } from "../lib/feeds";
 import { htmlText } from "../lib/html";
@@ -61,15 +61,16 @@ export function parseWisconsinPermits(text: string, now: Date): CountyStatus[] {
   const checked = now.toISOString();
   const seen = new Set<string>();
   const rows: CountyStatus[] = [];
-  let fresh = false;
+  let latest = -Infinity;
 
   for (const { COUNTY_NAME: name, LAST_UPDATE_DATE, PART_NOTREG_DNR, PERMIT_RESTRICTIONS, ADDITIONAL_COMMENTS } of records) {
     const county = countyByName(META.state, name === "Saint Croix" ? "St. Croix" : name);
     if (!county || seen.has(county.fips)) throw new Error("Wisconsin DNR: unknown or repeated county");
     seen.add(county.fips);
     const stamp = parseDotNetJsonDate(LAST_UPDATE_DATE ?? "");
-    if (!stamp || stamp.getTime() < start || stamp.getTime() > time) continue;
-    fresh = true;
+    if (!stamp || stamp.getTime() > time) continue;
+    latest = Math.max(latest, stamp.getTime());
+    if (stamp.getTime() < start) continue;
     if (PART_NOTREG_DNR !== "N" && PART_NOTREG_DNR !== PARTIAL) continue;
 
     const text = htmlText(PERMIT_RESTRICTIONS ?? "");
@@ -89,7 +90,10 @@ export function parseWisconsinPermits(text: string, now: Date): CountyStatus[] {
       checked, sourceUpdated: stamp.toISOString(), since: null, expires: null, validUntil, note,
     });
   }
-  if (!fresh) throw new Error("Wisconsin DNR: no county records dated today in Central time");
+  if (latest < start) {
+    const details = Number.isFinite(latest) ? ` (latest update ${new Date(latest).toISOString()})` : "";
+    throw new Error(`Wisconsin DNR: no county records dated today in Central time${details}. Check WisBURN or call 888-947-2876.`);
+  }
   return rows;
 }
 
@@ -97,6 +101,7 @@ export const wiPermits: ActiveSource = {
   ...META,
   coverage: "restrictions",
   mode: "positive-only",
+  reportingFips: countiesInState(META.state).map(({ fips }) => fips),
   cadence: { kind: "daily", zone: ZONE, hours: [FIRST_CHECK_HOUR, 12, 16] },
   async fetch({ now }) {
     const body = await getText(META.sourceUrl, { headers: { accept: "application/json" }, maxBytes: 150_000 });
