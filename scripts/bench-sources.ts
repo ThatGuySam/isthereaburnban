@@ -63,6 +63,8 @@ import { mdDnrWoodland, parseMdWoodland } from "../src/worker/sources/md/woodlan
 import { meOpenBurningPermits, parseMaineOpenBurning } from "../src/worker/sources/me/open-burning";
 import { meTownPermitHolds, parseMaineTownPermits } from "../src/worker/sources/me/town-permits";
 import { miPermits, parseMichiganPermits } from "../src/worker/sources/mi/permits";
+import { mnLocalCalendars } from "../src/worker/sources/mn/local-rules";
+import { mnOlmstedOrders, parseOlmstedOrders } from "../src/worker/sources/mn/olmsted";
 import { mnRestrictions, parseMinnesotaRestrictions } from "../src/worker/sources/mn/restrictions";
 import { moCapeGirardeau, parseCapeGirardeauDay } from "../src/worker/sources/mo/cape-girardeau";
 import { moLakeOzark, parseLakeOzarkDay } from "../src/worker/sources/mo/lake-ozark";
@@ -341,6 +343,22 @@ const parseMiFixture = () => parseMichiganPermits(JSON.parse(miMap), now);
 const parseNjFixture = () => parseNjRestrictions(JSON.parse(njDivisions), JSON.parse(njCounties), now);
 const parseWiFixture = () => parseWisconsinPermits(wiPermitsJson, now);
 const parseMnFixture = () => parseMinnesotaRestrictions(mnRestrictionsJson, now);
+const mnHtmlFixture = (name: string) => gunzipSync(from(`mn/fixtures/${name}-2026-11-24.html.gz`)).toString("utf8");
+const mnOlmstedArchive = mnHtmlFixture("olmsted-news");
+const mnOlmstedIssue = mnHtmlFixture("olmsted-ban");
+const mnOlmstedLift = mnHtmlFixture("olmsted-lift");
+const parseMnOlmsted = (at: Date) => parseOlmstedOrders(mnOlmstedArchive, at,
+  async (url) => url.includes("-ended-") ? mnOlmstedLift : mnOlmstedIssue);
+const mnLocalFixtures = mnLocalCalendars.map(({ id, kind, source, parse }) => {
+  const name = `rule-${id}`;
+  const fixture = `mn/fixtures/${name}-2026-11-24`;
+  if (kind === "pdf-etag") {
+    const head: ResponseInit = JSON.parse(utf8(`${fixture}.json`));
+    return { source, parse: () => parse(new Response(null, head), now) };
+  }
+  const body = kind === "pdf" ? raw(`${fixture}.pdf`) : mnHtmlFixture(name);
+  return { source, parse: () => parse(new Response(body), now) };
+});
 const parseOhFixture = () => parseOhioSeasonal(parseHtml(ohStatute), now);
 const gwinnettDecisionDay = new Date("2026-11-23T16:00:00Z");
 const summerDay = new Date("2026-07-01T14:00:00Z");
@@ -563,6 +581,8 @@ recordedInputs.push(
   { source: njRestrictions, rows: parseNjFixture(), checked },
   { source: wiPermits, rows: parseWiFixture(), checked },
   { source: mnRestrictions, rows: parseMnFixture(), checked },
+  { source: mnOlmstedOrders, rows: await parseMnOlmsted(now), checked },
+  ...await Promise.all(mnLocalFixtures.map(async ({ source, parse }) => ({ source, rows: await parse(), checked }))),
   { source: nyDecBrushBurning, rows: await parseNyDecFixture(), checked },
   { source: nyNycBarbecuing, rows: await parseNyNycFixture(), checked },
   { source: vaSeasonal, rows: await parseVaStatuteFixture(now), checked },
@@ -729,6 +749,9 @@ const jobs: Array<[string, () => unknown]> = [
   ["NJ Forest Fire Service ArcGIS", parseNjFixture],
   ["WI DNR permit feed", parseWiFixture],
   ["MN DNR restriction feed", parseMnFixture],
+  ["MN Olmsted current sheriff archive", () => parseMnOlmsted(now)],
+  ["MN Olmsted order and effective lift", () => parseMnOlmsted(new Date("2023-09-07T12:00:00Z"))],
+  ...mnLocalFixtures.map(({ source, parse }): [string, typeof parse] => [source.id, parse]),
   ["OH statute and calendar", parseOhFixture],
   ["GA Gwinnett daily decision", parseGwinnettFixture],
   ["GA EPD summer rules", parseGaSummerFixture],

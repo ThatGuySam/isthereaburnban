@@ -51,6 +51,9 @@ export function blockedReason(status: number, headers: Headers, prefix = ""): st
   }
   if (/<(?:title|h1)\b[^>]*>\s*Access Denied\b/i.test(prefix)) return "Access Denied";
   if (/incapsula incident id|<title>\s*Request Rejected\s*<\/title>/i.test(prefix)) return "Imperva challenge";
+  if (/<title>\s*Radware Page\s*<\/title>/i.test(prefix) && /content=["']https:\/\/radware\.com\//i.test(prefix)) {
+    return "Radware challenge";
+  }
   if (status === 403) return headers.get("server")?.includes("Akamai") ? "Akamai Access Denied" : "Forbidden";
 }
 

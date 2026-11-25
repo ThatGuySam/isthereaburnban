@@ -7,7 +7,7 @@ import { activeRule, calendarDayWindows, calendarStatusRows, CALENDAR_RULES } fr
 import { civicPlusAlertDetails, civicPlusNotices, civicPlusPageParagraphs, civicPlusPageText, civicPlusUrl } from "./civicplus";
 import { localDayWindow, parseLocalIsoTimestamp, parseWeekdayDate, reportWindow, weekdayOnOrAfter } from "./dates";
 import { decodeFeed, parseCsv, parseDotNetJsonDate, parseFeed, parseJson } from "./feeds";
-import { blockAfterHeading, blocksBetweenMarkers, extractHtml, extractHtmlGrid, localClock, matchesReviewedHtmlSection, numberedRuleSection, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, statusTableRows, US_ZONES } from "./html";
+import { blockAfterHeading, blocksBetweenMarkers, extractHtml, extractHtmlGrid, localClock, matchesReviewedHtmlSection, numberedRuleSection, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, reviewedHeadingDigest, statusTableRows, US_ZONES } from "./html";
 import { sha256 } from "./hash";
 import { BlockedError, fetchSource, HttpError, pacedSourceReader, pacedTextReader, USER_AGENT } from "./http";
 import { manualPdf } from "./pdf";
@@ -88,8 +88,8 @@ test("HTML status grids extract only selected rows and keep cell data", async ()
   const selectors = { row: "#status > .row", cell: ".cell" };
   expect((await extractHtmlGrid(markup, selectors))[0][0].text).toBe("One &Two");
   expect(await extractHtmlGrid(markup, { ...selectors, spaceLineBreaks: true })).toEqual([[
-    { text: "One & Two", className: "cell" }, { text: "On", className: "cell active" },
-    { text: "Order", className: "cell", href: "/order?p=1&n=2" },
+    { tag: "span", text: "One & Two", className: "cell" }, { tag: "span", text: "On", className: "cell active" },
+    { tag: "a", text: "Order", className: "cell", href: "/order?p=1&n=2" },
   ]]);
 });
 
@@ -98,7 +98,7 @@ test("HTML status grids can read a direct download URL published apart from the 
   const selectors = { row: ".row", cell: ".row a" };
   expect((await extractHtmlGrid(markup, selectors))[0][0].href).toBe("javascript:postBack()");
   expect((await extractHtmlGrid(markup, { ...selectors, linkAttribute: "title" }))[0][0])
-    .toEqual({ text: "View text", className: "", href: "/rule?id=1&rev=2" });
+    .toEqual({ tag: "a", text: "View text", className: "", href: "/rule?id=1&rev=2" });
 });
 
 test("legacy number headings isolate a complete, unique rule section", async () => {
@@ -138,6 +138,17 @@ test("CivicPlus rich-text widgets preserve headings and list order inside the pu
   expect(await civicPlusPageText(markup, "Fire Rules", ["h2", "h3", "p", "li"])).toEqual([
     "Ordinance", "Applies on public land.", "Conditions", "One & two", "Three",
   ]);
+});
+
+test("reviewed HTML headings isolate a rule from other subjects in the same widget", async () => {
+  const rule = `<h2>Open burning</h2><p>Permit<br>required.</p><h3>Exceptions</h3><ul><li>Cooking.</li></ul>`;
+  const read = (markup) => reviewedHeadingDigest(`<main>${markup}</main>`, "main", "Open burning");
+  const digest = await read(rule);
+  expect(digest).toBe(await sha256("Permit required.\nExceptions\nCooking."));
+  expect(await read(`<h2>Other permits</h2><p>New text.</p>${rule}<h2>Fees</h2><p>Updated fee.</p>`)).toBe(digest);
+  expect(await read(rule.replace("Cooking.", "Cooking and camping."))).not.toBe(digest);
+  await expect(read(rule + rule)).rejects.toThrow("Expected one nonempty reviewed HTML section");
+  await expect(read("<h2>Open burning</h2><h2>Fees</h2>")).rejects.toThrow("Expected one nonempty reviewed HTML section");
 });
 
 test("HTML table cells separate adjacent paragraphs without splitting inline text", async () => {
@@ -315,6 +326,9 @@ test("HTTP rejects publisher access-denied HTML, including HTTP 200 error docume
   await expect(fetchSource(url, { fetchImpl: async () => new Response(
     '<script>var dd={host:"geo.captcha-delivery.com"}</script>',
   ) })).rejects.toThrow("DataDome challenge");
+  await expect(fetchSource(url, { fetchImpl: async () => new Response(
+    '<title>Radware Page</title><meta property="og:url" content="https://radware.com/">',
+  ) })).rejects.toThrow("Radware challenge");
   await expect(fetchSource(url, { fetchImpl: async () => new Response("missing", { status: 404 }) })).rejects.toBeInstanceOf(HttpError);
 });
 

@@ -215,7 +215,7 @@ export async function extractHtml(input: Response | string, options: HtmlOptions
 export async function extractHtmlGrid(input: Response | string, selectors: {
   row: string; cell: string; linkAttribute?: string; spaceLineBreaks?: boolean;
 }) {
-  const rows: { text: string; className: string; href?: string }[][] = [];
+  const rows: { tag: string; text: string; className: string; href?: string }[][] = [];
   let row: (typeof rows)[number] | undefined;
   let cell: (typeof rows)[number][number] | undefined;
   const rewriter = new HTMLRewriter()
@@ -231,7 +231,7 @@ export async function extractHtmlGrid(input: Response | string, selectors: {
       element(element) {
         if (!row) return;
         if (cell) throw new Error("Nested status grid cells");
-        cell = { text: "", className: element.getAttribute("class") ?? "" };
+        cell = { tag: element.tagName, text: "", className: element.getAttribute("class") ?? "" };
         const href = element.tagName === "a" ? element.getAttribute(selectors.linkAttribute ?? "href") : null;
         if (href) cell.href = decodeEntities(href);
         row.push(cell);
@@ -252,11 +252,12 @@ export async function extractHtmlGrid(input: Response | string, selectors: {
 }
 
 export function blockAfterHeading(
-  blocks: Block[], pattern: RegExp,
+  blocks: Block[], pattern: string | RegExp,
   { requireUnique = false, headingTag }: { requireUnique?: boolean; headingTag?: `h${1 | 2 | 3 | 4 | 5 | 6}` } = {},
 ): Block[] {
-  const match = new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, ""));
-  const isHeading = ({ tag, text }: Block) => (headingTag ? tag === headingTag : HEAD.test(tag)) && match.test(text);
+  const match = typeof pattern === "string" ? undefined : new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, ""));
+  const isHeading = ({ tag, text }: Block) =>
+    (headingTag ? tag === headingTag : HEAD.test(tag)) && (match ? match.test(text) : text === pattern);
   const start = blocks.findIndex(isHeading);
   if (start < 0 || (requireUnique && blocks.findLastIndex(isHeading) !== start)) return [];
   const end = blocks.findIndex(({ tag }, index) => index > start && HEAD.test(tag) && tag <= blocks[start].tag);
@@ -281,6 +282,19 @@ export function blocksBetweenMarkers(
 export async function matchesReviewedHtmlSection(blocks: Block[], heading: RegExp, fingerprint: string): Promise<boolean> {
   const section = blockAfterHeading(blocks, heading, { requireUnique: true });
   return section.length > 0 && await sha256(section.map(({ text }) => text).join("\n")) === fingerprint;
+}
+
+/** Fingerprint a section of one publisher content region, excluding adjacent subjects. */
+export async function reviewedHeadingDigest(input: Response | string, selector: string, heading: string): Promise<string> {
+  const blocks = ["h1", "h2", "h3", "h4", "h5", "h6", "p", "ul > li", "ol > li"];
+  const [region, ...extra] = await extractHtmlGrid(input, {
+    row: selector,
+    cell: blocks.map((block) => `${selector} > ${block}`).join(", "),
+    spaceLineBreaks: true,
+  });
+  const section = region && !extra.length ? blockAfterHeading(region, heading, { requireUnique: true }) : [];
+  if (!section.some(({ text }) => text)) throw new Error(`Expected one nonempty reviewed HTML section: ${heading}`);
+  return sha256(section.map(({ text }) => text).join("\n"));
 }
 
 /** Fingerprint one reviewed rule region so changed wording requires a fresh review. */

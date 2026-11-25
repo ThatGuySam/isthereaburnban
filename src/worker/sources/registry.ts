@@ -42,6 +42,8 @@ import { mdDnrWoodland } from "./md/woodland";
 import { meOpenBurningPermits } from "./me/open-burning";
 import { meTownPermitHolds } from "./me/town-permits";
 import { miPermits } from "./mi/permits";
+import { mnLocalCalendars } from "./mn/local-rules";
+import { mnOlmstedOrders } from "./mn/olmsted";
 import { mnRestrictions } from "./mn/restrictions";
 import { moCapeGirardeau } from "./mo/cape-girardeau";
 import { moLakeOzark } from "./mo/lake-ozark";
@@ -135,6 +137,8 @@ export const SOURCES: readonly Source[] = [
   njRestrictions,
   wiPermits,
   mnRestrictions,
+  mnOlmstedOrders,
+  ...mnLocalCalendars.map(({ source }) => source),
   ohSeasonal,
   gaGwinnett,
   gaEpdSummer,

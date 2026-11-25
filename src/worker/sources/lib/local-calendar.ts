@@ -1,5 +1,5 @@
 import { calendarStatusRows, type CalendarCounty, type CalendarRule } from "./calendar";
-import { reviewedHtmlDigest } from "./html";
+import { reviewedHeadingDigest, reviewedHtmlDigest } from "./html";
 import { fetchSource, isSourceUnavailable } from "./http";
 import { manualPdf } from "./pdf";
 import type { ActiveSource } from "../types";
@@ -7,6 +7,7 @@ import type { ActiveSource } from "../types";
 export type LocalCalendarRule = Pick<CalendarRule, "label" | "note" | "scopeNote" | "seasons" | "hours">;
 export type LocalCalendarEvidence =
   | { kind: "html"; digest: string; selector: string; startsWith?: string }
+  | { kind: "html-heading"; digest: string; selector: string; heading: string }
   | { kind: "pdf"; digest: string }
   | { kind: "pdf-etag"; etag: string };
 type Publisher = Pick<ActiveSource, "id" | "state" | "scope" | "stack" | "sourceName" | "sourceUrl" | "officialUrl">;
@@ -24,6 +25,8 @@ async function matchesReview(input: Response, review: LocalCalendarEvidence): Pr
   switch (review.kind) {
     case "html":
       return await reviewedHtmlDigest(input, review.selector, review.startsWith) === review.digest;
+    case "html-heading":
+      return await reviewedHeadingDigest(input, review.selector, review.heading) === review.digest;
     case "pdf":
       return (await manualPdf(input)).sha256 === review.digest;
     case "pdf-etag":
@@ -59,7 +62,7 @@ export function reviewedLocalCalendar({ publisher, counties, rule, review, zone,
       try {
         reply = await fetchSource(publisher.sourceUrl, {
           method: review.kind === "pdf-etag" ? "HEAD" : "GET",
-          headers: { accept: review.kind === "html" ? "text/html" : "application/pdf" },
+          headers: { accept: review.kind.startsWith("html") ? "text/html" : "application/pdf" },
         });
       } catch (error) {
         if (!lastReviewed || !isSourceUnavailable(error)) throw error;
