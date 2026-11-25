@@ -13,6 +13,7 @@ import { arLocalRules } from "./ar/local-rules";
 import { azAreaASummer } from "./az/area-a";
 import { azGrandCanyonFire } from "./az/grand-canyon";
 import { azPimaWildfire } from "./az/pima";
+import { caCountySources } from "./ca/county-sources";
 import { pfirs } from "./ca/pfirs";
 import { coArapahoeFire, coBoulderFire, coDouglasFire, coElPasoFire, coEstesFire, coLarimerFire } from "./co/county-status";
 import { coDenverAir } from "./co/denver-air";
@@ -150,6 +151,7 @@ export const SOURCES: readonly Source[] = [
   flMiamiDadeResidentialBurning,
   inIdemResidentialBurning,
   pfirs,
+  ...caCountySources,
   miPermits,
   miChesterfieldBurnStatus,
   miEastLansingFireNotices,

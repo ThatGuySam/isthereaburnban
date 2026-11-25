@@ -24,6 +24,15 @@ import { arLocalRules } from "../src/worker/sources/ar/local-rules";
 import { parseArizonaAreaA } from "../src/worker/sources/az/area-a";
 import { azGrandCanyonFire, parseGrandCanyonFire } from "../src/worker/sources/az/grand-canyon";
 import { azPimaWildfire, parsePimaWildfire } from "../src/worker/sources/az/pima";
+import {
+  butteBurnDay, colusaBurnDay, elDoradoBurnDay, featherRiverBurnDay, imperialBurnDay,
+  tehamaBurnDay, venturaAgriculturalBurn, yoloSolanoBurnDay,
+} from "../src/worker/sources/ca/district-html";
+import { mendocinoDaily, parseSacramentoWoodSmoke, parseValleyBurnDeclarations } from "../src/worker/sources/ca/district-json";
+import { placerBurnMap, southCoastWoodSmoke } from "../src/worker/sources/ca/district-maps";
+import { parseSanBernardinoFire, sanBernardinoFire } from "../src/worker/sources/ca/fire-district";
+import { caLocalBurningRules } from "../src/worker/sources/ca/local-rules";
+import { portolaCurtailment } from "../src/worker/sources/ca/portola";
 import { parsePfirs, pfirs } from "../src/worker/sources/ca/pfirs";
 import {
   coArapahoeFire, coBoulderFire, coDouglasFire, coElPasoFire, coEstesFire, coLarimerFire,
@@ -371,6 +380,38 @@ const json = fixture("wisconsin.json");
 const rss = raw("lib/fixtures/texas-rss.xml");
 const pdf = raw("lib/fixtures/faulkner-rescind.pdf");
 const parseCaFixture = () => parsePfirs(parseHtml(pfirsHtml), now);
+const caCountyCaptured = new Date("2026-11-25T20:30:00Z");
+const caCountyFixture = (name: string) => raw(`ca/fixtures/county/${name}`);
+const caValleyToday = utf8("ca/fixtures/county/valley-2026-11-24.json");
+const caValleyTomorrow = utf8("ca/fixtures/county/valley-2026-11-25.json");
+const caSacramentoHistory = utf8("ca/fixtures/county/sac-history-2026-11-25.json");
+const caCountyDaily = [
+  [butteBurnDay, "butte", "html"],
+  [colusaBurnDay, "colusa", "html"],
+  [elDoradoBurnDay, "eldor", "html"],
+  [featherRiverBurnDay, "sierra-ag", "html"],
+  [imperialBurnDay, "imperial", "html"],
+  [mendocinoDaily, "mendo", "json"],
+  [placerBurnMap, "placer", "json"],
+  [portolaCurtailment, "no-portola", "html"],
+  [{ source: sanBernardinoFire, parse: parseSanBernardinoFire }, "sbcfire", "html"],
+  [southCoastWoodSmoke, "coast", "json"],
+  [tehamaBurnDay, "tehama-now", "html"],
+  [venturaAgriculturalBurn, "ventura", "html"],
+  [yoloSolanoBurnDay, "yolo", "html"],
+] as const;
+const caCountyJobs: [string, () => unknown][] = [
+  ["ca-sacramento-wood-burning", () => parseSacramentoWoodSmoke(JSON.parse(caSacramentoHistory), caCountyCaptured)],
+  ["ca-valley-air-burn-declarations", () => parseValleyBurnDeclarations(JSON.parse(caValleyToday), JSON.parse(caValleyTomorrow), caCountyCaptured)],
+  ...caCountyDaily.map(([{ source, parse }, name, ext]): [string, () => unknown] => {
+    const bytes = caCountyFixture(`${name}-2026-11-25.${ext}`);
+    return [source.id, () => parse(new Response(bytes), caCountyCaptured)];
+  }),
+  ...caLocalBurningRules.map(({ source, fixture, parse }): [string, () => unknown] => {
+    const bytes = caCountyFixture(fixture);
+    return [source.id, () => parse(new Response(bytes), caCountyCaptured)];
+  }),
+];
 const parseMiFixture = () => parseMichiganPermits(JSON.parse(miMap), now);
 const miCountyCaptured = new Date("2026-11-25T18:57:10Z");
 const miChesterfieldStatus = utf8("mi/fixtures/county-pass/chesterfield-status-2026-11-25.json");
@@ -834,6 +875,7 @@ const jobs: Array<[string, () => unknown]> = [
   ["Calendar rules", () => Object.values(CALENDAR_RULES).map((rule) => activeRule(rule, now, "Gwinnett County"))],
   ...adapters,
   ["CA PFIRS", parseCaFixture],
+  ...caCountyJobs,
   ["MI DNR ArcGIS", parseMiFixture],
   ["MI Chesterfield public status JSON", () => parseChesterfieldBurnStatus(JSON.parse(miChesterfieldStatus), miCountyCaptured)],
   ["MI East Lansing CivicPlus News Flash", () => parseEastLansingFireNotices(miEastLansingFeed, miCountyCaptured, async () => {

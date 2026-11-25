@@ -133,9 +133,21 @@
       {
         "label": "CARB agricultural and prescribed burn decisions",
         "url": "https://ssl.arb.ca.gov/pfirs/cb3/cb3.php"
+      },
+      {
+        "label": "California local air districts",
+        "url": "https://ww2.arb.ca.gov/california-air-districts"
+      },
+      {
+        "label": "San Joaquin Valley hazard-reduction burn declarations",
+        "url": "https://valleyair.org/compliance/hazard-reduction-burning/daily-burn-declarations/"
+      },
+      {
+        "label": "Bay Area open burning rules and notices",
+        "url": "https://www.baaqmd.gov/permits/open-burn"
       }
     ],
-    "notes": "CARB publishes air-basin decisions for agricultural and prescribed burns. Check residential permits and local restrictions for your activity with the fire or air district."
+    "notes": "County entries include local fire and air district decisions and standing rules. Each report names the covered activity and area. Check both authorities at the burn site for permit requirements and any current orders."
   },
   {
     "abbr": "CO",
