@@ -343,7 +343,9 @@ export async function initMap(): Promise<void> {
     // The legend starts open on wide screens; keep the country clear of it.
     const legendOpen = document.querySelector(".map-legend.is-open");
     const bar = (legendOpen ?? document.querySelector(".map-controls"))?.getBoundingClientRect().top ?? h - 60;
-    return { top: head + 12, bottom: Math.max(12, h - bar + 12), left: 12, right: 12 };
+    // Phones: leave a clear band between the drawn map and the bottom controls so they never touch.
+    const gap = host.clientWidth < 768 ? 32 : 12;
+    return { top: head + 12, bottom: Math.max(gap, h - bar + gap), left: 12, right: 12 };
   }
 
   // ---------- taps, long-press pins ----------
