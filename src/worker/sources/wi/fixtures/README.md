@@ -12,3 +12,17 @@ Captured by curl at 06:00 UTC on November 25, 2026 (the November 24 county pass 
 
 - `burlington-fire.html` from [Town of Burlington Fire Department](https://www.townofburlingtonwi.gov/fire-department/). The current status is a text block. The earlier town lift notice corroborates the clear panel.
 - `somerset-permits.html` from [Somerset Fire & Rescue burning permits](https://somersetfirerescue.com/burning-permits/). The original Elementor markup includes both alternatives. The Advanced Elementor visibility class suppresses the ban panel in this capture.
+
+## Local standing rules
+
+Captured from 06:02 to 06:23 UTC on November 25, 2026. Each filename under
+`local/` matches the rule ID in [local-rules.ts](../local-rules.ts), which records
+the exact request URL, publisher and selected region. HTML fixtures retain the
+publisher's selected content. PDF fixtures are the original public documents
+because verification compares their byte hashes. These snapshots are used
+to verify local rules and their geographic boundaries.
+
+## Official notice feeds
+
+- `clinton-orders.json` was captured at about 06:14 UTC on November 25 from the [Town of Clinton WordPress search](https://tn.clinton.wi.gov/wp-json/wp/v2/posts?search=burn+ban&per_page=100&_fields=id%2Cdate_gmt%2Ctitle%2Clink%2Ccontent). It includes the countywide March 1 and March 17, 2024 notices, and both matching cancellations.
+- `menomonee-safety.xml` is the [CivicPlus Safety Strategies RSS feed](https://www.menomoneefalls.gov/RSSFeed.aspx?ModID=1&CID=Safety-Strategies-16) captured at 06:13 UTC on November 25. The feed had no active items. The `menomonee-current-article.html` and `menomonee-archive-ban.html` excerpts show the markup of a [published Safety Strategies article](https://www.menomoneefalls.gov/m/newsflash/home/detail/1787) and the [archived March 2025 village ban](https://www.menomoneefalls.gov/CivicAlerts.aspx?AID=1678&ARC=3296).

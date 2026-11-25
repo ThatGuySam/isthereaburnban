@@ -130,6 +130,8 @@ import { parseWestVirginiaSeasonal, wvForestryFireSeason } from "../src/worker/s
 import { parseEcologyAir, waEcologyAir } from "../src/worker/sources/wa/ecology-air";
 import { parseKingFireSafety, waKingFireSafety } from "../src/worker/sources/wa/king-fire-safety";
 import { parsePugetSound, waPugetSoundAir } from "../src/worker/sources/wa/puget-sound";
+import { wiLocalRules } from "../src/worker/sources/wi/local-rules";
+import { parseMenomoneeNotices, parseVernonNotices, wiMenomoneeNotices, wiVernonNotices } from "../src/worker/sources/wi/local-notices";
 import { wiLocalStatuses } from "../src/worker/sources/wi/local-status";
 import { parseWisconsinPermits, wiPermits } from "../src/worker/sources/wi/permits";
 import { parseWyomingCountyOrders, wyCountyOrders } from "../src/worker/sources/wy/county-orders";
@@ -158,6 +160,17 @@ const miMap = utf8("mi/fixtures/permits-2026-11-24.json");
 const njDivisions = utf8("nj/fixtures/divisions-2026-11-24.json");
 const njCounties = utf8("nj/fixtures/counties-2026-11-24.json");
 const wiPermitsJson = utf8("wi/fixtures/permits-2026-11-24.json");
+const wiCountyCaptured = new Date("2026-11-25T06:13:00Z");
+const wiLocalRuleFixtures = wiLocalRules.map(({ source, parse, fixture }) => {
+  const body = raw(`wi/fixtures/local/${fixture}`);
+  return { source, parse: () => parse(new Response(body), now) };
+});
+const wiVernonJson = utf8("wi/fixtures/clinton-orders.json");
+const wiMenomoneeRss = utf8("wi/fixtures/menomonee-safety.xml");
+const parseWiVernon = () => parseVernonNotices(wiVernonJson, wiCountyCaptured);
+const parseWiMenomonee = () => parseMenomoneeNotices(wiMenomoneeRss, wiCountyCaptured, async () => {
+  throw new Error("The recorded Menomonee Falls feed has no burn-ban article");
+});
 const wiLocalStatusJobs = ["burlington-fire", "somerset-permits"].map((name, index): [string, () => unknown] => {
   const html = utf8(`wi/fixtures/${name}.html`);
   return [wiLocalStatuses[index].source.id, () => wiLocalStatuses[index].parse(html, now)];
@@ -613,6 +626,11 @@ recordedInputs.push(
   { source: miPermits, rows: parseMiFixture(), checked },
   { source: njRestrictions, rows: parseNjFixture(), checked },
   { source: wiPermits, rows: parseWiFixture(), checked },
+  ...await Promise.all(wiLocalRuleFixtures.map(async ({ source, parse }) => ({
+    source, rows: await parse(), checked,
+  }))),
+  { source: wiVernonNotices, rows: parseWiVernon(), checked },
+  { source: wiMenomoneeNotices, rows: await parseWiMenomonee(), checked },
   { source: mnRestrictions, rows: parseMnFixture(), checked },
   { source: mnOlmstedOrders, rows: await parseMnOlmsted(now), checked },
   ...await Promise.all(mnLocalFixtures.map(async ({ source, parse }) => ({ source, rows: await parse(), checked }))),
@@ -782,6 +800,9 @@ const jobs: Array<[string, () => unknown]> = [
   ["NJ Forest Fire Service ArcGIS", parseNjFixture],
   ["WI DNR permit feed", parseWiFixture],
   ...wiLocalStatusJobs,
+  ["WI Vernon County WordPress notices", parseWiVernon],
+  ["WI Menomonee Falls CivicPlus RSS", parseWiMenomonee],
+  ...wiLocalRuleFixtures.map(({ source, parse }): [string, typeof parse] => [source.id, parse]),
   ["MN DNR restriction feed", parseMnFixture],
   ["MN Olmsted current sheriff archive", () => parseMnOlmsted(now)],
   ["MN Olmsted order and effective lift", () => parseMnOlmsted(new Date("2023-09-07T12:00:00Z"))],

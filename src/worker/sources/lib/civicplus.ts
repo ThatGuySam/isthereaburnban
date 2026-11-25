@@ -1,5 +1,5 @@
 import { parseUsDate } from "./dates";
-import { blockAfterHeading, extractHtmlGrid, type HtmlParts } from "./html";
+import { blockAfterHeading, extractHtmlGrid, htmlStatusBlocks, type HtmlParts } from "./html";
 
 // Inventory: CivicPlus/CivicEngage, including AlertCenter, CivicAlerts and mobile News Flash
 // in Pima, Angel Fire, Greenwich, Placer, and Puget Sound Clean Air's embedded status table.
@@ -137,4 +137,17 @@ export async function civicPlusNewsFlash(input: Response | string, { id, name }:
     }
     return { title, preview, posted, updated };
   });
+}
+
+/** Read an active News Flash article and exclude archived articles and related stories. */
+export async function civicPlusNewsFlashArticle(input: Response | string) {
+  const fields = await htmlStatusBlocks(input, "#main-wrapper",
+    ".article-header-content .article-header-title, #article-header-tag, #article-header-date, .article-content.redesign-text");
+  const [title, category, date, body] = fields;
+  const stamp = /^Posted on ([^|]+?)(?: \| Last Updated on (.+))?$/.exec(date ?? "");
+  const posted = stamp && parseUsDate(stamp[1]);
+  if (fields.length !== 4 || !title || !category || !posted || !body) {
+    throw new Error("CivicPlus News Flash: expected an active article with title, category, date and body");
+  }
+  return { title, category, posted, body };
 }

@@ -113,6 +113,8 @@ import { vtOpenBurningPermits } from "./vt/permits";
 import { waEcologyAir } from "./wa/ecology-air";
 import { waKingFireSafety } from "./wa/king-fire-safety";
 import { waPugetSoundAir } from "./wa/puget-sound";
+import { wiLocalRules } from "./wi/local-rules";
+import { wiMenomoneeNotices, wiVernonNotices } from "./wi/local-notices";
 import { wiLocalStatuses } from "./wi/local-status";
 import { wiPermits } from "./wi/permits";
 import { wvForestryFireSeason } from "./wv/seasonal";
@@ -144,6 +146,9 @@ export const SOURCES: readonly Source[] = [
   njRestrictions,
   wiPermits,
   ...wiLocalStatuses.map(({ source }) => source),
+  ...wiLocalRules.map(({ source }) => source),
+  wiVernonNotices,
+  wiMenomoneeNotices,
   mnRestrictions,
   mnOlmstedOrders,
   ...mnLocalCalendars.map(({ source }) => source),
