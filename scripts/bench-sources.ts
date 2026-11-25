@@ -14,7 +14,13 @@ import { parse as parseTx, parseTxt } from "../src/worker/adapters/tx";
 import { COUNTIES } from "../src/worker/counties";
 import { parseAlaskaPermitZones } from "../src/worker/sources/ak/permits";
 import { akDecWinterBurning, parseAlaskaFireSeason, parseAlaskaWinterBurning } from "../src/worker/sources/ak/seasonal";
+import { parseGarlandAlerts, parseHotSpringsAlerts, parseNashvilleAlerts } from "../src/worker/sources/ar/county-alerts";
+import {
+  parseBaxterStatus, parseConwayStatus, parseLittleRiverStatus, parseLonokeStatus,
+  parseMillerStatus, parsePulaskiStatus, parseSalemStatus, parseUnionStatus, parseVanBurenStatus,
+} from "../src/worker/sources/ar/county-status";
 import { arFaulknerCountyOrders, parseFaulknerBan } from "../src/worker/sources/ar/faulkner";
+import { arLocalRules } from "../src/worker/sources/ar/local-rules";
 import { parseArizonaAreaA } from "../src/worker/sources/az/area-a";
 import { azGrandCanyonFire, parseGrandCanyonFire } from "../src/worker/sources/az/grand-canyon";
 import { azPimaWildfire, parsePimaWildfire } from "../src/worker/sources/az/pima";
@@ -426,6 +432,28 @@ const arCaptured = new Date("2026-11-24T10:31:53Z");
 const arBanner = utf8("ar/fixtures/faulkner-banner-2026-11-24.html");
 const arOrder = raw("ar/fixtures/faulkner-order-26-204-2026-11-24.pdf");
 const parseArFaulknerFixture = () => parseFaulknerBan(arBanner, arCaptured, () => manualPdf(new Response(arOrder)));
+const arCountyCaptured = new Date("2026-11-25T05:45:00Z");
+const arCountyHtml = (name: string) => utf8(`ar/fixtures/${name}-2026-11-24.html`);
+const arCountyJson = (name: string): unknown => JSON.parse(utf8(`ar/fixtures/${name}-2026-11-24.json`));
+const arBaxter = arCountyHtml("baxter-status");
+const arConway = arCountyHtml("conway-permits");
+const arGarland = arCountyHtml("garland-active-alerts");
+const arGarlandOrder = arCountyHtml("garland-order");
+const arHotSprings = arCountyHtml("hot-springs-alerts");
+const arHotSpringsOrder = arCountyHtml("hot-springs-order");
+const arLittleRiver = arCountyHtml("little-river-status");
+const arLittleRiverOrder = raw("ar/fixtures/little-river-order-2026-11-24.pdf");
+const arLonoke = arCountyJson("lonoke-burn");
+const arMiller = arCountyJson("miller-status");
+const arNashville = arCountyJson("nashville-alerts");
+const arPulaski = arCountyHtml("pulaski-status");
+const arSalem = arCountyHtml("salem-status");
+const arUnion = arCountyHtml("union-status");
+const arVanBuren = arCountyJson("van-buren-status");
+const arRuleFixtures = arLocalRules.map(({ source, parse }) => {
+  const html = arCountyHtml(source.id.slice(3));
+  return { source, parse: () => parse(new Response(html), arCountyCaptured) };
+});
 const scCaptured = new Date("2026-11-24T10:50:00Z");
 const scDebris = utf8("sc/fixtures/scfc-debris-2026-11-24.json");
 const scRegulation = raw("sc/fixtures/des-61-62-2-2026-11-24.pdf");
@@ -788,6 +816,20 @@ const jobs: Array<[string, () => unknown]> = [
   ["DC Rock Creek compendium and calendar", parseDcParkFixture],
   ["NV Truckee Meadows WordPress / Oxygen", parseNvTmfpdFixture],
   ["AR Faulkner County WordPress / Elementor and PDF", parseArFaulknerFixture],
+  ["AR Baxter County HTML flag", () => parseBaxterStatus(arBaxter, arCountyCaptured)],
+  ["AR Conway city daily permit status", () => parseConwayStatus(arConway, arCountyCaptured)],
+  ["AR Garland County CivicPlus alert", () => parseGarlandAlerts(arGarland, arCountyCaptured, async () => arGarlandOrder)],
+  ["AR Hot Springs city CivicPlus alert", () => parseHotSpringsAlerts(arHotSprings, arCountyCaptured, async () => arHotSpringsOrder)],
+  ["AR Little River County WordPress and PDF", () => parseLittleRiverStatus(arLittleRiver, arCountyCaptured,
+    () => manualPdf(new Response(arLittleRiverOrder)))],
+  ["AR Lonoke County JSON", () => parseLonokeStatus(arLonoke, arCountyCaptured)],
+  ["AR Miller County WordPress REST", () => parseMillerStatus(arMiller, arCountyCaptured)],
+  ["AR Nashville city Thrillshare JSON", () => parseNashvilleAlerts(arNashville, arCountyCaptured)],
+  ["AR Pulaski County SiteWrench table", () => parsePulaskiStatus(arPulaski, arCountyCaptured, "Wed, 25 Nov 2026 00:03:48 GMT")],
+  ["AR Salem fire district Google Sites banner", () => parseSalemStatus(arSalem, arCountyCaptured)],
+  ["AR Union County HTML notice", () => parseUnionStatus(arUnion, arCountyCaptured)],
+  ["AR Van Buren County Squarespace JSON", () => parseVanBurenStatus(arVanBuren, arCountyCaptured)],
+  ...arRuleFixtures.map(({ source, parse }): [string, typeof parse] => [source.id, parse]),
   ["SC Forestry Commission custom WordPress REST", parseScDebrisFixture],
   ["SC DES regulation PDF and calendar", parseScRegulationFixture],
   ["NC Forest Service Drupal newsroom and three orders", parseNcOrderFixtures],

@@ -1,0 +1,14 @@
+{
+  "website": {
+    "siteTitle": "Van Buren County Arkansas"
+  },
+  "collection": {
+    "title": "Home"
+  },
+  "websiteSettings": {
+    "announcementBarSettings": {
+      "style": 1,
+      "text": "<p data-rte-preserve-empty=\"true\" style=\"white-space:pre-wrap;\"><strong>Important News:</strong></p><p class=\"preFade fadeIn\" data-rte-preserve-empty=\"true\" style=\"white-space:pre-wrap;\">Van Buren County is currently under a burn ban. Please follow local guidelines and help keep our community safe.</p>"
+    }
+  }
+}

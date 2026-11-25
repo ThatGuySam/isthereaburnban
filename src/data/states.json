@@ -100,7 +100,7 @@
   {
     "abbr": "AR",
     "name": "Arkansas",
-    "coverage": "restrictions",
+    "coverage": "live",
     "publisher": "Arkansas Department of Agriculture, Forestry Division",
     "officialUrl": "https://agriculture.arkansas.gov/forests/",
     "extraUrls": [
@@ -113,11 +113,15 @@
         "url": "https://www.faulknercountyar.gov/"
       },
       {
+        "label": "Pulaski County Emergency Management",
+        "url": "https://www.pulaskicounty.net/emergency-management"
+      },
+      {
         "label": "Arkansas DEQ open burning rules",
         "url": "https://adeq.state.ar.us/air/compliance/yardwaste.aspx"
       }
     ],
-    "notes": "County judges issue and lift burn bans. The Forestry Division publishes reported county orders on its map. We check signed orders for unincorporated Faulkner County. For other areas, check with your county judge or city fire department. Contact the land manager for rules on public lands. State air-quality rules also apply."
+    "notes": "County judges issue and lift burn bans. The Forestry Division publishes reported county orders on its map. The site checks available county notices and local restrictions. Check the county judge or local fire department for the rules at your address. Contact the land manager for rules on public lands. State air-quality rules also apply."
   },
   {
     "abbr": "CA",

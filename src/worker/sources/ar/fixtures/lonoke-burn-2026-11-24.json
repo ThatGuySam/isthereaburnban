@@ -1,0 +1,13 @@
+{
+ "county": "Lonoke",
+ "status": "active",
+ "detail": "Lonoke is listed in the Arkansas Forestry Division 'Burn Ban Counties' list (34 counties)",
+ "checked": "2026-11-25T04:35:39Z",
+ "confirmed": "2026-11-25T04:35:39Z",
+ "sourceAsOf": "11/24/2026 7:31 AM",
+ "unknownSince": null,
+ "manual": null,
+ "source": "Arkansas Forestry Division burn-ban list; county burn bans are declared by the County Judge",
+ "sourceUrl": "https://mip.agri.arkansas.gov/agtools/Forestry/Fire_Info/Burn_Bans?show_districts=False",
+ "mapUrl": "https://mip.agri.arkansas.gov/agtools/Forestry/Fire_Info?do:showBurnBans"
+}

@@ -82,6 +82,20 @@ export async function civicPlusActiveAlerts(input: Response | string, pageUrl: s
   });
 }
 
+/** Read the full text of a CivicEngage alert after identifying it in the live index. */
+export async function civicPlusActiveAlertBody(input: Response | string, alert: { title: string; published: string | null }) {
+  const card = ".singleAlert > .alert.on";
+  const [cells, ...extra] = await extractHtmlGrid(input, {
+    row: card, cell: `${card} > .date, ${card} > h3, ${card} > p`, spaceLineBreaks: true,
+  });
+  const [date, title, ...body] = cells ?? [];
+  const text = body.map(({ text }) => text).filter(Boolean).join(" ");
+  if (extra.length || date?.text !== alert.published || title?.text !== alert.title || !text) {
+    throw new Error("CivicEngage alert details do not match the active listing");
+  }
+  return text;
+}
+
 export function civicPlusNotices(parts: HtmlParts, pageUrl: string): { title: string; url: string }[] {
   const home = new URL(pageUrl);
   const found = new Map<string, { title: string; url: string }>();

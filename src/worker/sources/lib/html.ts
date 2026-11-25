@@ -251,6 +251,13 @@ export async function extractHtmlGrid(input: Response | string, selectors: {
   return rows;
 }
 
+/** Read text from selected blocks within one recognized status section. */
+export async function htmlStatusBlocks(input: Response | string, section: string, blocks: string): Promise<string[]> {
+  const [cells, ...extra] = await extractHtmlGrid(input, { row: section, cell: blocks, spaceLineBreaks: true });
+  if (!cells || extra.length) throw new Error(`Expected one status section matching ${section}`);
+  return cells.map(({ text }) => text).filter(Boolean);
+}
+
 export function blockAfterHeading(
   blocks: Block[], pattern: string | RegExp,
   { requireUnique = false, headingTag }: { requireUnique?: boolean; headingTag?: `h${1 | 2 | 3 | 4 | 5 | 6}` } = {},

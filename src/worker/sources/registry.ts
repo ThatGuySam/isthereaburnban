@@ -3,7 +3,13 @@ import { akDnrPermitZones } from "./ak/permits";
 import { akDecWinterBurning, akDnrFireSeason } from "./ak/seasonal";
 import { alAdemOpenBurning, alJeffersonOpenBurning } from "./al/air-rules";
 import { alCahabaBurning } from "./al/cahaba";
+import { arGarlandAlerts, arHotSpringsAlerts, arNashvilleAlerts } from "./ar/county-alerts";
+import {
+  arBaxterStatus, arConwayStatus, arLittleRiverStatus, arLonokeStatus,
+  arMillerStatus, arPulaskiStatus, arSalemStatus, arUnionStatus, arVanBurenStatus,
+} from "./ar/county-status";
 import { arFaulknerCountyOrders } from "./ar/faulkner";
+import { arLocalRules } from "./ar/local-rules";
 import { azAreaASummer } from "./az/area-a";
 import { azGrandCanyonFire } from "./az/grand-canyon";
 import { azPimaWildfire } from "./az/pima";
@@ -175,6 +181,19 @@ export const SOURCES: readonly Source[] = [
   alJeffersonOpenBurning,
   alAdemOpenBurning,
   arFaulknerCountyOrders,
+  arBaxterStatus,
+  arConwayStatus,
+  arGarlandAlerts,
+  arHotSpringsAlerts,
+  arLittleRiverStatus,
+  arLonokeStatus,
+  arMillerStatus,
+  arNashvilleAlerts,
+  arPulaskiStatus,
+  arSalemStatus,
+  arUnionStatus,
+  arVanBurenStatus,
+  ...arLocalRules.map(({ source }) => source),
   akDecWinterBurning,
   utFfslFireOrders,
   utClosedFireSeason,
@@ -529,6 +548,13 @@ export const SOURCES: readonly Source[] = [
     sourceUrl: "https://bentoncountyar.gov/fire-marshal/burn-ban-information/",
     officialUrl: "https://bentoncountyar.gov/fire-marshal/burn-ban-information/",
     error: "The Fire Marshal's burn-ban information returned a Cloudflare challenge (HTTP 403) on 2026-11-24.",
+  },
+  {
+    id: "ar-benton-county-cencom-burn-status", state: "AR", scope: "part", stack: "IIS / PHP JSON",
+    mode: "manual", cadence: null, sourceName: "Benton County Emergency Communications",
+    sourceUrl: "https://gis.bentoncountyar.gov/controlledburn/getStatus.php",
+    officialUrl: "https://gis.bentoncountyar.gov/controlledburn/",
+    error: "The status endpoint works in curl. The local Worker repeatedly received a TLS connection reset. The portal covers participating dispatch districts.",
   },
   {
     id: "nv-interagency-fire-restrictions", state: "NV", scope: "part", stack: "ArcGIS FeatureServer / Squarespace order index",
