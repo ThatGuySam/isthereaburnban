@@ -1,6 +1,5 @@
-import { ACTIVE_KEY, decodeActive, encodeActive, INDEX_KEY, PRETTY_ACTIVE_KEY, stateKey, type ActiveProjection, type SnapshotIndex, type StateSnapshot } from "./snapshot-v2";
+import { ACTIVE_KEY, decodeActive, encodeActive, INDEX_KEY, stateKey, type ActiveProjection, type SnapshotIndex, type StateSnapshot } from "./snapshot-v2";
 import { readStateParts } from "./snapshot-chunks";
-import type { BanFormat } from "./active-bans";
 import type { Env } from "./env";
 
 export class SnapshotRevisionUnavailable extends Error {}
@@ -27,9 +26,8 @@ export async function readStateRevision(db: D1Database, state: string, revision:
   return serialized ? JSON.parse(serialized) : null;
 }
 
-export async function readActiveFragments(db: D1Database, format: BanFormat, index?: SnapshotIndex) {
-  const active = format === "pretty" ? "active_pretty" : "active";
-  const fields = `shard.state, shard.revision, chunked, ${active} AS active, weather, weather_counties AS weatherCounties`;
+export async function readActiveFragments(db: D1Database, index?: SnapshotIndex) {
+  const fields = "shard.state, shard.revision, chunked, active, weather, weather_counties AS weatherCounties";
   const query = index
     ? db.prepare(`SELECT ${fields} FROM snapshot_state AS shard
         JOIN json_each(?) AS ref ON shard.state = ref.key AND shard.revision = (ref.value ->> '$.revision')
@@ -38,11 +36,13 @@ export async function readActiveFragments(db: D1Database, format: BanFormat, ind
         WHERE rowid IN (SELECT MAX(rowid) FROM snapshot_state GROUP BY state) ORDER BY state`);
   const { results } = await query.all<{ state: string; revision: string; chunked: number;
     active: string; weatherCounties: string; weather: string }>();
-  const parts = await readStateParts(db, results.filter((row) => row.chunked), [active, "weather_counties", "weather"]);
+  const parts = await readStateParts(db, results.filter((row) => row.chunked), ["active", "weather_counties", "weather"]);
   return results.map((row) => {
     const chunk = parts.get(row.state);
-    return row.chunked ? { active: chunk?.[active]?.join("") || "\n",
-      weatherCounties: chunk?.weather_counties?.join("") ?? "", weather: chunk?.weather?.join("") ?? "" } : row;
+    if (!row.chunked) return row;
+    if (!chunk?.active?.length) throw new SnapshotRevisionUnavailable(`Active snapshot unavailable: ${row.state}/${row.revision}`);
+    return { active: chunk.active.join(""), weatherCounties: chunk.weather_counties?.join("") ?? "",
+      weather: chunk.weather?.join("") ?? "" };
   });
 }
 
@@ -51,7 +51,11 @@ export async function readStateNotices(db: D1Database, revision: string) {
     WHERE revision = ? AND (chunked = 1 OR notices <> '[]')`).bind(revision)
     .all<{ state: string; revision: string; chunked: number; notices: string }>();
   const parts = await readStateParts(db, results.filter((row) => row.chunked), ["notices"]);
-  return results.map((row) => row.chunked ? parts.get(row.state)?.notices?.join("") ?? "[]" : row.notices);
+  return results.map((row) => {
+    const notices = row.chunked ? parts.get(row.state)?.notices?.join("") : row.notices;
+    if (!notices) throw new Error(`Staged notices missing: ${row.state}/${row.revision}`);
+    return notices;
+  });
 }
 
 export async function loadIndex(env: Env) {
@@ -103,13 +107,13 @@ export async function loadMapStates(env: Env, index: SnapshotIndex, states: stri
   return shards;
 }
 
-export async function loadActive(env: Env, index: SnapshotIndex, format: BanFormat): Promise<ActiveProjection> {
+export async function loadActive(env: Env, index: SnapshotIndex): Promise<ActiveProjection> {
   const projection = await readCache(async () => {
-    const raw = await env.KV.get(format === "pretty" ? PRETTY_ACTIVE_KEY : ACTIVE_KEY, "text");
+    const raw = await env.KV.get(ACTIVE_KEY, "text");
     return raw ? decodeActive(raw) : null;
   });
   if (projection?.revision === index.revision) return projection;
-  const fragments = await readActiveFragments(env.DB, format, index);
+  const fragments = await readActiveFragments(env.DB, index);
   if (fragments.length !== Object.keys(index.states).length) throw new SnapshotRevisionUnavailable(`Active snapshot unavailable: ${index.revision}`);
   return decodeActive(encodeActive(index.revision, fragments));
 }

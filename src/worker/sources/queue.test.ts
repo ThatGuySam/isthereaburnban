@@ -8,11 +8,11 @@ import { RuleChangedError } from "./statutory-fallback";
 import { withFireWeather } from "../fire-weather";
 import { lookup, statusFor } from "../lookup";
 import { snapshotReader } from "../snapshot";
-import { ACTIVE_KEY, INDEX_KEY, PRETTY_ACTIVE_KEY, stateKey } from "../snapshot-v2";
+import { ACTIVE_KEY, INDEX_KEY, stateKey } from "../snapshot-v2";
 import { US_ZONES } from "./lib/dates";
 import { mergeSources, STALE_MS } from "./merge";
 import { nwsFireWeather, parseNwsAlerts } from "./nws/alerts";
-import { advancePublication, currentRun, MAX_CACHED_STATES } from "./publication";
+import { advancePublication, currentRun } from "./publication";
 import { consumeSourceMessage, consumeSourceQueue, enqueueSources, isDue } from "./queue";
 import { replayDeadLetter, SOURCE_DLQ } from "./dead-letter";
 import { pipelineStatus, runSourceMonitor } from "./monitor";
@@ -132,7 +132,6 @@ test("registry and states.json agree in both directions, and source IDs are uniq
   expect([...new Set(active.filter(({ coverage }) => coverage === "live").map(({ state }) => state))].sort()).toEqual(live);
   expect(new Set(SOURCES.map(({ id }) => id)).size).toBe(SOURCES.length);
   const dailyPolls = active.reduce((total, { cadence }) => total + (cadence.kind === "hourly" ? 24 : cadence.hours.length), 0);
-  expect(23 * (MAX_CACHED_STATES + 3) + 51 + 3).toBeLessThan(1000); // one full KV bootstrap and 23 capped publications
   expect((dailyPolls + 24 * (1 + 51 + 4)) * 3).toBeLessThanOrEqual(10000); // enqueue, dequeue, delete
   for (const item of active) {
     if (item.product === "fire-weather") {
@@ -190,7 +189,7 @@ test("queued NWS changes leave ban history alone and preserve a verified midnigh
   await poll(box, weather, active);
   await merge(box, sources, active);
   const during = box.snapshot();
-  expect(box.puts).toEqual([stateKey("CO"), ACTIVE_KEY, PRETTY_ACTIVE_KEY, INDEX_KEY]);
+  expect(box.puts).toEqual([stateKey("CO"), ACTIVE_KEY, INDEX_KEY]);
   expect(during.counties["08059"].status).toBe("none");
   expect(withFireWeather(during, active).counties["08059"]).toMatchObject({
     status: "restricted", expires: "2026-11-19T07:00:00.000Z", alerts: [expect.objectContaining({ event: "Red Flag Warning" })],
@@ -228,8 +227,8 @@ test("queue stores one revision, absorbs duplicate deliveries and skips unchange
   await poll(box, src, initial);
   await merge(box, [src], initial);
   expect(called).toBe(1);
-  expect(box.puts).toHaveLength(51 + 3);
-  expect(box.puts.slice(-3)).toEqual([ACTIVE_KEY, PRETTY_ACTIVE_KEY, INDEX_KEY]);
+  expect(box.puts).toHaveLength(51 + 2);
+  expect(box.puts.slice(-2)).toEqual([ACTIVE_KEY, INDEX_KEY]);
   expect(box.sqlite.query("SELECT count(*) as count FROM snapshot_state").get().count).toBe(51);
   expect(box.sqlite.query("SELECT count(*) as count FROM source_payload").get().count).toBe(1);
   expect(box.snapshot().sources[0]).toMatchObject({ ok: true, counties: 2 });
@@ -239,7 +238,7 @@ test("queue stores one revision, absorbs duplicate deliveries and skips unchange
   await merge(box, [src], nextHour + 3_600_000);
   await poll(box, src, initial - 1);
   expect(called).toBe(3);
-  expect(box.puts).toHaveLength(51 + 3);
+  expect(box.puts).toHaveLength(51 + 2);
   const snapshot = box.snapshot();
   applyChecks(snapshot, await readHeads(box.env.DB), new Date(nextHour + 3_600_000));
   expect(snapshot.counties["41039"].checked).toBe(new Date(nextHour + 3_600_000).toISOString());
@@ -401,7 +400,7 @@ test("one dirty state rewrites only its shard and readers pin the catalog revisi
   await poll(box, or, next);
   await poll(box, tx, next);
   await merge(box, [or, tx], next);
-  expect(box.puts).toEqual([stateKey("OR"), ACTIVE_KEY, PRETTY_ACTIVE_KEY, INDEX_KEY]);
+  expect(box.puts).toEqual([stateKey("OR"), ACTIVE_KEY, INDEX_KEY]);
   expect(box.catalog().states.TX).toEqual(before.states.TX);
 
   const freshOr = box.keys.get(stateKey("OR"));
@@ -409,7 +408,7 @@ test("one dirty state rewrites only its shard and readers pin the catalog revisi
   box.keys.set(ACTIVE_KEY, old.get(ACTIVE_KEY));
   const current = snapshotReader(box.env, { fresh: true });
   expect((await current.state("OR")).counties["41039"].status).toBe("ban");
-  expect(JSON.parse((await current.bans()).body.join("")).counties.map(({ fips }) => fips)).toEqual(["41039"]);
+  expect((await current.bans()).data.counties.map(({ fips }) => fips)).toEqual(["41039"]);
 
   box.keys.set(INDEX_KEY, old.get(INDEX_KEY)); // Edge sees the previous catalog with a newer shard.
   box.keys.set(stateKey("OR"), freshOr);
@@ -422,7 +421,7 @@ test("one dirty state rewrites only its shard and readers pin the catalog revisi
   expect(box.gets.every((key) => [INDEX_KEY, stateKey("OR"), stateKey("TX")].includes(key))).toBe(true);
 });
 
-test("a busy hour limits KV writes and still serves every changed state", async () => {
+test("all dirty state shards are cached in a 53-write Paid publication", async () => {
   const box = sandbox();
   const start = Date.now() - 7_200_000;
   const next = start + 3_600_000;
@@ -437,13 +436,12 @@ test("a busy hour limits KV writes and still serves every changed state", async 
   status = "ban";
   for (const src of sources) await poll(box, src, next);
   await merge(box, sources, next);
-  expect(box.puts).toHaveLength(MAX_CACHED_STATES + 3);
-  const overflow = Object.keys(box.catalog().states).filter((state) => !box.catalog().states[state].cached);
-  expect(overflow).toHaveLength(51 - MAX_CACHED_STATES);
-  const state = overflow[0];
+  expect(box.puts).toHaveLength(51 + 2);
+  expect(Object.values(box.catalog().states).every(({ cached }) => cached)).toBe(true);
+  const [state, county] = counties.entries().next().value;
   const result = await snapshotReader(box.env, { fresh: true }).state(state);
-  expect(result.counties[counties.get(state).fips].status).toBe("ban");
-  expect(box.gets).not.toContain(stateKey(state));
+  expect(result.counties[county.fips].status).toBe("ban");
+  expect(box.gets).toContain(stateKey(state));
 });
 
 test("v1 KV remains readable and the first v2 merge preserves history and resumes pending legacy notices", async () => {
@@ -489,8 +487,7 @@ test("unchanged scoped orders take the latest matching check without rewriting t
   expect(box.catalog().states.OR).toEqual(previous);
   const { lastAttemptedAt: _attempt, ...county } = statusFor(await reader().state("OR"), "41039");
   expect(county.orders[0].checked).toBe(new Date(next).toISOString());
-  expect(JSON.parse((await reader().bans()).body.join("")).counties[0]).toEqual(JSON.parse(JSON.stringify(county)));
-  expect(JSON.parse(JSON.parse((await reader().bans(undefined, "pretty")).body.join(""))).counties[0]).toEqual(JSON.parse(JSON.stringify(county)));
+  expect(JSON.parse(JSON.stringify((await reader().bans()).data.counties[0]))).toEqual(JSON.parse(JSON.stringify(county)));
 });
 
 test("out-of-order merge replay leaves a newer incomplete hourly refresh unpublished", async () => {
@@ -712,5 +709,5 @@ test("oversized state rows split into byte-safe chunks and remain readable throu
   box.keys.delete(ACTIVE_KEY);
   const reader = snapshotReader(box.env, { fresh: true });
   expect((await reader.state("OR")).counties["41039"].note).toBe(note);
-  expect(JSON.parse((await reader.bans()).body.join("")).counties[0].note).toBe(note);
+  expect((await reader.bans()).data.counties[0].note).toBe(note);
 });

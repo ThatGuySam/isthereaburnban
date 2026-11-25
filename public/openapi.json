@@ -181,6 +181,26 @@
               "maxLength": 2
             },
             "example": "TX"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "National page size. Omit for state-filtered requests.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "The nextCursor from the previous national page. A new publication invalidates earlier cursors.",
+            "schema": {
+              "type": "string",
+              "maxLength": 72
+            }
           }
         ],
         "responses": {
@@ -217,14 +237,32 @@
                       "type": "integer",
                       "minimum": 0,
                       "description": "Number of counties with unconfirmed status when a state is requested."
+                    },
+                    "count": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "Reports in this national page."
+                    },
+                    "nextCursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Pass as cursor to continue the national list. Continue even when the current page has no reports. Null means the list ended."
                     }
                   }
                 }
               }
             }
+          },
+          "400": {
+            "description": "Invalid page size, cursor, or pagination on a state-filtered request."
+          },
+          "409": {
+            "description": "The cursor refers to a different publication. Restart without a cursor."
           }
         },
-        "description": "Published county summaries with a ban or restriction, including scoped orders. The list reflects available evidence."
+        "description": "Published county summaries with a ban or restriction, including scoped orders. National responses are paged. State-filtered responses return the state list."
       }
     },
     "/api/v1/coverage": {

@@ -12,7 +12,7 @@ The JSON API needs no key. Use the result's `scope`, `scopeNote`, `orders`, chec
 - [Status by city](https://site.example/api/v1/status?city=Tulsa&state=OK) uses mapped Census incorporated places. Results include a `place` object. When counties disagree, the place answer is `depends`. City fire rules may apply separately.
 - [Plain-text answer](https://site.example/api/v1/status?zip=74103&format=text)
 - [One county](https://site.example/api/v1/counties/40143)
-- [Published active reports](https://site.example/api/v1/bans) and [by state](https://site.example/api/v1/bans?state=TX) include scoped restrictions.
+- [Published active reports](https://site.example/api/v1/bans) and [by state](https://site.example/api/v1/bans?state=TX) include scoped restrictions. Continue the national list using `nextCursor` as `cursor`, including after empty pages. State-filtered lists are returned in full.
 - [Coverage and source health](https://site.example/api/v1/coverage) distinguishes full, positive-only and manual sources.
 - [Map statuses](https://site.example/api/v1/map-status) return a publication revision, expiry and known statuses keyed by FIPS. Missing counties are unknown.
 - [Published NWS fire-weather signals](https://site.example/api/v1/fire-weather), optionally [filtered by state](https://site.example/api/v1/fire-weather?state=OK). Check the alert's area, onset and source health. Some local rules apply during a Red Flag Warning.
@@ -26,7 +26,7 @@ The JSON API needs no key. Use the result's `scope`, `scopeNote`, `orders`, chec
 
 - Streamable HTTP endpoint is https://site.example/mcp (stateless, no authentication).
 - `check_burn_ban` accepts ZIP, coordinates, county FIPS or city and state. Present location uncertainty and scope before giving an answer. Cite the issuing order when available.
-- `list_active_bans` lists published reports, optionally for one state. `coverage` reports source coverage and health.
+- `list_active_bans` lists published reports. Pass a state for a full state list or use `nextCursor` to continue a national list. `coverage` reports source coverage and health.
 - `subscribe_email_alerts` is the only tool that writes. Use it when someone asks for alerts and provides their email. If email delivery is enabled, a confirmation email goes out first. After confirmation we attempt alerts for eligible changes we detect.
 - [Client setup and API examples](https://site.example/developers/)
 

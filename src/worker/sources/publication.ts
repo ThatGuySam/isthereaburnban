@@ -6,17 +6,15 @@ import type { Notice } from "../notification-message";
 import { alertNotices, transitionInsert } from "../snapshot";
 import { SNAPSHOT_KV_LIMIT_BYTES, writeStateParts } from "../snapshot-chunks";
 import { readActiveFragments, readPublication, readStateNotices, readStateRevision } from "../snapshot-store";
-import { ACTIVE_KEY, encodeActive, encodeState, INDEX_KEY, PRETTY_ACTIVE_KEY, stateKey,
+import { ACTIVE_KEY, encodeActive, encodeState, INDEX_KEY, stateKey,
   type SnapshotIndex, type StateSnapshot, type StateSummary } from "../snapshot-v2";
 import { readLegacyState, resumeLegacyPublication } from "./legacy-publication";
 import { mergeSources, type SourceInput } from "./merge";
 import { importLegacyWeather, materialRevisions, readHeads, readSourceInputs, type SourceHead } from "./state";
 import type { Source } from "./types";
 
-// Leave room for retries, a refresh straddling midnight, and operational writes.
-export const MAX_CACHED_STATES = 32;
 // Bump when the same material revisions need a different state projection.
-const MERGE_VERSION = 5;
+const MERGE_VERSION = 6;
 
 type StateJob = { state: string; signature: string; cache: boolean };
 type RunRow = { id: string; slot: number; generated: string; plan: string; cursor: number };
@@ -25,8 +23,8 @@ type SendNotices = (env: Env, runId: string, notices: Notice[]) => Promise<unkno
 type PublishedState = { state: string; revision: string; cached: number; summary: string };
 
 export function buildStatePublication(prev: SnapshotData | null, inputs: SourceInput[], now: Date, state: string, revision: string, signature: string) {
-  const { snapshot, transitions, answers } = mergeSources(prev, inputs, now);
-  return { ...encodeState({ ...snapshot, version: 2, state, revision }, signature, answers), transitions, notices: alertNotices(transitions, snapshot) };
+  const { snapshot, transitions } = mergeSources(prev, inputs, now);
+  return { ...encodeState({ ...snapshot, version: 2, state, revision }, signature), transitions, notices: alertNotices(transitions, snapshot) };
 }
 
 export async function currentRun(db: D1Database): Promise<Run | null> {
@@ -60,14 +58,11 @@ export async function planPublication(env: Env, slot: number, now: Date, sources
     hashes.set(id, hash);
   }
   const plan: StateJob[] = [];
-  // Rotate which states are cached if a busy hour needs the D1 overflow path.
-  const offset = Math.floor(slot / 3_600_000) % STATES.length;
-  for (let i = 0; i < STATES.length; i++) {
-    const state = STATES[(offset + i + STATES.length) % STATES.length].abbr;
+  for (const { abbr: state } of STATES) {
     const material = materialRevisions(stateSources(sources, state), heads, now, weather.get(state) ?? new Map());
     const signature = createHash("sha256").update(JSON.stringify([MERGE_VERSION, material])).digest("hex");
     if (signature !== previous?.states[state]?.signature) {
-      plan.push({ state, signature, cache: !previous || plan.length < MAX_CACHED_STATES });
+      plan.push({ state, signature, cache: true });
     }
   }
   // Refresh a global health-only change (for example a failing NWS poll with an empty feed).
@@ -101,7 +96,7 @@ async function mergeState(env: Env, run: Run, job: StateJob, sources: readonly S
     const prune = env.DB.prepare(`DELETE FROM snapshot_state WHERE state = ? AND revision NOT IN
       (SELECT revision FROM snapshot_state WHERE state = ? ORDER BY rowid DESC LIMIT 2)`);
     const { writes, snapshotBytes } = writeStateParts(env.DB, state, run.id, encoded.summary, {
-      snapshot: serialized, active: encoded.active, active_pretty: encoded.pretty,
+      snapshot: serialized, active: encoded.active, active_pretty: "",
       weather_counties: encoded.weatherCounties, weather: encoded.weather, notices: JSON.stringify(encoded.notices),
     });
     const statements = [prune.bind(state, state), ...writes];
@@ -186,10 +181,11 @@ export async function advancePublication(env: Env, run: Run, sources: readonly S
   if (current !== run.cursor) return current !== null;
   const job = run.plan[run.cursor];
   if (job) await mergeState(env, run, job, sources);
-  else if (run.cursor <= run.plan.length + 1) {
-    const format = run.cursor === run.plan.length ? "compact" : "pretty";
-    const rows = await readActiveFragments(env.DB, format);
-    await env.KV.put(format === "pretty" ? PRETTY_ACTIVE_KEY : ACTIVE_KEY, encodeActive(run.id, rows));
+  else if (run.cursor === run.plan.length) {
+    const body = encodeActive(run.id, await readActiveFragments(env.DB));
+    if (Buffer.byteLength(body) < SNAPSHOT_KV_LIMIT_BYTES) await env.KV.put(ACTIVE_KEY, body);
+  } else if (run.cursor === run.plan.length + 1) {
+    // Preserve the cursor numbers of in-flight runs that used a separate pretty projection.
   } else if (run.cursor === run.plan.length + 2) await publishCatalog(env, run, sources);
   else {
     const notices = (await readStateNotices(env.DB, run.id)).flatMap((serialized): Notice[] => JSON.parse(serialized));

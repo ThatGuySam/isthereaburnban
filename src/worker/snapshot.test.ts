@@ -126,16 +126,11 @@ test("a district ban overrides a county-level negative in public answers and ale
 
   const index = { ...next.snapshot, revision: "fixture", version: 2, states: {}, orderChecks: {} };
   const encoded = encodeState({ ...index, state: "OK" }, "signature");
-  for (const format of ["compact", "pretty"]) {
-    const projection = decodeActive(encodeActive(index.revision, [{ ...encoded, active: format === "pretty" ? encoded.pretty : encoded.active }]));
-    const bans = (now: Date) => {
-      const { body } = formatNationalBans(projection, index, new Map(), now, format);
-      return JSON.parse(format === "pretty" ? JSON.parse(body.join("")) : body.join("")).counties;
-    };
-    const { lastAttemptedAt: _attempt, ...expected } = answer;
-    expect(bans(t1)).toEqual([JSON.parse(JSON.stringify(expected))]);
-    expect(bans(new Date(expires))).toEqual([]);
-  }
+  const projection = decodeActive(encodeActive(index.revision, [encoded]));
+  const bans = (now: Date) => formatNationalBans(projection, index, new Map(), now).data.counties;
+  const { lastAttemptedAt: _attempt, ...expected } = answer;
+  expect(JSON.parse(JSON.stringify(bans(t1)))).toEqual([JSON.parse(JSON.stringify(expected))]);
+  expect(bans(new Date(expires))).toEqual([]);
 });
 
 test("standing activity rules are reported separately from the temporary county feed", () => {

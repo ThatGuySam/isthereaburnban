@@ -26,7 +26,6 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
   const clock = now.getTime();
   const counties: SnapshotData["counties"] = {};
   const changed = { ...prev?.changed };
-  const answers: Record<string, CountyStatus> = {};
   const previousTime = Date.parse(prev?.generated ?? "");
   const previousClock = Number.isFinite(previousTime) ? previousTime : clock;
   const sources: SourceHealth[] = [];
@@ -126,13 +125,10 @@ export function mergeSources(prev: SnapshotData | null, inputs: SourceInput[], n
       changed[fips] = at;
     }
     counties[fips] = row;
-    decision.firstSeenAt = row.firstSeenAt;
-    decision.statusChangedAt = row.statusChangedAt;
-    answers[fips] = decision;
   }
   for (const fips of ended) if (!counties[fips] && prev?.counties[fips]) changed[fips] = at;
 
   const snapshot: Snapshot = { version: 1, generated: at, counties, sources, changed, sourceVersions, verifiedOrders: tracker.ledger,
     ...(Object.keys(fireWeather).length ? { fireWeather, weatherChecked } : {}) };
-  return { snapshot, transitions, answers };
+  return { snapshot, transitions };
 }

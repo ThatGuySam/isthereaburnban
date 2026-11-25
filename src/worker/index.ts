@@ -1,3 +1,4 @@
+import { bansPage } from "./bans-page";
 import { activeFireWeather, coverage } from "./api";
 import { confirmEmail, subscribeEmail, unsubscribeEmail } from "./email";
 import type { Env } from "./env";
@@ -88,8 +89,11 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
       return json(map, 200, statusCacheControl(map.expiresAt));
     }
     if (path === "/api/v1/bans") {
-      const bans = await snapshots.bans(p.get("state") ?? undefined);
-      return jsonResponse(bans.body.join(""), 200, statusCacheControl(bans.nextBoundary));
+      const limit = p.get("limit") ?? undefined;
+      const cursor = p.get("cursor") ?? undefined;
+      const bans = await snapshots.bans(p.get("state") ?? undefined,
+        limit !== undefined || cursor !== undefined ? bansPage(limit, cursor) : undefined);
+      return json(bans.data, 200, statusCacheControl(bans.nextBoundary));
     }
     if (path === "/api/v1/fire-weather") {
       const weather = activeFireWeather(await snapshots.weather(), p.get("state") ?? undefined);

@@ -2,7 +2,7 @@
 import { describe, expect, test } from "bun:test";
 import { activeBans } from "./api";
 import { handleMcp, subscribeAlertsTool } from "./mcp";
-import { encodeActive, encodeState, INDEX_KEY, PRETTY_ACTIVE_KEY } from "./snapshot-v2";
+import { ACTIVE_KEY, encodeActive, encodeState, INDEX_KEY } from "./snapshot-v2";
 import { withCurrentLinks } from "./source-links";
 
 function fakeEnv(resend?: string) {
@@ -82,7 +82,7 @@ test("national bans preserve JSON text in legacy SSE and modern JSON MCP respons
   } };
   const row = encodeState(snapshot, "fixture");
   const index = { version: 2, revision: "fixture", generated, sources: [], states: {}, orderChecks: {} };
-  const values = new Map([[INDEX_KEY, JSON.stringify(index)], [PRETTY_ACTIVE_KEY, encodeActive(index.revision, [{ ...row, active: row.pretty }])]]);
+  const values = new Map([[INDEX_KEY, JSON.stringify(index)], [ACTIVE_KEY, encodeActive(index.revision, [row])]]);
   const env = { SITE_URL: "https://isthereaburnban.com", KV: { get: async (key, type) => {
     const value = values.get(key);
     return type === "json" && value ? JSON.parse(value) : value ?? null;
@@ -96,7 +96,7 @@ test("national bans preserve JSON text in legacy SSE and modern JSON MCP respons
     "mcp-protocol-version": version, "mcp-method": "tools/call", "mcp-name": params.name,
   });
   expect(modern.content).toEqual(legacy.content);
-  expect(legacy.content[1].text).toBe(JSON.stringify(activeBans(withCurrentLinks(snapshot)), null, 2));
+  expect(legacy.content[1].text).toBe(JSON.stringify({ ...activeBans(withCurrentLinks(snapshot)), count: 1, nextCursor: null }, null, 2));
 });
 
 describe("MCP metadata for directories", () => {
@@ -120,4 +120,34 @@ describe("MCP metadata for directories", () => {
     for (const name of ["check_burn_ban", "list_active_bans", "coverage"]) expect(by[name].annotations.readOnlyHint).toBe(true);
     expect(by.subscribe_email_alerts.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false, idempotentHint: false });
   });
+});
+
+test("national API and MCP paginate the same reports in order and reject a cursor from another publication", async () => {
+  const generated = new Date().toISOString();
+  const revision = "first-revision";
+  const counties = Object.fromEntries([
+    ["40143", "Tulsa County"], ["40001", "Adair County"], ["40109", "Oklahoma County"],
+  ].map(([fips, county]) => [fips, { fips, state: "OK", county, status: "ban", label: "County ban",
+    since: null, expires: null, sourceUpdated: null, checked: generated, sourceName: "County", sourceUrl: "", officialUrl: "" }]));
+  const snapshot = { version: 2, state: "OK", revision, generated, sources: [], changed: {}, counties };
+  const shard = encodeState(snapshot, "fixture");
+  const index = { version: 2, revision, generated, sources: [], states: {}, orderChecks: {} };
+  const values = new Map([[INDEX_KEY, JSON.stringify(index)], [ACTIVE_KEY, encodeActive(revision, [shard])]]);
+  const env = { SITE_URL: "https://isthereaburnban.com", KV: { get: async (key, type) => {
+    const value = values.get(key);
+    return type === "json" && value ? JSON.parse(value) : value ?? null;
+  } }, DB: { prepare: () => ({ all: async () => ({ results: [] }) }) } };
+  const worker = (await import("./index")).default;
+  const http = (qs) => worker.fetch(new Request(env.SITE_URL + "/api/v1/bans?" + qs), env, {});
+  const call = (args) => rpc("tools/call", { name: "list_active_bans", arguments: args }, env);
+  const first = await (await http("limit=2")).json();
+  expect(first.counties.map(({ fips }) => fips)).toEqual(["40001", "40109"]);
+  expect(first.nextCursor).toBeTruthy();
+  expect(JSON.parse((await call({ limit: 2 })).content[1].text)).toEqual(first);
+  const second = await (await http("limit=2&cursor=" + first.nextCursor)).json();
+  expect(second.counties.map(({ fips }) => fips)).toEqual(["40143"]);
+  expect(second.nextCursor).toBeNull();
+  expect(JSON.parse((await call({ limit: 2, cursor: first.nextCursor })).content[1].text)).toEqual(second);
+  expect((await http("cursor=older-revision.1")).status).toBe(409);
+  expect((await http("limit=101")).status).toBe(400);
 });

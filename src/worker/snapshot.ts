@@ -1,12 +1,13 @@
 import type { CountyStatus, MapStatus, Snapshot, SnapshotData } from "../shared/types";
 import type { Adapter } from "./adapters";
-import { formatNationalBans, projectWeather, type BanFormat } from "./active-bans";
+import { formatNationalBans, projectWeather } from "./active-bans";
+import { bansPage, type BansPage, pageFields, pageStart } from "./bans-page";
 import { countyDecision } from "./county-decision";
 import { activeBans } from "./api";
 import { SNAPSHOT_KEY, type Env } from "./env";
 import { withFireWeather } from "./fire-weather";
 import { projectMapStatus, snapshotBoundary } from "./map-status";
-import { countyState } from "./lookup";
+import { countyState, LookupError } from "./lookup";
 import { CHANNELS } from "./notification-audience";
 import { transitionNotice, type Transition } from "./notification-message";
 import { drainOutbox, enqueueNotices } from "./notification-outbox";
@@ -129,8 +130,8 @@ type Memo<T> = { until: number; value: T };
 type ReadCache = {
   index?: Memo<SnapshotIndex>;
   heads?: Memo<Map<string, SourceHead>>;
-  active: Partial<Record<BanFormat, Memo<ActiveProjection>>>;
-  bans: Partial<Record<BanFormat, Memo<ReturnType<typeof formatNationalBans>> & { revision: string; heads: Map<string, SourceHead> }>>;
+  active?: Memo<ActiveProjection>;
+  bans?: Memo<ReturnType<typeof formatNationalBans>> & { revision: string; key: string; heads: Map<string, SourceHead> };
   map?: MapStatus;
   states: Map<string, Memo<StateSnapshot> & { heads?: Map<string, SourceHead> }>;
 };
@@ -147,7 +148,7 @@ function publicHeads(env: Env, ids?: string[]) {
 /** A request pins one catalog, so even border lookups follow the same publication. */
 export function snapshotReader(env: Env, { fresh = false, initialize = true } = {}) {
   let cache = readCache.get(env.KV);
-  if (!cache) readCache.set(env.KV, cache = { active: {}, bans: {}, states: new Map() });
+  if (!cache) readCache.set(env.KV, cache = { states: new Map() });
   const memo = cache;
   const reusable = (entry: Memo<unknown> | undefined) => !fresh && entry && Date.now() < entry.until;
   let index: Promise<SnapshotIndex | null> | undefined;
@@ -186,11 +187,11 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
     memo.heads = keep(heads);
     return heads;
   };
-  const active = async (idx: SnapshotIndex, format: BanFormat) => {
-    const cached = memo.active[format];
+  const active = async (idx: SnapshotIndex) => {
+    const cached = memo.active;
     if (cached && reusable(cached) && cached.value.revision === idx.revision) return cached.value;
-    const projection = await loadActive(env, idx, format);
-    memo.active[format] = keep(projection);
+    const projection = await loadActive(env, idx);
+    memo.active = keep(projection);
     return projection;
   };
 
@@ -288,8 +289,9 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
       applySourceChecks(sources, await allHeads());
       return { generated: idx.generated, sources };
     },
-    bans: (stateQuery?: string, format: BanFormat = "compact") => withCatalog(async (idx) => {
+    bans: (stateQuery?: string, page?: BansPage) => withCatalog(async (idx) => {
       const st = stateQuery?.trim().toUpperCase();
+      if (st && page) throw new LookupError("Pagination applies to the national list.", 400);
       if (!idx || st) {
         const snapshot = await stateAt(idx, st ?? "");
         if (idx && st) {
@@ -298,24 +300,34 @@ export function snapshotReader(env: Env, { fresh = false, initialize = true } = 
           snapshot.sources = sources;
         }
         const data = activeBans(snapshot, st);
-        const body = format === "pretty" ? JSON.stringify(JSON.stringify(data, null, 2)) : JSON.stringify(data);
-        return { body: [body], generated: data.generated, count: data.counties.length, nextBoundary };
+        let paging;
+        if (!st) {
+          const window = page ?? bansPage();
+          const revision = `legacy-${Date.parse(snapshot.generated)}`;
+          const start = pageStart(window, revision, data.counties.length);
+          const length = data.counties.length;
+          data.counties = data.counties.slice(start, start + window.limit);
+          paging = pageFields(revision, data.counties.length, start + data.counties.length, length);
+        }
+        return { data: { ...data, ...paging }, generated: data.generated, count: data.counties.length, nextBoundary };
       }
-      const [projection, heads] = await Promise.all([active(idx, format), allHeads()]);
-      const cached = memo.bans[format];
-      const result = cached && reusable(cached) && cached.revision === idx.revision && cached.heads === heads
-        ? cached.value : formatNationalBans(projection, idx, heads, new Date(), format);
-      if (result !== cached?.value) memo.bans[format] = { value: result, revision: idx.revision, heads,
+      const window = page ?? bansPage();
+      const [projection, heads] = await Promise.all([active(idx), allHeads()]);
+      const cached = memo.bans;
+      const key = `${window.limit}:${window.cursor ?? ""}`;
+      const result = cached && reusable(cached) && cached.revision === idx.revision && cached.heads === heads && cached.key === key
+        ? cached.value : formatNationalBans(projection, idx, heads, new Date(), window);
+      if (result !== cached?.value) memo.bans = { value: result, revision: idx.revision, heads, key,
         until: Math.min(Date.now() + MEMO_MS, result.nextBoundary) };
-      recordBoundary(result.nextBoundary, memo.active[format]);
+      recordBoundary(result.nextBoundary, memo.active);
       return result;
     }),
     weather: () => withCatalog(async (idx) => {
       if (!idx) return stateAt(idx, "");
-      const [projection, heads] = await Promise.all([active(idx, "compact"), allHeads()]);
+      const [projection, heads] = await Promise.all([active(idx), allHeads()]);
       const now = new Date();
       const view = projectWeather(projection, idx, heads, now);
-      recordBoundary(snapshotBoundary(view, now.getTime()), memo.active.compact);
+      recordBoundary(snapshotBoundary(view, now.getTime()), memo.active);
       return view;
     }),
     async lastChanged() {

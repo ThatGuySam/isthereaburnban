@@ -1,6 +1,6 @@
 import { STATES } from "../src/shared/states-fips";
 import type { CountyStatus, FireWeatherReport, SnapshotData } from "../src/shared/types";
-import { formatNationalBans, type BanFormat } from "../src/worker/active-bans";
+import { formatNationalBans } from "../src/worker/active-bans";
 import { COUNTIES, COUNTY_BY_FIPS } from "../src/worker/counties";
 import { withFireWeather } from "../src/worker/fire-weather";
 import { statusFor } from "../src/worker/lookup";
@@ -112,7 +112,6 @@ export function snapshotBenchmarks(inputs: SourceInput[], now: Date) {
     };
   });
   const active = encodeActive("fixture", previous);
-  const pretty = encodeActive("fixture", previous.map((entry) => ({ ...entry, active: entry.pretty })));
   const whole: SnapshotData = JSON.parse(originalJson);
   const index: SnapshotIndex = { version: 2, reportDates: true, revision: "fixture", generated: now.toISOString(),
     sources: whole.sources, sourceVersions: whole.sourceVersions, orderChecks,
@@ -124,16 +123,19 @@ export function snapshotBenchmarks(inputs: SourceInput[], now: Date) {
   const largest = previous.reduce((max, entry) => entry.snapshot.length > max.length ? entry.snapshot : max, "");
   const registry = inputs.map(({ source }) => source);
   const run = { id: "fixture", generated: now.toISOString() };
-  const readActive = (format: BanFormat, clock = now) => {
-    const projection = decodeActive(format === "pretty" ? pretty : active);
+  const readActive = (clock = now) => {
+    const projection = decodeActive(active);
     const catalog: SnapshotIndex = JSON.parse(indexJson);
-    return formatNationalBans(projection, catalog, heads, clock, format);
+    return formatNationalBans(projection, catalog, heads, clock, { limit: 50 }).data;
   };
+
   return {
     stateCases,
-    counts: { sources: inputs.length, counties: Object.keys(whole.counties).length, activeBytes: Buffer.byteLength(active), prettyBytes: Buffer.byteLength(pretty),
+    counts: { sources: inputs.length, counties: Object.keys(whole.counties).length, activeBytes: Buffer.byteLength(active),
       indexBytes: Buffer.byteLength(indexJson), wholeBytes: Buffer.byteLength(originalJson),
-      maxStateBytes: Math.max(...previous.map(({ snapshot }) => Buffer.byteLength(snapshot))) },
+      maxStateBytes: Math.max(...previous.map(({ snapshot }) => Buffer.byteLength(snapshot))),
+      maxEncodedRowBytes: Math.max(...previous.map(({ snapshot, summary, active, weather, weatherCounties, notices }) =>
+        [snapshot, summary, active, weather, weatherCounties, JSON.stringify(notices)].reduce((sum, text) => sum + Buffer.byteLength(text), 0))) },
     wholeRead: () => statusFor(read(JSON.parse(originalJson)), "40143"),
     wholeMerge: () => JSON.stringify(mergeSources(null, aggregateInputs.map(({ meta, payload }) => ({ ...meta, ...JSON.parse(payload) })), now).snapshot),
     coldRebuild: () => {
@@ -144,14 +146,13 @@ export function snapshotBenchmarks(inputs: SourceInput[], now: Date) {
       return {
         index: JSON.stringify(buildCatalog(run, shards, registry, heads)),
         active: encodeActive(run.id, shards),
-        pretty: encodeActive(run.id, shards.map((shard) => ({ ...shard, active: shard.pretty }))),
       };
     },
     joinActive: () => encodeActive("fixture", previous),
-    readActive: () => new Response(readActive("compact").body.join("")),
-    readActiveMcp: () => new Response(new Blob(['{"content":[{"type":"text","text":', ...readActive("pretty").body, '}] }'])),
-    readActiveExpired: () => new Response(new Blob(['{"content":[{"type":"text","text":',
-      ...readActive("pretty", new Date(now.getTime() + 3_600_000)).body, '}] }'])),
+    readActive: () => Response.json(readActive()),
+    readActiveMcp: () => Response.json({ content: [{ type: "text", text: JSON.stringify(readActive(), null, 2) }] }),
+    readActiveExpired: () => Response.json({ content: [{ type: "text",
+      text: JSON.stringify(readActive(new Date(now.getTime() + 3_600_000)), null, 2) }] }),
     parseIndex: () => JSON.parse(indexJson) as SnapshotIndex,
     parseWhole: () => JSON.parse(originalJson) as SnapshotData,
     parseLargestState: () => JSON.parse(largest) as StateSnapshot,

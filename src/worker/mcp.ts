@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp/server";
 import { z } from "zod";
+import { bansPage, MAX_BANS_LIMIT } from "./bans-page";
 import { coverage } from "./api";
 import { countyPath } from "./counties";
 import { subscribeEmail } from "./email";
@@ -43,7 +44,7 @@ export const SERVER_INSTRUCTIONS =
   "Report differing counties separately. Cite the issuing order when available and use officialUrl for confirmation. " +
   "Only call subscribe_email_alerts when the person asks for alerts and gives their own email.";
 
-export function createServer(env: Env, banText: (wireText: string[]) => string = (value) => JSON.parse(value.join(""))) {
+export function createServer(env: Env) {
   let reader: ReturnType<typeof snapshotReader> | undefined;
   const snapshots = () => (reader ??= snapshotReader(env));
   const { origin } = new URL(env.SITE_URL);
@@ -84,15 +85,23 @@ export function createServer(env: Env, banText: (wireText: string[]) => string =
     {
       title: "List active burn bans",
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
-      description: "List published active reports, including scoped restrictions. Pass a two-letter state code to narrow the list. Use coverage to check which reports the sources can establish.",
-      inputSchema: z.object({ state: z.string().length(2).optional().describe("2-letter state code, e.g. TX") }),
+      description: "List published active reports, including scoped restrictions. National results are paged. Continue with nextCursor even when a page is empty. Pass a two-letter state code for an unpaged state list. Check coverage to understand which reports the sources can establish.",
+      inputSchema: z.object({
+        state: z.string().length(2).optional().describe("Two-letter state code, e.g. TX"),
+        limit: z.number().int().min(1).max(MAX_BANS_LIMIT).optional().describe("National page size (default 50)"),
+        cursor: z.string().max(72).optional().describe("nextCursor from the previous national page"),
+      }),
     },
-    async ({ state }) => {
-      const { count, body, generated } = await snapshots().bans(state, "pretty");
-      return { content: [
-        { type: "text" as const, text: `${count ? `${count} counties with published active reports` : "No published active reports"}${state ? ` in ${state.toUpperCase()}` : ""}. Published ${generated}.` },
-        { type: "text" as const, text: banText(body) },
-      ] };
+    async ({ state, limit, cursor }) => {
+      try {
+        const { count, data, generated } = await snapshots().bans(state,
+          limit !== undefined || cursor !== undefined ? bansPage(limit, cursor) : undefined);
+        const summary = state ? `${count} counties with published active reports in ${state.toUpperCase()}`
+          : `${count} published active reports on this page`;
+        return json(data, `${summary}. Published ${generated}.`);
+      } catch (error) {
+        return { content: [{ type: "text" as const, text: error instanceof Error ? error.message : String(error) }], isError: true };
+      }
     },
   );
 
@@ -137,7 +146,9 @@ export async function handleMcp(request: Request, env: Env, ctx: ExecutionContex
       bounded = new Request(request, { body, headers });
       call = mcpCall(body);
     }
-    response = await serveMcp(bounded, env, ctx, call);
+    const site = new URL(env.SITE_URL).hostname;
+    const hosts = [site, "isthereaburnban.com", "www.isthereaburnban.com", "beta.isthereaburnban.com", "localhost", "127.0.0.1"];
+    response = await createMcpHandler(() => createServer(env), { route: "/mcp", allowedHostnames: hosts })(bounded, env, ctx);
   } catch (error) {
     if (!(error instanceof RequestBodyError)) throw error;
     response = Response.json({ jsonrpc: "2.0", id: null, error: { code: -32600, message: error.message } }, {
@@ -146,35 +157,4 @@ export async function handleMcp(request: Request, env: Env, ctx: ExecutionContex
   }
   if (request.method !== "OPTIONS") recordUsage(env, request, response, call);
   return response;
-}
-
-async function serveMcp(request: Request, env: Env, ctx: ExecutionContext, call?: McpCall): Promise<Response> {
-  const site = new URL(env.SITE_URL).hostname;
-  const hosts = [site, "isthereaburnban.com", "www.isthereaburnban.com", "beta.isthereaburnban.com", "localhost", "127.0.0.1"];
-  const banCall = request.method === "POST" && call?.method === "tools/call" && call.tool === "list_active_bans";
-  const deferred = new Map<string, string[]>();
-  const deferBanText = (wireText: string[]) => {
-    const marker = crypto.randomUUID();
-    deferred.set(JSON.stringify(marker), wireText);
-    return marker;
-  };
-  const response = await createMcpHandler(() => createServer(env, banCall ? deferBanText : undefined),
-    { route: "/mcp", allowedHostnames: hosts })(request, env, ctx);
-  if (!banCall || !response.ok || !response.body) return response;
-
-  // The SDK validates the exchange and serializes the envelope. Insert our escaped text after that,
-  // so it does not escape multi-megabyte county lists again. This tool emits no progress events.
-  const envelope = await response.text();
-  const parts: BlobPart[] = [];
-  let cursor = 0;
-  const slots = [...deferred].map(([marker, body]) => ({ marker, body, at: envelope.indexOf(marker) }))
-    .filter(({ at }) => at >= 0).sort((a, b) => a.at - b.at);
-  for (const { marker, body, at } of slots) {
-    parts.push(envelope.slice(cursor, at), ...body);
-    cursor = at + marker.length;
-  }
-  parts.push(envelope.slice(cursor));
-  const headers = new Headers(response.headers);
-  if (slots.length) headers.delete("content-length");
-  return new Response(new Blob(parts), { status: response.status, statusText: response.statusText, headers });
 }

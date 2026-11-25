@@ -70,7 +70,7 @@ const jsonLd = [
 
     <h2 id="get">Get the data</h2>
     <ul>
-      <li><a href="/api/v1/bans"><code>/api/v1/bans</code></a> lists published active reports, including scoped restrictions. Add <code>?state=TX</code> for one state.</li>
+      <li><a href="/api/v1/bans"><code>/api/v1/bans</code></a> lists published active reports, including scoped restrictions. Pass <code>nextCursor</code> back as <code>cursor</code> to continue the national list. Add <code>?state=TX</code> for the full state list.</li>
       <li><a href="/api/v1/coverage"><code>/api/v1/coverage</code></a> lists configured sources, their checks and coverage.</li>
       <li><code>/api/v1/status</code> returns reports for exact county or place matches, or county candidates to confirm if the match is approximate.</li>
       <li><a href="/openapi.json"><code>/openapi.json</code></a> describes the read API. Find MCP setup on <a href="/developers/">Connect your agent</a>.</li>
