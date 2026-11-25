@@ -76,8 +76,9 @@ describe("lookup", () => {
   });
 
   test("activeBans filters by state", () => {
-    expect(activeBans(snap, "ok").counties.length).toBe(1);
-    expect(activeBans(snap, "TX").counties.length).toBe(0);
+    const now = Date.parse(snap.generated);
+    expect(activeBans(snap, "ok", now).counties.length).toBe(1);
+    expect(activeBans(snap, "TX", now).counties.length).toBe(0);
   });
 });
 
