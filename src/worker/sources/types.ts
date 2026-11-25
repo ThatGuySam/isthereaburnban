@@ -30,6 +30,8 @@ export type ActiveSource = Metadata & {
   cadence: Cadence;
   /** Full sources cover the state roster unless the publisher defines a smaller one. */
   expectedFips?: readonly string[];
+  /** County footprints of a positive-only check, even when no restrictions were published. */
+  reportingFips?: readonly string[];
   /** Default 48 hours. Use a shorter window and row validity for daily permit decisions. */
   staleMs?: number;
   fetch(context: { now: Date; validators?: Validators }): Promise<SourceResult>;

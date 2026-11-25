@@ -34,10 +34,11 @@ const COOKING_EXCEPTION = /\b(?:ban does not include enclosed fires for (?:the )
 
 export function parseCrawfordCountyOrders(input: unknown, now: Date): CountyStatus[] {
   const items = parseWpItems(input);
-  if (items.length >= PER_PAGE || new Set(items.map(({ id }) => id)).size !== items.length) {
+  if (items.length >= PER_PAGE || items.some(({ id }) => !Number.isSafeInteger(id) || id <= 0) ||
+      new Set(items.map(({ id }) => id)).size !== items.length) {
     throw new Error("WTYE: incomplete or duplicate Crawford County search results");
   }
-  const recent = items.flatMap(({ title, body, published, url }) => {
+  const recent = items.flatMap(({ id, title, body, published, url }) => {
     if (!BAN_TITLE.test(title)) return [];
     if (!body) throw new Error("WTYE: missing burn-ban notice body");
     if (!COUNTY.test(`${title} ${body}`)) return [];
@@ -46,10 +47,12 @@ export function parseCrawfordCountyOrders(input: unknown, now: Date): CountyStat
     if (now.getTime() - Date.parse(date) >= CONFIRMATION_MS) return [];
     const link = new URL(url);
     const localDay = localClock(new Date(date), ZONE).date;
-    if (link.origin !== STATION || !link.pathname.startsWith(`/${localDay.replaceAll("-", "/")}/`)) {
-      throw new Error("WTYE: Crawford County publication link does not match the station and date");
+    if (link.origin !== STATION || link.username || link.password) {
+      throw new Error("WTYE: Crawford County publication link does not match the station");
     }
-    return [{ title, body, date, url }];
+    // WordPress also serves the attributed post by ID when the installation changes its permalink format.
+    const dated = link.pathname.startsWith(`/${localDay.replaceAll("-", "/")}/`) && !link.search && !link.hash;
+    return [{ title, body, date, url: dated ? link.href : `${STATION}/?p=${id}` }];
   }).sort((a, b) => b.date.localeCompare(a.date));
   const [current, previous] = recent;
   if (!current) return [];
@@ -77,6 +80,7 @@ export function parseCrawfordCountyOrders(input: unknown, now: Date): CountyStat
 
 export const ilCrawfordCountyOrders: ActiveSource = {
   ...META, mode: "positive-only", coverage: "restrictions",
+  reportingFips: ["17033"],
   cadence: { kind: "daily", zone: ZONE, hours: [0, 4, 8, 12, 16, 20] },
   staleMs: 6 * 3_600_000,
   async fetch({ now }) {
