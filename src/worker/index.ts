@@ -8,10 +8,11 @@ import { handleMcp } from "./mcp";
 import { handleOps } from "./ops";
 import { CANARY_CRON, runCanary } from "./notify";
 import { handlePage, handleSitemap } from "./pages";
+import { readJsonBody, RequestBodyError } from "./request-body";
 import { subscribePush, unsubscribePush } from "./push";
 import { refresh, snapshotReader } from "./snapshot";
 import { consumeSourceQueue, enqueueSources, type SourceMessage } from "./sources/queue";
-import { peekMcp, recordUsage, type McpCall } from "./usage";
+import { recordUsage } from "./usage";
 
 const CORS = {
   "access-control-allow-origin": "*",
@@ -44,15 +45,6 @@ function page(title: string, message: string, status = 200): Response {
   return new Response(html, { status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
 }
 
-async function readJson(request: Request): Promise<unknown> {
-  if (Number(request.headers.get("content-length") ?? 0) > 16_384) throw new LookupError("body too large", 413);
-  try {
-    return await request.json();
-  } catch {
-    throw new LookupError("body must be JSON");
-  }
-}
-
 async function api(request: Request, env: Env, url: URL): Promise<Response> {
   const path = url.pathname.replace(/\/+$/, "");
   const p = url.searchParams;
@@ -64,7 +56,7 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
     if (path === "/api/v1/email/confirm") {
       return (await confirmEmail(env, p.get("token") ?? ""))
         ? page("You're subscribed", "Your subscription is active for eligible changes in the counties you picked.")
-        : page("Link not valid", "This confirmation link is invalid or was already unsubscribed.", 404);
+        : page("Link not valid", "This confirmation link is invalid, expired, or was already unsubscribed.", 404);
     }
     if (path === "/api/v1/email/unsubscribe") {
       return (await unsubscribeEmail(env, p.get("token") ?? ""))
@@ -114,9 +106,9 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
 
   if (method === "POST") {
     let r: { ok: boolean; error?: string };
-    if (path === "/api/v1/push/subscribe") r = await subscribePush(env, await readJson(request));
-    else if (path === "/api/v1/push/unsubscribe") r = await unsubscribePush(env, await readJson(request));
-    else if (path === "/api/v1/email/subscribe") r = await subscribeEmail(env, await readJson(request));
+    if (path === "/api/v1/push/subscribe") r = await subscribePush(env, await readJsonBody(request, 16_384));
+    else if (path === "/api/v1/push/unsubscribe") r = await unsubscribePush(env, await readJsonBody(request, 16_384));
+    else if (path === "/api/v1/email/subscribe") r = await subscribeEmail(env, await readJsonBody(request, 16_384));
     else return error("not found", 404);
     return json(r, r.ok ? 200 : 400, "no-store");
   }
@@ -124,7 +116,7 @@ async function api(request: Request, env: Env, url: URL): Promise<Response> {
   return error("not found", 404);
 }
 
-async function route(request: Request, env: Env, ctx: ExecutionContext, mcp?: McpCall): Promise<Response> {
+async function route(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
   const path = url.pathname;
   if (path === "/ops" || path.startsWith("/ops/")) return handleOps(request, env, url);
@@ -132,11 +124,11 @@ async function route(request: Request, env: Env, ctx: ExecutionContext, mcp?: Mc
     if (path.startsWith("/api/")) return await api(request, env, url);
     const docs = await serveMachineDocs(request, env, url);
     if (docs) return docs;
-    if (path === "/mcp" || path.startsWith("/mcp/")) return await handleMcp(request, env, ctx, mcp);
+    if (path === "/mcp" || path.startsWith("/mcp/")) return await handleMcp(request, env, ctx);
     if (path.startsWith("/us/")) return await handlePage(request, env, snapshotReader(env));
     if (path === "/sitemap.xml" || path.startsWith("/sitemaps/")) return await handleSitemap(request, env, snapshotReader(env));
   } catch (err) {
-    if (err instanceof LookupError) return error(err.message, err.status);
+    if (err instanceof LookupError || err instanceof RequestBodyError) return error(err.message, err.status);
     console.error(err);
     return error("internal error", 500);
   }
@@ -146,11 +138,15 @@ async function route(request: Request, env: Env, ctx: ExecutionContext, mcp?: Mc
 export default {
   async fetch(request, env, ctx): Promise<Response> {
     // Aggregate API/MCP counts (src/worker/usage.ts); nothing identifying is written.
-    const path = new URL(request.url).pathname;
-    const counted = request.method !== "OPTIONS" && (path.startsWith("/api/") || path === "/mcp" || path.startsWith("/mcp/"));
-    const mcp = counted && path.startsWith("/mcp") ? await peekMcp(request) : undefined;
-    const response = await route(request, env, ctx, mcp);
-    if (counted) recordUsage(env, request, response, mcp);
+    const url = new URL(request.url);
+    const response = await route(request, env, ctx);
+    if (request.method !== "OPTIONS" && url.pathname.startsWith("/api/")) recordUsage(env, request, response);
+    if (request.method === "GET" && url.pathname.replace(/\/+$/, "") === "/api/v1/status" &&
+        url.searchParams.get("here") === "1" && response.headers.get("cache-control") !== "private, no-store") {
+      const headers = new Headers(response.headers);
+      headers.set("cache-control", "private, no-store");
+      return new Response(response.body, { status: response.status, headers });
+    }
     return response;
   },
 

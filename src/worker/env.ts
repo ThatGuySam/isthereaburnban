@@ -9,7 +9,7 @@ export interface Env {
   VAPID_PUBLIC_KEY: string;
   VAPID_PRIVATE_KEY?: string; // secret
   VAPID_SUBJECT: string;
-  RESEND_API_KEY?: string; // secret; when absent, email signups are stored but not sent
+  RESEND_API_KEY?: string; // secret; when absent, email signup is unavailable
   EMAIL_FROM?: string;
   OPS_ALERT_EMAIL?: string; // optional operational recipient
   DASH_TOKEN?: string;

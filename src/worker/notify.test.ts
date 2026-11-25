@@ -2,13 +2,14 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
 import { readFileSync } from "node:fs";
+import { confirmEmail, subscribeEmail, unsubscribeEmail } from "./email";
 import { SNAPSHOT_KEY } from "./env";
 import { ALERTS_PAUSED_KEY, setAlertsPaused } from "./notification-controls";
 import { testNotice, transitionNotice } from "./notification-message";
 import { drainOutbox, enqueueNotices } from "./notification-outbox";
 import { notify, runCanary } from "./notify";
 import { handleOps, validToken } from "./ops";
-import { subscribePush } from "./push";
+import { sendPush, subscribePush, unsubscribePush } from "./push";
 import { refresh } from "./snapshot";
 
 const FIPS = "40143";
@@ -33,7 +34,7 @@ const publicKey = async (key) => Buffer.from(await crypto.subtle.exportKey("raw"
 const receiverKey = await publicKey(receiver.publicKey);
 const authSecret = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString("base64url");
 
-const migrations = ["0001_init.sql", "0002_notification_ops.sql", "0003_source_refresh.sql", "0004_state_snapshots.sql", "0005_notification_outbox.sql", "0006_pipeline_monitor.sql"].map((file) =>
+const migrations = ["0001_init.sql", "0002_notification_ops.sql", "0003_source_refresh.sql", "0004_state_snapshots.sql", "0005_notification_outbox.sql", "0006_pipeline_monitor.sql", "0007_email_confirmation.sql"].map((file) =>
   readFileSync(new URL("../../migrations/" + file, import.meta.url), "utf8"));
 let sqlite: Database;
 let kv: Map<string, string>;
@@ -51,7 +52,7 @@ function d1(db: Database) {
         const row = sql.get(...bindings);
         return column ? row?.[column] ?? null : row;
       },
-      execute: () => ({ meta: { changes: sql.run(...bindings).changes } }),
+      execute: () => /RETURNING/i.test(query) ? { results: sql.all(...bindings) } : { meta: { changes: sql.run(...bindings).changes }, results: [] },
       run: async () => ({ meta: { changes: sql.run(...bindings).changes } }),
     };
   }
@@ -62,7 +63,7 @@ function d1(db: Database) {
 }
 
 function addPush(label, { fips = [FIPS], test = false, canary = false, id = crypto.randomUUID() } = {}) {
-  const endpoint = `https://push.example.test/topic/${label}`;
+  const endpoint = `https://fcm.googleapis.com/fcm/send/${label}`;
   sqlite.query(`INSERT INTO push_subscriptions (endpoint, p256dh, auth, fips_json, created, is_test, is_canary, ops_id)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(endpoint, receiverKey, authSecret, JSON.stringify(fips), at, +test, +canary, id);
   return endpoint;
@@ -266,7 +267,7 @@ describe("shared notifier", () => {
     expect(result.gone).toBe(1);
     expect(sqlite.query("SELECT endpoint FROM push_subscriptions").all()).toEqual([]);
     expect(sqlite.query("SELECT error, target_masked FROM notification_delivery_log").get()).toEqual({
-      error: `Push HTTP ${status}`, target_masked: "push.example.test · …oint",
+      error: `Push HTTP ${status}`, target_masked: "fcm.googleapis.com · …oint",
     });
     expect(requests[0].url).toBe(endpoint);
   });
@@ -384,6 +385,66 @@ test("a worker interrupted after provider acceptance retries with the same email
   expect(new Set(topics).size).toBe(1);
 });
 
+test("concurrent equivalent email signups coalesce, throttle other selections and rotate expired tokens", async () => {
+  const signup = { email: " Resident@Example.test ", fips: [FIPS, OTHER] };
+  const now = Date.parse(at);
+  await Promise.all([
+    subscribeEmail(env, signup, now),
+    subscribeEmail(env, { email: "resident@example.test", fips: [OTHER, FIPS] }, now),
+  ]);
+  await subscribeEmail(env, { ...signup, fips: [FIPS] }, now + 1000);
+  expect(requests).toHaveLength(1);
+  const first = sqlite.query("SELECT * FROM email_subscriptions").all();
+  expect(first).toHaveLength(1);
+  expect(first[0].email).toBe("resident@example.test");
+  expect(first[0].confirmed_at).toBeNull();
+  expect(await confirmEmail(env, first[0].token, now + 24 * 3_600_000)).toBe(false);
+  await subscribeEmail(env, signup, now + 24 * 3_600_000);
+  expect(requests).toHaveLength(2);
+  const renewed = sqlite.query("SELECT * FROM email_subscriptions").get();
+  expect(renewed.id).toBe(first[0].id);
+  expect(renewed.token).not.toBe(first[0].token);
+  expect(await confirmEmail(env, renewed.token, now + 24 * 3_600_000 + 1)).toBe(true);
+  await subscribeEmail(env, signup, now + 25 * 3_600_000);
+  expect(requests).toHaveLength(2);
+  expect(await unsubscribeEmail(env, renewed.token)).toBe(true);
+});
+
+test("legacy duplicate email rows keep a working opt-out link", async () => {
+  const legacy = new Database(":memory:");
+  try {
+    legacy.exec(migrations.slice(0, -1).join("\n"));
+    const insert = legacy.query(`INSERT INTO email_subscriptions (id, email, fips_json, token, confirmed_at, created)
+      VALUES (?, ?, ?, ?, ?, ?)`);
+    insert.run("first", "sam@example.test", JSON.stringify([OTHER, FIPS]), "first-token", at, "2026-11-24T00:00:00Z");
+    insert.run("duplicate", "Sam@example.test", JSON.stringify([FIPS, OTHER]), "old-token", at, "2026-11-23T00:00:00Z");
+    legacy.exec(migrations.at(-1));
+    expect(legacy.query("SELECT id FROM email_subscriptions WHERE unsubscribed_at IS NULL").all()).toEqual([{ id: "first" }]);
+    expect(await unsubscribeEmail({ DB: d1(legacy) }, "old-token")).toBe(true);
+    expect(legacy.query("SELECT id FROM email_subscriptions WHERE unsubscribed_at IS NULL").all()).toEqual([]);
+  } finally {
+    legacy.close();
+  }
+});
+
+test("push enrollment and delivery enforce the provider boundary and subscription credentials", async () => {
+  const endpoint = "https://fcm.googleapis.com/fcm/send/managed";
+  const subscription = { endpoint, keys: { p256dh: receiverKey, auth: authSecret } };
+  const input = { subscription, fips: [FIPS] };
+  expect((await subscribePush(env, { ...input, subscription: { ...subscription, endpoint: "https://unrelated.example/managed" } })).ok).toBe(false);
+  expect((await subscribePush(env, { ...input, subscription: { ...subscription, keys: { ...subscription.keys, p256dh: "invalid" } } })).ok).toBe(false);
+  expect((await subscribePush(env, input)).ok).toBe(true);
+  const wrongSecret = Buffer.alloc(16).toString("base64url");
+  expect((await subscribePush(env, { ...input, fips: [OTHER], subscription: { ...subscription, keys: { ...subscription.keys, auth: wrongSecret } } })).ok).toBe(false);
+  await unsubscribePush(env, { endpoint, auth: wrongSecret });
+  expect(sqlite.query("SELECT fips_json FROM push_subscriptions").get().fips_json).toBe(JSON.stringify([FIPS]));
+  await unsubscribePush(env, { endpoint, auth: authSecret });
+  expect(sqlite.query("SELECT endpoint FROM push_subscriptions").all()).toEqual([]);
+
+  expect((await sendPush(env, { ...subscription.keys, endpoint: "https://unrelated.example/managed" }, liveMessage)).result).toBe("gone");
+  expect(requests).toHaveLength(0);
+});
+
 describe("dashboard boundary", () => {
   test("the page is hidden, uses private response headers, and rejects cross-origin or missing Origin", async () => {
     expect(validToken(SECRET, SECRET)).toBe(true);
@@ -411,7 +472,7 @@ describe("dashboard boundary", () => {
 
   test("only the privileged route can mark a browser as test and it preserves its existing counties", async () => {
     const subscription = {
-      endpoint: "https://push.example.test/existing-device", keys: { p256dh: receiverKey, auth: authSecret },
+      endpoint: "https://fcm.googleapis.com/existing-device", keys: { p256dh: receiverKey, auth: authSecret },
     };
     await subscribePush(env, { subscription, fips: [OTHER], is_test: 1, is_canary: 1 });
     expect(sqlite.query("SELECT is_test FROM push_subscriptions").get().is_test).toBe(0);

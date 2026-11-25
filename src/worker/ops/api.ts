@@ -6,6 +6,7 @@ import { alertsPaused, MANUAL_LIMIT, setAlertsPaused } from "../notification-con
 import { countyBulletin, testNotice } from "../notification-message";
 import { outboxStatus } from "../notification-outbox";
 import { NotificationError, notify, providerStatus } from "../notify";
+import { readJsonBody, RequestBodyError } from "../request-body";
 import { subscribePush } from "../push";
 import { statusFor } from "../lookup";
 import { snapshotReader } from "../snapshot";
@@ -148,27 +149,11 @@ async function readBody(request: Request): Promise<unknown> {
   if (request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json") {
     throw new NotificationError("Use application/json.", 415);
   }
-  const limit = 8192;
-  if (Number(request.headers.get("content-length")) > limit) throw new NotificationError("Request is too large.", 413);
-  const input = request.body?.getReader();
-  if (!input) throw new NotificationError("A JSON body is required.", 400);
-  const decoder = new TextDecoder();
-  let size = 0;
-  let text = "";
-  for (;;) {
-    const { done, value } = await input.read();
-    if (done) break;
-    size += value.length;
-    if (size > limit) {
-      await input.cancel();
-      throw new NotificationError("Request is too large.", 413);
-    }
-    text += decoder.decode(value, { stream: true });
-  }
   try {
-    return JSON.parse(text + decoder.decode());
-  } catch {
-    throw new NotificationError("The request must contain valid JSON.", 400);
+    return await readJsonBody(request, 8192);
+  } catch (error) {
+    if (error instanceof RequestBodyError) throw new NotificationError(error.message, error.status);
+    throw error;
   }
 }
 

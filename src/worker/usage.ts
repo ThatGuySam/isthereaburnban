@@ -35,12 +35,11 @@ const COUNTED_MCP_TOOLS = new Set(["check_burn_ban", "list_active_bans", "covera
 
 export type McpCall = { method: string; tool: string };
 
-/** Reads the JSON-RPC method (and tool name for tools/call) from a clone, before the MCP handler consumes the body. */
-export async function peekMcp(request: Request): Promise<McpCall | undefined> {
-  if (request.method !== "POST" || Number(request.headers.get("content-length") ?? 0) > 65_536) return undefined;
+/** Extract only the JSON-RPC method and tool name from a bounded body. */
+export function mcpCall(body: string): McpCall | undefined {
   try {
-    const body = (await request.clone().json()) as unknown;
-    const msg = (Array.isArray(body) ? body[0] : body) as { method?: unknown; params?: { name?: unknown } } | undefined;
+    const value: unknown = JSON.parse(body);
+    const msg = (Array.isArray(value) ? value[0] : value) as { method?: unknown; params?: { name?: unknown } } | undefined;
     const method = typeof msg?.method === "string" ? msg.method.slice(0, 64) : "";
     const tool = method === "tools/call" && typeof msg?.params?.name === "string" ? msg.params.name.slice(0, 64) : "";
     return method ? { method, tool } : undefined;

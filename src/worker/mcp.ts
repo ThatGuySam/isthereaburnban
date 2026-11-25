@@ -7,7 +7,8 @@ import { subscribeEmail } from "./email";
 import type { Env } from "./env";
 import { lookup, lookupText } from "./lookup";
 import { snapshotReader } from "./snapshot";
-import { peekMcp, type McpCall } from "./usage";
+import { readLimitedBody, RequestBodyError } from "./request-body";
+import { mcpCall, recordUsage, type McpCall } from "./usage";
 
 function json(value: unknown, summary?: string) {
   const content: { type: "text"; text: string }[] = [];
@@ -22,8 +23,8 @@ export async function subscribeAlertsTool(env: Env, args: { email: string; fips:
   if (!r.ok) return { content: [{ type: "text" as const, text: r.error ?? "subscription failed" }], isError: true };
   const pages = args.fips.map((f) => `${new URL(countyPath(f), env.SITE_URL).href}`).join(", ");
   const text = r.emailEnabled
-    ? `Almost done: we sent a confirmation email to ${args.email.trim().toLowerCase()}. No alerts go out until they click the link in it. Pages: ${pages}`
-    : `Saved, but email alerts are not switched on yet, so no confirmation was sent. Suggest the user turn on push alerts on the county page instead: ${pages}`;
+    ? `If this signup needs confirmation, check the inbox for ${args.email.trim().toLowerCase()}. Alerts start after confirmation. County pages: ${pages}`
+    : `Email signups are unavailable. Push alerts are available from these county pages: ${pages}`;
   return { content: [{ type: "text" as const, text }] };
 }
 
@@ -124,10 +125,32 @@ export function createServer(env: Env, banText: (wireText: string[]) => string =
   return server;
 }
 
-export async function handleMcp(request: Request, env: Env, ctx: ExecutionContext, hint?: McpCall): Promise<Response> {
+export async function handleMcp(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  let bounded = request;
+  let call: McpCall | undefined;
+  let response: Response;
+  try {
+    if (request.method === "POST") {
+      const body = await readLimitedBody(request, 65_536);
+      const headers = new Headers(request.headers);
+      headers.delete("content-length");
+      bounded = new Request(request, { body, headers });
+      call = mcpCall(body);
+    }
+    response = await serveMcp(bounded, env, ctx, call);
+  } catch (error) {
+    if (!(error instanceof RequestBodyError)) throw error;
+    response = Response.json({ jsonrpc: "2.0", id: null, error: { code: -32600, message: error.message } }, {
+      status: error.status, headers: { "cache-control": "no-store" },
+    });
+  }
+  if (request.method !== "OPTIONS") recordUsage(env, request, response, call);
+  return response;
+}
+
+async function serveMcp(request: Request, env: Env, ctx: ExecutionContext, call?: McpCall): Promise<Response> {
   const site = new URL(env.SITE_URL).hostname;
   const hosts = [site, "isthereaburnban.com", "www.isthereaburnban.com", "beta.isthereaburnban.com", "localhost", "127.0.0.1"];
-  const call = hint ?? await peekMcp(request);
   const banCall = request.method === "POST" && call?.method === "tools/call" && call.tool === "list_active_bans";
   const deferred = new Map<string, string[]>();
   const deferBanText = (wireText: string[]) => {

@@ -7,22 +7,18 @@ import { withCurrentLinks } from "./source-links";
 
 function fakeEnv(resend?: string) {
   const inserts: unknown[][] = [];
-  const sent: { to: string[]; text: string }[] = [];
   const env = {
     SITE_URL: "https://isthereaburnban.com",
     RESEND_API_KEY: resend,
     DB: {
-      prepare: (sql: string) => ({
-        bind: (...args: unknown[]) => ({
-          run: async () => {
-            if (sql.startsWith("INSERT")) inserts.push(args);
-            return { meta: { changes: 1 } };
-          },
-        }),
-      }),
+      prepare: (sql: string) => ({ bind: (...args: unknown[]) => ({ sql, args }) }),
+      batch: async ([, pending]) => {
+        inserts.push(pending.args);
+        return [{ results: [] }, { results: [{ token: pending.args[4], created: pending.args[5] }] }];
+      },
     },
   };
-  return { env, inserts, sent };
+  return { env, inserts };
 }
 
 describe("subscribe_email_alerts", () => {
@@ -37,7 +33,7 @@ describe("subscribe_email_alerts", () => {
     try {
       const r = await subscribeAlertsTool(env as any, { email: "Sam@Example.com", fips: ["40143"] });
       expect(r.isError).toBeUndefined();
-      expect(r.content[0].text).toContain("confirmation email to sam@example.com");
+      expect(r.content[0].text).toContain("check the inbox for sam@example.com");
       expect(inserts.length).toBe(1);
       expect(inserts[0][1]).toBe("sam@example.com");
       expect(inserts[0][2]).toBe('["40143"]');
@@ -48,10 +44,11 @@ describe("subscribe_email_alerts", () => {
     }
   });
 
-  test("without Resend it saves but tells the agent no email went out", async () => {
-    const { env } = fakeEnv(undefined);
+  test("without Resend it reports email is unavailable and stores nothing", async () => {
+    const { env, inserts } = fakeEnv(undefined);
     const r = await subscribeAlertsTool(env as any, { email: "a@b.co", fips: ["40143"] });
-    expect(r.content[0].text).toContain("not switched on");
+    expect(r.content[0].text).toContain("Email signups are unavailable");
+    expect(inserts).toHaveLength(0);
     expect(r.content[0].text).toContain("https://isthereaburnban.com/us/ok/tulsa-county/");
   });
 

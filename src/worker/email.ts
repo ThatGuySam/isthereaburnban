@@ -39,47 +39,70 @@ function countyNames(fips: string[]): string {
   return fips.map((f) => { const c = COUNTY_BY_FIPS.get(f); return c ? `${c.name}, ${c.state}` : f; }).join("; ");
 }
 
-export async function subscribeEmail(env: Env, body: unknown): Promise<{ ok: boolean; pending?: boolean; emailEnabled?: boolean; error?: string }> {
+const CONFIRM_TTL_MS = 24 * 60 * 60_000;
+const CONFIRM_COOLDOWN_MS = 15 * 60_000;
+
+export async function subscribeEmail(env: Env, body: unknown, now = Date.now()): Promise<{ ok: boolean; emailEnabled?: boolean; error?: string }> {
   const b = (body ?? {}) as { email?: unknown; fips?: unknown };
   const email = typeof b.email === "string" ? b.email.trim().toLowerCase() : "";
   if (!EMAIL_RE.test(email) || email.length > 254) return { ok: false, error: "a valid email is required" };
-  const fips = cleanFipsList(b.fips);
+  const fips = cleanFipsList(b.fips).sort();
   if (!fips.length) return { ok: false, error: "fips must be a non-empty array of 5-digit county FIPS codes" };
+  if (!env.RESEND_API_KEY) return { ok: true, emailEnabled: false };
 
-  const token = crypto.randomUUID();
-  const now = new Date().toISOString();
-  await env.DB.prepare(
-    "INSERT INTO email_subscriptions (id, email, fips_json, token, confirmed_at, created, unsubscribed_at) VALUES (?, ?, ?, ?, NULL, ?, NULL)",
-  )
-    .bind(crypto.randomUUID(), email, JSON.stringify(fips), token, now)
-    .run();
+  const { DB: db } = env;
+  const selection = JSON.stringify(fips);
+  const nonce = crypto.randomUUID();
+  const nowIso = new Date(now).toISOString();
+  const cutoff = new Date(now - CONFIRM_TTL_MS).toISOString();
+  const [, pending] = await db.batch<{ token: string; created: string }>([
+    db.prepare(`INSERT INTO email_confirmation_gate (email, next_send_at, nonce)
+      SELECT ?, ?, ? WHERE NOT EXISTS (
+        SELECT 1 FROM email_subscriptions WHERE email = ? AND fips_key = ?
+        AND confirmed_at IS NOT NULL AND unsubscribed_at IS NULL
+      )
+      ON CONFLICT(email) DO UPDATE SET next_send_at = excluded.next_send_at, nonce = excluded.nonce
+      WHERE email_confirmation_gate.next_send_at <= ?`).bind(email, now + CONFIRM_COOLDOWN_MS, nonce, email, selection, now),
+    db.prepare(`INSERT INTO email_subscriptions (id, email, fips_json, fips_key, token, created)
+      SELECT ?, ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM email_confirmation_gate WHERE email = ? AND nonce = ?)
+      ON CONFLICT(email, fips_key) WHERE unsubscribed_at IS NULL DO UPDATE SET
+        token = CASE WHEN email_subscriptions.created <= ? THEN excluded.token ELSE email_subscriptions.token END,
+        created = CASE WHEN email_subscriptions.created <= ? THEN excluded.created ELSE email_subscriptions.created END
+      WHERE email_subscriptions.confirmed_at IS NULL RETURNING token, created`)
+      .bind(crypto.randomUUID(), email, selection, selection, crypto.randomUUID(), nowIso, email, nonce, cutoff, cutoff),
+  ]);
 
-  const emailEnabled = Boolean(env.RESEND_API_KEY);
-  if (emailEnabled) {
+  const confirmation = pending.results[0];
+  if (confirmation) {
+    const expiry = new Date(Date.parse(confirmation.created) + CONFIRM_TTL_MS).toISOString();
     const base = env.SITE_URL.replace(/\/$/, "");
     await sendEmail(
       env,
       email,
       "Confirm your burn ban alerts",
-      `A request was made for burn ban alerts for ${countyNames(fips)}.\n\n` +
-        `Confirm: ${base}/api/v1/email/confirm?token=${token}\n\n` +
+      `A request was made for burn ban alerts for ${countyNames(fips)}. The link expires on ${expiry.replace("T", " ").slice(0, 16)} UTC.\n\n` +
+        `Confirm: ${base}/api/v1/email/confirm?token=${confirmation.token}\n\n` +
         `If you did not request these alerts, you can ignore this email.\n`,
+      `confirm/${nonce}`,
     );
   }
-  return { ok: true, pending: true, emailEnabled };
+  // Use the same reply for active, already pending and newly requested selections.
+  return { ok: true, emailEnabled: true };
 }
 
-export async function confirmEmail(env: Env, token: string): Promise<boolean> {
+export async function confirmEmail(env: Env, token: string, now = Date.now()): Promise<boolean> {
   if (!token) return false;
-  const r = await env.DB.prepare("UPDATE email_subscriptions SET confirmed_at = COALESCE(confirmed_at, ?) WHERE token = ? AND unsubscribed_at IS NULL")
-    .bind(new Date().toISOString(), token)
+  const r = await env.DB.prepare(`UPDATE email_subscriptions SET confirmed_at = COALESCE(confirmed_at, ?)
+    WHERE token = ? AND unsubscribed_at IS NULL AND created > ?`)
+    .bind(new Date(now).toISOString(), token, new Date(now - CONFIRM_TTL_MS).toISOString())
     .run();
   return (r.meta.changes ?? 0) > 0;
 }
 
 export async function unsubscribeEmail(env: Env, token: string): Promise<boolean> {
   if (!token) return false;
-  const r = await env.DB.prepare("UPDATE email_subscriptions SET unsubscribed_at = COALESCE(unsubscribed_at, ?) WHERE token = ?")
+  const r = await env.DB.prepare(`UPDATE email_subscriptions SET unsubscribed_at = COALESCE(unsubscribed_at, ?)
+    WHERE id = (SELECT COALESCE(merged_into, id) FROM email_subscriptions WHERE token = ?)`)
     .bind(new Date().toISOString(), token)
     .run();
   return (r.meta.changes ?? 0) > 0;
