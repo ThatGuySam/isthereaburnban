@@ -65,3 +65,13 @@ test("a signed lift can close an omitted order without announcing a countywide a
   expect(alertNotices(resolved.transitions, resolved.snapshot)[0].title).toBe("Burn ban lifted: Tulsa County, OK");
   expect(step(resolved, 3, [], [rescission]).transitions).toEqual([]);
 });
+
+test("the first successful fetch of a newly added source seeds its order without alerting", () => {
+  const configured = publish(null, 0, [], { source: { ...source, id: "other" } });
+  const failed = publish(configured, 1, [], { error: "unreachable" });
+  const firstSuccess = publish(failed, 2, [ban]);
+  expect(firstSuccess.notices).toEqual([]);
+  expect(firstSuccess.snapshot.counties[fips].status).toBe("ban");
+  const next = publish(firstSuccess, 3, [{ ...ban, since: "2026-11-27", expires: "2026-12-05" }]);
+  expect(next.notices.map(({ title }) => title)).toEqual(["Burn ban: Tulsa County, OK"]);
+});

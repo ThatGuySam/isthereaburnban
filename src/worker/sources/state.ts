@@ -77,7 +77,7 @@ function normalize(source: ActiveSource, result: Exclude<SourceResult, { notModi
       (validFrom && !Number.isFinite(Date.parse(validFrom))) || (validUntil && !Number.isFinite(Date.parse(validUntil))) ||
       (issuerFor && (issuerFor === source.id || scope !== "county" || !documentId || !validFrom ||
         (row.status !== "ban" && row.status !== "none"))) ||
-      (validFrom && validUntil && Date.parse(validUntil) <= Date.parse(validFrom)) || (scope === "part" && !scopeNote)) {
+      (validFrom && validUntil && Date.parse(validUntil) <= Date.parse(validFrom)) || (scope === "part" && (typeof scopeNote !== "string" || !scopeNote.trim()))) {
       throw new Error(`${source.id}: invalid status row for ${fips}`);
     }
     const status = row.status === "none" && source.mode === "positive-only" && scope !== "part" && !issuerFor ? "unknown" : row.status;

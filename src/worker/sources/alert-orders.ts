@@ -9,7 +9,7 @@ type Evidence = CountyReport | NonNullable<StoredCountyStatus["orders"]>[number]
 function orderState(report: Evidence): VerifiedOrder {
   return {
     source: ("issuerFor" in report ? report.issuerFor : undefined) ?? report.sourceId ?? "",
-    scope: report.scope === "part" ? `part:${report.scopeNote?.trim().toLowerCase() ?? ""}` : "countywide",
+    scope: report.scope === "part" ? `part:${typeof report.scopeNote === "string" ? report.scopeNote.trim().toLowerCase() : ""}` : "countywide",
     document: "documentId" in report ? report.documentId : undefined,
     start: report.since ?? report.validFrom ?? undefined,
     end: report.validUntil ?? report.expires ?? undefined,
