@@ -3,7 +3,7 @@ import { CALENDAR_RULES, calendarStatusRows } from "../lib/calendar";
 import { sha256 } from "../lib/hash";
 import { extractHtmlGrid } from "../lib/html";
 import { getText } from "../lib/http";
-import { reviewedRuleFallback } from "../statutory-fallback";
+import { reviewedRuleFallback, RuleChangedError } from "../statutory-fallback";
 import type { ActiveSource } from "../types";
 
 const RULE = CALENDAR_RULES.NH;
@@ -23,7 +23,7 @@ export async function parseNhOpenBurning(input: Response | string, now: Date) {
   });
   if (heading?.text !== "Section 227-L:17" || !section || extra.length || otherRows.length ||
       await sha256(section.text) !== REVIEWED_SECTION) {
-    throw new Error("New Hampshire RSA 227-L:17: reviewed statute changed or is missing");
+    throw new RuleChangedError("New Hampshire RSA 227-L:17: reviewed statute changed or is missing");
   }
   return permitRows(now);
 }

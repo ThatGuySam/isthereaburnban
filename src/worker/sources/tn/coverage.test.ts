@@ -100,8 +100,7 @@ test("blocked Tennessee guidance keeps the reviewed statutory season and its loc
       status: "restricted", note: expect.stringContaining("last reviewed"), validUntil: expect.any(String),
     });
     expect(result.rows.some(({ county }) => /Davidson|Knox|Shelby/.test(county))).toBe(false);
-    expect((await tnSeasonalBurnPermits.fetch({ now: new Date("2027-06-02T12:00Z") }).catch((err) => err)).message)
-      .toContain("review deadline");
+    await expect(tnSeasonalBurnPermits.fetch({ now: new Date("2027-06-02T12:00Z") })).rejects.toThrow("review window");
   } finally {
     globalThis.fetch = fetch;
   }

@@ -31,7 +31,8 @@ function currentReport<T extends Report>(report: T, now: number): T {
   }
   if (!(now < evidenceDeadline(report))) {
     const ended = report.validUntil && Date.parse(report.validUntil) <= now;
-    return { ...report, status: "unknown", label: ended ? "Source decision expired" : "Last successful source check is too old",
+    const label = ended ? "Source decision expired" : report.ruleReview ? "Statutory rule needs review" : "Last successful source check is too old";
+    return { ...report, status: "unknown", label,
       note: undefined, since: null, expires: null };
   }
   if (report.status === "none" && report.sourceCheckFailed) {
@@ -47,8 +48,8 @@ export function toCountyReport(row: StoredCountyStatus): CountyReport {
 }
 
 function order(report: Report): ScopedOrder | undefined {
-  if (!report.checked) return;
-  return { ...report, checked: report.checked, scope: report.scope ?? "county", scopeNote: report.scopeNote ?? report.label };
+  if (!report.checked && !report.ruleReview) return;
+  return { ...report, scope: report.scope ?? "county", scopeNote: report.scopeNote ?? report.label };
 }
 
 function describeConflict(report: Report): ConflictReport {
@@ -178,7 +179,7 @@ function oldDecision(row: CountyStatus, now: number): CountyStatus {
     status: current.status, label: current.label, checked: current.checked, sourceId: current.sourceId, sourceName: current.sourceName,
     sourceUpdated: current.sourceUpdated, officialUrl: current.officialUrl,
   } : undefined);
-  return { ...withOrders, sourceCheckFailed: undefined, sourceFailedSince: undefined, lastAttemptedAt: undefined, staleMs: undefined,
+  return { ...withOrders, sourceCheckFailed: undefined, sourceFailedSince: undefined, lastAttemptedAt: undefined, staleMs: undefined, ruleReview: undefined,
     ...report, scopeNote, label: status === "ban" ? `Burn ban in ${scopeNote.replace(/^within /i, "")}` : label,
     status: "restricted", scopedBan: isScopedBan(selected) ? true : undefined,
     sourceUrl: sourceUrl || report.officialUrl, countywide };

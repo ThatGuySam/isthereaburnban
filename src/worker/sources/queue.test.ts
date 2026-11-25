@@ -4,6 +4,7 @@ import { afterEach, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { COUNTIES, STATES_DIR } from "../counties";
 import { SNAPSHOT_KEY } from "../env";
+import { RuleChangedError } from "./statutory-fallback";
 import { withFireWeather } from "../fire-weather";
 import { lookup, statusFor } from "../lookup";
 import { snapshotReader } from "../snapshot";
@@ -296,9 +297,52 @@ test("a reviewed calendar fallback publishes evidence without recording a succes
   expect(heads.get(src.id)).toMatchObject({ lastGood: new Date(initial).toISOString(), ruleReview: { reviewedAt, reviewBy } });
   expect(snapshot.sources[0]).toMatchObject({ ok: false, error: "Official site HTTP 520", ruleReview: { reviewedAt, reviewBy } });
   applyChecks(snapshot, heads, new Date(nextHour));
-  expect(statusFor(snapshot, "41039", nextHour)).toMatchObject({ status: "restricted", checked: reviewedAt, sourceCheckFailed: true });
+  expect(statusFor(snapshot, "41039", nextHour)).toMatchObject({
+    status: "restricted", checked: new Date(initial).toISOString(), sourceCheckFailed: true,
+    ruleReview: { reviewedAt, reviewBy },
+  });
   expect(statusFor(snapshot, "41039", Date.parse(reviewBy)).status).toBe("unknown");
   expect(box.alerts).toEqual([]);
+});
+
+test("a first-poll statutory fallback leaves the last successful check empty", async () => {
+  const box = sandbox();
+  const reviewedAt = new Date(initial - 7 * 86_400_000).toISOString();
+  const reviewBy = new Date(initial + 2 * 3_600_000).toISOString();
+  const src = source("or-review", async ({ now }) => ({
+    rows: [row("restricted", now.toISOString(), { scope: "part", scopeNote: "District" })],
+    fallback: { reviewedAt, reviewBy, reason: "Official site HTTP 520" },
+  }), { mode: "positive-only", recurring: true });
+  await poll(box, src, initial);
+  await merge(box, [src], initial);
+
+  const snapshot = box.snapshot();
+  expect(snapshot.sources[0].lastSuccessfulAt).toBeNull();
+  const answer = statusFor(snapshot, "41039", initial);
+  expect(answer).toMatchObject({ status: "restricted", checked: null, ruleReview: { reviewedAt, reviewBy },
+    orders: [{ checked: null, ruleReview: { reviewedAt, reviewBy } }] });
+  expect(statusFor(snapshot, "41039", Date.parse(reviewBy)).status).toBe("unknown");
+});
+
+test("changed statutory terms invalidate a pinned fallback even during a subsequent outage", async () => {
+  const box = sandbox();
+  const reviewedAt = new Date(initial - 7 * 86_400_000).toISOString();
+  const reviewBy = new Date(initial + 86_400_000).toISOString();
+  const src = source("or-review", async ({ now }) => {
+    if (now.getTime() === nextHour) throw new RuleChangedError("Publisher changed the rule");
+    return { rows: [row("restricted", now.toISOString())], fallback: { reviewedAt, reviewBy, reason: "Origin blocked" } };
+  }, { mode: "positive-only", recurring: true });
+  await poll(box, src, initial);
+  await merge(box, [src], initial);
+  await poll(box, src, nextHour);
+
+  const prior = box.snapshot();
+  applyChecks(prior, await readHeads(box.env.DB), new Date(nextHour));
+  expect(statusFor(prior, "41039", nextHour).status).toBe("unknown");
+  const later = nextHour + 3_600_000;
+  await poll(box, src, later);
+  await merge(box, [src], later);
+  expect(statusFor(box.snapshot(), "41039", later).status).toBe("unknown");
 });
 
 test("journal handles KV and D1 interruption without duplicating a transition or alert run", async () => {

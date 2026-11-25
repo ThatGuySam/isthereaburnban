@@ -62,7 +62,7 @@ test("the reviewed NH law survives an HTTP outage and expires on its review date
     expect(result.fallback).toMatchObject({ reviewedAt: expect.any(String), reason: expect.stringContaining("520") });
     expect(result.rows).toHaveLength(10);
     expect(result.rows[0]).toMatchObject({ status: "restricted", note: expect.stringContaining("last reviewed") });
-    await expect(nhOpenBurningPermits.fetch({ now: new Date(result.fallback.reviewBy) })).rejects.toThrow("review deadline");
+    await expect(nhOpenBurningPermits.fetch({ now: new Date(result.fallback.reviewBy) })).rejects.toThrow("review window");
   } finally {
     globalThis.fetch = fetch;
   }

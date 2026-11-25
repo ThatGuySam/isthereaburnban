@@ -7,8 +7,9 @@ export function checkDeadline(checked: string | null | undefined, staleMs = DEFA
   return Number.isFinite(time) ? time + staleMs : -Infinity;
 }
 
-export function evidenceDeadline({ checked, staleMs, validUntil }: EvidenceTiming): number {
-  return Math.min(checkDeadline(checked, staleMs), validUntil ? Date.parse(validUntil) : Infinity);
+export function evidenceDeadline({ checked, staleMs, validUntil, ruleReview }: EvidenceTiming): number {
+  const freshness = ruleReview ? Date.parse(ruleReview.reviewBy) : checkDeadline(checked, staleMs);
+  return Math.min(freshness, validUntil ? Date.parse(validUntil) : Infinity);
 }
 
 export function evidenceInEffect(report: EvidenceTiming, now: number): boolean {

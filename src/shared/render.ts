@@ -144,7 +144,10 @@ export function renderStatusHtml(cs: CountyStatus, opts: RenderOptions = {}): st
   const failure = failedCheckText(cs);
   if (failure) meta.push(`<span>${escapeHtml(failure)}</span>`);
 
-  const sentence = opts.lastKnown ? `Last known on ${shortDate(cs.checked)} · ${statusSentence(cs)}` : statusSentence(cs);
+  const knownDate = opts.lastKnown && shortDate(cs.checked ?? cs.ruleReview?.reviewedAt);
+  const sentence = opts.lastKnown
+    ? `${knownDate ? `Last known on ${knownDate}` : "Last report"} · ${statusSentence(cs)}`
+    : statusSentence(cs);
   const lines: string[] = [
     `<p class="status-word${theme.word.length > 5 ? " status-word--long" : ""}">${escapeHtml(theme.word)}</p>`,
     `<p class="status-sentence">${escapeHtml(sentence)}</p>`,
@@ -304,7 +307,7 @@ export function answerMeta(question: string, list: CountyStatus[], cityName?: st
 }
 
 type ReportDates = Pick<CountyStatus, "since" | "expires" | "checked" | "sourceUpdated" |
-  "lastAttemptedAt" | "firstSeenAt" | "statusChangedAt" | "validFrom" | "validUntil">;
+  "lastAttemptedAt" | "firstSeenAt" | "statusChangedAt" | "validFrom" | "validUntil" | "ruleReview">;
 
 function renderReportDates(report: ReportDates): string {
   const dates = [
@@ -313,6 +316,7 @@ function renderReportDates(report: ReportDates): string {
     ["First recorded", report.firstSeenAt], ["Published status changed", report.statusChangedAt],
     ["Last successful check", report.checked],
     ["Latest check attempt", report.lastAttemptedAt !== report.checked ? report.lastAttemptedAt : null],
+    ["Statutory rule reviewed", report.ruleReview?.reviewedAt],
     ["Decision starts", report.validFrom !== report.since ? report.validFrom : null],
     ["Decision valid until", report.validUntil],
   ];

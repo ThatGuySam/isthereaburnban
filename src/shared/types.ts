@@ -19,9 +19,12 @@ export type FireWeatherAlert = {
   sender: string;
 };
 
+export type RuleReview = { reviewedAt: string; reviewBy: string };
+
 export type EvidenceTiming = {
   checked: string | null; // last successful source check, if known
   staleMs?: number; // publisher-specific maximum time since that check
+  ruleReview?: RuleReview; // reviewed recurring rule used during a live-source outage
   validFrom?: string; // start instant for a dated or scheduled decision
   validUntil?: string; // exclusive end instant for that decision
   lastAttemptedAt?: string;
@@ -66,21 +69,18 @@ export type ConflictReport = EvidenceTiming & Pick<CountyReport, "status" | "lab
 export type ScopedOrder = Pick<CountyStatus, "status" | "label" | "note" | "since" | "expires" |
   "sourceId" | "sourceName" | "sourceUpdated" | "officialUrl" | "standing" | "scopedBan"> & EvidenceTiming & {
   sourceUrl?: string;
-  checked: string;
   scope: "part" | "county" | "state";
   scopeNote: string;
 };
 
 /** Snapshot-only timing for local restrictions that can outlast the warning. */
-export type FireWeatherOrder = ScopedOrder & { retainAfter?: string; carried?: true };
+export type FireWeatherOrder = ScopedOrder & { checked: string; retainAfter?: string; carried?: true };
 
 export type FireWeatherReport = {
   fips: string;
   alerts: FireWeatherAlert[];
   orders?: Omit<FireWeatherOrder, "checked">[];
 };
-
-export type RuleReview = { reviewedAt: string; reviewBy: string };
 
 export type SourceHealth = {
   id: string; // "ok", "tx", ...
@@ -92,6 +92,7 @@ export type SourceHealth = {
   failedSince?: string;
   staleMs?: number;
   ruleReview?: RuleReview;
+  ruleChanged?: true;
   error?: string;
   counties: number; // distinct counties with a mapped report
   bans: number;

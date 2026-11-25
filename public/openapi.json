@@ -479,6 +479,15 @@
         ],
         "description": "ban means a reported burn ban. restricted means a local, activity-specific or permit restriction. none means no applicable temporary county order was reported within the checked feed coverage. unknown means the status is unconfirmed because evidence is missing, unreported, expired or unavailable."
       },
+      "RuleReview": {
+        "type": "object",
+        "description": "Reviewed statutory rule used while the live source is unavailable. The review window is separate from the source check and the rule's local validity window.",
+        "required": ["reviewedAt", "reviewBy"],
+        "properties": {
+          "reviewedAt": { "type": "string", "format": "date-time" },
+          "reviewBy": { "type": "string", "format": "date-time" }
+        }
+      },
       "CountyStatus": {
         "type": "object",
         "required": [
@@ -553,6 +562,9 @@
             ],
             "description": "Last successful source check for the report. Null for a directory fallback or an unavailable check time.",
             "format": "date-time"
+          },
+          "ruleReview": {
+            "$ref": "#/components/schemas/RuleReview"
           },
           "sourceName": {
             "type": "string",
@@ -781,6 +793,9 @@
             ],
             "description": "Latest successful automated check, if known.",
             "format": "date-time"
+          },
+          "ruleReview": {
+            "$ref": "#/components/schemas/RuleReview"
           },
           "cadence": {
             "type": [
@@ -1128,6 +1143,9 @@
             ],
             "description": "Last successful source check for the report. Null for a directory fallback or an unavailable check time.",
             "format": "date-time"
+          },
+          "ruleReview": {
+            "$ref": "#/components/schemas/RuleReview"
           },
           "sourceId": {
             "type": "string",

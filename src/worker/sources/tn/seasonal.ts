@@ -4,7 +4,7 @@ import { CALENDAR_RULES, calendarStatusRows } from "../lib/calendar";
 import { US_ZONES } from "../lib/dates";
 import { extractHtml, type HtmlParts } from "../lib/html";
 import { getText } from "../lib/http";
-import { reviewedRuleFallback } from "../statutory-fallback";
+import { reviewedRuleFallback, RuleChangedError } from "../statutory-fallback";
 import type { ActiveSource } from "../types";
 import { tennesseeZone } from "./zones";
 
@@ -34,7 +34,7 @@ export function parseTennesseePermitSeason({ blocks }: HtmlParts, now: Date): Co
   const hasHeading = blocks.some(({ tag, text }) => tag === "h1" && /^Get a burn permit$/i.test(text));
   const hasRule = blocks.some(({ tag, text }) => tag === "p" &&
     /^From October 15 through May 15, a burn permit from the Tennessee Division of Forestry \(TDF\) is required for debris pile fires and prescribed fires\.$/i.test(text));
-  if (!hasHeading || !hasRule) throw new Error("Tennessee Forestry: the seasonal permit guidance changed or is missing");
+  if (!hasHeading || !hasRule) throw new RuleChangedError("Tennessee Forestry: the seasonal permit guidance changed or is missing");
 
   return seasonRows(now);
 }

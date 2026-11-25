@@ -153,6 +153,7 @@ export function buildCatalog(run: Pick<Run, "id" | "generated">, states: Publish
       row.error = head.error;
       row.failedSince = head.error ? head.failedSince ?? head.checked : undefined;
       row.ruleReview = head.ruleReview;
+      row.ruleChanged = head.ruleChanged;
       if (!head.ruleReview && head.hash && head.hash === sourceVersions[id]) index.orderChecks[id] = head.lastGood ?? head.checked;
       if (row.product === "fire-weather" && head.hash) index.weatherChecked = head.lastGood ?? head.checked;
     }
