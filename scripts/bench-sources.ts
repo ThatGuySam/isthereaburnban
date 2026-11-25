@@ -69,6 +69,10 @@ import { mdDnrWoodland, parseMdWoodland } from "../src/worker/sources/md/woodlan
 import { meOpenBurningPermits, parseMaineOpenBurning } from "../src/worker/sources/me/open-burning";
 import { meTownPermitHolds, parseMaineTownPermits } from "../src/worker/sources/me/town-permits";
 import { miPermits, parseMichiganPermits } from "../src/worker/sources/mi/permits";
+import { parseChesterfieldBurnStatus } from "../src/worker/sources/mi/chesterfield";
+import { parseEastLansingFireNotices } from "../src/worker/sources/mi/east-lansing-news";
+import { miScopedBurnRules } from "../src/worker/sources/mi/scoped-burn-rules";
+import { miTownshipBulletins } from "../src/worker/sources/mi/township-bulletins";
 import { mnLocalCalendars } from "../src/worker/sources/mn/local-rules";
 import { mnOlmstedOrders, parseOlmstedOrders } from "../src/worker/sources/mn/olmsted";
 import { mnRestrictions, parseMinnesotaRestrictions } from "../src/worker/sources/mn/restrictions";
@@ -364,6 +368,20 @@ const rss = raw("lib/fixtures/texas-rss.xml");
 const pdf = raw("lib/fixtures/faulkner-rescind.pdf");
 const parseCaFixture = () => parsePfirs(parseHtml(pfirsHtml), now);
 const parseMiFixture = () => parseMichiganPermits(JSON.parse(miMap), now);
+const miCountyCaptured = new Date("2026-11-25T18:57:10Z");
+const miChesterfieldStatus = utf8("mi/fixtures/county-pass/chesterfield-status-2026-11-25.json");
+const miEastLansingFeed = utf8("mi/fixtures/county-pass/east-lansing-news-2026-11-25.xml");
+const miTownshipJobs = ["spencer", "vernon-canonical"].map((name, index): [string, () => unknown] => {
+  const html = utf8(`mi/fixtures/county-pass/${name}-2026-11-25.html`);
+  const { source, parse } = miTownshipBulletins[index];
+  return [source.id, () => parse(html, miCountyCaptured)];
+});
+const miScopedRuleJobs = miScopedBurnRules.map(({ source, parse, fixture }): [string, () => unknown] => {
+  const path = `mi/fixtures/county-pass/${fixture}`;
+  const body = fixture.endsWith(".headers.json") ? null : raw(path);
+  const headers = body ? undefined : JSON.parse(utf8(path));
+  return [source.id, () => parse(new Response(body, { headers }), miCountyCaptured)];
+});
 const parseNjFixture = () => parseNjRestrictions(JSON.parse(njDivisions), JSON.parse(njCounties), now);
 const parseWiFixture = () => parseWisconsinPermits(wiPermitsJson, now);
 const parseMnFixture = () => parseMinnesotaRestrictions(mnRestrictionsJson, now);
@@ -797,6 +815,12 @@ const jobs: Array<[string, () => unknown]> = [
   ...adapters,
   ["CA PFIRS", parseCaFixture],
   ["MI DNR ArcGIS", parseMiFixture],
+  ["MI Chesterfield public status JSON", () => parseChesterfieldBurnStatus(JSON.parse(miChesterfieldStatus), miCountyCaptured)],
+  ["MI East Lansing CivicPlus News Flash", () => parseEastLansingFireNotices(miEastLansingFeed, miCountyCaptured, async () => {
+    throw new Error("Unexpected fire notice in the captured feed");
+  })],
+  ...miTownshipJobs,
+  ...miScopedRuleJobs,
   ["NJ Forest Fire Service ArcGIS", parseNjFixture],
   ["WI DNR permit feed", parseWiFixture],
   ...wiLocalStatusJobs,

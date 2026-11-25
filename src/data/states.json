@@ -576,6 +576,10 @@
       {
         "label": "EGLE open burning rules",
         "url": "https://www.michigan.gov/egle/faqs/air-quality/burning"
+      },
+      {
+        "label": "Find a township and its local contacts",
+        "url": "https://michigantownships.org/find-a-township/"
       }
     ],
     "notes": "The DNR reports debris-burning permit conditions in 49 counties in the Upper Peninsula and northern Lower Peninsula. Use the county dropdown on the DNR map for township details. Contact your local fire department or local government wherever the map refers you to a local issuer. Local ordinances and state air quality rules also apply."

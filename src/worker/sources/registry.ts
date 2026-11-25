@@ -48,6 +48,10 @@ import { mdDnrWoodland } from "./md/woodland";
 import { meOpenBurningPermits } from "./me/open-burning";
 import { meTownPermitHolds } from "./me/town-permits";
 import { miPermits } from "./mi/permits";
+import { miChesterfieldBurnStatus } from "./mi/chesterfield";
+import { miEastLansingFireNotices } from "./mi/east-lansing-news";
+import { miScopedBurnRules } from "./mi/scoped-burn-rules";
+import { miTownshipBulletins } from "./mi/township-bulletins";
 import { mnLocalCalendars } from "./mn/local-rules";
 import { mnOlmstedOrders } from "./mn/olmsted";
 import { mnRestrictions } from "./mn/restrictions";
@@ -143,6 +147,10 @@ export const SOURCES: readonly Source[] = [
   inIdemResidentialBurning,
   pfirs,
   miPermits,
+  miChesterfieldBurnStatus,
+  miEastLansingFireNotices,
+  ...miTownshipBulletins.map(({ source }) => source),
+  ...miScopedBurnRules.map(({ source }) => source),
   njRestrictions,
   wiPermits,
   ...wiLocalStatuses.map(({ source }) => source),
