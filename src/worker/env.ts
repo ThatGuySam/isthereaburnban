@@ -11,7 +11,9 @@ export interface Env {
   VAPID_SUBJECT: string;
   RESEND_API_KEY?: string; // secret; when absent, email signup is unavailable
   EMAIL_FROM?: string;
-  OPS_ALERT_EMAIL?: string; // optional operational recipient
+  OPS_ALERT_EMAIL?: string; // optional operational recipient (secret)
+  EMAIL?: SendEmail; // Cloudflare Email Service binding; used when EMAIL_TRANSPORT is "cloudflare"
+  EMAIL_TRANSPORT?: string; // "cloudflare" turns on the EMAIL binding once the domain is onboarded for sending
   DASH_TOKEN?: string;
   PUSH_CANARY_ENABLED?: string;
   PUSH_CANARY_FIPS?: string;
@@ -19,3 +21,8 @@ export interface Env {
 }
 
 export const SNAPSHOT_KEY = "snapshot:v1";
+
+/** True when some email transport is configured: Cloudflare Email Service, or Resend as the fallback. */
+export function emailConfigured(env: Pick<Env, "RESEND_API_KEY" | "EMAIL" | "EMAIL_TRANSPORT">): boolean {
+  return Boolean((env.EMAIL && env.EMAIL_TRANSPORT === "cloudflare") || env.RESEND_API_KEY);
+}

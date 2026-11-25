@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import { COUNTY_BY_FIPS } from "./counties";
-import type { Env } from "./env";
+import { emailConfigured, type Env } from "./env";
 import { maskTarget, planAudience, type Audience, type AudienceWindow, type Channel, type Delivery } from "./notification-audience";
 import { alertsPaused, MANUAL_LIMIT } from "./notification-controls";
 import { drainOperatorRun, stageOperatorRun } from "./notification-outbox";
@@ -36,7 +36,7 @@ export class NotificationError extends Error {
 }
 
 export function providerStatus(env: Env): Record<Channel, boolean> {
-  return { push: Boolean(pushVapid(env)), email: Boolean(env.RESEND_API_KEY) };
+  return { push: Boolean(pushVapid(env)), email: emailConfigured(env) };
 }
 
 async function plan(env: Env, req: Dispatch, window?: AudienceWindow) {

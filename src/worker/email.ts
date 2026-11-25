@@ -1,6 +1,6 @@
 import { cleanFipsList, COUNTY_BY_FIPS } from "./counties";
 import type { DeliveryOutcome } from "./delivery";
-import type { Env } from "./env";
+import { emailConfigured, type Env } from "./env";
 import type { Notice } from "./notification-message";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -12,6 +12,17 @@ function from(env: Env): string {
 async function sendEmail(
   env: Env, to: string, subject: string, text: string, idempotencyKey?: string,
 ): Promise<string | undefined> {
+  if (env.EMAIL && env.EMAIL_TRANSPORT === "cloudflare") {
+    try {
+      const sent = await env.EMAIL.send({
+        from: parseFrom(from(env)), to, subject, text,
+        ...(idempotencyKey ? { headers: { "X-Entity-Ref-ID": idempotencyKey } } : {}),
+      });
+      return sent.messageId;
+    } catch (err) {
+      throw new EmailProviderError(0, `Cloudflare Email: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
   if (!env.RESEND_API_KEY) return;
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -23,15 +34,21 @@ async function sendEmail(
     signal: AbortSignal.timeout(10_000),
     body: JSON.stringify({ from: from(env), to: [to], subject, text }),
   });
-  if (!res.ok) throw new ResendError(res.status);
+  if (!res.ok) throw new EmailProviderError(res.status, `Resend HTTP ${res.status}`);
   const body: unknown = await res.json().catch(() => null);
   if (body && typeof body === "object" && "id" in body &&
       typeof body.id === "string" && /^[a-z0-9_-]{1,128}$/i.test(body.id)) return body.id;
 }
 
-class ResendError extends Error {
-  constructor(readonly status: number) {
-    super(`Resend HTTP ${status}`);
+/** "Name <addr>" -> { name, email } for the Cloudflare builder; a bare address passes through. */
+function parseFrom(value: string): string | { name: string; email: string } {
+  const m = /^\s*(.*?)\s*<([^>]+)>\s*$/.exec(value);
+  return m ? { name: m[1], email: m[2] } : value;
+}
+
+class EmailProviderError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message);
   }
 }
 
@@ -48,7 +65,7 @@ export async function subscribeEmail(env: Env, body: unknown, now = Date.now()):
   if (!EMAIL_RE.test(email) || email.length > 254) return { ok: false, error: "a valid email is required" };
   const fips = cleanFipsList(b.fips).sort();
   if (!fips.length) return { ok: false, error: "fips must be a non-empty array of 5-digit county FIPS codes" };
-  if (!env.RESEND_API_KEY) return { ok: true, emailEnabled: false };
+  if (!emailConfigured(env)) return { ok: true, emailEnabled: false };
 
   const { DB: db } = env;
   const selection = JSON.stringify(fips);
@@ -111,7 +128,7 @@ export async function unsubscribeEmail(env: Env, token: string): Promise<boolean
 export async function sendAlertEmail(
   env: Env, target: { email: string; token: string | null }, notices: Notice[], idempotencyKey: string,
 ): Promise<DeliveryOutcome> {
-  if (!env.RESEND_API_KEY) return { result: "error", error: "Resend is unavailable" };
+  if (!emailConfigured(env)) return { result: "error", error: "Email is not configured" };
   const base = env.SITE_URL.replace(/\/$/, "");
   const footer = target.token
     ? `\nUnsubscribe: ${base}/api/v1/email/unsubscribe?token=${target.token}\n` : "";
@@ -122,7 +139,7 @@ export async function sendAlertEmail(
     const providerId = await sendEmail(env, target.email, subject, text, idempotencyKey);
     return { result: "accepted", providerId };
   } catch (err) {
-    return { result: "error", error: err instanceof ResendError ? err.message : "Resend request failed",
-      permanent: err instanceof ResendError && [400, 422].includes(err.status) };
+    return { result: "error", error: err instanceof EmailProviderError ? err.message : "Email request failed",
+      permanent: err instanceof EmailProviderError && [400, 422].includes(err.status) };
   }
 }

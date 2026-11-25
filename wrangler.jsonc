@@ -23,6 +23,8 @@
       { "queue": "isthereaburnban-sources-dlq", "max_batch_size": 10, "max_concurrency": 1, "max_retries": 100 }
     ]
   },
+  // Cloudflare Email Service. Sending stays off until EMAIL_TRANSPORT is "cloudflare" (after `wrangler email sending enable`).
+  "send_email": [{ "name": "EMAIL" }],
   "kv_namespaces": [{ "binding": "KV", "id": "0e241f78e10a4066aafc2d3a41e8588c" }],
   // Aggregate API/MCP request counts (src/worker/usage.ts). The dataset is created on the first write after deploy.
   "analytics_engine_datasets": [{ "binding": "USAGE", "dataset": "isthereaburnban_usage" }],

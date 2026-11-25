@@ -1,6 +1,6 @@
 import type { DeliveryOutcome } from "./delivery";
 import { sendAlertEmail } from "./email";
-import type { Env } from "./env";
+import { emailConfigured, type Env } from "./env";
 import { maskTarget, RESEND_TEST_ADDRESSES, type Audience, type Channel, type Delivery } from "./notification-audience";
 import { alertsPaused, MANUAL_LIMIT } from "./notification-controls";
 import type { Notice } from "./notification-message";
@@ -122,7 +122,7 @@ export async function drainOutbox(env: Env, now = Date.now(), runId?: string): P
   if (await alertsPaused(env)) return false;
   const { DB: db } = env;
   const lease = crypto.randomUUID();
-  const channels = JSON.stringify([...(pushVapid(env) ? ["push"] : []), ...(env.RESEND_API_KEY ? ["email"] : [])]);
+  const channels = JSON.stringify([...(pushVapid(env) ? ["push"] : []), ...(emailConfigured(env) ? ["email"] : [])]);
   // Expire old alerts even when the corresponding provider is unavailable.
   const ready = `status = 'pending' AND due_at <= ?
     AND (channel IN (SELECT value FROM json_each(?)) OR run_id IN (SELECT id FROM notification_runs WHERE at <= ?))
