@@ -1,8 +1,8 @@
-import { checkDeadline, evidenceInEffect, nextEvidenceBoundary } from "../shared/evidence";
+import { checkDeadline, evidenceInEffect, fireWeatherDeadline, nextEvidenceBoundary } from "../shared/evidence";
 import type { CountyStatus, FireWeatherOrder, ScopedOrder, SnapshotData } from "../shared/types";
 import { countyBoundary } from "./county-decision";
 import { statusFor } from "./lookup";
-import { alertIsCurrent, nwsFireWeather } from "./sources/nws/alerts";
+import { nwsFireWeather } from "./sources/nws/alerts";
 
 function weatherCheck(snapshot: SnapshotData, published?: string) {
   const source = snapshot.sources.find((item) => item.product === "fire-weather");
@@ -33,10 +33,8 @@ export function weatherBoundary(snapshot: SnapshotData, now: number, published?:
   for (const report of Object.values(snapshot.fireWeather)) {
     if (report.alerts.length && deadline > now) {
       for (const alert of report.alerts) {
-        if (!alertIsCurrent(alert, now)) continue;
-        const end = alert.ends ? Date.parse(alert.ends) : Infinity;
-        const expiry = alert.expires ? Date.parse(alert.expires) : Infinity;
-        next = Math.min(next, deadline, end, expiry);
+        const end = fireWeatherDeadline(alert);
+        if (end > now) next = Math.min(next, deadline, end);
       }
     }
     for (const order of report.orders ?? []) next = Math.min(next, nextEvidenceBoundary(timedOrder(order, timing, now), now));
@@ -52,7 +50,7 @@ export function withFireWeather<T extends SnapshotData>(snapshot: T, now = Date.
   let counties: SnapshotData["counties"] | undefined;
   let nextBoundary = snapshot.nextBoundary ?? Infinity;
   for (const [fips, weather] of Object.entries(snapshot.fireWeather)) {
-    const alerts = weatherFresh ? weather.alerts.filter((alert) => alertIsCurrent(alert, now)) : [];
+    const alerts = weatherFresh ? weather.alerts.filter((alert) => fireWeatherDeadline(alert) > now) : [];
     const orders = weather.orders?.map((order) => timedOrder(order, timing, now)).filter((order) => evidenceInEffect(order, now));
     if (!alerts.length && !orders?.length) continue;
 

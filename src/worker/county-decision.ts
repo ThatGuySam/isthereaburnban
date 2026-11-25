@@ -1,4 +1,4 @@
-import { DEFAULT_STALE_MS, evidenceDeadline, evidenceInEffect, nextEvidenceBoundary } from "../shared/evidence";
+import { DEFAULT_STALE_MS, evidenceDeadline, evidenceInEffect, fireWeatherDeadline, nextEvidenceBoundary } from "../shared/evidence";
 import type { ConflictReport, CountyReport, CountyStatus, ScopedOrder, StoredCountyStatus } from "../shared/types";
 
 export { DEFAULT_STALE_MS as STALE_MS };
@@ -208,10 +208,8 @@ export function countyBoundary(row: StoredCountyStatus, now: number): number {
   for (const report of row.candidates ?? []) next = Math.min(next, nextEvidenceBoundary(report, now));
   for (const report of row.orders ?? []) next = Math.min(next, nextEvidenceBoundary(report, now));
   for (const alert of row.alerts ?? []) {
-    for (const value of [alert.ends, alert.expires]) {
-      const end = value ? Date.parse(value) : -Infinity;
-      if (end > now) next = Math.min(next, end);
-    }
+    const end = fireWeatherDeadline(alert);
+    if (end > now) next = Math.min(next, end);
   }
   return next;
 }

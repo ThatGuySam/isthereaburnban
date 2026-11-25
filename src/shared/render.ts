@@ -1,6 +1,7 @@
 // Status wording, colors and hero markup. Pure functions shared by the Worker (HTMLRewriter
 // injection) and the browser (client-side lookups), so every surface says the same thing.
 import type { BanStatus, ConflictReport, CountyStatus, FireWeatherAlert, LookupResult, PlaceStatus, ScopedOrder, StateDirectoryEntry } from "./types";
+import { fireWeatherDeadline } from "./evidence";
 
 export type HeroStatus = PlaceStatus | "checking";
 
@@ -163,8 +164,7 @@ export function renderStatusHtml(cs: CountyStatus, opts: RenderOptions = {}): st
 export function currentAlerts(cs: Pick<CountyStatus, "alerts">, now: number = Date.now()): FireWeatherAlert[] {
   const seen = new Set<string>();
   return (cs.alerts ?? []).filter((a) => {
-    const end = a.ends ?? a.expires;
-    if (!a.event || (end && !(Date.parse(end) > now)) || seen.has(a.event)) return false;
+    if (!a.event || !(fireWeatherDeadline(a) > now) || seen.has(a.event)) return false;
     seen.add(a.event);
     return true;
   });

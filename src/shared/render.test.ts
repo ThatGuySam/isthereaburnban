@@ -8,7 +8,7 @@ const redFlag = {
   event: "Red Flag Warning",
   headline: "Red Flag Warning issued November 24 at 4:02AM CST until November 24 at 8:00PM CST by NWS Tulsa OK",
   onset: "2026-11-24T16:00:00Z",
-  expires: "2026-11-24T14:00:00Z",
+  expires: "2026-11-25T01:00:00Z",
   ends: "2026-11-25T02:00:00Z",
   url: "https://alerts.weather.gov/search?id=urn:oid:2.49.0.1.840.0.abc",
   sender: "NWS Tulsa OK",
@@ -35,6 +35,12 @@ describe("NWS fire-weather line", () => {
     const ended = { ...redFlag, event: "Fire Weather Watch", ends: "2026-11-24T17:00:00Z" };
     expect(currentAlerts({ alerts: [redFlag, { ...redFlag, sender: "NWS Norman OK" }, ended] }, NOW)).toHaveLength(1);
     expect(renderAlertLineHtml({ state: "OK", alerts: [ended] }, NOW)).toBe("");
+  });
+
+  test("hides the warning at message expiry even when the event end is later", () => {
+    const expiry = Date.parse(redFlag.expires);
+    expect(currentAlerts({ alerts: [redFlag] }, expiry - 1)).toEqual([redFlag]);
+    expect(renderAlertLineHtml({ state: "OK", alerts: [redFlag] }, expiry)).toBe("");
   });
 
   test("details show one linked weather alert with an explicit time zone", () => {

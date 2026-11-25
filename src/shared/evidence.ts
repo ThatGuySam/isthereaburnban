@@ -1,4 +1,4 @@
-import type { EvidenceTiming } from "./types";
+import type { EvidenceTiming, FireWeatherAlert } from "./types";
 
 export const DEFAULT_STALE_MS = 48 * 3_600_000;
 
@@ -21,4 +21,9 @@ export function nextEvidenceBoundary(report: EvidenceTiming, now: number): numbe
   const start = report.validFrom ? Date.parse(report.validFrom) : -Infinity;
   if (!(end > now) || start >= end) return Infinity;
   return start > now ? start : end;
+}
+
+export function fireWeatherDeadline({ ends, expires }: Pick<FireWeatherAlert, "ends" | "expires">): number {
+  if (!ends && !expires) return -Infinity;
+  return Math.min(ends ? Date.parse(ends) : Infinity, expires ? Date.parse(expires) : Infinity);
 }
