@@ -3,7 +3,7 @@ import { calendarStatusRows, type CalendarCounty, type CalendarRule } from "./ca
 import { sha256 } from "./hash";
 import { htmlStatusBlocks, reviewedHeadingDigest, reviewedHtmlDigest } from "./html";
 import { fetchSource, isSourceUnavailable } from "./http";
-import { manualPdf } from "./pdf";
+import { manualPdf, matchesPdfEtag } from "./pdf";
 import type { ActiveSource } from "../types";
 
 export type LocalCalendarRule = Pick<CalendarRule, "label" | "note" | "scopeNote" | "seasons" | "hours">;
@@ -41,9 +41,7 @@ async function matchesReview(input: Response, review: LocalCalendarEvidence): Pr
     case "pdf":
       return (await manualPdf(input)).sha256 === review.digest;
     case "pdf-etag":
-      // A strong validator identifies the exact document version reviewed by hand.
-      return input.status === 200 && /^application\/pdf\b/i.test(input.headers.get("content-type") ?? "") &&
-        /^"[^"]+"$/.test(review.etag) && input.headers.get("etag") === review.etag;
+      return matchesPdfEtag(input, review.etag);
   }
 }
 

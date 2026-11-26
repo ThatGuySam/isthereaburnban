@@ -1,9 +1,12 @@
 import { z } from "zod";
 import type { CountyStatus } from "../../../shared/types";
 import { countyByName } from "../../counties";
-import { localClock, localDayWindow, parseIsoTimestamp, parseUsDate, US_ZONES } from "../lib/dates";
-import { matchHtmlStatus } from "../lib/html";
-import { fetchSource, getText } from "../lib/http";
+import { localClock, localDayWindow, parseIsoTimestamp, parseLocalDateTime, parseUsDate, US_ZONES } from "../lib/dates";
+import { extractHtmlGrid, matchHtmlStatus } from "../lib/html";
+import { fetchSource, getText, pacedSourceReader } from "../lib/http";
+import { kmlOutlineColors } from "../lib/kml";
+import { matchesPdfEtag } from "../lib/pdf";
+import { latestWpNotice, wpRestUrl } from "../lib/wordpress";
 import type { ActiveSource } from "../types";
 
 const ZONE = US_ZONES.Mountain;
@@ -14,7 +17,7 @@ type Publisher = Pick<ActiveSource, "id" | "sourceName" | "officialUrl" | "stack
   scopeNote?: string;
 };
 
-export function localFirePublisher(publisher: Publisher, options: Pick<ActiveSource, "cadence" | "staleMs">) {
+function localFirePublisher(publisher: Publisher, options: Pick<ActiveSource, "cadence" | "staleMs">) {
   const county = countyByName("CO", publisher.county);
   if (!county) throw new Error(`Unknown Colorado county: ${publisher.county}`);
   const { fips, name } = county;
@@ -47,6 +50,17 @@ type Page = Publisher & Parameters<typeof matchHtmlStatus<Decision>>[1] & { date
 const weekdayDate = "(?:[A-Za-z]+, )?[A-Za-z]+ [0-9]{1,2}, [0-9]{4}";
 
 const pages: readonly Page[] = [
+  {
+    id: "co-adams-current", county: "Adams", stack: "WordPress / HTML", sourceName: "Adams County Emergency Management",
+    officialUrl: "https://adamscountyco.gov/our-county/office-of-emergency-management/fire-restrictions/",
+    section: '#main-content > section[data-module="flexible_content"]:nth-of-type(2) .wysiwyg',
+    blocks: "h3:first-child, p:first-of-type, p:nth-of-type(2)",
+    choices: [
+      ["clear", /^(?<date>[A-Za-z]+\.? \d{1,2}, \d{4}) at \d{1,2}:\d{2} [ap]\.m\.\nPer order of Adams County Sheriff [A-Za-z ]+, unincorporated Adams County is moving from Stage [12] fire restrictions to no fire restrictions effective immediately and until further notice\.$/i],
+      ["stage1", /^(?<date>[A-Za-z]+\.? \d{1,2}, \d{4}) at \d{1,2}:\d{2} [ap]\.m\.\nStage 1 Fire Restrictions\nBy Order of Adams County Sheriff [A-Za-z ]+, unincorporated Adams County will move to Stage 1 Fire Restrictions effective immediately until further notice\.$/i],
+      ["stage2", /^(?<date>[A-Za-z]+\.? \d{1,2}, \d{4}) at \d{1,2}:\d{2} [ap]\.m\.\nStage 2 Fire Restrictions\nBy Order of Adams County Sheriff [A-Za-z ]+, unincorporated Adams County will move to Stage 2 Fire Restrictions effective immediately until further notice\.$/i],
+    ],
+  },
   {
     id: "co-fremont-current", county: "Fremont", stack: "Drupal / HTML", sourceName: "Fremont County Government",
     officialUrl: "https://fremontcountyco.gov/",
@@ -161,6 +175,103 @@ const pages: readonly Page[] = [
       ["stage2", /^The Upper Piedra Region remains in Stage (?:II|2) Fire restrictions\. The remainder of the county has no Fire Restrictions\.$/i],
     ],
   },
+  {
+    id: "co-chaffee-current", county: "Chaffee", stack: "Streamline / HTML", sourceName: "South Arkansas Fire Protection District",
+    officialUrl: "https://southarkfire.specialdistrict.org/fire-restrictions-community-wildfire-information",
+    scopeNote: "South Arkansas Fire Protection District in Chaffee County",
+    section: "#poc", blocks: "#poc .body > div > h3:first-child, #poc .body > div > p:nth-child(2)",
+    choices: [
+      ["clear", /^Current Fire Restrictions:\nFire Restrictions are LIFTED - (?<since>[A-Za-z]+ \d{1,2}(?:st|nd|rd|th)?, \d{4})$/i],
+      ["stage1", /^Current Fire Restrictions:\nStage (?:I|1) Fire Restrictions are in effect\.?$/i],
+      ["stage2", /^Current Fire Restrictions:\nStage (?:II|2) Fire Restrictions are in effect\.?$/i],
+    ],
+  },
+  {
+    id: "co-delta-current", county: "Delta", stack: "WordPress / Kadence HTML",
+    sourceName: "West Slope Fire Info · Delta County Emergency Management",
+    officialUrl: "https://westslopefireinfo.com/delta-county/",
+    section: ".kb-row-layout-id3437_7a1043-97", blocks: "p.kt-adv-heading3437_f1d70c-22",
+    choices: [
+      ["clear", /^No Current Fire Restrictions\.?$/i],
+      ["stage1", /^Stage (?:I|1) Fire Restrictions(?: (?:are )?in effect)?\.?$/i],
+      ["stage2", /^Stage (?:II|2) Fire Restrictions(?: (?:are )?in effect)?\.?$/i],
+    ],
+  },
+  {
+    id: "co-montrose-current", county: "Montrose", stack: "WordPress / Kadence HTML",
+    sourceName: "West Slope Fire Info · Montrose County Emergency Management",
+    officialUrl: "https://westslopefireinfo.com/montrose-county/",
+    section: "#main", blocks: "h2.kt-adv-heading3687_d9b2ac-61",
+    choices: [
+      ["clear", /^No Current Fire Restrictions are in effect in unincorporated Montrose County\.?$/i],
+      ["stage1", /^Stage (?:I|1) Fire Restrictions are in effect in unincorporated Montrose County\.?$/i],
+      ["stage2", /^Stage (?:II|2) Fire Restrictions are in effect in unincorporated Montrose County\.?$/i],
+    ],
+  },
+  {
+    id: "co-ouray-current", county: "Ouray", stack: "WordPress / Kadence HTML",
+    sourceName: "West Slope Fire Info · Ouray County Emergency Management",
+    officialUrl: "https://westslopefireinfo.com/ouray-county/",
+    section: "#main", blocks: "h2.kt-adv-heading3487_15d20e-c8",
+    choices: [
+      ["clear", /^Ouray County fire restrictions are rescinded effective (?<since>\d{1,2}\/\d{1,2}\/\d{2,4}) for all unincorporated areas\.?$/i],
+      ["stage1", /^Stage (?:I|1) Fire Restrictions are in effect for (?:all )?unincorporated (?:Ouray County|areas)\.?$/i],
+      ["stage2", /^Stage (?:II|2) Fire Restrictions are in effect for (?:all )?unincorporated (?:Ouray County|areas)\.?$/i],
+    ],
+  },
+  {
+    id: "co-pitkin-current", county: "Pitkin", stack: "Streamline / HTML", sourceName: "Aspen Fire Protection District",
+    officialUrl: "https://www.aspenfire.com/pitkin-county-wildfire-restrictions",
+    scopeNote: "Aspen Fire Protection District in Pitkin County",
+    section: "#poc", blocks: "#poc > header > h2, #poc .body > div > p:first-child",
+    choices: [
+      ["clear", /^Pitkin County Wildfire Restrictions\nThere are currently no wildfire restrictions in Pitkin County; however, restrictions could be enacted at any time\.$/i],
+      ["stage1", /^Pitkin County Wildfire Restrictions\nStage (?:I|1) wildfire restrictions are in effect in Pitkin County\.$/i],
+      ["stage2", /^Pitkin County Wildfire Restrictions\nStage (?:II|2) wildfire restrictions are in effect in Pitkin County\.$/i],
+    ],
+  },
+  {
+    id: "co-grand-current", county: "Grand", stack: "Streamline / HTML", sourceName: "Grand Fire Protection District No. 1",
+    officialUrl: "https://www.grandfire.org/fire-danger-level-and-restriction-information",
+    scopeNote: "Grand Fire Protection District No. 1 in Grand County",
+    section: "#poc", blocks: "#poc .body > div > h2:first-child",
+    choices: [
+      ["clear", /^There are (?:currently )?no fire restrictions (?:in effect )?in Grand County\.?$/i],
+      ["stage1", new RegExp(`^Grand County enacts Stage (?:I|1) Fire Restrictions effective (?<time>\\d{1,2}:\\d{2} [ap]\\.?m\\.?) (?<since>${weekdayDate})\\. Please see below for more information\\.$`, "i")],
+      ["stage2", new RegExp(`^Grand County enacts Stage (?:II|2) Fire Restrictions effective (?<time>\\d{1,2}:\\d{2} [ap]\\.?m\\.?) (?<since>${weekdayDate})\\. Please see below for more information\\.$`, "i")],
+    ],
+  },
+  {
+    id: "co-garfield-current", county: "Garfield", stack: "WordPress / HTML", sourceName: "Garfield County Emergency Management",
+    officialUrl: "https://www.garfieldcountyco.gov/emergency-management/fire-restrictions/",
+    section: "#post-54 .entry-content", blocks: ".entry-content > h2:first-of-type, .entry-content > p:first-of-type",
+    choices: [
+      ["clear", new RegExp(`^Stage (?:II?|[12]) Fire Restrictions lifted in Garfield County\\nGarfield County, CO, The Garfield County Sheriff’s Office, Bureau of Land Management – Upper Colorado River District, and the seven fire districts in Garfield County lift Stage [12] Fire Restrictions throughout Garfield County effective (?<time>\\d{1,2}:\\d{2} [ap]\\.?m\\.?) (?<since>${weekdayDate})\\.$`, "i")],
+      ["stage1", new RegExp(`^Stage (?:I|1) Fire Restrictions in effect in Garfield County\\nStage (?:I|1) Fire Restrictions are in effect in unincorporated Garfield County effective (?<time>\\d{1,2}:\\d{2} [ap]\\.?m\\.?) (?<since>${weekdayDate})\\.$`, "i")],
+      ["stage2", new RegExp(`^Stage (?:II|2) Fire Restrictions in effect in Garfield County\\nStage (?:II|2) Fire Restrictions are in effect in unincorporated Garfield County effective (?<time>\\d{1,2}:\\d{2} [ap]\\.?m\\.?) (?<since>${weekdayDate})\\.$`, "i")],
+    ],
+  },
+  {
+    id: "co-la-plata-current", county: "La Plata", stack: "Revize / HTML", sourceName: "La Plata County Emergency Management",
+    officialUrl: "https://www.lpcgov.org/departments/emergency_management/fire_restrictions.php",
+    scopeNote: "La Plata County Sheriff’s jurisdiction outside municipal, federal and tribal lands",
+    section: "#freeform-main #post", blocks: "#post > h3:first-of-type",
+    choices: [
+      ["clear", /^La Plata County currently has no fire restrictions\.$/i],
+      ["stage1", /^(?:Unincorporated )?La Plata County (?:currently has|is currently under) Stage (?:I|1) Fire Restrictions\.$/i],
+      ["stage2", /^(?:Unincorporated )?La Plata County (?:currently has|is currently under) Stage (?:II|2) Fire Restrictions\.$/i],
+    ],
+  },
+  {
+    id: "co-montezuma-current", county: "Montezuma", stack: "WordPress / Elementor HTML", sourceName: "Montezuma County Emergency Management",
+    officialUrl: "https://montezumacounty.gov/fire-restrictions-by-jurisdiction/",
+    section: ".elementor-element-fc807c9", blocks: "ul > li",
+    choices: [
+      ["clear", /^Unincorporated Montezuma County: All restrictions lifted as of [A-Za-z]+ \d{1,2}\.$/im],
+      ["stage1", /^Unincorporated Montezuma County: Stage (?:I|1) Fire Restrictions (?:are )?in effect\.?$/im],
+      ["stage2", /^Unincorporated Montezuma County: Stage (?:II|2) Fire Restrictions (?:are )?in effect\.?$/im],
+    ],
+  },
 ];
 
 function htmlFireStatus(page: Page) {
@@ -172,16 +283,23 @@ function htmlFireStatus(page: Page) {
     const today = localClock(now, ZONE).date;
     const published = match.groups?.date;
     const effective = match.groups?.since;
+    const time = match.groups?.time;
     const sourceUpdated = published ? parseUsDate(published) : null;
     const since = effective ? parseUsDate(effective) : null;
-    if ((page.datedToday && sourceUpdated !== today) || (effective && (!since || since > today))) {
+    const validFrom = time && effective ? parseLocalDateTime(`${effective} at ${time}`, ZONE) : null;
+    if ((page.datedToday && sourceUpdated !== today) || (published && (!sourceUpdated || sourceUpdated > today)) ||
+        (effective && (!since || since > today))) {
       throw new Error(`${page.id}: status edition is not current`);
     }
-    if (status === "clear") return [];
+    if (time && !validFrom) throw new Error(`${page.id}: invalid effective time`);
+    if (status === "clear") {
+      if (validFrom && validFrom > now.toISOString()) throw new Error(`${page.id}: rescission is not effective yet`);
+      return [];
+    }
     const stage = status.slice(-1);
     const window = page.datedToday ? localDayWindow(today, ZONE) : {};
     return [row(now, stage === "1" ? "restricted" : "ban", `Stage ${stage} fire restrictions`, {
-      ...window, sourceUpdated, since,
+      ...(validFrom ? { validFrom } : window), sourceUpdated, since,
     })];
   }
   const source: ActiveSource = {
@@ -256,4 +374,121 @@ export const coJeffersonFire: ActiveSource = {
   },
 };
 
-export const coLocalFireSources = [coJeffersonFire, ...coHtmlFireStatus.map(({ source }) => source)];
+const eagle = localFirePublisher({
+  id: "co-eagle-fire-map", county: "Eagle", sourceName: "Eagle County Emergency Management",
+  officialUrl: "https://sites.google.com/eaglecounty.us/ecemergency/fire-restrictions",
+  sourceUrl: "https://www.google.com/maps/d/kml?mid=1mrgWHyDoAjWnJ8LyHcFXp47GqgD6JB1L&forcekml=1",
+  stack: "Google My Maps / KML",
+}, { cadence: { kind: "daily", zone: ZONE, hours: [1, 9, 17] }, staleMs: 24 * HOUR });
+const eagleColors = new Map([
+  ["0F9D58", 0], ["F4B400", 1], ["FFFF00", 1], ["DB4437", 2], ["FF0000", 2], ["000000", 3],
+]);
+
+export function parseEagleFireMap(input: string, now: Date): CountyStatus[] {
+  const [main, remainder] = kmlOutlineColors(input, "Eagle County - Current Fire Restrictions", [
+    "Unincorporated Eagle County", "Unincorporated (2) Eagle County",
+  ]);
+  const stage = eagleColors.get(main);
+  if (stage === undefined || stage !== eagleColors.get(remainder)) throw new Error("Eagle County: unknown or split map status");
+  return stage === 0 ? [] : [eagle.row(now, stage === 1 ? "restricted" : "ban", `Stage ${stage} fire restrictions`)];
+}
+
+export const coEagleFireMap: ActiveSource = {
+  ...eagle.metadata,
+  async fetch({ now }) {
+    const kml = await getText(eagle.metadata.sourceUrl, { maxBytes: 3_500_000, maxResponseAgeMs: 12 * HOUR, attempts: 1 });
+    return { rows: parseEagleFireMap(kml, now) };
+  },
+};
+
+const cheyenne = localFirePublisher({
+  id: "co-cheyenne-notice", county: "Cheyenne", sourceName: "Cheyenne County Board of County Commissioners",
+  officialUrl: "https://www.co.cheyenne.co.us/",
+  stack: "County notices HTML / published notice PDF",
+}, { cadence: { kind: "daily", zone: ZONE, hours: [0, 12] }, staleMs: 30 * HOUR });
+const cheyenneNotice = "/assets/pdfs/Burn_Ban_Notice(3.31.26).pdf";
+
+export async function parseCheyenneFire(input: Response | string, now: Date, readOrder: () => Promise<Response>): Promise<CountyStatus[]> {
+  const sections = await extractHtmlGrid(input, {
+    row: "div.content", cell: "div.content > header > h2, div.content li a", linkAttribute: "href",
+  });
+  const notices = sections.filter(([heading]) => heading?.text === "Notices");
+  if (notices.length !== 1) throw new Error("Cheyenne County: missing current notices");
+  const editions = notices[0].slice(1).filter(({ text }) => /\b(?:burn|fire) (?:ban|restrictions?)\b/i.test(text));
+  if (!editions.length) return [];
+  const [edition] = editions;
+  if (editions.length === 1 && /\b(?:lift(?:ed|ing|s)?|revoked|rescinded|cancelled|canceled)\b/i.test(edition.text)) return [];
+  if (editions.length !== 1 || !/^Open Burn Ban$/i.test(edition.text) || edition.href !== cheyenneNotice ||
+      !matchesPdfEtag(await readOrder(), '"165056-64e7fdcd1c986"')) {
+    throw new Error("Cheyenne County: review the newly published open burn ban");
+  }
+  const since = "2026-03-31";
+  if (since > localClock(now, ZONE).date) throw new Error("Cheyenne County: future open burn ban");
+  return [cheyenne.row(now, "ban", "Open burn ban", {
+    since, note: "Cheyenne County Resolution 2026-06 restricts open fires in unincorporated areas until revoked by public notice. See the order for exceptions.",
+  })];
+}
+
+export const coCheyenneFire: ActiveSource = {
+  ...cheyenne.metadata,
+  async fetch({ now }) {
+    const read = pacedSourceReader({ maxResponseAgeMs: 12 * HOUR });
+    const page = await read(cheyenne.metadata.sourceUrl);
+    if (page.notModified) throw new Error("Unexpected Cheyenne County page 304");
+    return { rows: await parseCheyenneFire(page.response, now, async () => {
+      const order = await read(new URL(cheyenneNotice, cheyenne.metadata.sourceUrl).href, { method: "HEAD" });
+      if (order.notModified) throw new Error("Unexpected Cheyenne County order 304");
+      return order.response;
+    }) };
+  },
+};
+
+const HUERFANO_SITE = "https://huerfano.us";
+const NOTICE_LIMIT = 20;
+const huerfano = localFirePublisher({
+  id: "co-huerfano-notices", county: "Huerfano", sourceName: "Huerfano County Board of County Commissioners",
+  officialUrl: `${HUERFANO_SITE}/news/`,
+  sourceUrl: wpRestUrl(HUERFANO_SITE, "posts", {
+    search: "fire restrictions", per_page: String(NOTICE_LIMIT), _fields: "id,link,date_gmt,title,content",
+  }),
+  stack: "WordPress REST / dated notices",
+}, { cadence: { kind: "daily", zone: ZONE, hours: [0, 8, 16] }, staleMs: 24 * HOUR });
+
+export function parseHuerfanoFire(data: unknown, now: Date): CountyStatus[] {
+  const latest = latestWpNotice(data, {
+    site: HUERFANO_SITE, now, limit: NOTICE_LIMIT,
+    matches: (title) => /^(?:Huerfano County\b.*\b(?:fire restrictions|fire ban)\b|Stage\b.*\b(?:fire restrictions|fire ban)\b|Fire Restrictions Lifted$)/i.test(title),
+  });
+  if (!latest) return [];
+
+  const { title, body, published, url } = latest;
+  const publishedDay = localClock(new Date(published), ZONE).date;
+  const lift = new RegExp(`^On (?<date>${weekdayDate}); the Huerfano County Board of County Commissioners \\(BOCC\\) voted to lift Stage (?:One|Two|[12]) Fire Restrictions\\.`, "i").exec(body);
+  if (/^Huerfano County Lifts Stage (?:One|Two|[12]) Fire Restrictions$/i.test(title) && lift) {
+    const day = parseUsDate(lift.groups?.date ?? "");
+    if (day && day <= publishedDay && /Huerfano County is no longer in Fire Restrictions\./i.test(body)) return [];
+  }
+  const issued = new RegExp(`^Stage (?<stage>[12]) Fire Restrictions Effective (?<date>${weekdayDate})$`, "i").exec(title);
+  const since = parseUsDate(issued?.groups?.date ?? "");
+  const stage = issued?.groups?.stage;
+  if (!since || since > publishedDay || !stage ||
+      !body.startsWith(`By order of the Huerfano County Board of Commissioners, Huerfano County has been placed under Stage ${stage} Fire Restrictions effective ${issued?.groups?.date}.`)) {
+    throw new Error("Huerfano County: review the latest fire restriction notice");
+  }
+  return [{
+    ...huerfano.row(now, stage === "2" ? "ban" : "restricted", `Stage ${stage} fire restrictions`, { since, sourceUpdated: published }),
+    officialUrl: url,
+  }];
+}
+
+export const coHuerfanoFire: ActiveSource = {
+  ...huerfano.metadata, keepRowLinks: true,
+  async fetch({ now }) {
+    const text = await getText(huerfano.metadata.sourceUrl, { maxBytes: 250_000, headers: { accept: "application/json" } });
+    return { rows: parseHuerfanoFire(JSON.parse(text), now) };
+  },
+};
+
+export const coLocalFireSources = [
+  coJeffersonFire, coEagleFireMap, coCheyenneFire, coHuerfanoFire, ...coHtmlFireStatus.map(({ source }) => source),
+];

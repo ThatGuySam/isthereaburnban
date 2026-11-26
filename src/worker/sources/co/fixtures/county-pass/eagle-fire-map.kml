@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Eagle County - Current Fire Restrictions</name>
+    <description>For the latest information regarding current fire restriction status, categories, and additional safety information, please go to the Eagle County Emergency Fire Restrictions Page linked at https://sites.google.com/eaglecounty.us/ecemergency/fire-restrictions</description>
+    <Style id="line-0F9D58-1000-normal">
+      <LineStyle>
+        <color>ff589d0f</color>
+        <width>1</width>
+      </LineStyle>
+    </Style>
+    <Style id="line-0F9D58-1000-highlight">
+      <LineStyle>
+        <color>ff589d0f</color>
+        <width>1.5</width>
+      </LineStyle>
+    </Style>
+    <StyleMap id="line-0F9D58-1000">
+      <Pair>
+        <key>normal</key>
+        <styleUrl>#line-0F9D58-1000-normal</styleUrl>
+      </Pair>
+      <Pair>
+        <key>highlight</key>
+        <styleUrl>#line-0F9D58-1000-highlight</styleUrl>
+      </Pair>
+    </StyleMap>
+    <Style id="line-0F9D58-1770-normal">
+      <LineStyle>
+        <color>ff589d0f</color>
+        <width>1.77</width>
+      </LineStyle>
+    </Style>
+    <Style id="line-0F9D58-1770-highlight">
+      <LineStyle>
+        <color>ff589d0f</color>
+        <width>2.655</width>
+      </LineStyle>
+    </Style>
+    <StyleMap id="line-0F9D58-1770">
+      <Pair>
+        <key>normal</key>
+        <styleUrl>#line-0F9D58-1770-normal</styleUrl>
+      </Pair>
+      <Pair>
+        <key>highlight</key>
+        <styleUrl>#line-0F9D58-1770-highlight</styleUrl>
+      </Pair>
+    </StyleMap>
+    <Style id="poly-0F9D58-1-125-normal">
+      <LineStyle>
+        <color>ff589d0f</color>
+        <width>0.001</width>
+      </LineStyle>
+      <PolyStyle>
+        <color>7d589d0f</color>
+        <fill>1</fill>
+        <outline>1</outline>
+      </PolyStyle>
+    </Style>
+    <Style id="poly-0F9D58-1-125-highlight">
+      <LineStyle>
+        <color>ff589d0f</color>
+        <width>0.0015</width>
+      </LineStyle>
+      <PolyStyle>
+        <color>7d589d0f</color>
+        <fill>1</fill>
+        <outline>1</outline>
+      </PolyStyle>
+    </Style>
+    <StyleMap id="poly-0F9D58-1-125">
+      <Pair>
+        <key>normal</key>
+        <styleUrl>#poly-0F9D58-1-125-normal</styleUrl>
+      </Pair>
+      <Pair>
+        <key>highlight</key>
+        <styleUrl>#poly-0F9D58-1-125-highlight</styleUrl>
+      </Pair>
+    </StyleMap>
+    <Style id="poly-0F9D58-1000-156-normal">
+      <LineStyle>
+        <color>ff589d0f</color>
+        <width>1</width>
+      </LineStyle>
+      <PolyStyle>
+        <color>9c589d0f</color>
+        <fill>1</fill>
+        <outline>1</outline>
+      </PolyStyle>
+    </Style>
+    <Style id="poly-0F9D58-1000-156-highlight">
+      <LineStyle>
+        <color>ff589d0f</color>
+        <width>1.5</width>
+      </LineStyle>
+      <PolyStyle>
+        <color>9c589d0f</color>
+        <fill>1</fill>
+        <outline>1</outline>
+      </PolyStyle>
+    </Style>
+    <StyleMap id="poly-0F9D58-1000-156">
+      <Pair>
+        <key>normal</key>
+        <styleUrl>#poly-0F9D58-1000-156-normal</styleUrl>
+      </Pair>
+      <Pair>
+        <key>highlight</key>
+        <styleUrl>#poly-0F9D58-1000-156-highlight</styleUrl>
+      </Pair>
+    </StyleMap>
+    <Style id="poly-0F9D58-1000-158-normal">
+      <LineStyle>
+        <color>ff589d0f</color>
+        <width>1</width>
+      </LineStyle>
+      <PolyStyle>
+        <color>9e589d0f</color>
+        <fill>1</fill>
+        <outline>1</outline>
+      </PolyStyle>
+    </Style>
+    <Style id="poly-0F9D58-1000-158-highlight">
+      <LineStyle>
+        <color>ff589d0f</color>
+        <width>1.5</width>
+      </LineStyle>
+      <PolyStyle>
+        <color>9e589d0f</color>
+        <fill>1</fill>
+        <outline>1</outline>
+      </PolyStyle>
+    </Style>
+    <StyleMap id="poly-0F9D58-1000-158">
+      <Pair>
+        <key>normal</key>
+        <styleUrl>#poly-0F9D58-1000-158-normal</styleUrl>
+      </Pair>
+      <Pair>
+        <key>highlight</key>
+        <styleUrl>#poly-0F9D58-1000-158-highlight</styleUrl>
+      </Pair>
+    </StyleMap>
+    <Style id="poly-0F9D58-1000-161-normal">
+      <LineStyle>
+        <color>ff589d0f</color>
+        <width>1</width>
+      </LineStyle>
+      <PolyStyle>
+        <color>a1589d0f</color>
+        <fill>1</fill>
+        <outline>1</outline>
+      </PolyStyle>
+    </Style>
+    <Style id="poly-0F9D58-1000-161-highlight">
+      <LineStyle>
+        <color>ff589d0f</color>
+        <width>1.5</width>
+      </LineStyle>
+      <PolyStyle>
+        <color>a1589d0f</color>
+        <fill>1</fill>
+        <outline>1</outline>
+      </PolyStyle>
+    </Style>
+    <StyleMap id="poly-0F9D58-1000-161">
+      <Pair>
+        <key>normal</key>
+        <styleUrl>#poly-0F9D58-1000-161-normal</styleUrl>
+      </Pair>
+      <Pair>
+        <key>highlight</key>
+        <styleUrl>#poly-0F9D58-1000-161-highlight</styleUrl>
+      </Pair>
+    </StyleMap>
+    <Folder>
+      <name>Unincorporated Eagle County (non-Federal/State lands)</name>
+      <Placemark>
+        <name>Unincorporated Eagle County</name>
+        <description><![CDATA[Green = No Restrictions<br>Yellow = Stage 1<br>Red = Stage 2<br>Black = Stage 3<br><br>When fire restrictions are in place, information on activities that are prohibited on Unincorporated County, Municipal, or State land in Eagle County can be found at:<br>https://sites.google.com/eaglecounty.us/ecemergency/fire-restrictions]]></description>
+        <styleUrl>#line-0F9D58-1770</styleUrl>
+        <MultiGeometry></MultiGeometry>
+      </Placemark>
+    </Folder>
+    <Folder>
+      <name>Town Boundaries</name>
+      <Placemark>
+        <name>Gypsum - 6601 ft</name>
+        <description><![CDATA[Green = No Restrictions<br>Yellow = Stage 1<br>Red = Stage 2<br><br>When fire restrictions are in place, information on activities that are prohibited on Unincorporated County, Municipal, or State land in Eagle County can be found at:<br>https://sites.google.com/eaglecounty.us/ecemergency/fire-restrictions]]></description>
+        <styleUrl>#poly-0F9D58-1000-158</styleUrl>
+        <MultiGeometry></MultiGeometry>
+      </Placemark>
+      <Placemark>
+        <name>Red Cliff - 8750 ft</name>
+        <description><![CDATA[Green = No Restrictions<br>Yellow = Stage 1<br>Red = Stage 2<br><br>When fire restrictions are in place, information on activities that are prohibited on Unincorporated County, Municipal, or State land in Eagle County can be found at:<br>https://sites.google.com/eaglecounty.us/ecemergency/fire-restrictions]]></description>
+        <styleUrl>#poly-0F9D58-1000-158</styleUrl>
+        <Polygon>
+          <outerBoundaryIs>
+            <LinearRing>
+              <tessellate>1</tessellate>
+              <coordinates></coordinates>
+            </LinearRing>
+          </outerBoundaryIs>
+        </Polygon>
+      </Placemark>
+      <Placemark>
+        <name>Avon - 7431 ft</name>
+        <description><![CDATA[Green = No Restrictions<br>Yellow = Stage 1<br>Red = Stage 2<br><br>When fire restrictions are in place, information on activities that are prohibited on Unincorporated County, Municipal, or State land in Eagle County can be found at:<br>https://sites.google.com/eaglecounty.us/ecemergency/fire-restrictions]]></description>
+        <styleUrl>#poly-0F9D58-1000-156</styleUrl>
+        <MultiGeometry></MultiGeometry>
+      </Placemark>
+      <Placemark>
+        <name>Minturn - 7861 ft</name>
+        <description><![CDATA[Green = No Restrictions<br>Yellow = Stage 1<br>Red = Stage 2<br>Black = Stage 3<br>When fire restrictions are in place, information on activities that are prohibited on Unincorporated County, Municipal, or State land in Eagle County can be found at:<br>https://sites.google.com/eaglecounty.us/ecemergency/fire-restrictions]]></description>
+        <styleUrl>#poly-0F9D58-1000-158</styleUrl>
+        <Polygon>
+          <outerBoundaryIs>
+            <LinearRing>
+              <tessellate>1</tessellate>
+              <coordinates></coordinates>
+            </LinearRing>
+          </outerBoundaryIs>
+          <innerBoundaryIs>
+            <LinearRing>
+              <tessellate>1</tessellate>
+              <coordinates></coordinates>
+            </LinearRing>
+          </innerBoundaryIs>
+          <innerBoundaryIs>
+            <LinearRing>
+              <tessellate>1</tessellate>
+              <coordinates></coordinates>
+            </LinearRing>
+          </innerBoundaryIs>
+          <innerBoundaryIs>
+            <LinearRing>
+              <tessellate>1</tessellate>
+              <coordinates></coordinates>
+            </LinearRing>
+          </innerBoundaryIs>
+        </Polygon>
+      </Placemark>
+      <Placemark>
+        <name>Basalt - 6611 ft</name>
+        <description><![CDATA[Green = No Restrictions<br>Yellow = Stage 1<br>Red = Stage 2<br><br>When fire restrictions are in place, information on activities that are prohibited on Unincorporated County, Municipal, or State land in Eagle County can be found at:<br>https://sites.google.com/eaglecounty.us/ecemergency/fire-restrictions]]></description>
+        <styleUrl>#poly-0F9D58-1000-156</styleUrl>
+        <Polygon>
+          <outerBoundaryIs>
+            <LinearRing>
+              <tessellate>1</tessellate>
+              <coordinates></coordinates>
+            </LinearRing>
+          </outerBoundaryIs>
+          <innerBoundaryIs>
+            <LinearRing>
+              <tessellate>1</tessellate>
+              <coordinates></coordinates>
+            </LinearRing>
+          </innerBoundaryIs>
+          <innerBoundaryIs>
+            <LinearRing>
+              <tessellate>1</tessellate>
+              <coordinates></coordinates>
+            </LinearRing>
+          </innerBoundaryIs>
+          <innerBoundaryIs>
+            <LinearRing>
+              <tessellate>1</tessellate>
+              <coordinates></coordinates>
+            </LinearRing>
+          </innerBoundaryIs>
+          <innerBoundaryIs>
+            <LinearRing>
+              <tessellate>1</tessellate>
+              <coordinates></coordinates>
+            </LinearRing>
+          </innerBoundaryIs>
+        </Polygon>
+      </Placemark>
+      <Placemark>
+        <name>Vail - 8150 ft</name>
+        <description><![CDATA[Green = No Restrictions<br>Yellow = Stage 1<br>Red = Stage 2<br><br>When fire restrictions are in place, information on activities that are prohibited on Unincorporated County, Municipal, or State land in Eagle County can be found at:<br>https://sites.google.com/eaglecounty.us/ecemergency/fire-restrictions]]></description>
+        <styleUrl>#poly-0F9D58-1000-158</styleUrl>
+        <Polygon>
+          <outerBoundaryIs>
+            <LinearRing>
+              <tessellate>1</tessellate>
+              <coordinates></coordinates>
+            </LinearRing>
+          </outerBoundaryIs>
+        </Polygon>
+      </Placemark>
+      <Placemark>
+        <name>Eagle - 6601 ft</name>
+        <description><![CDATA[Green = No Restrictions<br>Yellow = Stage 1<br>Red = Stage 2<br>Black = Stage 3<br>When fire restrictions are in place, information on activities that are prohibited on Unincorporated County, Municipal, or State land in Eagle County can be found at:<br>https://sites.google.com/eaglecounty.us/ecemergency/fire-restrictions]]></description>
+        <styleUrl>#poly-0F9D58-1000-161</styleUrl>
+        <MultiGeometry></MultiGeometry>
+      </Placemark>
+    </Folder>
+    <Folder>
+      <name>Federal/State Public Lands</name>
+      <Placemark>
+        <name><![CDATA[State  Colorado Parks & Wildlife Lands]]></name>
+        <description><![CDATA[Green = No Restrictions<br>Yellow = Stage 1<br>Red = Stage 2<br>Black = Stage 3<br><br>When fire restrictions are in place, information on activities that are prohibited on Unincorporated County, Municipal, or State land in Eagle County can be found at:<br>https://sites.google.com/eaglecounty.us/ecemergency/fire-restrictions]]></description>
+        <styleUrl>#poly-0F9D58-1-125</styleUrl>
+        <MultiGeometry></MultiGeometry>
+      </Placemark>
+      <Placemark>
+        <name><![CDATA[White River National Forest & Holy Cross Wilderness]]></name>
+        <description><![CDATA[Green = No Restrictions<br>Yellow = Stage 1<br>Red = Stage 2<br>Black = Stage 3<br><br>When fire restrictions are in place, information on activities that are prohibited on Forest Service land in Eagle County can be found at:<br>https://www.fs.usda.gov/detail/whiteriver/landmanagement/?cid=fseprd669969]]></description>
+        <styleUrl>#line-0F9D58-1000</styleUrl>
+        <MultiGeometry></MultiGeometry>
+      </Placemark>
+      <Placemark>
+        <name>Bureau of Land Management (BLM) Lands</name>
+        <description><![CDATA[Green = No Restrictions<br>Yellow = Stage 1<br>Red = Stage 2<br>Black = Stage 3<br><br>When fire restrictions are in place, information on activities that are prohibited on Federal Bureau of Land Management land in Eagle County can be found at:<br>https://www.blm.gov/programs/public-safety-and-fire/fire-and-aviation/regional-information/colorado/upper-colorado-river-district]]></description>
+        <styleUrl>#line-0F9D58-1000</styleUrl>
+        <MultiGeometry></MultiGeometry>
+      </Placemark>
+    </Folder>
+    <Folder>
+      <name>additional unincorporated (for color matching)</name>
+      <Placemark>
+        <name>Unincorporated (2) Eagle County</name>
+        <description><![CDATA[Green = No Restrictions<br>Yellow = Stage 1<br>Red = Stage 2<br>Black = Stage 3<br><br>When fire restrictions are in place, information on activities that are prohibited on Unincorporated County, Municipal, or State land in Eagle County can be found at:<br>https://sites.google.com/eaglecounty.us/ecemergency/fire-restrictions]]></description>
+        <styleUrl>#line-0F9D58-1000</styleUrl>
+        <MultiGeometry></MultiGeometry>
+      </Placemark>
+    </Folder>
+  </Document>
+</kml>

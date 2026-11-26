@@ -7,7 +7,7 @@ import { activeRule, calendarDayWindows, calendarStatusRows, CALENDAR_RULES } fr
 import { civicPlusAlertDetails, civicPlusNotices, civicPlusPageParagraphs, civicPlusPageText, civicPlusUrl } from "./civicplus";
 import { localDayWindow, parseLocalIsoTimestamp, parseWeekdayDate, reportWindow, weekdayOnOrAfter } from "./dates";
 import { decodeFeed, parseCsv, parseDotNetJsonDate, parseFeed, parseJson } from "./feeds";
-import { blockAfterHeading, blocksBetweenMarkers, extractHtml, extractHtmlGrid, localClock, matchesReviewedHtmlSection, numberedRuleSection, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, reviewedHeadingDigest, statusTableRows, US_ZONES } from "./html";
+import { blockAfterHeading, blocksBetweenMarkers, extractHtml, extractHtmlGrid, localClock, matchHtmlStatus, matchesReviewedHtmlSection, numberedRuleSection, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, reviewedHeadingDigest, statusTableRows, US_ZONES } from "./html";
 import { sha256 } from "./hash";
 import { BlockedError, fetchSource, HttpError, pacedSourceReader, pacedTextReader, USER_AGENT } from "./http";
 import { manualPdf } from "./pdf";
@@ -19,6 +19,20 @@ const data = (name) => readFileSync(new URL(`./fixtures/${name}`, import.meta.ur
 const text = (name) => data(name).toString();
 const json = (name) => JSON.parse(text(name));
 const date = (s) => new Date(s);
+
+test("HTML status panels require one decision even if two dates match the same status pattern", async () => {
+  const panel = {
+    section: "#status", blocks: "p",
+    choices: [["active", /^Restrictions since (?<since>\d{4}-\d{2}-\d{2})$/m], ["clear", /^No restrictions$/m]],
+  };
+  const status = "<p>Restrictions since 2026-11-24</p>";
+  expect(await matchHtmlStatus(`<div id="status">${status}</div>`, panel))
+    .toMatchObject({ status: "active", match: { groups: { since: "2026-11-24" } } });
+  await expect(matchHtmlStatus(`<div id="status">${status}<p>Restrictions since 2026-11-25</p></div>`, panel))
+    .rejects.toThrow("Ambiguous status");
+  await expect(matchHtmlStatus(`<div id="status">${status}<p>No restrictions</p></div>`, panel))
+    .rejects.toThrow("Ambiguous status");
+});
 
 test("Syncfusion reads literal JSON rows and rejects computed or ambiguous data sources", () => {
   const rows = [{ name: 'A ]), "quoted"', values: [[1], [2]] }];

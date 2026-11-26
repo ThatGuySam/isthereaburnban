@@ -199,9 +199,17 @@
       {
         "label": "Estes Valley Fire Protection District restrictions",
         "url": "https://www.estesvalleyfire.org/fire-restrictions-bans"
+      },
+      {
+        "label": "Jefferson County Sheriff fire restrictions",
+        "url": "https://www.jeffcosheriffco.gov/safety/wildland-fire/fire-restrictions"
+      },
+      {
+        "label": "West Slope county fire restrictions",
+        "url": "https://westslopefireinfo.com/"
       }
     ],
-    "notes": "County sheriffs and commissioners, municipalities, fire districts, and federal land managers can issue restrictions for their own areas. We track some local orders and Denver-area indoor wood-burning advisories. Check your local fire authority, land manager and air-quality rules for the burn location."
+    "notes": "County sheriffs and commissioners, municipalities, fire districts, and federal land managers can issue restrictions for their own areas. County entries include local orders, standing permit rules and Denver-area indoor wood-burning advisories. Check your local fire authority, land manager and air-quality rules for the burn location."
   },
   {
     "abbr": "CT",

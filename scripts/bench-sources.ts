@@ -39,6 +39,10 @@ import {
   parseArapahoeFire, parseBoulderFire, parseDouglasFire, parseElPasoFire, parseEstesFire, parseLarimerFire,
 } from "../src/worker/sources/co/county-status";
 import { coDenverAir, parseDenverAir } from "../src/worker/sources/co/denver-air";
+import { coLocalBurningRules } from "../src/worker/sources/co/local-rules";
+import {
+  coHtmlFireStatus, parseCheyenneFire, parseEagleFireMap, parseHuerfanoFire, parseJeffersonFire,
+} from "../src/worker/sources/co/local-status";
 import { ctDeepFireDanger, parseCtFireDanger } from "../src/worker/sources/ct/fire-danger";
 import { deActionDays, parseDeActionDays } from "../src/worker/sources/de/air-quality";
 import { deOpenBurning, parseDeOpenBurning } from "../src/worker/sources/de/open-burning";
@@ -690,6 +694,31 @@ const coJobs = [
   ["CO Larimer Aegis Experience", coLarimerFire, () => parseLarimerFire(JSON.parse(coLarimerJson), now)],
   ["CO CDPHE Denver Metro advisory", coDenverAir, async () => parseDenverAir(await extractHtml(coDenverHtml), now)],
 ] as const;
+const coCountyCaptured = new Date("2026-11-25T21:00:00Z");
+const coCountyPath = "co/fixtures/county-pass/";
+const coCountyText = (name: string) => utf8(coCountyPath + name);
+const coCheyennePage = coCountyText("cheyenne-notice.html");
+const coCheyenneHeaders = JSON.parse(coCountyText("cheyenne-order-headers.json"));
+const coEagleKml = coCountyText("eagle-fire-map.kml");
+const coHuerfanoJson = coCountyText("huerfano-notices.json");
+const coJeffersonJson = coCountyText("jefferson-api.json");
+const coCountyParsers: [string, () => unknown][] = [
+  ["CO Cheyenne notices", () => parseCheyenneFire(coCheyennePage, coCountyCaptured,
+    async () => new Response(null, { headers: coCheyenneHeaders }))],
+  ["CO Eagle My Maps", () => parseEagleFireMap(coEagleKml, coCountyCaptured)],
+  ["CO Huerfano notices", () => parseHuerfanoFire(JSON.parse(coHuerfanoJson), coCountyCaptured)],
+  ["CO Jefferson Sheriff API", () => parseJeffersonFire(JSON.parse(coJeffersonJson), coCountyCaptured)],
+  ...coHtmlFireStatus.map(({ source, parse }): [string, () => unknown] => {
+    const html = coCountyText(`${source.id.slice(3)}.html`);
+    return [source.id, () => parse(html, coCountyCaptured)];
+  }),
+  ...coLocalBurningRules.map(({ source, parse, fixture }): [string, () => unknown] => {
+    const file = coCountyPath + fixture;
+    const body = fixture.endsWith(".gz") ? new Uint8Array(gunzipSync(from(file))) : raw(file);
+    const contentType = fixture.endsWith(".pdf") ? "application/pdf" : "text/html";
+    return [source.id, () => parse(new Response(body, { headers: { "content-type": contentType } }), coCountyCaptured)];
+  }),
+];
 const orOutdoor = utf8("or/fixtures/lrapa-outdoor-2026-11-24.html");
 const orHeating = utf8("or/fixtures/lrapa-wood-heating-2026-11-24.html");
 const orWillamette = utf8("or/fixtures/willamette-2026-11-23.html");
@@ -938,6 +967,7 @@ const jobs: Array<[string, () => unknown]> = [
   ["WA Puget Sound air quality grid", parseWaPugetFixture],
   ["WA King County fire safety", parseWaKingFixture],
   ...coJobs.map(([name, , parse]): [string, () => unknown] => [name, parse]),
+  ...coCountyParsers,
   ...orJobs.map(([name, , parse]): [string, () => unknown] => [name, parse]),
   ["KY Forestry SharePoint list", parseKyListFixture],
   ["KY statute PDF and calendar", parseKyStatuteFixture],

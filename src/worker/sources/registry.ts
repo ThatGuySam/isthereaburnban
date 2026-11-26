@@ -17,6 +17,8 @@ import { caCountySources } from "./ca/county-sources";
 import { pfirs } from "./ca/pfirs";
 import { coArapahoeFire, coBoulderFire, coDouglasFire, coElPasoFire, coEstesFire, coLarimerFire } from "./co/county-status";
 import { coDenverAir } from "./co/denver-air";
+import { coLocalBurningRules } from "./co/local-rules";
+import { coLocalFireSources } from "./co/local-status";
 import { ctDeepFireDanger } from "./ct/fire-danger";
 import { dcOpenBurning } from "./dc/open-burning";
 import { dcRockCreekFireRules } from "./dc/rock-creek";
@@ -197,6 +199,8 @@ export const SOURCES: readonly Source[] = [
   coEstesFire,
   coLarimerFire,
   coDenverAir,
+  ...coLocalFireSources,
+  ...coLocalBurningRules.map(({ source }) => source),
   orLrapaOutdoor,
   orLrapaHeating,
   orWillametteBackyard,

@@ -1,6 +1,12 @@
 import { sha256 } from "./hash";
 import { fetchSource, type Validators } from "./http";
 
+/** Match the strong validator for an exact, reviewed PDF edition. */
+export function matchesPdfEtag(response: Response, etag: string): boolean {
+  return response.status === 200 && /^application\/pdf\b/i.test(response.headers.get("content-type") ?? "") &&
+    /^"[^"]+"$/.test(etag) && response.headers.get("etag") === etag;
+}
+
 // Manual inventory shape PDF: Pennsylvania DCNR, signed county orders, and scanned notices.
 // A byte hash detects document changes and gives a reviewer a stable reference.
 export async function manualPdf(response: Response) {

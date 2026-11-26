@@ -42,6 +42,7 @@ Use `reportingFips` for a positive-only source with a verified county footprint 
 | Every HTTP publisher | `http.ts` | User agent, deadlines, bounded bodies, validators, retry backoff, and typed access blocks |
 | FeatureServer and MapServer | `arcgis.ts` | OK, TX, FL, IN, LA, IA, NJDEP divisions, ODF regulated-use areas, AK permit zones, ND declarations, WY county layers and Dickinson County, KS fire districts. Read coded domains or subtypes, edit stamps, and all pages. |
 | Dashboard, Experience, WebMap | `arcgis.ts` | Southwest interagency Experience, Florida and Montana dashboards. Follow item data to operational layers and select the layers that establish status. |
+| Google My Maps KML | `kml.ts` | Eagle County's unincorporated areas. Verify the publisher's legend and named placemarks before interpreting outline colors. |
 | CivicPlus/CivicEngage, Granicus and municipal portals | `civicplus.ts`, `html.ts` | Pima, Angel Fire, Placer and Greenwich notices, Puget Sound status table, Boulder govDelivery. Pair issue and lift notices by authority and effective date. |
 | Apptegy news listings | `apptegy.ts`, `dates.ts` | Gatlinburg permit notices. Check the archive dates and article body for the issuing authority and explicitly covered days. |
 | WordPress | `wordpress.ts`, `html.ts` | Faulkner homepage and REST search, Mississippi Ninja Tables, WV Forestry and SC Forestry. Check that the REST content type actually carries status. |

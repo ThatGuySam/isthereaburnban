@@ -268,12 +268,16 @@ export async function matchHtmlStatus<const Status extends string>(
   },
 ): Promise<{ status: Status; match: RegExpMatchArray }> {
   const content = (await htmlStatusBlocks(input, section, blocks)).join("\n");
-  const matches = choices.flatMap(([status, pattern]) => {
-    const match = new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, "")).exec(content);
-    return match ? [{ status, match }] : [];
-  });
-  if (matches.length !== 1) throw new Error(`Unrecognized or ambiguous status in ${section}`);
-  return matches[0];
+  let decision: { status: Status; match: RegExpMatchArray } | undefined;
+  for (const [status, pattern] of choices) {
+    const scan = new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, "") + "g");
+    for (const match of content.matchAll(scan)) {
+      if (decision) throw new Error(`Ambiguous status in ${section}`);
+      decision = { status, match };
+    }
+  }
+  if (!decision) throw new Error(`Unrecognized status in ${section}`);
+  return decision;
 }
 
 /** Read one explicit choice from a dedicated, visible status panel. */
