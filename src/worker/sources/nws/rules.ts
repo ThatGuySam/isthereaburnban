@@ -2,6 +2,7 @@ import type { FireWeatherAlert, FireWeatherOrder, ScopedOrder } from "../../../s
 import { arcgisRows, arcgisUrl } from "../lib/arcgis";
 import { localClock, localDayWindow, US_ZONES } from "../lib/dates";
 import { fetchSource, type HttpFetch } from "../lib/http";
+import { SKAGWAY_PERMITS } from "../ak/local-rules";
 import { ND_DECLARATION_FIELDS, ND_DECLARATION_LAYER, ndDeclarationWindow } from "../nd/declarations";
 
 type Declaration = { start: string; end: string };
@@ -11,6 +12,12 @@ type Rule = Pick<ScopedOrder, "scope" | "scopeNote" | "label" | "sourceName" | "
 };
 
 const standingRules: Record<string, Rule> = {
+  "02230": {
+    scope: "county", scopeNote: "Open fires and campfires in the Municipality of Skagway",
+    sourceName: "Skagway Fire Department", label: "Skagway total burn ban during a Red Flag Warning",
+    officialUrl: SKAGWAY_PERMITS,
+    note: "Skagway Fire Department says a Red Flag Warning triggers the municipality’s total ban on open burning, including campfires, until the warning expires.",
+  },
   "08009": {
     scope: "part", scopeNote: "Unincorporated Baca County", sourceName: "Baca County Board of County Commissioners",
     label: "Stage I fire restrictions during a Red Flag Warning",

@@ -12,6 +12,9 @@ import { parse as parseMs, msEditionIds } from "../src/worker/adapters/ms";
 import { parse as parseOk } from "../src/worker/adapters/ok";
 import { parse as parseTx, parseTxt } from "../src/worker/adapters/tx";
 import { COUNTIES } from "../src/worker/counties";
+import { akLocalRules } from "../src/worker/sources/ak/local-rules";
+import { parseFairbanksAirAlert, parseJuneauWoodsmoke } from "../src/worker/sources/ak/local-status";
+import { parseAkNixleNotice, type AkNixlePublisher } from "../src/worker/sources/ak/nixle-notices";
 import { parseAlaskaPermitZones } from "../src/worker/sources/ak/permits";
 import { akDecWinterBurning, parseAlaskaFireSeason, parseAlaskaWinterBurning } from "../src/worker/sources/ak/seasonal";
 import { parseGarlandAlerts, parseHotSpringsAlerts, parseNashvilleAlerts } from "../src/worker/sources/ar/county-alerts";
@@ -764,6 +767,24 @@ const parseAkZones = () => parseAlaskaPermitZones(
 );
 const parseAkSummer = () => parseAlaskaFireSeason(akFireSeason, akFirePermitLaw, summerDay);
 const parseAkWinter = () => parseAlaskaWinterBurning(akWinterLaw, akWinterAreas, now);
+const akCountyPath = "ak/fixtures/county-pass/";
+const akLocalRuleFixtures = akLocalRules.map(({ source, parse, fixture }) => {
+  const path = akCountyPath + fixture;
+  const headerOnly = fixture.endsWith(".headers.json");
+  const pdf = fixture.endsWith(".pdf.gz");
+  const headers = headerOnly ? JSON.parse(utf8(path)) : { "content-type": pdf ? "application/pdf" : "text/html" };
+  const body = headerOnly ? null : pdf ? new Uint8Array(gunzipSync(from(path))) : raw(path);
+  return { source, parse: () => parse(new Response(body, { headers }), now) };
+});
+const akFairbanksRelay = utf8(`${akCountyPath}fairbanks-air-alert.html`);
+const akJuneauStatus = utf8(`${akCountyPath}juneau-woodsmoke-alert.html`);
+const parseAkFairbanksRelay = () => parseFairbanksAirAlert(akFairbanksRelay, new Date("2026-11-24T23:30:00Z"));
+const parseAkJuneauStatus = () => parseJuneauWoodsmoke(akJuneauStatus, new Date("2026-11-26T10:31:00Z"));
+const akNixleFixtures = (["haines", "skagway"] satisfies AkNixlePublisher[]).map((name) => {
+  const wire = utf8(`${akCountyPath}nixle-${name}-issue-wire.html`);
+  const detail = utf8(`${akCountyPath}nixle-${name}-issue-notice.html`);
+  return { name: `AK ${name} Nixle`, parse: () => parseAkNixleNotice(name, wire, async () => detail, now) };
+});
 const coFixture = (name: string, ext: string) => utf8(`co/fixtures/${name}-2026-11-24.${ext}`);
 const coDouglasJson = coFixture("douglas-status", "json");
 const coElPasoJson = coFixture("el-paso-status", "json");
@@ -1194,6 +1215,10 @@ const jobs: Array<[string, () => unknown]> = [
   ["AK DNR permit zone statuses", parseAkZones],
   ["AK DNR fire-season permit law", parseAkSummer],
   ["AK DEC winter open-burning rule", parseAkWinter],
+  ["AK Fairbanks DEC air alert relay", parseAkFairbanksRelay],
+  ["AK Juneau dated wood-smoke icon", parseAkJuneauStatus],
+  ...akLocalRuleFixtures.map(({ source, parse }): [string, typeof parse] => [source.id, parse]),
+  ...akNixleFixtures.map(({ name, parse }): [string, typeof parse] => [name, parse]),
   ["NWS live fire-weather GeoJSON", parseNwsLive],
   ["NWS archived RFW GeoJSON", parseNwsArchive],
   ["Merge and encode current sources", () => JSON.stringify(mergeSources(null, recordedInputs, now).snapshot)],

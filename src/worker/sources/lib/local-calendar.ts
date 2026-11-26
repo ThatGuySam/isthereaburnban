@@ -5,6 +5,7 @@ import { sha256 } from "./hash";
 import { htmlStatusBlocks, reviewedHeadingDigest, reviewedHtmlDigest } from "./html";
 import { fetchSource, isSourceUnavailable } from "./http";
 import { manualPdf, matchesPdfEtag } from "./pdf";
+import { reviewedRuleFallback, RuleChangedError } from "../statutory-fallback";
 import type { ActiveSource } from "../types";
 
 export type LocalCalendarRule = Pick<CalendarRule, "label" | "note" | "scopeNote" | "seasons" | "hours" | "effectiveDates">;
@@ -25,6 +26,7 @@ type ReviewedLocalCalendar = {
   zone: string;
   hour: number;
   lastReviewed?: string;
+  reviewedAt?: string;
   standing?: true;
 };
 
@@ -54,7 +56,7 @@ export function staleVerificationNote(note: string, lastReviewed: string) {
 }
 
 /** Poll the reviewed document before applying the standing local restriction. */
-export function reviewedLocalCalendar({ publisher, counties, rule, review, zone, hour, lastReviewed, standing }: ReviewedLocalCalendar) {
+export function reviewedLocalCalendar({ publisher, counties, rule, review, zone, hour, lastReviewed, reviewedAt, standing }: ReviewedLocalCalendar) {
   function rowsAt(now: Date, note = rule.note) {
     const rows = calendarStatusRows({
       ...rule, note, zone, state: publisher.state, scope: publisher.scope, officialUrl: publisher.officialUrl, status: "restricted",
@@ -63,7 +65,10 @@ export function reviewedLocalCalendar({ publisher, counties, rule, review, zone,
   }
 
   async function parse(input: Response, now: Date) {
-    if (!await matchesReview(input, review)) throw new Error(`${publisher.id}: reviewed local burning rule changed`);
+    if (!await matchesReview(input, review)) {
+      const message = `${publisher.id}: reviewed local burning rule changed`;
+      throw reviewedAt ? new RuleChangedError(message) : new Error(message);
+    }
     return rowsAt(now);
   }
 
@@ -79,8 +84,11 @@ export function reviewedLocalCalendar({ publisher, counties, rule, review, zone,
           headers: { accept: review.kind.startsWith("html") ? "text/html" : "application/pdf" },
         });
       } catch (error) {
-        if (!lastReviewed || !isSourceUnavailable(error)) throw error;
-        return { rows: rowsAt(now, staleVerificationNote(rule.note, lastReviewed)) };
+        if (isSourceUnavailable(error)) {
+          if (reviewedAt) return reviewedRuleFallback(rowsAt(now), reviewedAt, now, error);
+          if (lastReviewed) return { rows: rowsAt(now, staleVerificationNote(rule.note, lastReviewed)) };
+        }
+        throw error;
       }
       if (reply.notModified) throw new Error(`Unexpected ${publisher.id} 304`);
       return { rows: await parse(reply.response, now) };

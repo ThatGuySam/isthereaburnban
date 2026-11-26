@@ -50,14 +50,14 @@
       },
       {
         "label": "Juneau open-burning permits",
-        "url": "https://juneau.org/fire/burn-permit"
+        "url": "https://juneau.org/fire/burn-permit-info"
       },
       {
         "label": "BLM Alaska fire restrictions",
         "url": "https://www.blm.gov/programs/fire-and-aviation/regional-info/alaska-fire-service/fire-restrictions"
       }
     ],
-    "notes": "State Forestry generally requires burn permits April 1 through August 31 and can suspend permits by zone or order emergency closures. Alaska DEC restricts open burning in designated parts of Fairbanks North Star Borough and Juneau in winter and can issue separate air quality restrictions. Check your local fire department and land manager for other rules."
+    "notes": "State Forestry generally requires burn permits April 1 through August 31 and can suspend permits by zone or order emergency closures. Alaska DEC and local agencies issue separate restrictions for some cities, fire service areas and air-quality zones. Check the linked jurisdiction and your land manager for the rules at your address."
   },
   {
     "abbr": "AZ",

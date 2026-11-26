@@ -215,7 +215,7 @@ export async function extractHtml(input: Response | string, options: HtmlOptions
 export async function extractHtmlGrid(input: Response | string, selectors: {
   row: string; cell: string; linkAttribute?: string; spaceLineBreaks?: boolean;
 }) {
-  const rows: { tag: string; text: string; className: string; href?: string }[][] = [];
+  const rows: { tag: string; text: string; className: string; href?: string; src?: string }[][] = [];
   let row: (typeof rows)[number] | undefined;
   let cell: (typeof rows)[number][number] | undefined;
   const rewriter = new HTMLRewriter()
@@ -231,10 +231,18 @@ export async function extractHtmlGrid(input: Response | string, selectors: {
       element(element) {
         if (!row) return;
         if (cell) throw new Error("Nested status grid cells");
-        cell = { tag: element.tagName, text: "", className: element.getAttribute("class") ?? "" };
+        const selected: (typeof rows)[number][number] = {
+          tag: element.tagName, text: "", className: element.getAttribute("class") ?? "",
+        };
+        row.push(selected);
+        if (element.tagName === "img") {
+          const src = element.getAttribute("src");
+          if (src) selected.src = decodeEntities(src);
+          return;
+        }
         const href = element.tagName === "a" ? element.getAttribute(selectors.linkAttribute ?? "href") : null;
-        if (href) cell.href = decodeEntities(href);
-        row.push(cell);
+        if (href) selected.href = decodeEntities(href);
+        cell = selected;
         element.onEndTag(() => {
           if (cell) cell.text = cleanText(decodeEntities(cell.text));
           cell = undefined;

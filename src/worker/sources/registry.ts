@@ -1,4 +1,7 @@
 import { ADAPTERS } from "../adapters";
+import { AK_CALENDAR_POLL_GROUP, AK_PERMIT_POLL_GROUP, akLocalRules } from "./ak/local-rules";
+import { akFairbanksAirAlert, akJuneauWoodsmoke } from "./ak/local-status";
+import { akNixleNotices } from "./ak/nixle-notices";
 import { akDnrPermitZones } from "./ak/permits";
 import { akDecWinterBurning, akDnrFireSeason } from "./ak/seasonal";
 import { alAdemOpenBurning, alJeffersonOpenBurning } from "./al/air-rules";
@@ -168,7 +171,9 @@ export const SOURCES: readonly Source[] = [
   } satisfies ActiveSource)),
   txArcherCountyIssuer,
   txBexarCountyIssuer,
-  nwsFireWeather,
+  // One existing hourly queue slot, with independent checks and evidence for each publisher.
+  ...[nwsFireWeather, akFairbanksAirAlert, akJuneauWoodsmoke, ...akNixleNotices]
+    .map((source) => ({ ...source, pollGroup: "nws-and-alaska-hourly" })),
   ...iaCountyBulletins.map(({ source }) => source),
   ...iaLocalCalendars.map(({ source }) => source),
   flMiamiDadeResidentialBurning,
@@ -247,8 +252,9 @@ export const SOURCES: readonly Source[] = [
   idSeasonal,
   ...idCountyBulletins.map(({ source }) => source),
   ...idCountyCalendars.map(({ source }) => source),
-  akDnrPermitZones,
-  akDnrFireSeason,
+  { ...akDnrPermitZones, pollGroup: AK_PERMIT_POLL_GROUP },
+  { ...akDnrFireSeason, pollGroup: AK_CALENDAR_POLL_GROUP },
+  ...akLocalRules.map(({ source }) => source),
   alJeffersonOpenBurning,
   alAdemOpenBurning,
   arFaulknerCountyOrders,
@@ -265,7 +271,7 @@ export const SOURCES: readonly Source[] = [
   arUnionStatus,
   arVanBurenStatus,
   ...arLocalRules.map(({ source }) => source),
-  akDecWinterBurning,
+  { ...akDecWinterBurning, pollGroup: AK_CALENDAR_POLL_GROUP },
   utFfslFireOrders,
   utClosedFireSeason,
   mtDeqFall,

@@ -80,6 +80,21 @@ test("a Maine Red Flag Warning produces a restriction only for the warned area a
   expect(parseNwsAlerts(feed(feature), archivedAt)[0].orders).toBeUndefined();
 });
 
+test("a Red Flag Warning in the Skagway fire zone activates the municipal burning restriction", () => {
+  const feature = wyomingWarning();
+  feature.properties.geocode = { SAME: [], UGC: ["AKZ318"] };
+  feature.properties.affectedZones = ["https://api.weather.gov/zones/fire/AKZ318"];
+  const [row, ...others] = parseNwsAlerts(feed(feature), archivedAt);
+  expect(others).toEqual([]);
+  expect(row.fips).toBe("02230");
+  expect(row.orders).toEqual([expect.objectContaining({
+    status: "restricted", scope: "county", officialUrl: "https://www.sgyfire.org/burn-permits",
+    validFrom: "2026-11-19T18:00:00.000Z", validUntil: "2026-11-20T00:00:00.000Z",
+  })]);
+  feature.properties.event = "Fire Weather Watch";
+  expect(parseNwsAlerts(feed(feature), archivedAt)[0].orders).toBeUndefined();
+});
+
 test("opens warnings ahead of onset, prefers latest updates, and respects cancellation and event end", () => {
   const warning = wyomingWarning();
   expect(parseNwsAlerts(feed(warning), new Date("2026-11-19T17:30Z"))).toHaveLength(3);
