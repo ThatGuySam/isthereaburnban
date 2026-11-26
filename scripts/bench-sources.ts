@@ -172,6 +172,10 @@ import { wiLocalStatuses } from "../src/worker/sources/wi/local-status";
 import { parseWisconsinPermits, wiPermits } from "../src/worker/sources/wi/permits";
 import { parseWyomingCountyOrders, wyCountyOrders } from "../src/worker/sources/wy/county-orders";
 import { parseWyomingStateLands, wyStateLands } from "../src/worker/sources/wy/state-lands";
+import {
+  mortonCountyBulletin, ndBowmanBulletin, ndRoletteBulletin, northCentralCountyBulletin,
+} from "../src/worker/sources/nd/county-bulletins";
+import { ndLocalBurningRules } from "../src/worker/sources/nd/local-rules";
 import { ndDesRestrictions, parseNdRestrictions } from "../src/worker/sources/nd/restrictions";
 import { neLincolnLancasterAir, parseNeLincolnAir } from "../src/worker/sources/ne/lincoln-air";
 import { neOpenBurningLaw, parseNeOpenBurning } from "../src/worker/sources/ne/open-burning";
@@ -606,6 +610,18 @@ const ndCaptured = new Date("2026-11-24T10:06:16Z");
 const ndRestrictions = utf8("nd/fixtures/restrictions-2026-11-24.json");
 const ndFireDanger = utf8("nd/fixtures/fire-danger-2026-11-24.json");
 const parseNdFixture = () => parseNdRestrictions(JSON.parse(ndRestrictions), JSON.parse(ndFireDanger), ndCaptured);
+const ndLocalConditions = async () => ({ ratings: JSON.parse(ndFireDanger), warnings: JSON.parse(ndRestrictions) });
+const ndCountyFixtures = [
+  { ...ndBowmanBulletin, fixture: "bowman-notices.html" },
+  { ...ndRoletteBulletin, fixture: "rolette-fire.html" },
+  { ...mortonCountyBulletin(ndLocalConditions), fixture: "morton-fire.html" },
+  { ...northCentralCountyBulletin(ndLocalConditions), fixture: "bottineau-renville-fire.html" },
+  ...ndLocalBurningRules,
+].map(({ source, parse, fixture: name }) => {
+  const body = raw(`nd/fixtures/county-pass/${name}`);
+  const contentType = name.endsWith(".pdf") ? "application/pdf" : "text/html";
+  return { source, parse: () => parse(new Response(body, { headers: { "content-type": contentType } }), ndCaptured) };
+});
 const nvCaptured = new Date("2026-11-24T10:16:08Z");
 const nvTmfpdHtml = utf8("nv/fixtures/tmfpd-pile-burning-2026-11-24.html");
 const parseNvTmfpdFixture = () => parseTmfpdPileBurning(nvTmfpdHtml, nvCaptured);
@@ -910,6 +926,9 @@ recordedInputs.push(
   { source: wyCountyOrders, rows: parseWyCountyFixture(), checked: wyCaptured.toISOString() },
   { source: wyStateLands, rows: parseWyLandFixture(), checked: wyCaptured.toISOString() },
   { source: ndDesRestrictions, rows: parseNdFixture(), checked: ndCaptured.toISOString() },
+  ...await Promise.all(ndCountyFixtures.map(async ({ source, parse }) => ({
+    source, rows: await parse(), checked: ndCaptured.toISOString(),
+  }))),
   { source: nvTmfpdPileBurning, rows: await parseNvTmfpdFixture(), checked: nvCaptured.toISOString() },
   { source: nvUsfsSpringMountains, rows: await parseNvForestFixture(), checked: nvForestCaptured.toISOString() },
   { source: arFaulknerCountyOrders, rows: await parseArFaulknerFixture(), checked: arCaptured.toISOString() },
@@ -1060,6 +1079,7 @@ const jobs: Array<[string, () => unknown]> = [
   ["WY State Forestry county orders", parseWyCountyFixture],
   ["WY state trust lands rule", parseWyLandFixture],
   ["ND DES ArcGIS daily restrictions", parseNdFixture],
+  ...ndCountyFixtures.map(({ source, parse }): [string, typeof parse] => [source.id, parse]),
   ["SD Wildland Fire WebForms pile conditions", parseSdPermitFixture],
   ["SD BLM Drupal notice and signed order", parseSdBlmFixture],
   ...sdCountyFixtures.map(({ source, parse }): [string, typeof parse] => [source.id, parse]),

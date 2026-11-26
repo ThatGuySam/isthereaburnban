@@ -2,7 +2,7 @@ import type { CountyStatus } from "../../../shared/types";
 import { countyByName } from "../../counties";
 import type { ActiveSource } from "../types";
 import { atLocalTime, localClock, parseLocalDateTime, parseUsDate, shiftDay } from "./dates";
-import { matchHtmlStatus } from "./html";
+import { matchHtmlStatus, type Link } from "./html";
 import { fetchSource } from "./http";
 
 type Decision = Pick<CountyStatus, "status" | "label" | "note"> &
@@ -18,10 +18,18 @@ type LocalOrderWindow =
   | { kind: "dates"; from: string; through: string }
   | { kind: "times"; from: string; until: string };
 
+/** Confirm that an issuer's status page still links to the reviewed edition of a signed order. */
+export function requirePublishedOrderLink(links: readonly Link[], pageUrl: string, title: string, orderUrl: string) {
+  const [link, ...duplicates] = links.filter(({ text }) => text === title);
+  if (!link || duplicates.length || new URL(link.href, pageUrl).href !== orderUrl) {
+    throw new Error(`Missing or changed published order: ${title}`);
+  }
+}
+
 /** Read an explicitly bounded local order. Whole-day orders include the final named date. */
 export function datedLocalOrder(
   window: LocalOrderWindow, zone: string, now: Date,
-): Pick<CountyStatus, "since" | "expires" | "validFrom" | "validUntil"> | undefined {
+): { since: string; expires: string; validFrom: string; validUntil: string } | undefined {
   let validFrom: string | null;
   let validUntil: string | null;
   let expires: string | null;
@@ -35,7 +43,7 @@ export function datedLocalOrder(
     validUntil = parseLocalDateTime(window.until, zone);
     expires = validUntil && localClock(new Date(Date.parse(validUntil) - 1), zone).date;
   }
-  if (!validFrom || !validUntil || validUntil <= validFrom) throw new Error("Invalid local order dates");
+  if (!expires || !validFrom || !validUntil || validUntil <= validFrom) throw new Error("Invalid local order dates");
   const checked = now.toISOString();
   if (checked < validFrom || checked >= validUntil) return;
   return { validFrom, validUntil, since: localClock(new Date(validFrom), zone).date, expires };

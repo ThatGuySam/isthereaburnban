@@ -79,6 +79,8 @@ import { mtPermitPortals } from "./mt/permit-portal";
 import { ncAirHours } from "./nc/air-hours";
 import { ncForestOrders } from "./nc/forest-orders";
 import { ncPermits } from "./nc/permits";
+import { ndCountyBulletins } from "./nd/county-bulletins";
+import { ndLocalBurningRules } from "./nd/local-rules";
 import { ndDesRestrictions } from "./nd/restrictions";
 import { neLincolnLancasterAir } from "./ne/lincoln-air";
 import { neOpenBurningLaw } from "./ne/open-burning";
@@ -263,6 +265,8 @@ export const SOURCES: readonly Source[] = [
   wyCountyOrders,
   wyStateLands,
   ndDesRestrictions,
+  ...ndCountyBulletins,
+  ...ndLocalBurningRules.map(({ source }) => source),
   nvTmfpdPileBurning,
   nvUsfsSpringMountains,
   ...scfcDebris,

@@ -1,6 +1,6 @@
 // @ts-nocheck -- bun test types are not installed.
 import { expect, test } from "bun:test";
-import { htmlStatusBulletin, namedStatusRows, scopedStatusBulletin } from "./county-bulletin";
+import { htmlStatusBulletin, namedStatusRows, requirePublishedOrderLink, scopedStatusBulletin } from "./county-bulletin";
 
 const now = new Date("2026-11-26T16:00:00Z");
 const publisher = {
@@ -8,6 +8,19 @@ const publisher = {
   sourceUrl: "https://example.org/status", officialUrl: "https://example.org/burning",
   cadence: { kind: "hourly" }, staleMs: 7_200_000,
 } as const;
+
+test("a published order needs one matching visible link to the reviewed edition", () => {
+  const title = "Signed burn order";
+  const href = "/orders/april.pdf";
+  const url = new URL(href, publisher.sourceUrl).href;
+  const validate = (links) => requirePublishedOrderLink(links, publisher.sourceUrl, title, url);
+  const link = { text: title, href };
+  expect(() => validate([link])).not.toThrow();
+  expect(() => validate([{ ...link, href: url }])).not.toThrow();
+  expect(() => validate([])).toThrow("Missing or changed");
+  expect(() => validate([link, { ...link, href: "/orders/may.pdf" }])).toThrow("Missing or changed");
+  expect(() => validate([{ ...link, href: "https://other.example.org/orders/april.pdf" }])).toThrow("Missing or changed");
+});
 
 test("a named status roster requires every publisher area and the expected value columns", () => {
   const roster = ["South", "North"];

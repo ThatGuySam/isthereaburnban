@@ -136,14 +136,14 @@ function jurisdiction(row: Attributes) {
   return { county, scopeNote: `${name} jurisdiction within ${county.name}` };
 }
 
-function activeWarning(row: Attributes, at: string) {
+export function ndActiveWarning(row: Attributes, at: string) {
   if (row.RFW_Status !== "RFW") return;
   const start = arcgisTimestampOffset(row.rfw_effective_Date);
   const end = arcgisTimestampOffset(row.rfw_expiration_date);
   if (start && end && start <= at && at < end) return { start, end };
 }
 
-function currentRatings(json: unknown, checked: string, today: string) {
+export function currentNdRatings(json: unknown, checked: string, today: string) {
   const ratings = new Map<string, number>();
   const seen = new Set<string>();
   const dates = new Map<unknown, boolean>();
@@ -172,7 +172,7 @@ export function parseNdRestrictions(json: unknown, fireDanger: unknown, now: Dat
   const features = arcgisRows(json, { requireComplete: true });
   const checked = now.toISOString();
   const today = localClock(now, ZONE).date;
-  const ratings = currentRatings(fireDanger, checked, today);
+  const ratings = currentNdRatings(fireDanger, checked, today);
   const { validUntil } = localDayWindow(today, ZONE);
   const stamps = new Map<unknown, ReturnType<typeof reportWindow>>();
   const seen = new Set<string>();
@@ -217,7 +217,7 @@ export function parseNdRestrictions(json: unknown, fireDanger: unknown, now: Dat
     // NWS already evaluates these particular signed editions using its live CAP feed.
     const coveredByNws = isCounty && typeof row.attachment_declaration_name === "string" &&
       hasDatedRedFlagRule(county.fips, row.attachment_declaration_name);
-    const warning = coveredByNws ? undefined : activeWarning(row, checked);
+    const warning = coveredByNws ? undefined : ndActiveWarning(row, checked);
     const indexActivities: string[] = [];
     const warnedActivities: string[] = [];
     for (const [activity, label] of ACTIVITIES_BY_FIELD) {
@@ -258,7 +258,7 @@ export function parseNdRestrictions(json: unknown, fireDanger: unknown, now: Dat
 
 export const ndDesRestrictions: ActiveSource = {
   ...META, coverage: "restrictions", mode: "positive-only", keepRowLinks: true,
-  cadence: { kind: "hourly" }, staleMs: MAX_AGE,
+  cadence: { kind: "hourly" }, pollGroup: "nd-hourly", staleMs: MAX_AGE,
   async fetch({ now }) {
     const read = pacedTextReader({ headers: { accept: "application/json" }, maxBytes: 300_000 });
     const declarations: unknown = JSON.parse(await read(META.sourceUrl));
