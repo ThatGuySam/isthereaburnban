@@ -66,7 +66,8 @@ export function parseWeekdayDate(raw: string, defaultYear?: number): string | nu
   const day = parseUsDate(raw, defaultYear);
   if (!day) return null;
   const expected = WEEKDAYS[new Date(day).getUTCDay()];
-  return weekday === expected || weekday === expected.slice(0, 3) ? day : null;
+  const abbreviation = expected === "thursday" && /^(?:thur|thurs)$/.test(weekday);
+  return weekday === expected || weekday === expected.slice(0, 3) || abbreviation ? day : null;
 }
 
 export function parseEndDate(raw: string, defaultYear?: number) {

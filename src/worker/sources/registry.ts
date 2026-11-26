@@ -97,6 +97,10 @@ import { nyDecBrushBurning } from "./ny/dec-brush-burning";
 import { nyCountyCalendars } from "./ny/local-rules";
 import { nyNycBarbecuing } from "./ny/nyc-barbecuing";
 import { ohSeasonal } from "./oh/seasonal";
+import { orCrookBurnDay, orMultnomahWoodSmoke, orUmatillaBurnDay, orUnionSmokeLine } from "./or/county-status";
+import { orDeqCountyRules } from "./or/deq-county-rules";
+import { orCrookedRiverRanch, orDepoeBay, orTillamookPermitWindow, orTvfrBurnBan } from "./or/district-status";
+import { orCountyRules } from "./or/local-rules";
 import { orLrapaHeating, orLrapaOutdoor } from "./or/lrapa";
 import { orOdfPublicUse } from "./or/odf";
 import { orWillametteBackyard } from "./or/willamette";
@@ -218,10 +222,18 @@ export const SOURCES: readonly Source[] = [
   coDenverAir,
   ...coLocalFireSources,
   ...coLocalBurningRules.map(({ source }) => source),
-  orLrapaOutdoor,
-  orLrapaHeating,
-  orWillametteBackyard,
-  orOdfPublicUse,
+  ...[orLrapaOutdoor, orLrapaHeating, orWillametteBackyard, orOdfPublicUse]
+    .map((source) => ({ ...source, pollGroup: "or-regional-burning" })),
+  orDeqCountyRules,
+  orCrookBurnDay,
+  orMultnomahWoodSmoke,
+  orUmatillaBurnDay,
+  orUnionSmokeLine,
+  orCrookedRiverRanch,
+  orDepoeBay,
+  orTillamookPermitWindow,
+  orTvfrBurnBan,
+  ...orCountyRules.map(({ source }) => source),
   kyForestryCountyBans,
   kySeasonal,
   paDepAirBasins,

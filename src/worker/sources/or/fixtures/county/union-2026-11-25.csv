@@ -1,0 +1,12 @@
+Date_Time,Error_Level,Morning_Burn,Afternoon_Burn,UC_Ban,Decision Data
+Wed Nov 25 05:30:03 AM PST 2026,0,0,1,0,BurnMrn=0 BurnAft=1 | AvgSpdMrn=21 MxHtMrn=1 AvgSpdAft=17 MixHtAft=4500 | AQI=21
+Tue Nov 24 05:30:03 AM PST 2026,0,0,0,0,BurnMrn=0 BurnAft=0 | AvgSpdMrn=24 MxHtMrn=1 AvgSpdAft=28 MixHtAft=4500 | AQI=32
+Mon Nov 23 05:30:03 AM PST 2026,0,0,1,0,BurnMrn=0 BurnAft=1 | AvgSpdMrn=3 MxHtMrn=1 AvgSpdAft=13 MixHtAft=5000 | AQI=35
+Sun Nov 22 05:30:02 AM PST 2026,0,0,0,0,BurnMrn=0 BurnAft=0 | AvgSpdMrn=12 MxHtMrn=1 AvgSpdAft=3 MixHtAft=6000 | AQI=26
+Sat Nov 21 05:30:03 AM PST 2026,0,0,1,0,BurnMrn=0 BurnAft=1 | AvgSpdMrn=3 MxHtMrn=1 AvgSpdAft=12 MixHtAft=5000 | AQI=40
+Fri Nov 20 05:30:04 AM PST 2026,0,1,0,0,BurnMrn=1 BurnAft=0 | AvgSpdMrn=8 MxHtMrn=4000 AvgSpdAft=2 MixHtAft=5500 | AQI=15
+Thu Nov 19 05:30:03 AM PST 2026,0,0,0,0,BurnMrn=0 BurnAft=0 | AvgSpdMrn=2 MxHtMrn=1 AvgSpdAft=1 MixHtAft=4500 | AQI=20
+Wed Nov 18 05:30:04 AM PST 2026,0,0,1,0,BurnMrn=0 BurnAft=1 | AvgSpdMrn=15 MxHtMrn=1 AvgSpdAft=17 MixHtAft=5000 | AQI=55
+Tue Nov 17 05:30:03 AM PST 2026,0,0,0,0,BurnMrn=0 BurnAft=0 | AvgSpdMrn=5 MxHtMrn=1 AvgSpdAft=4 MixHtAft=5500 | AQI=12
+Mon Nov 16 05:30:05 AM PST 2026,0,0,0,0,BurnMrn=0 BurnAft=0 | AvgSpdMrn=2 MxHtMrn=4000 AvgSpdAft=2 MixHtAft=5000 | AQI=10
+Sun Nov 15 05:30:04 AM PST 2026,0,0,1,0,BurnMrn=0 BurnAft=1 | AvgSpdMrn=23 MxHtMrn=1 AvgSpdAft=16 MixHtAft=4500 | AQI=10

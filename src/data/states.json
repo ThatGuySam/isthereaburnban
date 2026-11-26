@@ -1030,6 +1030,10 @@
         "url": "https://www.oregon.gov/deq/aq/pages/burning.aspx"
       },
       {
+        "label": "Before You Burn local fire districts and permits",
+        "url": "https://beforeyouburn.com/states/or/"
+      },
+      {
         "label": "Lane County outdoor burning advisory",
         "url": "https://www.lrapa-or.gov/air-quality-protection/burning-overview/outdoor-burning/#current-restrictions"
       },
@@ -1054,7 +1058,7 @@
         "url": "https://www.blm.gov/programs/fire/regional-info/oregon-washington/fire-restrictions"
       }
     ],
-    "notes": "Sources include Oregon Department of Forestry rules on land it protects, Lane County air-quality advisories and the Willamette Valley backyard burning bulletin. See coverage for their latest checks. Local, tribal and federal rules can apply separately."
+    "notes": "Sources include Oregon Department of Forestry orders, Lane County air-quality advisories, the Willamette Valley backyard burning bulletin, and local permit and burn-day restrictions. Check the issuing fire district or agency for the rules at your address."
   },
   {
     "abbr": "PA",

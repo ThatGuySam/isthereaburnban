@@ -136,12 +136,16 @@ test("registry and states.json agree in both directions, and source IDs are uniq
     const key = pollGroup ? `group:${pollGroup}` : `source:${id}`;
     const entry = schedules.get(key);
     if (entry) {
-      expect(cadence).toEqual(entry.cadence);
+      expect(cadence.kind).toBe(entry.cadence.kind);
+      if (cadence.kind === "daily") {
+        expect(cadence.zone).toBe(entry.cadence.zone);
+        for (const hour of cadence.hours) entry.hours.add(hour);
+      }
       expect(++entry.size).toBeLessThanOrEqual(MAX_POLL_GROUP);
-    } else schedules.set(key, { cadence, size: 1 });
+    } else schedules.set(key, { cadence, size: 1, hours: new Set(cadence.kind === "daily" ? cadence.hours : []) });
   }
   const dailyPolls = [...schedules.values()]
-    .reduce((total, { cadence }) => total + (cadence.kind === "hourly" ? 24 : cadence.hours.length), 0);
+    .reduce((total, { cadence, hours }) => total + (cadence.kind === "hourly" ? 24 : hours.size), 0);
   expect((dailyPolls + 24 * (1 + 51 + 4)) * 3).toBeLessThanOrEqual(10000); // enqueue, dequeue, delete
   for (const item of active) {
     if (item.product === "fire-weather") {

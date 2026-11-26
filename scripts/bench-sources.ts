@@ -121,6 +121,10 @@ import { nyDecBrushBurning, parseDecBrushBurning } from "../src/worker/sources/n
 import { nyCountyCalendars } from "../src/worker/sources/ny/local-rules";
 import { nyNycBarbecuing, parseNycBarbecuing } from "../src/worker/sources/ny/nyc-barbecuing";
 import { ohSeasonal, parseOhioSeasonal } from "../src/worker/sources/oh/seasonal";
+import { orCrookBurnDay, orMultnomahWoodSmoke, orUmatillaBurnDay, orUnionSmokeLine, parseCrookBurnDay, parseMultnomahWoodSmoke, parseUmatillaBurnDay, parseUnionSmokeLine } from "../src/worker/sources/or/county-status";
+import { orDeqCountyRules, parseDeqCountyRules } from "../src/worker/sources/or/deq-county-rules";
+import { orCrookedRiverRanch, orDepoeBay, orTillamookPermitWindow, orTvfrBurnBan, parseCrookedRiverRanch, parseDepoeBay, parseTillamookPermitWindow, parseTvfrBurnBan } from "../src/worker/sources/or/district-status";
+import { orCountyRules } from "../src/worker/sources/or/local-rules";
 import { orLrapaHeating, orLrapaOutdoor, parseLrapaHeating, parseLrapaOutdoor } from "../src/worker/sources/or/lrapa";
 import { orOdfPublicUse, parseOdfPublicUse } from "../src/worker/sources/or/odf";
 import { orWillametteBackyard, parseWillametteBackyard } from "../src/worker/sources/or/willamette";
@@ -814,6 +818,39 @@ const orJobs = [
   ["OR ODF regulated-use ArcGIS view", orOdfPublicUse, () => parseOdfPublicUse(JSON.parse(orOdfLayer), JSON.parse(orOdfAreas), now)],
 ] as const;
 
+const orDailyCheck = new Date("2026-11-25T21:00:00Z");
+const orCountyCheck = new Date("2026-11-26T10:15:00Z");
+const orCountyFixture = (name: string) => utf8(`or/fixtures/county/${name}`);
+const orCountyJobs: Array<[string, () => unknown]> = [
+  ...([
+    [orCrookBurnDay, parseCrookBurnDay, "crook-2026-11-25.html", orDailyCheck],
+    [orMultnomahWoodSmoke, parseMultnomahWoodSmoke, "multnomah-2026-11-25.html", orDailyCheck],
+    [orUmatillaBurnDay, parseUmatillaBurnDay, "umatilla-2026-11-25.html", orDailyCheck],
+    [orUnionSmokeLine, parseUnionSmokeLine, "union-2026-11-25.csv", orDailyCheck],
+    [orCrookedRiverRanch, parseCrookedRiverRanch, "crooked-river-ranch-2026-11-26.html", orCountyCheck],
+    [orDepoeBay, parseDepoeBay, "depoe-bay-2026-11-26.html", orCountyCheck],
+    [orTillamookPermitWindow, parseTillamookPermitWindow, "tillamook-bay-2026-11-26.html", orCountyCheck],
+  ] as const).map(([source, parse, file, date]): [string, () => unknown] => {
+    const body = orCountyFixture(file);
+    return [source.id, () => parse(body, date)];
+  }),
+  ...([
+    [orDeqCountyRules, parseDeqCountyRules, "deq-domestic-2026-11-26.json"],
+    [orTvfrBurnBan, parseTvfrBurnBan, "tvfr-webmap-2026-11-26.json"],
+  ] as const).map(([source, parse, file]): [string, () => unknown] => {
+    const body = orCountyFixture(file);
+    return [source.id, () => parse(JSON.parse(body), orCountyCheck)];
+  }),
+  ...orCountyRules.map(({ source, parse, fixture }): [string, () => unknown] => {
+    const path = `or/fixtures/county/${fixture}`;
+    const headerOnly = fixture.endsWith(".headers.json");
+    const body = headerOnly ? null : fixture.endsWith(".gz") ? new Uint8Array(gunzipSync(from(path))) : raw(path);
+    const headers = headerOnly ? JSON.parse(utf8(path))
+      : { "content-type": fixture.includes(".pdf") ? "application/pdf" : "text/html" };
+    return [source.id, () => parse(new Response(body, { headers }), orCountyCheck)];
+  }),
+];
+
 const adapters: Array<[string, () => CountyStatus[]]> = [
   ["OK ArcGIS", () => parseOk(JSON.parse(ok), checked)],
   ["TX ArcGIS", () => parseTx(JSON.parse(tx), checked)],
@@ -1064,6 +1101,7 @@ const jobs: Array<[string, () => unknown]> = [
   ...coJobs.map(([name, , parse]): [string, () => unknown] => [name, parse]),
   ...coCountyParsers,
   ...orJobs.map(([name, , parse]): [string, () => unknown] => [name, parse]),
+  ...orCountyJobs,
   ["KY Forestry SharePoint list", parseKyListFixture],
   ["KY statute PDF and calendar", parseKyStatuteFixture],
   ["PA Carroll Valley CivicPlus", parsePaNewsFixture],

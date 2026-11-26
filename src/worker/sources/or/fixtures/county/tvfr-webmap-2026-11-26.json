@@ -1,0 +1,42 @@
+{
+  "operationalLayers": [
+    {
+      "title": "DEQ Special Control Area + ODF",
+      "url": "https://services1.arcgis.com/wOF9vb6aWdPvzl13/arcgis/rest/services/seasonal_burnban_odf/FeatureServer/0",
+      "visibility": true
+    },
+    {
+      "title": "DEQ Special Control Area",
+      "url": "https://services1.arcgis.com/wOF9vb6aWdPvzl13/arcgis/rest/services/Seasonal_backyard_burnBan/FeatureServer/0",
+      "visibility": true
+    },
+    {
+      "title": "Rural Areas",
+      "url": "https://services1.arcgis.com/wOF9vb6aWdPvzl13/arcgis/rest/services/Year_round_burnarea/FeatureServer/0",
+      "visibility": true
+    },
+    {
+      "title": "Permanent DEQ Burn Ban",
+      "url": "https://services1.arcgis.com/wOF9vb6aWdPvzl13/arcgis/rest/services/Permanent_DEQ_burnBan/FeatureServer/0",
+      "visibility": true
+    },
+    {
+      "title": "TVF&R Burn Ban in Effect",
+      "url": "https://services1.arcgis.com/wOF9vb6aWdPvzl13/arcgis/rest/services/TVFR_bnd_2019_10/FeatureServer/0",
+      "visibility": false,
+      "popupInfo": {
+        "popupElements": [
+          {
+            "type": "text",
+            "text": "<p>&nbsp;</p><p style='color:black; font-family:Arial; font-size:11.0pt; margin:0in;'><strong>Tualatin Valley Fire &amp; Rescue is enacting a High-Fire Danger Burn Ban as of June 13,&nbsp; 2026 at 00:01 hours.</strong><span style=''><strong>&nbsp; </strong></span><strong>All outdoor burning will be banned throughout TVFR’s jurisdiction, including areas served in Washington, Multnomah, Clackamas and Yamhill Counties.</strong><span style=''><strong>&nbsp; </strong></span><strong>Outdoor burning restrictions are authorized under ORS 478.960 and OFC 307.</strong></p><p style='color:black; font-family:Arial; font-size:11.0pt; margin:0in 0in 0in .375in;'><strong>&nbsp;</strong></p><p style='color:black; font-family:Arial; font-size:11.0pt; margin-bottom:3pt; margin-left:.375in; margin-top:0pt;'><strong>The burn ban prohibits&nbsp;<u>all</u>&nbsp;of the following:&nbsp;</strong></p><ol><li><span style='color:black; font-family:Arial; font-size:11.0pt;'><span style='font-style:normal; font-weight:normal;'>Backyard or open burning (branches, yard debris, etc.).&nbsp;</span></span></li><li><span style='color:black; font-family:Arial; font-size:11.0pt;'>Agricultural burning (agricultural wastes, crops, field burning, etc.).&nbsp;</span></li><li><span style='color:black; font-family:Arial; font-size:11.0pt;'>Any other land clearing, slash, stump, waste, debris or controlled burning.</span></li></ol><p style='color:black; font-family:Arial; font-size:11.0pt; margin:0in 0in 0in .375in;'><span style='background-color:white;'>&nbsp;</span></p><p style='color:black; font-family:Arial; font-size:11.0pt; margin-bottom:3pt; margin-left:.375in; margin-top:0pt;'><strong>The burn ban <u>does not</u> prohibit:&nbsp;</strong></p><ol><li><span style='color:black; font-family:Arial; font-size:11.0pt;'><span style='font-style:normal; font-weight:normal;'>Small outdoor cooking, warming or recreational fires. These include portable or permanent fire pits, fire tables, and campfires, with a maximum fuel area of three feet in diameter and two feet in height in a safe location away from combustibles or vegetation.&nbsp;</span></span></li><li><span style='color:black; font-family:Arial; font-size:11.0pt;'>Barbeque grills, smokers and similar cooking appliances with clean, dry firewood, briquettes, wood chips, pellets, propane, natural gas, or similar fuels.</span></li><li><span style='color:black; font-family:Arial; font-size:11.0pt;'>Gas powered equipment such as chainsaws, lawnmowers, string trimmers, etc.</span></li></ol><p style='color:black; font-family:Arial; font-size:11.0pt; margin:0in 0in 0in .375in;'><span style='background-color:white;'>&nbsp;</span></p><p style='font-family:Arial; font-size:11.0pt; margin:0in;'><span style='color:black;'>There may be more restrictive fire safety rules on and within 1/8 mile of Oregon Department of Forestry (ODF) protected land which exists throughout much of rural Washington County. ODF restrictions may include prohibitions on campfires, smoking, target shooting, powered equipment, motorized vehicles, and other public, private landowner and industrial fire restrictions.&nbsp;More details about ODF fire restrictions are available at&nbsp;</span><a target='_blank' href='https://gisapps.odf.oregon.gov/firerestrictions/PFR.html' rel='nofollow ugc noopener noreferrer'>https://gisapps.odf.oregon.gov/firerestrictions/PFR.html</a><span style='color:black;'>&nbsp;</span></p><p style='color:black; font-family:Arial; font-size:11.0pt; margin:0in;'><span style='background-color:white;'>&nbsp;</span></p><p style='color:black; font-family:Arial; font-size:11.0pt; margin:0in;'>Outdoor fires in violation of this burn ban may be immediately extinguished. If a fire agency responds to a fire that has been started in willful violation of this burn ban, the person responsible may be liable for all costs incurred, as well as legal fees per ORS 478.965.</p><p style='font-family:Arial; font-size:11.0pt; margin:0in 0in 0in .375in;'>&nbsp;</p><p style='font-family:Arial; font-size:11.0pt; margin:0in;'><strong>This website will be updated when the burn ban is lifted</strong></p><p style='font-family:Arial; font-size:11.0pt; margin-bottom:8pt; margin-left:0in; margin-top:0pt;'><br />Recorded Burn Message 503-259-1789<br />&nbsp;</p><p style='font-family:Arial; font-size:11.0pt; margin-bottom:8pt; margin-left:0in; margin-top:0pt;'>Return to TVF&amp;R&nbsp;<a target='_blank' href='https://www.tvfr.com/' rel='nofollow ugc noopener noreferrer'>Home Page</a>&nbsp;</p>"
+          }
+        ]
+      }
+    },
+    {
+      "title": "TVF&R Service Area",
+      "url": "https://services1.arcgis.com/wOF9vb6aWdPvzl13/arcgis/rest/services/TVFR_bnd_2019_10/FeatureServer/0",
+      "visibility": false
+    }
+  ]
+}
