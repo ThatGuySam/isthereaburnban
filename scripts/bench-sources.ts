@@ -159,9 +159,13 @@ import { parseFprSituation, vtFprRestrictions } from "../src/worker/sources/vt/f
 import { parseFranklinBurning, vtFranklinBurning } from "../src/worker/sources/vt/franklin";
 import { parseVermontPermits, vtOpenBurningPermits } from "../src/worker/sources/vt/permits";
 import { parseWestVirginiaSeasonal, wvForestryFireSeason } from "../src/worker/sources/wv/seasonal";
+import { parseBentonDaily, waBentonDaily } from "../src/worker/sources/wa/benton-daily";
+import { waCountyStatus, waIslandFire } from "../src/worker/sources/wa/county-status";
 import { parseEcologyAir, waEcologyAir } from "../src/worker/sources/wa/ecology-air";
 import { parseKingFireSafety, waKingFireSafety } from "../src/worker/sources/wa/king-fire-safety";
+import { waCountyRules } from "../src/worker/sources/wa/local-rules";
 import { parsePugetSound, waPugetSoundAir } from "../src/worker/sources/wa/puget-sound";
+import { waRegionalStatus } from "../src/worker/sources/wa/regional-status";
 import { wiLocalRules } from "../src/worker/sources/wi/local-rules";
 import { parseMenomoneeNotices, parseVernonNotices, wiMenomoneeNotices, wiVernonNotices } from "../src/worker/sources/wi/local-notices";
 import { wiLocalStatuses } from "../src/worker/sources/wi/local-status";
@@ -512,6 +516,18 @@ const parseAzPimaFixture = async () => parsePimaWildfire(await extractHtml(azPim
 const parseAzGrandCanyonFixture = async () => parseGrandCanyonFire(await extractHtml(azGrandCanyonHtml), now);
 const parseAzAreaAFixture = async () => parseArizonaAreaA(await extractHtml(azStatute), summerDay);
 const parseWaEcologyFixture = () => parseEcologyAir(waEcologyHtml, now);
+const waCountyCaptured = new Date("2026-11-26T10:00:00Z");
+const waCountyFixtures = [
+  ...[...waRegionalStatus, ...waCountyStatus, { source: waBentonDaily, parse: parseBentonDaily }].map(({ source, parse }) => {
+    const ext = source.id === waIslandFire.source.id ? "xml" : "html";
+    const body = raw(`wa/fixtures/county-status/${source.id.slice(3)}.${ext}`);
+    return { source, parse: () => parse(new Response(body), waCountyCaptured) };
+  }),
+  ...waCountyRules.map(({ source, fixture, parse }) => {
+    const body = raw(`wa/fixtures/local-rules/${fixture}`);
+    return { source, parse: () => parse(new Response(body), waCountyCaptured) };
+  }),
+];
 const parseWaPugetFixture = () => parsePugetSound(waPugetHtml, now);
 const parseWaKingFixture = async () => parseKingFireSafety(await extractHtml(waKingHtml), now);
 const kyList = utf8("ky/fixtures/county-burn-bans-2026-11-24.json");
@@ -868,6 +884,9 @@ recordedInputs.push(
   { source: waEcologyAir, rows: await parseWaEcologyFixture(), checked },
   { source: waPugetSoundAir, rows: await parseWaPugetFixture(), checked },
   { source: waKingFireSafety, rows: await parseWaKingFixture(), checked },
+  ...await Promise.all(waCountyFixtures.map(async ({ source, parse }) => ({
+    source, rows: await parse(), checked: waCountyCaptured.toISOString(),
+  }))),
   ...await Promise.all(coJobs.map(async ([, source, parse]) => ({ source, rows: await parse(), checked }))),
   ...await Promise.all(orJobs.map(async ([, source, parse]) => ({ source, rows: await parse(), checked }))),
   { source: akDecWinterBurning, rows: await parseAkWinter(), checked },
@@ -1022,6 +1041,7 @@ const jobs: Array<[string, () => unknown]> = [
   ["WA Ecology air quality orders", parseWaEcologyFixture],
   ["WA Puget Sound air quality grid", parseWaPugetFixture],
   ["WA King County fire safety", parseWaKingFixture],
+  ...waCountyFixtures.map(({ source, parse }): [string, () => unknown] => [source.id, parse]),
   ...coJobs.map(([name, , parse]): [string, () => unknown] => [name, parse]),
   ...coCountyParsers,
   ...orJobs.map(([name, , parse]): [string, () => unknown] => [name, parse]),

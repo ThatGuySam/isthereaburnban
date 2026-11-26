@@ -74,6 +74,7 @@ export async function parsePugetSound(input: Response | string, now: Date): Prom
 
 export const waPugetSoundAir: ActiveSource = {
   ...META, coverage: "restrictions", mode: "positive-only",
+  pollGroup: "wa-hourly-bulletins",
   cadence: { kind: "hourly" },
   staleMs: 12 * 3_600_000,
   async fetch({ now }) {

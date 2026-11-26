@@ -259,7 +259,7 @@ export async function htmlStatusBlocks(input: Response | string, section: string
 }
 
 /** Read one explicit statement and its captured fields from a dedicated status panel. */
-export async function matchHtmlStatus<const Status extends string>(
+export async function matchHtmlStatus<const Status>(
   input: Response | string,
   { section, blocks, choices }: {
     section: string;

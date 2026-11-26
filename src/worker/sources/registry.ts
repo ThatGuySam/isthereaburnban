@@ -132,9 +132,13 @@ import { vaShenandoahAlerts } from "./va/shenandoah";
 import { vtFprRestrictions } from "./vt/fpr";
 import { vtFranklinBurning } from "./vt/franklin";
 import { vtOpenBurningPermits } from "./vt/permits";
+import { waBentonDaily } from "./wa/benton-daily";
+import { waCountyStatus } from "./wa/county-status";
 import { waEcologyAir } from "./wa/ecology-air";
 import { waKingFireSafety } from "./wa/king-fire-safety";
+import { waCountyRules } from "./wa/local-rules";
 import { waPugetSoundAir } from "./wa/puget-sound";
+import { waRegionalStatus } from "./wa/regional-status";
 import { wiLocalRules } from "./wi/local-rules";
 import { wiMenomoneeNotices, wiVernonNotices } from "./wi/local-notices";
 import { wiLocalStatuses } from "./wi/local-status";
@@ -199,6 +203,10 @@ export const SOURCES: readonly Source[] = [
   waEcologyAir,
   waPugetSoundAir,
   waKingFireSafety,
+  waBentonDaily,
+  ...waCountyStatus.map(({ source }) => source),
+  ...waRegionalStatus.map(({ source }) => source),
+  ...waCountyRules.map(({ source }) => source),
   coArapahoeFire,
   coBoulderFire,
   coDouglasFire,

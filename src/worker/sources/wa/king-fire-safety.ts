@@ -44,6 +44,7 @@ export function parseKingFireSafety({ blocks }: HtmlParts, now: Date): CountySta
 
 export const waKingFireSafety: ActiveSource = {
   ...META, coverage: "restrictions", mode: "positive-only",
+  pollGroup: "wa-county-fire-safety",
   cadence: { kind: "daily", zone: US_ZONES.Pacific, hours: [0, 8, 16] },
   staleMs: 24 * 3_600_000,
   async fetch({ now }) {

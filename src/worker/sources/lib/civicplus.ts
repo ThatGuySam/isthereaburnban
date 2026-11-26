@@ -165,7 +165,7 @@ export function latestCivicPlusNewsFlashNotice(xml: string, options: {
   if (channel !== channelTitle || !/<\/channel>\s*<\/rss>\s*$/.test(xml)) {
     throw new Error("Missing or changed CivicPlus News Flash feed");
   }
-  const entries = parseFeed(xml, { includeText: () => false });
+  const entries = parseFeed(xml, { includeText: ({ title }) => matches(title) });
   if (entries.length !== [...xml.matchAll(/<item\b/g)].length) throw new Error("Incomplete CivicPlus News Flash feed");
   const notices = entries.filter(({ title }) => matches(title)).map((entry) => {
     const url = new URL(entry.url);
