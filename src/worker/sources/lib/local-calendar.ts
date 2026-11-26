@@ -1,4 +1,4 @@
-import { apptegyPageText } from "./apptegy";
+import { apptegyFormSection, apptegyPageText } from "./apptegy";
 import { calendarStatusRows, type CalendarCounty, type CalendarRule } from "./calendar";
 import { reviewedEcode360Digest } from "./ecode360";
 import { sha256 } from "./hash";
@@ -15,6 +15,7 @@ export type LocalCalendarEvidence =
   | { kind: "html-heading"; digest: string; selector: string; heading: string }
   | ({ kind: "html-anchors"; digest: string } & Parameters<typeof reviewedAnchoredHtmlDigest>[1])
   | { kind: "html-apptegy-node"; digest: string; pageId: number; nodeId: string }
+  | { kind: "json-apptegy-form"; digest: string; section: Parameters<typeof apptegyFormSection>[1] }
   | { kind: "html-ecode360"; digest: string; sections: readonly [string, ...string[]] }
   | { kind: "pdf"; digest: string }
   | { kind: "pdf-etag"; etag: string };
@@ -23,6 +24,7 @@ type ReviewedLocalCalendar = {
   publisher: Publisher & { scope: "county" | "part" };
   counties: readonly CalendarCounty[];
   rule: LocalCalendarRule;
+  additionalRules?: readonly LocalCalendarRule[];
   review: LocalCalendarEvidence;
   zone: string;
   hour: number;
@@ -45,6 +47,8 @@ async function matchesReview(input: Response, review: LocalCalendarEvidence): Pr
       return await reviewedAnchoredHtmlDigest(input, review) === review.digest;
     case "html-apptegy-node":
       return await sha256(apptegyPageText(await input.text(), review.pageId, review.nodeId)) === review.digest;
+    case "json-apptegy-form":
+      return await sha256(apptegyFormSection(await input.json(), review.section)) === review.digest;
     case "html-ecode360":
       return await reviewedEcode360Digest(input, review.sections) === review.digest;
     case "pdf":
@@ -59,11 +63,18 @@ export function staleVerificationNote(note: string, lastReviewed: string) {
 }
 
 /** Poll the reviewed document before applying the standing local restriction. */
-export function reviewedLocalCalendar({ publisher, counties, rule, review, zone, hour, lastReviewed, reviewedAt, standing }: ReviewedLocalCalendar) {
-  function rowsAt(now: Date, note = rule.note) {
-    const rows = calendarStatusRows({
-      ...rule, note, zone, state: publisher.state, scope: publisher.scope, officialUrl: publisher.officialUrl, status: "restricted",
-    }, counties, publisher, now, { includeTomorrow: true, includeSeasonDates: true });
+export function reviewedLocalCalendar({
+  publisher, counties, rule, additionalRules = [], review, zone, hour, lastReviewed, reviewedAt, standing,
+}: ReviewedLocalCalendar) {
+  const rules = [rule, ...additionalRules];
+  const accept = review.kind === "json-apptegy-form" ? "application/json"
+    : review.kind.startsWith("html") ? "text/html" : "application/pdf";
+
+  function rowsAt(now: Date, staleReviewDate?: string) {
+    const rows = rules.flatMap((entry) => calendarStatusRows({
+      ...entry, zone, state: publisher.state, scope: publisher.scope, officialUrl: publisher.officialUrl, status: "restricted",
+      note: staleReviewDate ? staleVerificationNote(entry.note, staleReviewDate) : entry.note,
+    }, counties, publisher, now, { includeTomorrow: true, includeSeasonDates: true }));
     return standing ? rows.map((row) => ({ ...row, standing })) : rows;
   }
 
@@ -84,12 +95,12 @@ export function reviewedLocalCalendar({ publisher, counties, rule, review, zone,
       try {
         reply = await fetchSource(publisher.sourceUrl, {
           method: review.kind === "pdf-etag" ? "HEAD" : "GET",
-          headers: { accept: review.kind.startsWith("html") ? "text/html" : "application/pdf" },
+          headers: { accept },
         });
       } catch (error) {
         if (isSourceUnavailable(error)) {
           if (reviewedAt) return reviewedRuleFallback(rowsAt(now), reviewedAt, now, error);
-          if (lastReviewed) return { rows: rowsAt(now, staleVerificationNote(rule.note, lastReviewed)) };
+          if (lastReviewed) return { rows: rowsAt(now, lastReviewed) };
         }
         throw error;
       }

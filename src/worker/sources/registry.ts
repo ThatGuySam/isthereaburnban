@@ -15,7 +15,13 @@ import { arFaulknerCountyOrders } from "./ar/faulkner";
 import { arLocalRules } from "./ar/local-rules";
 import { azAreaASummer } from "./az/area-a";
 import { azGrandCanyonFire } from "./az/grand-canyon";
+import { azLocalBurnRules } from "./az/local-rules";
+import { azFlagstaffFireStages, azYavapaiFireZones } from "./az/local-stages";
+import { azMaricopaAirQuality } from "./az/maricopa-air-quality";
+import { azMohaveOrders } from "./az/mohave-orders";
+import { azNavajoNationStage } from "./az/navajo-nation";
 import { azPimaWildfire } from "./az/pima";
+import { azSaintDavidPermitStatus } from "./az/saint-david";
 import { caCountySources } from "./ca/county-sources";
 import { pfirs } from "./ca/pfirs";
 import { coArapahoeFire, coBoulderFire, coDouglasFire, coElPasoFire, coEstesFire, coLarimerFire } from "./co/county-status";
@@ -180,7 +186,7 @@ export const SOURCES: readonly Source[] = [
   txBexarCountyIssuer,
   // One existing hourly queue slot, with independent checks and evidence for each publisher.
   ...[nwsFireWeather, akFairbanksAirAlert, akJuneauWoodsmoke, ...akNixleNotices]
-    .map((source) => ({ ...source, pollGroup: "nws-and-alaska-hourly" })),
+    .map((source) => ({ ...source, pollGroup: "hourly-fire-status" })),
   ...iaCountyBulletins.map(({ source }) => source),
   ...iaLocalCalendars.map(({ source }) => source),
   flMiamiDadeResidentialBurning,
@@ -216,9 +222,14 @@ export const SOURCES: readonly Source[] = [
   gaHinesvilleClosure,
   ...gaPermitCalendars,
   ...gaLocalRuleSources,
-  azPimaWildfire,
-  azGrandCanyonFire,
-  azAreaASummer,
+  ...[azPimaWildfire, azGrandCanyonFire, azAreaASummer].map((source) => ({ ...source, pollGroup: "az-county-daily" })),
+  azFlagstaffFireStages.source,
+  azYavapaiFireZones.source,
+  azMaricopaAirQuality.source,
+  azMohaveOrders,
+  azNavajoNationStage.source,
+  azSaintDavidPermitStatus.source,
+  ...azLocalBurnRules.map(({ source }) => source),
   waEcologyAir,
   waPugetSoundAir,
   waKingFireSafety,

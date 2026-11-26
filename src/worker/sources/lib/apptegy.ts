@@ -58,6 +58,27 @@ export function apptegyLiveFeed(data: unknown, sectionId: number, now: Date) {
   });
 }
 
+const formElements = z.object({
+  data: z.array(z.object({
+    id: z.string(),
+    type: z.literal("element"),
+    attributes: z.object({ title: z.string(), element_type: z.string(), config: z.unknown() }),
+  })).max(250),
+});
+
+/** Read a named section of a public Apptegy form without submitting the form. */
+export function apptegyFormSection(data: unknown, section: { id: string; title: string }): string {
+  const { data: elements } = formElements.parse(data);
+  const [element, ...duplicates] = elements.filter(({ id }) => id === section.id);
+  if (!element || duplicates.length || element.attributes.title !== section.title || element.attributes.element_type !== "SECTION") {
+    throw new Error(`Missing or changed Apptegy form section: ${section.title}`);
+  }
+  const config = z.object({ description: z.string() }).parse(element.attributes.config);
+  const text = htmlText(config.description);
+  if (!text) throw new Error(`Empty Apptegy form section: ${section.title}`);
+  return text;
+}
+
 const apptegyPageState = z.object({
   page: z.object({
     id: z.number().int().positive(),

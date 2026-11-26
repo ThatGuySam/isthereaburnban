@@ -26,7 +26,13 @@ import { arFaulknerCountyOrders, parseFaulknerBan } from "../src/worker/sources/
 import { arLocalRules } from "../src/worker/sources/ar/local-rules";
 import { parseArizonaAreaA } from "../src/worker/sources/az/area-a";
 import { azGrandCanyonFire, parseGrandCanyonFire } from "../src/worker/sources/az/grand-canyon";
+import { azLocalBurnRules } from "../src/worker/sources/az/local-rules";
+import { azFlagstaffFireStages, azYavapaiFireZones } from "../src/worker/sources/az/local-stages";
+import { azMaricopaAirQuality } from "../src/worker/sources/az/maricopa-air-quality";
+import { azMohaveOrders, parseMohaveOrders } from "../src/worker/sources/az/mohave-orders";
+import { azNavajoNationStage } from "../src/worker/sources/az/navajo-nation";
 import { azPimaWildfire, parsePimaWildfire } from "../src/worker/sources/az/pima";
+import { azSaintDavidPermitStatus } from "../src/worker/sources/az/saint-david";
 import {
   butteBurnDay, colusaBurnDay, elDoradoBurnDay, featherRiverBurnDay, imperialBurnDay,
   tehamaBurnDay, venturaAgriculturalBurn, yoloSolanoBurnDay,
@@ -542,6 +548,25 @@ const parseGaNonSummerFixture = async () => parseEpdSeasonal(await extractHtml(g
 const parseAzPimaFixture = async () => parsePimaWildfire(await extractHtml(azPimaHtml), now);
 const parseAzGrandCanyonFixture = async () => parseGrandCanyonFire(await extractHtml(azGrandCanyonHtml), now);
 const parseAzAreaAFixture = async () => parseArizonaAreaA(await extractHtml(azStatute), summerDay);
+const azCountyCaptured = new Date("2026-11-26T12:39:00Z");
+const azCountyBulletins: [typeof azFlagstaffFireStages, string, Date][] = [
+  [azFlagstaffFireStages, "flagstaff-outdoor-fire-permits.html", azCountyCaptured],
+  [azYavapaiFireZones, "yavapai-fire-zones.html", azCountyCaptured],
+  [azMaricopaAirQuality, "maricopa-air-quality.html", new Date("2026-11-25T18:00:00Z")],
+  [azNavajoNationStage, "navajo-nation-orders.html", azCountyCaptured],
+  [azSaintDavidPermitStatus, "saint-david-permit-status.json", azCountyCaptured],
+];
+const azCountyParsers = azCountyBulletins.map(([entry, fixture, at]): [string, () => unknown] => {
+  const body = raw(`az/fixtures/county/${fixture}`);
+  return [entry.source.id, () => entry.parse(new Response(body), at)];
+});
+const azMohaveIndex = utf8("az/fixtures/county/mohave-order-index.html");
+const azMohaveLift = utf8("az/fixtures/county/mohave-order-lifted.html");
+azCountyParsers.push([azMohaveOrders.id, () => parseMohaveOrders(azMohaveIndex, azCountyCaptured, async () => azMohaveLift)]);
+for (const { source, parse, fixture } of azLocalBurnRules) {
+  const body = raw(`az/fixtures/county/${fixture}`);
+  azCountyParsers.push([source.id, () => parse(new Response(body), azCountyCaptured)]);
+}
 const parseWaEcologyFixture = () => parseEcologyAir(waEcologyHtml, now);
 const waCountyCaptured = new Date("2026-11-26T10:00:00Z");
 const waCountyFixtures = [
@@ -1161,6 +1186,7 @@ const jobs: Array<[string, () => unknown]> = [
   ["AZ Pima wildfire bulletin", parseAzPimaFixture],
   ["AZ Grand Canyon fire bulletin", parseAzGrandCanyonFixture],
   ["AZ Area A statute and calendar", parseAzAreaAFixture],
+  ...azCountyParsers,
   ["WA Ecology air quality orders", parseWaEcologyFixture],
   ["WA Puget Sound air quality grid", parseWaPugetFixture],
   ["WA King County fire safety", parseWaKingFixture],

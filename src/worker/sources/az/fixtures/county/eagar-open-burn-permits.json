@@ -1,0 +1,16 @@
+{
+  "data": [
+    {
+      "id": "88900",
+      "type": "element",
+      "attributes": {
+        "title": "Burn Permit Rules",
+        "element_type": "SECTION",
+        "config": {
+          "description": "<p>All burns within the Town of Eagar must be called in to our Dispatch Center in Show Low at 928-537-4365 prior to starting the burn and when burn is completed.</p><p>The Town of Eagar requires all individuals to obtain a Burn Permit. Per Town Code all burning should be conducted between the hours of 6:00 a.m. and 6:00 p.m. Burn Permits can be filled out below by clicking the link. Burn permits can also be obtained at the Fire Department during normal business hours. For any questions regarding the Burn Permit process please call the Fire Station at:</p><p>(928) 551-6200</p><p>The Department does conduct Prescribed Burns when weather, time and manpower allow. Permits are reviewed when received and owners will be contacted prior to burn. Requests must be made by the property owner or legal representative.</p>",
+          "required_answer": false
+        }
+      }
+    }
+  ]
+}

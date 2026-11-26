@@ -63,7 +63,7 @@
     "abbr": "AZ",
     "name": "Arizona",
     "coverage": "restrictions",
-    "publisher": "Arizona Department of Forestry and Fire Management, Pima County, and National Park Service",
+    "publisher": "Arizona Department of Forestry and Fire Management, local and tribal authorities, and National Park Service",
     "officialUrl": "https://dffm.az.gov/newsroom/fire-restrictions",
     "extraUrls": [
       {
@@ -79,8 +79,16 @@
         "url": "https://www.nps.gov/grca/learn/management/fireinformation.htm"
       },
       {
-        "label": "Maricopa County air quality burning rules and No Burn Days",
-        "url": "https://www.maricopa.gov/1830/Burning-Activities"
+        "label": "Maricopa County current air quality and No Burn Days",
+        "url": "https://www.maricopa.gov/1244/Air-Quality"
+      },
+      {
+        "label": "Yavapai County fire restrictions by zone",
+        "url": "https://www.yavapaiready.gov/Community-Resources/Outdoor-Fire-Ordinance"
+      },
+      {
+        "label": "Navajo Nation fire restriction orders",
+        "url": "https://opvp.navajo-nsn.gov/executive-orders/"
       },
       {
         "label": "Arizona open burn permits",
