@@ -97,9 +97,10 @@ test("Wisconsin parses its full JSON fixture within the Worker CPU budget", () =
   const run = () => parseWisconsinPermits(fixture, captured);
   for (let i = 0; i < 20; i++) run();
   const samples = Array.from({ length: 120 }, () => {
-    const start = performance.now();
+    const start = process.threadCpuUsage();
     run();
-    return performance.now() - start;
+    const { user, system } = process.threadCpuUsage(start);
+    return (user + system) / 1000;
   }).sort((a, b) => a - b);
   expect(samples[113]).toBeLessThan(5);
 });
