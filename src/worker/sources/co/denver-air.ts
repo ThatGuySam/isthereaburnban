@@ -63,6 +63,7 @@ export function parseDenverAir({ blocks }: HtmlParts, now: Date): CountyStatus[]
 
 export const coDenverAir: ActiveSource = {
   ...META, coverage: "restrictions", mode: "positive-only", cadence: { kind: "hourly" },
+  pollGroup: "co-front-range-hourly",
   staleMs: 26 * 3_600_000,
   async fetch({ now }) {
     const reply = await fetchSource(URL, { headers: { accept: "text/html", "cache-control": "no-cache" } });

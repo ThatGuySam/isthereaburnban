@@ -366,6 +366,7 @@ export function parseJeffersonFire(input: unknown, now: Date): CountyStatus[] {
 
 export const coJeffersonFire: ActiveSource = {
   ...jefferson.metadata,
+  pollGroup: "co-front-range-hourly",
   async fetch({ now }) {
     const text = await getText(jefferson.metadata.sourceUrl, {
       maxBytes: 10_000, maxResponseAgeMs: HOUR, headers: { accept: "application/json" },
