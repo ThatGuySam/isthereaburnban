@@ -179,3 +179,21 @@ export function namedStatusRows<T extends string>(
   if (found.size !== expected.size) throw new Error("Incomplete status roster");
   return found;
 }
+
+/** Read a roster whose name and measurements precede a separate row of status cells. */
+export function pairedStatusRows<T extends string>(
+  rows: readonly (readonly string[])[], names: readonly T[], statusColumns: number,
+  { trailingColumns = 0 } = {},
+): ReadonlyMap<T, readonly string[]> {
+  if (rows.length !== names.length * 2) throw new Error("Incomplete paired status roster");
+  const statuses = [];
+  for (let index = 0; index < rows.length; index += 2) {
+    const [name, ...measurements] = rows[index];
+    const decisions = rows[index + 1];
+    if (measurements.length !== statusColumns + trailingColumns || decisions.length !== statusColumns) {
+      throw new Error(`Unexpected paired status rows for ${name ?? "unnamed area"}`);
+    }
+    statuses.push([name, ...decisions]);
+  }
+  return namedStatusRows(statuses, names, statusColumns + 1);
+}

@@ -130,7 +130,11 @@ import { tnSeasonalBurnPermits } from "./tn/seasonal";
 import { tnTullahomaDailyBurning } from "./tn/tullahoma";
 import { txArcherCountyIssuer, txBexarCountyIssuer } from "./tx/county-issuers";
 import type { ActiveSource, Source } from "./types";
+import { utDaqCountyAirActions } from "./ut/air-status";
+import { utCountyBulletins } from "./ut/county-bulletins";
+import { utLocalRules } from "./ut/local-rules";
 import { utFfslFireOrders } from "./ut/orders";
+import { utDaqLocalOpenBurnPermits } from "./ut/permit-status";
 import { utClosedFireSeason } from "./ut/seasonal";
 import { vaBrunswickBurnBan } from "./va/brunswick";
 import { vaLocalCalendars } from "./va/local-rules";
@@ -272,8 +276,10 @@ export const SOURCES: readonly Source[] = [
   arVanBurenStatus,
   ...arLocalRules.map(({ source }) => source),
   { ...akDecWinterBurning, pollGroup: AK_CALENDAR_POLL_GROUP },
-  utFfslFireOrders,
-  utClosedFireSeason,
+  ...[utFfslFireOrders, utDaqLocalOpenBurnPermits, ...utCountyBulletins.map(({ source }) => source), utDaqCountyAirActions]
+    .map((source) => ({ ...source, pollGroup: "ut-fire-and-permit-bulletins" })),
+  ...[utClosedFireSeason, ...utLocalRules.map(({ source }) => source)]
+    .map((source) => ({ ...source, pollGroup: "ut-burning-calendars" })),
   mtDeqFall,
   mtDnrcRestrictions,
   mtGallatinOpenBurning,

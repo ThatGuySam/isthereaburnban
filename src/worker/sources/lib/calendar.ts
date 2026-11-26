@@ -1,5 +1,5 @@
 import type { CountyStatus } from "../../../shared/types";
-import { atLocalTime, localClock, localDayWindow, shiftDay, US_ZONES } from "./dates";
+import { atLocalTime, isoDay, localClock, localDayWindow, shiftDay, US_ZONES } from "./dates";
 
 // Inventory: Alabama and Jefferson County open burning, Alaska burn permits and winter air rules, AZ Area A, Idaho and Utah closed fire seasons, NY DEC Open Burning, GA EPD Summer Open Burning Ban, KY fire hazard seasons, OH DNR Open Burning Regulations,
 // PA state forest fires, VA DOF 4 PM Burning Law, WV Forestry Fire Burning Guidelines, MD DNR Burning Guidance,
@@ -41,7 +41,9 @@ function seasonDates(rule: CalendarRule, date: string) {
   const wrapsYear = start > end;
   const startYear = wrapsYear && date.slice(5) < start ? year - 1 : year;
   const since = `${startYear}-${start}`;
-  const expires = `${startYear + Number(wrapsYear)}-${end}`;
+  const endYear = startYear + Number(wrapsYear);
+  const endDay = end === "02-29" && !isoDay(endYear, 2, 29) ? "02-28" : end;
+  const expires = `${endYear}-${endDay}`;
   return { since: from && from > since ? from : since, expires: through && through < expires ? through : expires };
 }
 

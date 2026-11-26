@@ -1,6 +1,6 @@
 // @ts-nocheck -- bun test types are not installed.
 import { expect, test } from "bun:test";
-import { htmlStatusBulletin, namedStatusRows, requirePublishedOrderLink, scopedStatusBulletin } from "./county-bulletin";
+import { htmlStatusBulletin, namedStatusRows, pairedStatusRows, requirePublishedOrderLink, scopedStatusBulletin } from "./county-bulletin";
 
 const now = new Date("2026-11-26T16:00:00Z");
 const publisher = {
@@ -32,6 +32,19 @@ test("a named status roster requires every publisher area and the expected value
   expect(() => namedStatusRows([open, ["East", "Closed"]], roster, 2)).toThrow("Unexpected status row");
   expect(() => namedStatusRows([open, ["South", ""]], roster, 2)).toThrow("Unexpected status row");
   expect(() => namedStatusRows([open, ["South", "Closed", "Open"]], roster, 2)).toThrow("Unexpected status row");
+});
+
+test("a paired roster assigns the following decision row to the named area", () => {
+  const north = ["North", "Good", "Moderate", "Advisory"];
+  const south = ["South", "Moderate", "Moderate", "Advisory"];
+  const open = ["Open", "Open"];
+  const closed = ["Closed", "Open"];
+  const parse = (rows) => [...pairedStatusRows(rows, ["North", "South"], 2, { trailingColumns: 1 })];
+  expect(parse([north, open, south, closed])).toEqual([["North", open], ["South", closed]]);
+  expect(() => parse([north, open, south])).toThrow("Incomplete");
+  expect(() => parse([north, open, north, closed])).toThrow("Unexpected status row");
+  expect(() => parse([north, open, closed, south])).toThrow("Unexpected paired status");
+  expect(() => parse([north, open, south, ["Closed", ""]])).toThrow("Unexpected status row");
 });
 
 test("a scoped bulletin reports only its mapped counties and preserves per-area human links", async () => {

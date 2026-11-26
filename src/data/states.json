@@ -1206,6 +1206,10 @@
         "url": "https://deq.utah.gov/daq/residential-open-burning"
       },
       {
+        "label": "Utah county and city burn permits",
+        "url": "https://air.utah.gov/OpenBurning/form/index.php?e=application"
+      },
+      {
         "label": "Utah air-quality burn advisories",
         "url": "https://air.utah.gov/mediaforecast.php"
       },

@@ -154,7 +154,11 @@ import { tnLocalCalendars } from "../src/worker/sources/tn/local-rules";
 import { parseTennesseePermitHolds, parseTennesseePermitRoster, tnForestryPermitHolds } from "../src/worker/sources/tn/permit-holds";
 import { parseTennesseePermitSeason, tnSeasonalBurnPermits } from "../src/worker/sources/tn/seasonal";
 import { parseTullahomaForm, parseTullahomaPermitPage, tnTullahomaDailyBurning, tullahomaRows } from "../src/worker/sources/tn/tullahoma";
+import { parseUtahAirActions } from "../src/worker/sources/ut/air-status";
+import { utCountyBulletins } from "../src/worker/sources/ut/county-bulletins";
+import { utLocalRules } from "../src/worker/sources/ut/local-rules";
 import { parseUtahOrders, utFfslFireOrders } from "../src/worker/sources/ut/orders";
+import { parseUtahPermitConditions } from "../src/worker/sources/ut/permit-status";
 import { parseUtahSeasonal, utClosedFireSeason } from "../src/worker/sources/ut/seasonal";
 import { parseBrunswickNotices, vaBrunswickBurnBan } from "../src/worker/sources/va/brunswick";
 import { vaLocalCalendars } from "../src/worker/sources/va/local-rules";
@@ -583,6 +587,24 @@ const utOrders = utf8("ut/fixtures/orders-2026-11-24.json");
 const utStatute = utf8("ut/fixtures/code-index-2026-11-24.html");
 const parseUtOrders = () => parseUtahOrders(JSON.parse(utLayer), JSON.parse(utOrders), utCaptured);
 const parseUtStatute = (time = summerDay) => parseUtahSeasonal(utStatute, time);
+const utCountyCaptured = new Date("2026-11-26T11:35:00Z");
+const utCountyFixture = (name: string) => `ut/fixtures/county/${name}`;
+const utAirForecast = utf8(utCountyFixture("forecast.html"));
+const utPermitForm = utf8(utCountyFixture("permit-form.html"));
+const utPermitConfig = utf8(utCountyFixture("permit-config.js"));
+const utCountyFixtures = [
+  ["ut-washington-municipal-permits", "washington.html"],
+  ["ut-weber-fire-district-open-burn", "weber.html"],
+  ["ut-manila-current-fire-rules", "manila.html"],
+  ["ut-box-elder-burning-permit", "box-ordinance.pdf"],
+  ["ut-utah-county-open-burning-permit", "ucounty-intent.html"],
+  ["ut-wayne-burn-permit-season", "wayne.html"],
+].map(([id, name]): [string, () => unknown] => {
+  const entry = [...utCountyBulletins, ...utLocalRules].find(({ source }) => source.id === id);
+  if (!entry) throw new Error(`Missing Utah publisher ${id}`);
+  const body = raw(utCountyFixture(name));
+  return [id, () => entry.parse(new Response(body), utCountyCaptured)];
+});
 const mtCaptured = new Date("2026-11-24T09:25:38Z");
 const mtDeq = utf8("mt/fixtures/deq-fall-2026-11-24.json");
 const mtDnrcLayer = utf8("mt/fixtures/dnrc-layer-2026-11-24.json");
@@ -1206,6 +1228,9 @@ const jobs: Array<[string, () => unknown]> = [
   ["NV Spring Mountains Drupal order table", parseNvForestFixture],
   ["UT FFSL fire order polygons", parseUtOrders],
   ["UT closed fire season and calendar", parseUtStatute],
+  ["UT DAQ county air actions", () => parseUtahAirActions(utAirForecast, utCountyCaptured)],
+  ["UT DAQ local clearing-index permit decisions", () => parseUtahPermitConditions(utPermitForm, utPermitConfig, utCountyCaptured)],
+  ...utCountyFixtures,
   ["MT DEQ fall open-burning decisions", parseMtDeq],
   ["MT DNRC interagency ArcGIS dashboard", parseMtDnrc],
   ["MT Gallatin district status table", parseMtGallatin],
