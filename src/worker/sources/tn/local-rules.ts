@@ -309,8 +309,9 @@ const rules: readonly LocalRule[] = [
   {
     id: "tiptonville", fips: ["47095"], stack: "MTAS / municipal code PDF",
     sourceName: "Town of Tiptonville code via University of Tennessee MTAS",
-    sourceUrl: "https://www.mtas.tennessee.edu/system/files/codes/combined/Tiptonville-code.pdf",
-    review: { kind: "pdf", digest: "975585a33f1cb6251151d637e4655c4a86c791e5bee75cd447c7ae52f9e0df94" },
+    sourceUrl: "https://www.mtas.tennessee.edu/system/files/codes/tipton_t-7.pdf",
+    officialUrl: "https://www.mtas.tennessee.edu/code/municipal-code-tiptonville",
+    review: { kind: "pdf", digest: "0c503c33ca65b189612f9653bebe26e3682c350bcbfa879d17d46352e9fdafd5" },
     hour: 8,
     label: "Open-burning permit required for eligible yard cleanup", scopeNote: "Town of Tiptonville",
     note: "Title 7, chapter 5 requires applying to the town recorder for a permit before covered open burning. The code exempts contained cooking, fire pits and certain other fires. The fire chief can suspend permits.",

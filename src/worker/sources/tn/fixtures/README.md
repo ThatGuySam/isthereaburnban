@@ -60,4 +60,4 @@ The 04:19 UTC replay on November 25 used the full captured pages and documents. 
 | `rule-milan-2026-11-24.html` | 2026-11-25 04:09:54 | [Milan Fire Department](https://www.milanfd.com/permits-ordinances) |
 | `rule-white-house-2026-11-24.html` | 2026-11-25 04:09:53 | [White House Fire Department](https://www.whitehousetn.gov/214/Burn-Permits) |
 | `rule-gallatin-2026-11-24.html` | 2026-11-25 04:09:53 | [Gallatin Fire Department](https://gallatintn.gov/269/Burn-Permits) |
-| `rule-tiptonville-2026-11-24.pdf` | 2026-11-25 04:14:29 | [Town of Tiptonville code via University of Tennessee MTAS](https://www.mtas.tennessee.edu/system/files/codes/combined/Tiptonville-code.pdf) |
+| `rule-tiptonville-2026-11-24.pdf` | 2026-11-26 07:01:34 | [Tiptonville code, Title 7, via University of Tennessee MTAS](https://www.mtas.tennessee.edu/system/files/codes/tipton_t-7.pdf). Title 7 replaces the complete code fixture and contains the same open-burning chapter. |
