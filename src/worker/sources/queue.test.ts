@@ -13,7 +13,7 @@ import { US_ZONES } from "./lib/dates";
 import { mergeSources, STALE_MS } from "./merge";
 import { nwsFireWeather, parseNwsAlerts } from "./nws/alerts";
 import { advancePublication, currentRun } from "./publication";
-import { consumeSourceMessage, consumeSourceQueue, enqueueSources, isDue } from "./queue";
+import { consumeSourceMessage, consumeSourceQueue, enqueueSources, isDue, MAX_POLL_GROUP } from "./queue";
 import { replayDeadLetter, SOURCE_DLQ } from "./dead-letter";
 import { pipelineStatus, runSourceMonitor } from "./monitor";
 import { SOURCES } from "./registry";
@@ -131,7 +131,17 @@ test("registry and states.json agree in both directions, and source IDs are uniq
   const live = STATES_DIR.filter(({ coverage }) => coverage === "live").map(({ abbr }) => abbr).sort();
   expect([...new Set(active.filter(({ coverage }) => coverage === "live").map(({ state }) => state))].sort()).toEqual(live);
   expect(new Set(SOURCES.map(({ id }) => id)).size).toBe(SOURCES.length);
-  const dailyPolls = active.reduce((total, { cadence }) => total + (cadence.kind === "hourly" ? 24 : cadence.hours.length), 0);
+  const schedules = new Map();
+  for (const { id, cadence, pollGroup } of active) {
+    const key = pollGroup ? `group:${pollGroup}` : `source:${id}`;
+    const entry = schedules.get(key);
+    if (entry) {
+      expect(cadence).toEqual(entry.cadence);
+      expect(++entry.size).toBeLessThanOrEqual(MAX_POLL_GROUP);
+    } else schedules.set(key, { cadence, size: 1 });
+  }
+  const dailyPolls = [...schedules.values()]
+    .reduce((total, { cadence }) => total + (cadence.kind === "hourly" ? 24 : cadence.hours.length), 0);
   expect((dailyPolls + 24 * (1 + 51 + 4)) * 3).toBeLessThanOrEqual(10000); // enqueue, dequeue, delete
   for (const item of active) {
     if (item.product === "fire-weather") {
@@ -143,6 +153,39 @@ test("registry and states.json agree in both directions, and source IDs are uniq
     expect(state?.coverage === "live" || state?.coverage === item.coverage).toBe(true);
     if (item.scope === "part") expect(item.coverage).toBe("restrictions");
   }
+});
+
+test("one grouped queue message keeps independent source health, readiness and replay protection", async () => {
+  const box = sandbox();
+  const attempts = [];
+  const available = source("or-local-a", async ({ now }) => {
+    attempts.push("a");
+    return { rows: [row("restricted", now.toISOString())] };
+  }, { pollGroup: "or-local" });
+  const down = source("or-local-b", async () => {
+    attempts.push("b");
+    throw new Error("Publisher unavailable");
+  }, { pollGroup: "or-local" });
+  const other = source("or-local-c", async ({ now }) => {
+    attempts.push("c");
+    return { rows: [row("restricted", now.toISOString())] };
+  }, { pollGroup: "or-local" });
+  const sources = [available, down, other];
+  const ids = sources.map(({ id }) => id);
+  await enqueueSources(box.env, initial, { sources });
+  expect(box.messages).toEqual([
+    { body: { kind: "source-group", ids, slot: initial } },
+    { body: { kind: "merge", due: ids, slot: initial }, delaySeconds: 120 },
+  ]);
+  const job = box.messages[0].body;
+  expect(await run(box, sources, job)).toBe("done");
+  expect(await run(box, sources, job)).toBe("done");
+  expect(attempts).toEqual(["a", "b", "c"]);
+  const heads = await readHeads(box.env.DB);
+  expect(heads.get(available.id)).toMatchObject({ slot: initial, lastGood: new Date(initial).toISOString() });
+  expect(heads.get(down.id)).toMatchObject({ slot: initial, error: "Publisher unavailable" });
+  expect(heads.get(other.id)).toMatchObject({ slot: initial, lastGood: new Date(initial).toISOString() });
+  expect(box.sqlite.query("SELECT count(*) AS count FROM source_jobs").get().count).toBe(0);
 });
 
 test("cron posts one message per due source and one delayed merge, including local cadence gates", async () => {

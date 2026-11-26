@@ -14,6 +14,7 @@ export type CalendarRule = {
   scopeNote: string;
   zone: string;
   seasons?: readonly (readonly [start: string, end: string])[]; // inclusive MM-DD
+  effectiveDates?: readonly [from: string, through: string]; // inclusive YYYY-MM-DD
   hours?: readonly [start: number, end: number]; // local minutes, end exclusive
   hoursByDay?: Readonly<Record<string, readonly [start: number, end: number]>>; // MM-DD override
   counties?: ReadonlySet<string>; // publisher county names without "County"
@@ -26,17 +27,22 @@ function seasonOn(rule: CalendarRule, date: string) {
 }
 
 function inSeason(rule: CalendarRule, date: string): boolean {
-  return !rule.seasons || seasonOn(rule, date) !== undefined;
+  const bounds = rule.effectiveDates;
+  return (!bounds || (date >= bounds[0] && date <= bounds[1])) &&
+    (!rule.seasons || seasonOn(rule, date) !== undefined);
 }
 
 function seasonDates(rule: CalendarRule, date: string) {
   const season = seasonOn(rule, date);
-  if (!season) return { since: null, expires: null };
+  const [from, through] = rule.effectiveDates ?? [];
+  if (!season) return { since: from ?? null, expires: through ?? null };
   const [start, end] = season;
   const year = Number(date.slice(0, 4));
   const wrapsYear = start > end;
   const startYear = wrapsYear && date.slice(5) < start ? year - 1 : year;
-  return { since: `${startYear}-${start}`, expires: `${startYear + Number(wrapsYear)}-${end}` };
+  const since = `${startYear}-${start}`;
+  const expires = `${startYear + Number(wrapsYear)}-${end}`;
+  return { since: from && from > since ? from : since, expires: through && through < expires ? through : expires };
 }
 
 function hoursOn(rule: CalendarRule, date: string) {

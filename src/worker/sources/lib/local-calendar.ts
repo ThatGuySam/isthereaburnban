@@ -7,7 +7,7 @@ import { fetchSource, isSourceUnavailable } from "./http";
 import { manualPdf, matchesPdfEtag } from "./pdf";
 import type { ActiveSource } from "../types";
 
-export type LocalCalendarRule = Pick<CalendarRule, "label" | "note" | "scopeNote" | "seasons" | "hours">;
+export type LocalCalendarRule = Pick<CalendarRule, "label" | "note" | "scopeNote" | "seasons" | "hours" | "effectiveDates">;
 export type LocalCalendarEvidence =
   | { kind: "html"; digest: string; selector: string; startsWith?: string }
   | { kind: "html-blocks"; digest: string; section: string; blocks: string }

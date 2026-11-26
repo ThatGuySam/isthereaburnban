@@ -28,6 +28,8 @@ export type ActiveSource = Metadata & {
   mode: Exclude<SourceHealth["mode"], "manual">;
   coverage: Exclude<Coverage, "directory">;
   cadence: Cadence;
+  /** Co-schedule small publishers with the same cadence in one queue message. */
+  pollGroup?: string;
   /** Full sources cover the state roster unless the publisher defines a smaller one. */
   expectedFips?: readonly string[];
   /** County footprints of a positive-only check, even when no restrictions were published. */

@@ -708,11 +708,15 @@
         "url": "https://www.missoulacounty.gov/9652"
       },
       {
+        "label": "Flathead County burn permits and activation rules",
+        "url": "https://flatheadcounty.gov/department-directory/health/environmental-health/burn-permit"
+      },
+      {
         "label": "Participating county permits and daily restrictions",
         "url": "https://app.egovmt.com/burnpermit/"
       }
     ],
-    "notes": "Montana DEQ posts daily fall air-quality limits for open burning in parts of western Montana. County and district fire officials manage local permits and closures. Tribal, state and federal land managers issue separate fire restrictions for their jurisdictions. Check the permit issuer and land manager for your location."
+    "notes": "Montana DEQ posts daily fall air-quality limits for open burning in parts of western Montana. Participating counties publish permit closures by county, fire district or zone. Local rules can also require permits or limit when a burn can take place. Tribal, state and federal land managers issue restrictions for their jurisdictions. Check the permit issuer and land manager for your location."
   },
   {
     "abbr": "NE",

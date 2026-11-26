@@ -39,6 +39,8 @@ type Options = RequestInit & {
   maxBytes?: number;
   /** Reject responses older than this using the HTTP Date and Age headers. */
   maxResponseAgeMs?: number;
+  /** Read a form-selection redirect without following it or forwarding headers. */
+  formRedirect?: URL;
   fetchImpl?: HttpFetch;
 };
 
@@ -123,7 +125,8 @@ function retryDelay(response: Response | undefined, attempt: number): number {
 }
 
 export async function fetchSource(url: string, options: Options = {}): Promise<SourceReply> {
-  const { fetchImpl = fetch, timeoutMs = 15_000, attempts = 2, maxBytes = 2_000_000, maxResponseAgeMs, validators, ...init } = options;
+  const { fetchImpl = fetch, timeoutMs = 15_000, attempts = 2, maxBytes = 2_000_000, maxResponseAgeMs,
+    validators, formRedirect, ...init } = options;
   const headers = new Headers(init.headers);
   if (!headers.has("user-agent")) headers.set("user-agent", USER_AGENT);
   if (!headers.has("accept")) headers.set("accept", "*/*");
@@ -141,6 +144,16 @@ export async function fetchSource(url: string, options: Options = {}): Promise<S
       const finalUrl = response.url || url;
       const blocked = blockedReason(response.status, response.headers);
       if (blocked) throw new BlockedError(finalUrl, response.status, blocked);
+      if (formRedirect) {
+        const location = response.headers.get("location");
+        if (method !== "POST" || init.redirect !== "manual" || ![302, 303].includes(response.status) ||
+            !location || formRedirect.origin !== new URL(url).origin ||
+            new URL(location, url).href !== formRedirect.href) {
+          throw new Error(`${url} -> unexpected form redirect (HTTP ${response.status})`);
+        }
+        await response.body?.cancel();
+        return { notModified: false, validators: {}, response };
+      }
       if (maxResponseAgeMs !== undefined && (response.ok || response.status === 304)) {
         const sentAt = Date.parse(response.headers.get("date") ?? "");
         const age = response.headers.get("age") ?? "0";
@@ -185,7 +198,7 @@ export async function getText(url: string, options: Options = {}): Promise<strin
 /** Space a publisher's sequential requests within one poll. */
 export function pacedSourceReader(options: Options, intervalMs = 1_000) {
   let nextStart = 0;
-  return async (url: string, request: Pick<RequestInit, "body" | "method"> = {}) => {
+  return async (url: string, request: Pick<Options, "body" | "method" | "headers" | "formRedirect"> = {}) => {
     const wait = nextStart - Date.now();
     if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
     nextStart = Date.now() + intervalMs;

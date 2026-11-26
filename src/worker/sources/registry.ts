@@ -73,7 +73,9 @@ import { moYardWaste } from "./mo/yard-waste";
 import { mtDeqFall } from "./mt/deq-fall";
 import { mtDnrcRestrictions } from "./mt/dnrc";
 import { mtGallatinOpenBurning } from "./mt/gallatin";
+import { mtLocalBurningRules } from "./mt/local-rules";
 import { mtMissoulaSeasons } from "./mt/missoula";
+import { mtPermitPortals } from "./mt/permit-portal";
 import { ncAirHours } from "./nc/air-hours";
 import { ncForestOrders } from "./nc/forest-orders";
 import { ncPermits } from "./nc/permits";
@@ -248,6 +250,8 @@ export const SOURCES: readonly Source[] = [
   mtDnrcRestrictions,
   mtGallatinOpenBurning,
   mtMissoulaSeasons,
+  ...mtPermitPortals.map(({ source }) => source),
+  ...mtLocalBurningRules.map(({ source }) => source),
   wyCountyOrders,
   wyStateLands,
   ndDesRestrictions,

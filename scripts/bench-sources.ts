@@ -104,7 +104,9 @@ import { moYardWaste, parseMoYardWaste } from "../src/worker/sources/mo/yard-was
 import { mtDeqFall, parseDeqFall } from "../src/worker/sources/mt/deq-fall";
 import { mtDnrcRestrictions, parseDnrcRestrictions } from "../src/worker/sources/mt/dnrc";
 import { parseGallatin } from "../src/worker/sources/mt/gallatin";
+import { mtLocalBurningRules } from "../src/worker/sources/mt/local-rules";
 import { mtMissoulaSeasons, parseMissoulaSeasons } from "../src/worker/sources/mt/missoula";
+import { mtPermitPortals } from "../src/worker/sources/mt/permit-portal";
 import { ncAirHours, parseNcAirHours } from "../src/worker/sources/nc/air-hours";
 import { applyNcOrders, ncForestOrders, parseNcNewsroom, parseNcOrder } from "../src/worker/sources/nc/forest-orders";
 import { ncPermits, parseNcPermits } from "../src/worker/sources/nc/permits";
@@ -564,6 +566,20 @@ const parseMtDeq = () => parseDeqFall(JSON.parse(mtDeq), mtCaptured);
 const parseMtDnrc = () => parseDnrcRestrictions(JSON.parse(mtDnrcLayer), JSON.parse(mtDnrcOrders), mtCaptured);
 const parseMtGallatin = () => parseGallatin(mtGallatin, new Date("2026-11-20T19:00:00Z"));
 const parseMtMissoula = async () => parseMissoulaSeasons(await extractHtml(mtMissoula), mtCaptured);
+const mtCountyCaptured = new Date("2026-11-26T07:40:00Z");
+const mtPortalFixtures = ["flathead", "hill", "missoula", "yellowstone", "sanders", "lincoln"].map((county) => {
+  const adapter = mtPermitPortals.find(({ source }) => source.id === `mt-permit-${county}`);
+  if (!adapter) throw new Error(`Missing Montana permit portal adapter for ${county}`);
+  const body = utf8(`mt/fixtures/permit-${county}-2026-11-26.html`);
+  return { source: adapter.source, parse: () => adapter.parse(body, mtCountyCaptured) };
+});
+const mtRuleFixtures = mtLocalBurningRules.map(({ source, parse, evidenceKind }) => {
+  const extension = evidenceKind === "pdf-etag" ? "json" : evidenceKind === "pdf" ? "pdf" : "html";
+  const path = `mt/fixtures/${source.id.slice(3)}-2026-11-26.${extension}`;
+  const body = extension === "json" ? null : raw(path);
+  const headers = extension === "json" ? JSON.parse(utf8(path)) : undefined;
+  return { source, parse: () => parse(new Response(body, { headers }), mtCaptured) };
+});
 const wyCaptured = new Date("2026-11-24T09:41:20Z");
 const wyCountyLayer = utf8("wy/fixtures/county-layer-2026-11-24.json");
 const wyCounties = utf8("wy/fixtures/county-restrictions-2026-11-24.json");
@@ -1095,6 +1111,8 @@ const jobs: Array<[string, () => unknown]> = [
   ["MT DNRC interagency ArcGIS dashboard", parseMtDnrc],
   ["MT Gallatin district status table", parseMtGallatin],
   ["MT Missoula seasonal closures", parseMtMissoula],
+  ...mtPortalFixtures.map(({ source, parse }): [string, typeof parse] => [source.id, parse]),
+  ...mtRuleFixtures.map(({ source, parse }): [string, typeof parse] => [source.id, parse]),
   ["AK DNR permit zone statuses", parseAkZones],
   ["AK DNR fire-season permit law", parseAkSummer],
   ["AK DEC winter open-burning rule", parseAkWinter],
