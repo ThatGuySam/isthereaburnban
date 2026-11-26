@@ -201,6 +201,8 @@ import { neLincolnLancasterAir, parseNeLincolnAir } from "../src/worker/sources/
 import { neOpenBurningLaw, parseNeOpenBurning } from "../src/worker/sources/ne/open-burning";
 import { nhOpenBurningPermits, parseNhOpenBurning } from "../src/worker/sources/nh/open-burning";
 import { nhTownHallRoad, parseTownHallRoad } from "../src/worker/sources/nh/town-hall-road";
+import { nhLocalRules } from "../src/worker/sources/nh/local-rules";
+import { nhMunicipalStatus } from "../src/worker/sources/nh/municipal-status";
 import { parseRiDemRule, riDemForest, riDemParks } from "../src/worker/sources/ri/dem-rules";
 import { parseRiTownRule, riTownSources } from "../src/worker/sources/ri/town-rules";
 
@@ -338,6 +340,11 @@ const nhForestAlerts = utf8("nh/fixtures/usfs-alerts-2026-11-24.html");
 const nhRoadOrder = utf8("nh/fixtures/usfs-town-hall-road-2026-11-24.html");
 const parseNhStatuteFixture = () => parseNhOpenBurning(nhStatute, nhCaptured);
 const parseNhForestFixture = () => parseTownHallRoad(nhForestAlerts, async () => nhRoadOrder, nhCaptured);
+const nhCountyCaptured = new Date("2026-11-26T13:20:00Z");
+const nhCountyFixtures = [...nhLocalRules, ...nhMunicipalStatus].map(({ source, parse, fixture }) => {
+  const body = raw(`nh/fixtures/${fixture}`);
+  return { source, parse: () => parse(new Response(body), nhCountyCaptured) };
+});
 
 const neStatuteCaptured = new Date("2026-11-24T16:31:48Z");
 const neLincolnCaptured = new Date("2026-11-24T16:32:38Z");
@@ -1004,6 +1011,9 @@ recordedInputs.push(
   { source: alCahabaBurning, rows: await parseAlCahaba(), checked: alCaptured.toISOString() },
   { source: nhOpenBurningPermits, rows: await parseNhStatuteFixture(), checked: nhCaptured.toISOString() },
   { source: nhTownHallRoad, rows: await parseNhForestFixture(), checked: nhCaptured.toISOString() },
+  ...await Promise.all(nhCountyFixtures.map(async ({ source, parse }) => ({
+    source, rows: await parse(), checked: nhCountyCaptured.toISOString(),
+  }))),
   { source: neOpenBurningLaw, rows: await parseNeStatuteFixture(), checked: neStatuteCaptured.toISOString() },
   { source: neLincolnLancasterAir, rows: await parseNeLincolnFixture(), checked: neLincolnCaptured.toISOString() },
   ...await Promise.all(riJobs.map(async ([, source, parse]) => ({
@@ -1134,6 +1144,7 @@ const jobs: Array<[string, () => unknown]> = [
   ["AL Cahaba Valley district status", parseAlCahaba],
   ["NH open-burning statute and calendar", parseNhStatuteFixture],
   ["NH White Mountain Drupal forest order", parseNhForestFixture],
+  ...nhCountyFixtures.map(({ source, parse }): [string, () => unknown] => [source.id, parse]),
   ["NE open-burning statute and calendar", parseNeStatuteFixture],
   ["NE Lincoln-Lancaster open-burning rules and calendar", parseNeLincolnFixture],
   ...riJobs.map(([name, , parse]): [string, () => unknown] => [name, () => parse(riSpring)]),

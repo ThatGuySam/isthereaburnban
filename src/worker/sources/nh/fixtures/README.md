@@ -32,3 +32,26 @@ Direct HTTP GET results on November 24.
 The checked CivicPlus alert centers for Fremont, Greenland, Hanover, Lebanon and Concord had no current burn notices. The state permit portal answered, and its public application starts with personal identification fields. The NWS active New Hampshire response had zero features at approximately 16:21 UTC. These checks leave temporary municipal and statewide order status unconfirmed. [Permit portal](https://nh.burnsafeamerica.com/) · [NWS active alerts](https://api.weather.gov/alerts/active?area=NH)
 
 The General Court's current rules describe permit suspension at Ncr 561.09, and permit hours at Ncr 561.04. The Governor can issue woodland fire proclamations with Executive Council approval under RSA 227-L:15. An apparent November 2026 press clipping repeated the October 29, 2025 rescission. Rochester's contemporaneous notice gives the effective date, and the November 2026 Council schedule lists November 10 as its meeting date. [Administrative rules](https://gc.nh.gov/rules/state_agencies/ncr520-590.html) · [RSA 227-L:15](https://gc.nh.gov/rsa/html/XIX-A/227-L/227-L-15.htm) · [Rochester's October 2025 confirmation](https://news.rochesternh.gov/statewide-burn-ban-lifted-rochester-fire-department-urges-caution/) · [Council schedule](https://www.sos.nh.gov/gc-schedule)
+
+## County pass captures
+
+The county-pass HTML captures retain the publisher's decision panel or reviewed rule text and its selector ancestors. The PDFs are byte-for-byte captures. All requests were public GETs using the project user agent on November 26, 2026. The times below are the HTTP Date values in UTC.
+
+| Fixture | Request URL | Time |
+| --- | --- | --- |
+| `nashua-permit-status-2026-11-26.html` | https://nashuanh.burnpermits.com/ | 13:05:01 |
+| `hudson-permit-status-2026-11-26.html` | https://hudsonnh.burnpermits.com/ | 13:05:30 |
+| `laconia-permit-rule-2026-11-26.html` | https://www.laconianh.gov/709/Permits-and-Inspection-Guidelines | 13:07:07 |
+| `madison-permit-rule-2026-11-26.html` | https://www.madison-nh.org/departments/firerescue-department/ | 13:10:29 |
+| `sullivan-warden-rule-2026-11-26.pdf` | https://townofsullivannh.com/vertical/sites/%7B55112C42-38E1-4306-9104-21AA508BD373%7D/uploads/ANSWERS_-_Fire_Department.pdf | 13:12:44 |
+| `gorham-permit-rule-2026-11-26.html` | https://www.gorhamnh.gov/pages/emergency-services | 13:12:45 |
+| `hanover-snow-rule-2026-11-26.html` | https://hanovernh.org/274/Burning-Permit-Information | 13:07:08 |
+| `nashua-permit-rule-2026-11-26.html` | https://nashuanh.gov/1364/Residential-Burning-Permits | 13:04:26 |
+| `manchester-recreational-fire-rule-2026-11-26.html` | https://www.manchesternh.gov/Departments/Fire/Fire-Prevention/Safety-Compliance-Standards | 13:07:38 |
+| `concord-setback-rule-2026-11-26.html` | https://www.concordnh.gov/1110/Burn-Permits | 13:05:00 |
+| `portsmouth-streets-rule-2026-11-26.html` | https://www.portsmouthnh.gov/fire/online-burn-permitting | 13:04:26 |
+| `somersworth-burn-rule-2026-11-26.pdf` | https://www.somersworthnh.gov/sites/g/files/vyhlif1226/f/uploads/fire_safety_and_emergency_tips.pdf | 13:10:29 |
+| `claremont-burn-zone-rule-2026-11-26.html` | https://www.claremontnh.com/faq | 13:10:29 |
+| `../../lib/fixtures/fluent-burn-permits-ban-2026-11-26.html` | https://yavco.burnpermits.com/ | 13:07:29 |
+
+Nashua and Hudson were permissive under their existing permit terms. The Yavapai capture establishes the shared vendor's explicit ban banner. The county-pass tests also change the text and addresses in memory to check that ambiguous decisions and revised rules require review.

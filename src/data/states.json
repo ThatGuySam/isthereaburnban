@@ -810,7 +810,7 @@
     "abbr": "NH",
     "name": "New Hampshire",
     "coverage": "restrictions",
-    "publisher": "New Hampshire General Court and U.S. Forest Service",
+    "publisher": "New Hampshire General Court, municipal fire departments and U.S. Forest Service",
     "officialUrl": "https://gc.nh.gov/rsa/html/XIX-A/227-L/227-L-17.htm",
     "extraUrls": [
       {
@@ -828,9 +828,13 @@
       {
         "label": "White Mountain National Forest alerts and orders",
         "url": "https://www.fs.usda.gov/r09/whitemountain/alerts"
+      },
+      {
+        "label": "New Hampshire town and city directory",
+        "url": "https://www.nheconomy.com/office-of-planning-and-development/what-we-do/state-data-center-%28census-data%29/municipalities%2C-counties-and-regions"
       }
     ],
-    "notes": "Town forest fire wardens issue open-burning permits and can confirm local rules and suspensions. See coverage for the latest checks on state permit law and the U.S. Forest Service order for part of Carroll County."
+    "notes": "Town forest fire wardens issue open-burning permits and can confirm local rules and suspensions. Coverage includes the statewide permit law, selected municipal rules, local suspension checks in Nashua and Hudson, and a U.S. Forest Service order for part of Carroll County."
   },
   {
     "abbr": "NJ",

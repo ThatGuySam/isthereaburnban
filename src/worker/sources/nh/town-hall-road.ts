@@ -78,7 +78,7 @@ export async function parseTownHallRoad(
 
 export const nhTownHallRoad: ActiveSource = {
   ...META, mode: "positive-only", coverage: "restrictions", staleMs: STALE_MS,
-  cadence: { kind: "daily", zone: ZONE, hours: [0] },
+  cadence: { kind: "daily", zone: ZONE, hours: [0] }, pollGroup: "nh-daily-rules",
   async fetch({ now }) {
     const read = pacedSourceReader({
       headers: { accept: "text/html" }, maxBytes: 350_000, maxResponseAgeMs: 6 * 60 * 60 * 1_000,

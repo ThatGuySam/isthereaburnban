@@ -93,6 +93,8 @@ import { ndLocalBurningRules } from "./nd/local-rules";
 import { ndDesRestrictions } from "./nd/restrictions";
 import { neLincolnLancasterAir } from "./ne/lincoln-air";
 import { neOpenBurningLaw } from "./ne/open-burning";
+import { nhLocalRules } from "./nh/local-rules";
+import { nhMunicipalStatus } from "./nh/municipal-status";
 import { nhOpenBurningPermits } from "./nh/open-burning";
 import { nhTownHallRoad } from "./nh/town-hall-road";
 import { njLocalBurnRules } from "./nj/local-rules";
@@ -363,6 +365,8 @@ export const SOURCES: readonly Source[] = [
   alCahabaBurning,
   nhOpenBurningPermits,
   nhTownHallRoad,
+  ...nhMunicipalStatus.map(({ source }) => source),
+  ...nhLocalRules.map(({ source }) => source),
   neOpenBurningLaw,
   neLincolnLancasterAir,
   riDemForest,
