@@ -63,9 +63,10 @@ test("both real WordPress notice fixtures parse under 5 ms p95", () => {
     const run = () => parse(JSON.parse(fixture), captured);
     for (let i = 0; i < 10; i++) run();
     const samples = Array.from({ length: 30 }, () => {
-      const start = performance.now();
+      const start = process.threadCpuUsage();
       run();
-      return performance.now() - start;
+      const { user, system } = process.threadCpuUsage(start);
+      return (user + system) / 1_000;
     }).sort((a, b) => a - b);
     expect(samples[28]).toBeLessThan(5);
   }

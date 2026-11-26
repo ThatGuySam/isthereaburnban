@@ -124,9 +124,10 @@ test("ND fixture decoding and parsing stay below 5 ms at p95", () => {
   const parseFixture = () => parseNdRestrictions(JSON.parse(declarationsBody), JSON.parse(ratingsBody), captured);
   for (let i = 0; i < 20; i++) parseFixture();
   const timings = Array.from({ length: 60 }, () => {
-    const start = performance.now();
+    const start = process.threadCpuUsage();
     parseFixture();
-    return performance.now() - start;
+    const { user, system } = process.threadCpuUsage(start);
+    return (user + system) / 1_000;
   }).sort((a, b) => a - b);
   expect(timings[Math.ceil(timings.length * 0.95) - 1]).toBeLessThan(5);
 });

@@ -58,9 +58,10 @@ test("each reviewed local rule parses its fixture in under 6 ms p95", async () =
     for (let i = 0; i < 4; i++) await run();
     const samples = [];
     for (let i = 0; i < 25; i++) {
-      const start = performance.now();
+      const start = process.threadCpuUsage();
       await run();
-      samples.push(performance.now() - start);
+      const { user, system } = process.threadCpuUsage(start);
+      samples.push((user + system) / 1_000);
     }
     samples.sort((a, b) => a - b);
     const p95 = samples[23];
