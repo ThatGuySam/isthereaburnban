@@ -154,14 +154,14 @@ test("Colorado county fixture parsing stays below 5 ms p95", async () => {
     for (let rep = 0; rep < 10; rep++) await parse();
     const samples = [];
     for (let rep = 0; rep < 40; rep++) {
-      const started = process.cpuUsage();
+      const started = process.threadCpuUsage();
       await parse();
-      const { user, system } = process.cpuUsage(started);
+      const { user, system } = process.threadCpuUsage(started);
       samples.push((user + system) / 1_000);
     }
     const p95 = samples.sort((a, b) => a - b)[37];
     if (p95 > slowest.ms) slowest = { name: source.id, ms: p95 };
   }
-  console.log(`CO county fixture parse CPU p95 max ${slowest.ms.toFixed(3)} ms (${slowest.name})`);
+  console.log(`CO county fixture parse thread CPU p95 max ${slowest.ms.toFixed(3)} ms (${slowest.name})`);
   expect(slowest.ms).toBeLessThan(5);
 });
