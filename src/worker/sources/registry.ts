@@ -89,6 +89,7 @@ import { neLincolnLancasterAir } from "./ne/lincoln-air";
 import { neOpenBurningLaw } from "./ne/open-burning";
 import { nhOpenBurningPermits } from "./nh/open-burning";
 import { nhTownHallRoad } from "./nh/town-hall-road";
+import { njLocalBurnRules } from "./nj/local-rules";
 import { njRestrictions } from "./nj/restrictions";
 import { nmAngelFirePermits } from "./nm/angel-fire";
 import { nmBernalilloOpenBurning, nmOpenBurning } from "./nm/open-burning";
@@ -197,6 +198,7 @@ export const SOURCES: readonly Source[] = [
   ...miLocalNotices,
   ...miLocalRules.map(({ source }) => source),
   njRestrictions,
+  ...njLocalBurnRules.map(({ source }) => source),
   wiPermits,
   ...wiLocalStatuses.map(({ source }) => source),
   ...wiLocalRules.map(({ source }) => source),

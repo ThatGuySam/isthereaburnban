@@ -131,6 +131,7 @@ export const njRestrictions: ActiveSource = {
   coverage: "restrictions",
   // Firewardens can change the stages without notice. Recheck source timestamps each poll.
   cadence: { kind: "hourly" },
+  pollGroup: "nj-and-pike-hourly",
   staleMs: MAX_EDIT_AGE_MS,
   async fetch({ now }) {
     const options = { headers: { accept: "application/json" }, maxBytes: 100_000 };

@@ -113,6 +113,7 @@ import { mtPermitPortals } from "../src/worker/sources/mt/permit-portal";
 import { ncAirHours, parseNcAirHours } from "../src/worker/sources/nc/air-hours";
 import { applyNcOrders, ncForestOrders, parseNcNewsroom, parseNcOrder } from "../src/worker/sources/nc/forest-orders";
 import { ncPermits, parseNcPermits } from "../src/worker/sources/nc/permits";
+import { njLocalBurnRules } from "../src/worker/sources/nj/local-rules";
 import { njRestrictions, parseNjRestrictions } from "../src/worker/sources/nj/restrictions";
 import { nmAngelFirePermits, parseAngelFirePermits } from "../src/worker/sources/nm/angel-fire";
 import { nmBernalilloOpenBurning, nmOpenBurning, parseNmOpenBurning } from "../src/worker/sources/nm/open-burning";
@@ -226,6 +227,15 @@ const miLocalRuleFixtures = miLocalRules.map(({ source, parse, fixture }) => {
 });
 const njDivisions = utf8("nj/fixtures/divisions-2026-11-24.json");
 const njCounties = utf8("nj/fixtures/counties-2026-11-24.json");
+const njCountyFixtures = njLocalBurnRules.map(({ source, parse, fixture }) => {
+  const path = `nj/fixtures/county-pass/${fixture}`;
+  if (fixture.endsWith(".headers.json")) {
+    const headers = JSON.parse(utf8(path));
+    return { source, parse: () => parse(new Response(null, { headers }), now) };
+  }
+  const body = raw(path);
+  return { source, parse: () => parse(new Response(body), now) };
+});
 const wiPermitsJson = utf8("wi/fixtures/permits-2026-11-24.json");
 const wiCountyCaptured = new Date("2026-11-25T06:13:00Z");
 const wiLocalRuleFixtures = wiLocalRules.map(({ source, parse, fixture }) => {
@@ -1203,6 +1213,7 @@ const jobs: Array<[string, () => unknown]> = [
   ["TN Gatlinburg Apptegy permit notices", parseTnGatlinburg],
   ["TN Tullahoma Revize and Google Forms permit status", parseTnTullahoma],
   ...tnLocalFixtures.map<[string, () => unknown]>(({ id, parse }) => [`TN local burn rule (${id})`, parse]),
+  ...njCountyFixtures.map(({ source, parse }): [string, typeof parse] => [source.id, parse]),
   ["NY DEC brush rules and Fire Towns", parseNyDecFixture],
   ["NYC 311 outdoor barbecuing rules", parseNyNycFixture],
   ...nyCountyFixtures.map(({ source, parse }): [string, typeof parse] => [source.id, parse]),

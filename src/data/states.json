@@ -826,7 +826,7 @@
     "coverage": "restrictions",
     "publisher": "New Jersey Forest Fire Service",
     "officialUrl": "https://www.arcgis.com/apps/dashboards/ab223d9403e94560a60b31b4141cc46e",
-    "notes": "The Forest Fire Service reports temporary campfire and agricultural burning restrictions by division or by county. Forest fire wardens handle state permits, and towns can have their own rules.",
+    "notes": "The Forest Fire Service reports temporary campfire and agricultural burning restrictions by division or county. Local reports describe standing rules within the named municipality or county park system.",
     "extraUrls": [
       {
         "label": "Campfire permits and restriction stages",
@@ -835,6 +835,10 @@
       {
         "label": "Agricultural burning permits",
         "url": "https://dep.nj.gov/parksandforests/wildfire/agricultural/"
+      },
+      {
+        "label": "County emergency management contacts",
+        "url": "https://nj.gov/njoem/about-us/county-coordinators.shtml"
       }
     ]
   },

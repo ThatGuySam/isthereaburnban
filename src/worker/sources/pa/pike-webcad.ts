@@ -53,7 +53,7 @@ export async function parsePikeWebCad(input: Response | string, now: Date): Prom
 
 export const paPikeWebCad: ActiveSource = {
   ...META, mode: "positive-only", coverage: "restrictions", reportingFips: [COUNTY.fips],
-  cadence: { kind: "hourly" }, staleMs: MAX_AGE_MS,
+  cadence: { kind: "hourly" }, pollGroup: "nj-and-pike-hourly", staleMs: MAX_AGE_MS,
   async fetch({ now }) {
     const reply = await fetchSource(URL, { headers: { accept: "text/html" }, maxBytes: 250_000 });
     if (reply.notModified) throw new Error("Unexpected Pike WebCAD 304");
