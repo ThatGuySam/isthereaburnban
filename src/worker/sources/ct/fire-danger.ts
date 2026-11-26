@@ -52,11 +52,15 @@ export async function parseCtFireDanger(input: Response | string, now: Date): Pr
   }));
 }
 
+export const CT_DAILY_POLL_GROUP = "ct-daily";
+export const CT_DAILY_POLL_HOURS = [8, 11, 15] as const;
+
 export const ctDeepFireDanger: ActiveSource = {
   ...META, mode: "positive-only", coverage: "restrictions", keepRowLinks: true,
   reportingFips: COUNTIES.map(({ fips }) => fips),
   // DEEP normally publishes before 8 a.m. Eastern. Recheck for late reports and revisions.
-  cadence: { kind: "daily", zone: ZONE, hours: [8, 11, 15] },
+  cadence: { kind: "daily", zone: ZONE, hours: CT_DAILY_POLL_HOURS },
+  pollGroup: CT_DAILY_POLL_GROUP,
   staleMs: 24 * 3_600_000,
   async fetch({ now }) {
     const read = async (headers: HeadersInit) => {

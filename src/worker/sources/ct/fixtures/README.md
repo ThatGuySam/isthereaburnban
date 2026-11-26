@@ -22,3 +22,22 @@ All eight URLs returned HTTP 200 to a direct GET with the project User-Agent. Th
 | [Litchfield permit rules](https://www.townoflitchfieldct.gov/subpages/burning-permits), municipal HTML | Requires a permit and bars covered burning at High, Very High or Extreme. It has no dated decision. |
 
 The [Chesterfield Fire Company](https://nextdoor.com/agency-detail/ct/town-of-montville/chesterfield-fire-company-1/) confirmed the November 24 High reading for Montville and that its permits were invalid that day. The [Montville Fire Marshal](https://www.montville-ct.gov/department-services/fire-marshall-emergency-management/) explains the town's permit rules.
+
+## County pass captures
+
+Public GETs with the project user agent returned HTTP 200 on November 26, 2026. The times below are UTC. The eCode360 captures retain the numbered sections used by the parser and their ancestor elements. The CivicPlus captures retain the title and content widget markup. Each trimmed fixture produced the same fingerprint as the full public page.
+
+| Fixture | Request URL | Time (UTC) |
+| --- | --- | --- |
+| `ridgefield-open-burning-2026-11-26.html` | https://ecode360.com/12368289 | 13:29:36 |
+| `newington-residential-brush-2026-11-26.html` | https://ecode360.com/8835073 | 13:29:50 |
+| `milford-open-burning-2026-11-26.html` | https://ecode360.com/14523165 | 13:29:39 |
+| `harwinton-open-burning-2026-11-26.html` | https://ecode360.com/44844383 | 13:29:42 |
+| `winchester-brush-certificates-2026-11-26.html` | https://ecode360.com/37116189 | 13:29:41 |
+| `old-saybrook-open-burning-2026-11-26.html` | https://ecode360.com/8718820 | 13:29:44 |
+| `mansfield-open-burning-2026-11-26.html` | https://ecode360.com/11768140 | 13:29:46 |
+| `putnam-open-burning-2026-11-26.html` | https://ecode360.com/47691550 | 13:29:47 |
+| `trumbull-open-burning-2026-11-26.html` | https://www.trumbull-ct.gov/167/Open-Burn-Permits | 13:29:38 |
+| `north-stonington-brush-permits-2026-11-26.html` | https://www.northstoningtonct.gov/217/Burning-Permit-Information | 13:29:37 |
+
+Harwinton’s code specifies 12:01 a.m. June 1 and 11:59 p.m. September 30, so the seasonal row uses those local times on the boundary days. North Stonington’s page says permits are unavailable between June 15 and September 15. The extra seasonal row covers June 16 through September 14, and the standing permit rule continues to apply on the two boundary dates. The town’s form specifies permit validity conditions separately from the issuance pause. [North Stonington permit form](https://www.northstoningtonct.gov/DocumentCenter/View/6010/Burning-Permit-Fillable-2026)

@@ -29,6 +29,7 @@ import { coDenverAir } from "./co/denver-air";
 import { coLocalBurningRules } from "./co/local-rules";
 import { coLocalFireSources } from "./co/local-status";
 import { ctDeepFireDanger } from "./ct/fire-danger";
+import { ctLocalRules } from "./ct/local-rules";
 import { dcOpenBurning } from "./dc/open-burning";
 import { dcRockCreekFireRules } from "./dc/rock-creek";
 import { deActionDays } from "./de/air-quality";
@@ -356,6 +357,7 @@ export const SOURCES: readonly Source[] = [
   meOpenBurningPermits,
   maOpenBurning,
   ctDeepFireDanger,
+  ...ctLocalRules.map(({ source }) => source),
   ...Object.values(illinoisGuidanceSources),
   ilCrawfordCountyOrders,
   ksOpenBurning,

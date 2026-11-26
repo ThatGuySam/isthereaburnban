@@ -53,6 +53,7 @@ import {
   coHtmlFireStatus, parseCheyenneFire, parseEagleFireMap, parseHuerfanoFire, parseJeffersonFire,
 } from "../src/worker/sources/co/local-status";
 import { ctDeepFireDanger, parseCtFireDanger } from "../src/worker/sources/ct/fire-danger";
+import { ctLocalRules } from "../src/worker/sources/ct/local-rules";
 import { deActionDays, parseDeActionDays } from "../src/worker/sources/de/air-quality";
 import { deOpenBurning, parseDeOpenBurning } from "../src/worker/sources/de/open-burning";
 import { gaEpdNonSummer, parseEpdSeasonal } from "../src/worker/sources/ga/epd";
@@ -304,6 +305,10 @@ const parseMeStatute = () => parseMaineOpenBurning(meStatute, meCaptured);
 const ctCaptured = new Date("2026-11-24T15:15:32Z");
 const ctReport = utf8("ct/fixtures/fire-danger-2026-11-24.html");
 const parseCtFireDangerFixture = () => parseCtFireDanger(ctReport, ctCaptured);
+const ctCountyFixtures = ctLocalRules.map(({ source, parse, fixture }) => {
+  const body = raw(`ct/fixtures/${fixture}`);
+  return { source, parse: () => parse(new Response(body), ctCaptured) };
+});
 const ilCaptured = new Date("2026-11-24T15:37:59Z");
 const ilCrawford = utf8("il/fixtures/wtye-crawford-2026-11-24.json");
 const parseIlCrawford = (at = ilCaptured) => parseCrawfordCountyOrders(JSON.parse(ilCrawford), at);
@@ -1000,6 +1005,9 @@ recordedInputs.push(
   { source: meTownPermitHolds, rows: parseMeClasses(), checked: meCaptured.toISOString() },
   { source: meOpenBurningPermits, rows: await parseMeStatute(), checked: meCaptured.toISOString() },
   { source: ctDeepFireDanger, rows: await parseCtFireDangerFixture(), checked: ctCaptured.toISOString() },
+  ...await Promise.all(ctCountyFixtures.map(async ({ source, parse }) => ({
+    source, rows: await parse(), checked: ctCaptured.toISOString(),
+  }))),
   { source: ilCrawfordCountyOrders, rows: parseIlCrawford(now), checked },
   ...await Promise.all(ilJobs.map(async ([, source, parse]) => ({ source, rows: await parse(now), checked }))),
   { source: ksDickinsonDistricts, rows: parseKsDistricts(), checked: ksCaptured.toISOString() },
@@ -1133,6 +1141,7 @@ const jobs: Array<[string, () => unknown]> = [
   ["ME fire danger and town permit rules", parseMeClasses],
   ["ME open-burning statute and calendar", parseMeStatute],
   ["CT DEEP daily fire danger", parseCtFireDangerFixture],
+  ...ctCountyFixtures.map(({ source, parse }): [string, () => unknown] => [source.id, parse]),
   ["IL Crawford County orders via WTYE", parseIlCrawford],
   ...ilJobs.map(([name, , parse]): [string, () => unknown] => [name, parse]),
   ["KS Dickinson County ArcGIS fire districts", parseKsDistricts],

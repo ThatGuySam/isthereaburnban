@@ -1,5 +1,6 @@
 import { apptegyFormSection, apptegyPageText } from "./apptegy";
 import { calendarStatusRows, type CalendarCounty, type CalendarRule } from "./calendar";
+import { civicPlusPageParagraphs } from "./civicplus";
 import { reviewedEcode360Digest } from "./ecode360";
 import { sha256 } from "./hash";
 import { htmlStatusBlocks, reviewedAnchoredHtmlDigest, reviewedHeadingDigest, reviewedHtmlDigest } from "./html";
@@ -8,7 +9,7 @@ import { manualPdf, matchesPdfEtag } from "./pdf";
 import { reviewedRuleFallback, RuleChangedError } from "../statutory-fallback";
 import type { ActiveSource } from "../types";
 
-export type LocalCalendarRule = Pick<CalendarRule, "label" | "note" | "scopeNote" | "seasons" | "hours" | "effectiveDates">;
+export type LocalCalendarRule = Pick<CalendarRule, "label" | "note" | "scopeNote" | "seasons" | "hours" | "hoursByDay" | "effectiveDates">;
 export type LocalCalendarEvidence =
   | { kind: "html"; digest: string; selector: string; startsWith?: string }
   | { kind: "html-blocks"; digest: string; section: string; blocks: string }
@@ -17,6 +18,7 @@ export type LocalCalendarEvidence =
   | { kind: "html-apptegy-node"; digest: string; pageId: number; nodeId: string }
   | { kind: "json-apptegy-form"; digest: string; section: Parameters<typeof apptegyFormSection>[1] }
   | { kind: "html-ecode360"; digest: string; sections: readonly [string, ...string[]] }
+  | { kind: "html-civicplus"; digest: string; title: string }
   | { kind: "pdf"; digest: string }
   | { kind: "pdf-etag"; etag: string };
 type Publisher = Pick<ActiveSource, "id" | "state" | "scope" | "stack" | "sourceName" | "sourceUrl" | "officialUrl">;
@@ -51,6 +53,8 @@ async function matchesReview(input: Response, review: LocalCalendarEvidence): Pr
       return await sha256(apptegyFormSection(await input.json(), review.section)) === review.digest;
     case "html-ecode360":
       return await reviewedEcode360Digest(input, review.sections) === review.digest;
+    case "html-civicplus":
+      return await sha256((await civicPlusPageParagraphs(input, review.title)).join("\n")) === review.digest;
     case "pdf":
       return (await manualPdf(input)).sha256 === review.digest;
     case "pdf-etag":
