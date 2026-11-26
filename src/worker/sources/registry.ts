@@ -34,8 +34,10 @@ import { hiCabNoBurnPeriods } from "./hi/no-burn-periods";
 import { hiCabOpenBurning } from "./hi/open-burning";
 import { iaCountyBulletins } from "./ia/county-status";
 import { iaLocalCalendars } from "./ia/local-rules";
+import { idCountyBulletins } from "./id/county-status";
 import { idIdlStages } from "./id/idl-stages";
 import { idKootenaiAir } from "./id/kootenai-air";
+import { idCountyCalendars } from "./id/local-rules";
 import { idSeasonal } from "./id/seasonal";
 import { ilCrawfordCountyOrders } from "./il/crawford";
 import { illinoisGuidanceSources } from "./il/guidance";
@@ -218,6 +220,8 @@ export const SOURCES: readonly Source[] = [
   idIdlStages,
   idKootenaiAir,
   idSeasonal,
+  ...idCountyBulletins.map(({ source }) => source),
+  ...idCountyCalendars.map(({ source }) => source),
   akDnrPermitZones,
   akDnrFireSeason,
   alJeffersonOpenBurning,

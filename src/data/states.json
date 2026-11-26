@@ -367,6 +367,14 @@
       {
         "label": "Kootenai County Fire & Rescue burning rules",
         "url": "https://kootenaifire.com/burn-permits/"
+      },
+      {
+        "label": "Treasure Valley local burning ordinances",
+        "url": "https://www2.deq.idaho.gov/air/AQIPublic/Ordinance/Index/3"
+      },
+      {
+        "label": "Nez Perce Reservation burn permits",
+        "url": "https://farr.npterwmairquality.org/"
       }
     ],
     "notes": "Land managers issue fire restrictions by zone, and Idaho DEQ issues separate air-quality restrictions. From May 10 through October 20, check state fire-safety permit requirements. Ask your local fire district, city, county, or Tribe about additional rules for your location."

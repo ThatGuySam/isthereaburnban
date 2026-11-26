@@ -53,8 +53,10 @@ import { GA_LOCAL_RULES, gaLocalRuleKeys, gaLocalRuleSources, parseGaLocalRule }
 import { parsePermitCalendar } from "../src/worker/sources/ga/permit-calendar";
 import { iaCountyBulletins } from "../src/worker/sources/ia/county-status";
 import { iaLocalCalendars } from "../src/worker/sources/ia/local-rules";
+import { idCountyBulletins } from "../src/worker/sources/id/county-status";
 import { idIdlStages, parseIdlStages } from "../src/worker/sources/id/idl-stages";
 import { idKootenaiAir, parseKootenaiAir } from "../src/worker/sources/id/kootenai-air";
+import { idCountyCalendars } from "../src/worker/sources/id/local-rules";
 import { idSeasonal, parseIdahoSeasonal } from "../src/worker/sources/id/seasonal";
 import { ilCrawfordCountyOrders, parseCrawfordCountyOrders } from "../src/worker/sources/il/crawford";
 import { illinoisGuidanceSources, parseIllinoisGuidance } from "../src/worker/sources/il/guidance";
@@ -531,6 +533,11 @@ const idStatute = utf8("id/fixtures/section-38-115-2026-11-24.html");
 const parseIdlFixture = () => parseIdlStages(JSON.parse(idLayer), arcgisRows(JSON.parse(idZones), { requireComplete: true }), idCaptured);
 const parseIdForecastFixture = () => parseKootenaiAir(idForecast, idCaptured);
 const parseIdStatuteFixture = (time = summerDay) => parseIdahoSeasonal(idStatute, time);
+const idCountyFixtures = [...idCountyBulletins, ...idCountyCalendars].map(({ source, parse, fixture }) => {
+  const path = `id/fixtures/${fixture}`;
+  const body = fixture.endsWith(".gz") ? new Uint8Array(gunzipSync(from(path))) : raw(path);
+  return { source, parse: () => parse(new Response(body), now) };
+});
 const utCaptured = new Date("2026-11-24T09:10:16Z");
 const utLayer = utf8("ut/fixtures/layer-2026-11-24.json");
 const utOrders = utf8("ut/fixtures/orders-2026-11-24.json");
@@ -848,6 +855,7 @@ recordedInputs.push(
   { source: idIdlStages, rows: parseIdlFixture(), checked: idCaptured.toISOString() },
   { source: idKootenaiAir, rows: await parseIdForecastFixture(), checked: idCaptured.toISOString() },
   { source: idSeasonal, rows: await parseIdStatuteFixture(idCaptured), checked: idCaptured.toISOString() },
+  ...await Promise.all(idCountyFixtures.map(async ({ source, parse }) => ({ source, rows: await parse(), checked }))),
   { source: utFfslFireOrders, rows: parseUtOrders(), checked: utCaptured.toISOString() },
   { source: utClosedFireSeason, rows: parseUtStatute(utCaptured), checked: utCaptured.toISOString() },
   { source: mtDeqFall, rows: parseMtDeq(), checked: mtCaptured.toISOString() },
@@ -1001,6 +1009,7 @@ const jobs: Array<[string, () => unknown]> = [
   ["ID IDL stage zones", parseIdlFixture],
   ["ID Kootenai district air forecast", parseIdForecastFixture],
   ["ID closed fire season and calendar", parseIdStatuteFixture],
+  ...idCountyFixtures.map(({ source, parse }): [string, typeof parse] => [source.id, parse]),
   ["WY State Forestry county orders", parseWyCountyFixture],
   ["WY state trust lands rule", parseWyLandFixture],
   ["ND DES ArcGIS daily restrictions", parseNdFixture],
