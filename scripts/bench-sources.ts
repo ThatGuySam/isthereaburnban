@@ -77,6 +77,10 @@ import { mdSummerAir, parseMdSummerAir } from "../src/worker/sources/md/summer-a
 import { mdDnrWoodland, parseMdWoodland } from "../src/worker/sources/md/woodland";
 import { meOpenBurningPermits, parseMaineOpenBurning } from "../src/worker/sources/me/open-burning";
 import { meTownPermitHolds, parseMaineTownPermits } from "../src/worker/sources/me/town-permits";
+import { miCivicPlusNotices } from "../src/worker/sources/mi/civicplus-notices";
+import { parseAtlasFireStatus, parseGrandTraverseMetroStatus, parsePortSanilacFireStatus, parseStJosephFireStatus } from "../src/worker/sources/mi/live-permits";
+import { parseLaketownNotices, parseSolonNotices } from "../src/worker/sources/mi/local-notices";
+import { miLocalRules } from "../src/worker/sources/mi/local-rules";
 import { miPermits, parseMichiganPermits } from "../src/worker/sources/mi/permits";
 import { parseChesterfieldBurnStatus } from "../src/worker/sources/mi/chesterfield";
 import { parseEastLansingFireNotices } from "../src/worker/sources/mi/east-lansing-news";
@@ -174,6 +178,22 @@ const txText = raw("../adapters/fixtures/tx.txt");
 const msIds = msEditionIds(utf8("../adapters/fixtures/ms-edition.html"));
 const pfirsHtml = utf8("ca/fixtures/pfirs.html");
 const miMap = utf8("mi/fixtures/permits-2026-11-24.json");
+const miLocalCaptured = new Date("2026-11-25T06:38:00Z");
+const miAtlas = utf8("mi/fixtures/atlas-panel-2026-11-25.html");
+const miStJoseph = utf8("mi/fixtures/st-joseph-live-2026-11-25.json");
+const miGrandTraverse = utf8("mi/fixtures/gt-metro-wp-2026-11-25.json");
+const miPortSanilac = utf8("mi/fixtures/port-sanilac-firestore-2026-11-25.json");
+const miSolonNotices = utf8("mi/fixtures/solon-wp-notices-2026-11-25.json");
+const miLaketownNotices = utf8("mi/fixtures/laketown-wp-notices-2026-11-25.json");
+const miCivicPlusFixtures = ["battle-creek", "grand-ledge"].map((name, index): [string, () => unknown] => {
+  const body = utf8(`mi/fixtures/${name}-rss-2026-11-25.xml`);
+  const { source, parse } = miCivicPlusNotices[index];
+  return [source.id, () => parse(body, miLocalCaptured, async () => { throw new Error("Unexpected matching article"); })];
+});
+const miLocalRuleFixtures = miLocalRules.map(({ source, parse, fixture }) => {
+  const body = raw(`mi/fixtures/local/${fixture}`);
+  return { source, parse: () => parse(new Response(body), miLocalCaptured) };
+});
 const njDivisions = utf8("nj/fixtures/divisions-2026-11-24.json");
 const njCounties = utf8("nj/fixtures/counties-2026-11-24.json");
 const wiPermitsJson = utf8("wi/fixtures/permits-2026-11-24.json");
@@ -883,6 +903,14 @@ const jobs: Array<[string, () => unknown]> = [
   })],
   ...miTownshipJobs,
   ...miScopedRuleJobs,
+  ["MI Atlas Township GoDaddy panel", () => parseAtlasFireStatus(miAtlas, miLocalCaptured)],
+  ["MI St. Joseph Charter Township JSON", () => parseStJosephFireStatus(JSON.parse(miStJoseph), miLocalCaptured)],
+  ["MI Grand Traverse Metro WordPress", () => parseGrandTraverseMetroStatus(JSON.parse(miGrandTraverse), miLocalCaptured)],
+  ["MI Port Sanilac FirePermit.Online", () => parsePortSanilacFireStatus(JSON.parse(miPortSanilac), miLocalCaptured)],
+  ["MI Solon Township WordPress notices", () => parseSolonNotices(JSON.parse(miSolonNotices), miLocalCaptured)],
+  ["MI Laketown Township WordPress notices", () => parseLaketownNotices(JSON.parse(miLaketownNotices), miLocalCaptured)],
+  ...miCivicPlusFixtures,
+  ...miLocalRuleFixtures.map(({ source, parse }): [string, typeof parse] => [source.id, parse]),
   ["NJ Forest Fire Service ArcGIS", parseNjFixture],
   ["WI DNR permit feed", parseWiFixture],
   ...wiLocalStatusJobs,

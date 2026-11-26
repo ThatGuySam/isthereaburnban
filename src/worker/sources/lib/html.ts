@@ -258,19 +258,29 @@ export async function htmlStatusBlocks(input: Response | string, section: string
   return cells.map(({ text }) => text).filter(Boolean);
 }
 
-/** Read one explicit choice from a dedicated, visible status panel. */
-export async function htmlStatusChoice<const Status extends string>(
+/** Read one explicit statement and its captured fields from a dedicated status panel. */
+export async function matchHtmlStatus<const Status extends string>(
   input: Response | string,
   { section, blocks, choices }: {
     section: string;
     blocks: string;
     choices: readonly (readonly [Status, RegExp])[];
   },
-): Promise<Status> {
+): Promise<{ status: Status; match: RegExpMatchArray }> {
   const content = (await htmlStatusBlocks(input, section, blocks)).join("\n");
-  const [match, ...extra] = choices.filter(([, pattern]) => pattern.test(content));
-  if (!match || extra.length) throw new Error(`Unrecognized or ambiguous status in ${section}`);
-  return match[0];
+  const matches = choices.flatMap(([status, pattern]) => {
+    const match = new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, "")).exec(content);
+    return match ? [{ status, match }] : [];
+  });
+  if (matches.length !== 1) throw new Error(`Unrecognized or ambiguous status in ${section}`);
+  return matches[0];
+}
+
+/** Read one explicit choice from a dedicated, visible status panel. */
+export async function htmlStatusChoice<const Status extends string>(
+  input: Response | string, config: Parameters<typeof matchHtmlStatus<Status>>[1],
+): Promise<Status> {
+  return (await matchHtmlStatus(input, config)).status;
 }
 
 export function blockAfterHeading(

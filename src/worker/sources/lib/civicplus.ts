@@ -1,4 +1,5 @@
 import { parseUsDate } from "./dates";
+import { parseFeed } from "./feeds";
 import { blockAfterHeading, extractHtmlGrid, htmlStatusBlocks, type HtmlParts } from "./html";
 
 // Inventory: CivicPlus/CivicEngage, including AlertCenter, CivicAlerts and mobile News Flash
@@ -150,4 +151,31 @@ export async function civicPlusNewsFlashArticle(input: Response | string) {
     throw new Error("CivicPlus News Flash: expected an active article with title, category, date and body");
   }
   return { title, category, posted, body };
+}
+
+/** Read the latest matching item in a public News Flash category feed. */
+export function latestCivicPlusNewsFlashNotice(xml: string, options: {
+  origin: string;
+  channelTitle: string;
+  now: Date;
+  matches: (title: string) => boolean;
+}) {
+  const { origin, channelTitle, now, matches } = options;
+  const channel = /<channel>\s*<title>([^<]+)<\/title>/.exec(xml)?.[1];
+  if (channel !== channelTitle || !/<\/channel>\s*<\/rss>\s*$/.test(xml)) {
+    throw new Error("Missing or changed CivicPlus News Flash feed");
+  }
+  const entries = parseFeed(xml, { includeText: () => false });
+  if (entries.length !== [...xml.matchAll(/<item\b/g)].length) throw new Error("Incomplete CivicPlus News Flash feed");
+  const notices = entries.filter(({ title }) => matches(title)).map((entry) => {
+    const url = new URL(entry.url);
+    if (!entry.published || Date.parse(entry.published) > now.getTime() || url.origin !== origin ||
+        !/^\/CivicAlerts\.aspx$/i.test(url.pathname) || !/^\d+$/.test(url.searchParams.get("aid") ?? "")) {
+      throw new Error("Invalid CivicPlus News Flash notice date or link");
+    }
+    return { ...entry, published: entry.published };
+  }).sort((left, right) => right.published.localeCompare(left.published));
+  const [latest, next] = notices;
+  if (latest && latest.published === next?.published) throw new Error("Ambiguous latest CivicPlus News Flash notice");
+  return latest;
 }

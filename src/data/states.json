@@ -592,9 +592,13 @@
       {
         "label": "Find a township and its local contacts",
         "url": "https://michigantownships.org/find-a-township/"
+      },
+      {
+        "label": "State Fire Marshal directory of local fire departments",
+        "url": "https://fireservicedirectory.apps.lara.state.mi.us/"
       }
     ],
-    "notes": "The DNR reports debris-burning permit conditions in 49 counties in the Upper Peninsula and northern Lower Peninsula. Use the county dropdown on the DNR map for township details. Contact your local fire department or local government wherever the map refers you to a local issuer. Local ordinances and state air quality rules also apply."
+    "notes": "The DNR reports debris-burning permit conditions in 49 northern counties. Use its county dropdown for township details. Where a county result cites a local fire department or ordinance, check the named city, township or district and the activities it covers. Contact your local fire department for current permits and emergency orders."
   },
   {
     "abbr": "MN",

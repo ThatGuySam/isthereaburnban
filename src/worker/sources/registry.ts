@@ -48,6 +48,10 @@ import { mdSummerAir } from "./md/summer-air";
 import { mdDnrWoodland } from "./md/woodland";
 import { meOpenBurningPermits } from "./me/open-burning";
 import { meTownPermitHolds } from "./me/town-permits";
+import { miCivicPlusNotices } from "./mi/civicplus-notices";
+import { miAtlasFireStatus, miGrandTraverseMetroStatus, miPortSanilacFireStatus, miStJosephFireStatus } from "./mi/live-permits";
+import { miLocalNotices } from "./mi/local-notices";
+import { miLocalRules } from "./mi/local-rules";
 import { miPermits } from "./mi/permits";
 import { miChesterfieldBurnStatus } from "./mi/chesterfield";
 import { miEastLansingFireNotices } from "./mi/east-lansing-news";
@@ -157,6 +161,13 @@ export const SOURCES: readonly Source[] = [
   miEastLansingFireNotices,
   ...miTownshipBulletins.map(({ source }) => source),
   ...miScopedBurnRules.map(({ source }) => source),
+  miAtlasFireStatus,
+  miGrandTraverseMetroStatus,
+  miPortSanilacFireStatus,
+  miStJosephFireStatus,
+  ...miCivicPlusNotices.map(({ source }) => source),
+  ...miLocalNotices,
+  ...miLocalRules.map(({ source }) => source),
   njRestrictions,
   wiPermits,
   ...wiLocalStatuses.map(({ source }) => source),

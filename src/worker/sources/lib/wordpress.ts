@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseIsoTimestamp } from "./dates";
 import { extractHtml, htmlText } from "./html";
 
 // Inventory: WordPress, including the Faulkner REST search and Mississippi's Ninja Tables JSON.
@@ -71,6 +72,31 @@ export function parseWpItems(data: unknown): RestItem[] {
       body: typeof item.content?.rendered === "string" ? htmlText(item.content.rendered) : "",
     };
   });
+}
+
+/** Select the latest relevant notice from a bounded public REST result. */
+export function latestWpNotice(data: unknown, options: {
+  site: string;
+  now: Date;
+  limit: number;
+  matches: (title: string) => boolean;
+}) {
+  const { site, now, limit, matches } = options;
+  const items = parseWpItems(data);
+  if (items.length >= limit) throw new Error("WordPress notice results reached the page limit");
+  const origin = new URL(site).origin;
+  const seen = new Set<number>();
+  const notices = items.filter(({ title }) => matches(title)).map((item) => {
+    const published = parseIsoTimestamp(item.published);
+    if (!published || Date.parse(published) > now.getTime() || new URL(item.url).origin !== origin || seen.has(item.id)) {
+      throw new Error("Invalid or duplicate WordPress notice");
+    }
+    seen.add(item.id);
+    return { ...item, published };
+  }).sort((left, right) => right.published.localeCompare(left.published));
+  const [latest, next] = notices;
+  if (latest && latest.published === next?.published) throw new Error("Ambiguous latest WordPress notice");
+  return latest;
 }
 
 export function parseNinjaRows<T extends object>(data: unknown): T[] {
