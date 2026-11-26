@@ -42,9 +42,9 @@ Not in the repo, on purpose: `public/.well-known/mcp-registry-auth`. It holds th
 8. `[Sam]` Google Search Console: Domain property, submit `https://isthereaburnban.com/sitemap.xml`. Bing Webmaster Tools: import from Search Console. Rich Results Test on `/data/`.
 9. `[Sam]` Anthropic Connectors Directory: [claude.ai/directory/manage](https://claude.ai/directory/manage) → Submit new → MCP connector. Test it as a custom connector in Claude first. Docs URL `https://isthereaburnban.com/developers/`, privacy URL `https://isthereaburnban.com/privacy/`, support contact the mailbox from step 1, icon `public/icons/icon-512.png`, auth "none", data handling "third party's API you don't control".
 
-## Beta domain
+## Domains
 
-Since 2026-11-24 the Worker also answers on `https://beta.isthereaburnban.com` (Workers Custom Domain in `wrangler.jsonc` `routes`). The apex and `www` still point at Vercel. Canonical URLs still use `SITE_URL` (the workers.dev preview), so beta pages are not indexed as a second copy. At cutover, add the apex and `www` as custom domains, then delete the old Vercel DNS records in the same change, and keep or drop `beta`.
+Live since 2026-11-25: the Worker serves `isthereaburnban.com`, `www.isthereaburnban.com` and `beta.isthereaburnban.com` as Workers Custom Domains (`wrangler.jsonc` `routes`), and `SITE_URL` is `https://isthereaburnban.com`. The two old CNAMEs to Vercel (`alias.zeit.co`) were deleted with the `cf` CLI; a backup of the zone's records from before the change is in `~/.cache/itabb-jobs/dns-backup-2026-11-25.txt` on Tiki. Cutover steps 2 and 4 are done; the rest still apply.
 
 ## Contact mailbox (Cloudflare Email Routing)
 
