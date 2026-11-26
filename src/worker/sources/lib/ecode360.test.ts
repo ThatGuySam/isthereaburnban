@@ -34,3 +34,12 @@ test("eCode360 requires one matching title and body for every requested section"
   }
   await expect(reviewedEcode360Digest(html, [ban, ban])).rejects.toThrow("Expected distinct eCode360 section IDs");
 });
+
+test("eCode360 rejects a different reviewed section body under a matching title", async () => {
+  const html = (await batavia())
+    .replace(`id="${ban}_content"`, 'id="swap"')
+    .replace(`id="${recreation}_content"`, `id="${ban}_content"`)
+    .replace('id="swap"', `id="${recreation}_content"`);
+  await expect(reviewedEcode360Digest(html, [ban, recreation]))
+    .rejects.toThrow(`Expected one published eCode360 section: ${ban}`);
+});

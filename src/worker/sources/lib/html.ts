@@ -215,7 +215,7 @@ export async function extractHtml(input: Response | string, options: HtmlOptions
 export async function extractHtmlGrid(input: Response | string, selectors: {
   row: string; cell: string; linkAttribute?: string; spaceLineBreaks?: boolean;
 }) {
-  const rows: { tag: string; text: string; className: string; href?: string; src?: string }[][] = [];
+  const rows: { tag: string; text: string; className: string; id?: string; href?: string; src?: string }[][] = [];
   let row: (typeof rows)[number] | undefined;
   let cell: (typeof rows)[number][number] | undefined;
   const rewriter = new HTMLRewriter()
@@ -234,6 +234,8 @@ export async function extractHtmlGrid(input: Response | string, selectors: {
         const selected: (typeof rows)[number][number] = {
           tag: element.tagName, text: "", className: element.getAttribute("class") ?? "",
         };
+        const id = element.getAttribute("id");
+        if (id) selected.id = id;
         row.push(selected);
         if (element.tagName === "img") {
           const src = element.getAttribute("src");
