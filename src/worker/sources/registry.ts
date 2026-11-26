@@ -104,6 +104,8 @@ import { riTownSources } from "./ri/town-rules";
 import { scAirQuality } from "./sc/air-quality";
 import { scfcDebris } from "./sc/debris";
 import { sdBlmFireRestrictions } from "./sd/blm";
+import { sdCountyBulletins } from "./sd/county-status";
+import { sdLocalBurnRules } from "./sd/local-rules";
 import { sdBlackHillsPileBurning } from "./sd/pile-burning";
 import { tnAirQualityPermitHolds } from "./tn/air-quality";
 import { tnGatlinburgPermitNotices } from "./tn/gatlinburg";
@@ -305,6 +307,8 @@ export const SOURCES: readonly Source[] = [
   ...Object.values(riTownSources),
   sdBlackHillsPileBurning,
   sdBlmFireRestrictions,
+  ...sdCountyBulletins.map(({ source }) => source),
+  ...sdLocalBurnRules.map(({ source }) => source),
   hiCabNoBurnPeriods,
   hiCabOpenBurning,
   dcOpenBurning,

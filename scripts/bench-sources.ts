@@ -128,6 +128,8 @@ import { paStateForestSpring, parsePaStateForestSpring } from "../src/worker/sou
 import { parseScAirQuality, scAirQuality } from "../src/worker/sources/sc/air-quality";
 import { parseScfcDebris } from "../src/worker/sources/sc/debris";
 import { parseSdBlmRestrictions, sdBlmFireRestrictions } from "../src/worker/sources/sd/blm";
+import { davisonBurnStatus, spinkBurnStatus, sullyBurnStatus, yanktonBurnStatus } from "../src/worker/sources/sd/county-status";
+import { sdLocalBurnRules } from "../src/worker/sources/sd/local-rules";
 import { parseBlackHillsPileBurning, sdBlackHillsPileBurning } from "../src/worker/sources/sd/pile-burning";
 import { hiCabNoBurnPeriods, parseHiNoBurnPeriods } from "../src/worker/sources/hi/no-burn-periods";
 import { hiCabOpenBurning, parseHiOpenBurning } from "../src/worker/sources/hi/open-burning";
@@ -324,6 +326,22 @@ const sdBlmHtml = utf8("sd/fixtures/blm-current-2026-11-24.html");
 const sdBlmOrder = raw("sd/fixtures/blm-stage1-2026-10-01.pdf");
 const parseSdPermitFixture = async () => parseBlackHillsPileBurning(await extractHtml(sdPermitHtml), sdCaptured);
 const parseSdBlmFixture = () => parseSdBlmRestrictions(sdBlmHtml, sdCaptured, async () => new Response(sdBlmOrder));
+const sdCountyCaptured = new Date("2026-11-26T06:00:00Z");
+const sdCountyFixtures = [
+  { ...davisonBurnStatus, fixture: "davison.json" },
+  { ...spinkBurnStatus, fixture: "spink.html" },
+  { ...sullyBurnStatus, fixture: "sully.html" },
+  { ...yanktonBurnStatus, fixture: "yankton.html" },
+  ...sdLocalBurnRules,
+].map(({ source, parse, fixture }) => {
+  const path = `sd/fixtures/county-pass/${fixture}`;
+  if (fixture.endsWith(".headers.json")) {
+    const headers = JSON.parse(utf8(path));
+    return { source, parse: () => parse(new Response(null, { headers }), sdCountyCaptured) };
+  }
+  const body = raw(path);
+  return { source, parse: () => parse(new Response(body), sdCountyCaptured) };
+});
 
 const hiCaptured = new Date("2026-11-24T17:14:33Z");
 const hiCabNotice = utf8("hi/fixtures/cab-no-burn-2026-11-24.html");
@@ -801,6 +819,9 @@ recordedInputs.push(
   }))),
   { source: sdBlackHillsPileBurning, rows: await parseSdPermitFixture(), checked: sdCaptured.toISOString() },
   { source: sdBlmFireRestrictions, rows: await parseSdBlmFixture(), checked: sdCaptured.toISOString() },
+  ...await Promise.all(sdCountyFixtures.map(async ({ source, parse }) => ({
+    source, rows: await parse(), checked: sdCountyCaptured.toISOString(),
+  }))),
   { source: hiCabNoBurnPeriods, rows: await parseHiNoticeFixture(), checked: hiCaptured.toISOString() },
   { source: hiCabOpenBurning, rows: await parseHiRulesFixture(), checked: hiCaptured.toISOString() },
   { source: dcOpenBurning, rows: await parseDcRuleFixture(), checked: dcCaptured.toISOString() },
@@ -985,6 +1006,7 @@ const jobs: Array<[string, () => unknown]> = [
   ["ND DES ArcGIS daily restrictions", parseNdFixture],
   ["SD Wildland Fire WebForms pile conditions", parseSdPermitFixture],
   ["SD BLM Drupal notice and signed order", parseSdBlmFixture],
+  ...sdCountyFixtures.map(({ source, parse }): [string, typeof parse] => [source.id, parse]),
   ["HI Clean Air Branch WordPress no-burn periods", parseHiNoticeFixture],
   ["HI Clean Air Branch WordPress open-burning rules", parseHiRulesFixture],
   ["DC DCRegs current rule and calendar", parseDcRuleFixture],
