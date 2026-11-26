@@ -116,6 +116,7 @@ import { nvTmfpdPileBurning, parseTmfpdPileBurning } from "../src/worker/sources
 import { nvUsfsSpringMountains, parseSpringMountainsOrder } from "../src/worker/sources/nv/usfs";
 import { nwsFireWeather, parseNwsAlerts } from "../src/worker/sources/nws/alerts";
 import { nyDecBrushBurning, parseDecBrushBurning } from "../src/worker/sources/ny/dec-brush-burning";
+import { nyCountyCalendars } from "../src/worker/sources/ny/local-rules";
 import { nyNycBarbecuing, parseNycBarbecuing } from "../src/worker/sources/ny/nyc-barbecuing";
 import { ohSeasonal, parseOhioSeasonal } from "../src/worker/sources/oh/seasonal";
 import { orLrapaHeating, orLrapaOutdoor, parseLrapaHeating, parseLrapaOutdoor } from "../src/worker/sources/or/lrapa";
@@ -364,6 +365,15 @@ const nyDecHtml = utf8("ny/fixtures/dec-open-burning-2026-11-24.html");
 const nyNycHtml = utf8("ny/fixtures/nyc-311-barbecuing-2026-11-24.html");
 const parseNyDecFixture = async () => parseDecBrushBurning(await extractHtml(nyDecHtml), now);
 const parseNyNycFixture = async () => parseNycBarbecuing(await extractHtml(nyNycHtml), now);
+const nyCountyFixtures = nyCountyCalendars.map(({ source, parse, fixture }) => {
+  const path = `ny/fixtures/county-pass/${fixture}`;
+  if (fixture.endsWith(".headers.json")) {
+    const headers = JSON.parse(utf8(path));
+    return { source, parse: () => parse(new Response(null, { headers }), now) };
+  }
+  const body = raw(path);
+  return { source, parse: () => parse(new Response(body), now) };
+});
 const vaStatute = utf8("va/fixtures/section-10.1-1142-2026-11-24.html");
 const vaRapidanHtml = utf8("va/fixtures/rapidan-wma-2026-11-24.html");
 const vaParkJson = utf8("va/fixtures/shen-park-alerts-2026-11-24.json");
@@ -785,6 +795,7 @@ recordedInputs.push(
   ...await Promise.all(mnLocalFixtures.map(async ({ source, parse }) => ({ source, rows: await parse(), checked }))),
   { source: nyDecBrushBurning, rows: await parseNyDecFixture(), checked },
   { source: nyNycBarbecuing, rows: await parseNyNycFixture(), checked },
+  ...await Promise.all(nyCountyFixtures.map(async ({ source, parse }) => ({ source, rows: await parse(), checked }))),
   { source: vaSeasonal, rows: await parseVaStatuteFixture(now), checked },
   { source: vaRapidanAlerts, rows: await parseVaRapidanFixture(), checked },
   { source: vaShenandoahAlerts, rows: parseVaParkFixture(), checked },
@@ -1057,6 +1068,7 @@ const jobs: Array<[string, () => unknown]> = [
   ...tnLocalFixtures.map<[string, () => unknown]>(({ id, parse }) => [`TN local burn rule (${id})`, parse]),
   ["NY DEC brush rules and Fire Towns", parseNyDecFixture],
   ["NYC 311 outdoor barbecuing rules", parseNyNycFixture],
+  ...nyCountyFixtures.map(({ source, parse }): [string, typeof parse] => [source.id, parse]),
   ["VA 4 p.m. statute and calendar", () => parseVaStatuteFixture(vaSpring)],
   ["VA DWR Rapidan WordPress notice table", parseVaRapidanFixture],
   ["VA NPS Shenandoah park-alert JSON", parseVaParkFixture],

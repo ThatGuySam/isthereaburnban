@@ -1,5 +1,6 @@
 import { apptegyPageText } from "./apptegy";
 import { calendarStatusRows, type CalendarCounty, type CalendarRule } from "./calendar";
+import { reviewedEcode360Digest } from "./ecode360";
 import { sha256 } from "./hash";
 import { htmlStatusBlocks, reviewedHeadingDigest, reviewedHtmlDigest } from "./html";
 import { fetchSource, isSourceUnavailable } from "./http";
@@ -12,6 +13,7 @@ export type LocalCalendarEvidence =
   | { kind: "html-blocks"; digest: string; section: string; blocks: string }
   | { kind: "html-heading"; digest: string; selector: string; heading: string }
   | { kind: "html-apptegy-node"; digest: string; pageId: number; nodeId: string }
+  | { kind: "html-ecode360"; digest: string; sections: readonly [string, ...string[]] }
   | { kind: "pdf"; digest: string }
   | { kind: "pdf-etag"; etag: string };
 type Publisher = Pick<ActiveSource, "id" | "state" | "scope" | "stack" | "sourceName" | "sourceUrl" | "officialUrl">;
@@ -38,6 +40,8 @@ async function matchesReview(input: Response, review: LocalCalendarEvidence): Pr
       return await reviewedHeadingDigest(input, review.selector, review.heading) === review.digest;
     case "html-apptegy-node":
       return await sha256(apptegyPageText(await input.text(), review.pageId, review.nodeId)) === review.digest;
+    case "html-ecode360":
+      return await reviewedEcode360Digest(input, review.sections) === review.digest;
     case "pdf":
       return (await manualPdf(input)).sha256 === review.digest;
     case "pdf-etag":

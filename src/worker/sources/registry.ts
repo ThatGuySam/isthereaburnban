@@ -90,6 +90,7 @@ import { nvTmfpdPileBurning } from "./nv/tmfpd";
 import { nvUsfsSpringMountains } from "./nv/usfs";
 import { nwsFireWeather } from "./nws/alerts";
 import { nyDecBrushBurning } from "./ny/dec-brush-burning";
+import { nyCountyCalendars } from "./ny/local-rules";
 import { nyNycBarbecuing } from "./ny/nyc-barbecuing";
 import { ohSeasonal } from "./oh/seasonal";
 import { orLrapaHeating, orLrapaOutdoor } from "./or/lrapa";
@@ -272,6 +273,7 @@ export const SOURCES: readonly Source[] = [
   tnSeasonalBurnPermits,
   nyDecBrushBurning,
   nyNycBarbecuing,
+  ...nyCountyCalendars.map(({ source }) => source),
   vaSeasonal,
   vaRapidanAlerts,
   vaShenandoahAlerts,
