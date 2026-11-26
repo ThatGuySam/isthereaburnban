@@ -343,6 +343,28 @@ export async function reviewedHeadingDigest(input: Response | string, selector: 
   return sha256(section.map(({ text }) => text).join("\n"));
 }
 
+/** Verify the content between named anchors in a long, single-page ordinance book. */
+export async function reviewedAnchoredHtmlDigest(input: Response | string, {
+  startAnchor, endAnchor, encoding,
+}: { startAnchor: string; endAnchor: string; encoding?: string }): Promise<string> {
+  const html = encoding && typeof input !== "string" ? new TextDecoder(encoding).decode(await input.arrayBuffer()) : input;
+  const markup = typeof html === "string" ? html : await html.text();
+  const positions = (name: string) => {
+    if (!/^[\w.-]+$/.test(name)) throw new Error("Invalid ordinance anchor");
+    const value = name.replaceAll(".", "\\.");
+    return [...markup.matchAll(new RegExp(`<a\\b[^>]*?\\s(?:id|name)\\s*=\\s*(?:"${value}"|'${value}'|${value}(?=[\\s>]))`, "gi"))];
+  };
+  const [start, ...otherStarts] = positions(startAnchor);
+  const [end, ...otherEnds] = positions(endAnchor);
+  if (!start || !end || otherStarts.length || otherEnds.length || end.index <= start.index) {
+    throw new Error(`Missing, duplicate or out-of-order ordinance anchors: ${startAnchor}, ${endAnchor}`);
+  }
+  const fragment = markup.slice(start.index, end.index);
+  const text = htmlText(fragment);
+  if (!text) throw new Error(`Empty reviewed HTML range: ${startAnchor}`);
+  return sha256(text);
+}
+
 /** Fingerprint one reviewed rule region so changed wording requires a fresh review. */
 export async function reviewedHtmlDigest(input: Response | string, selector: string, startsWith = ""): Promise<string> {
   const regions: string[] = [];

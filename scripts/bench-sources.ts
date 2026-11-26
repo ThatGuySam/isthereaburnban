@@ -118,6 +118,8 @@ import { njRestrictions, parseNjRestrictions } from "../src/worker/sources/nj/re
 import { nmAngelFirePermits, parseAngelFirePermits } from "../src/worker/sources/nm/angel-fire";
 import { nmBernalilloOpenBurning, nmOpenBurning, parseNmOpenBurning } from "../src/worker/sources/nm/open-burning";
 import { nmStateParks, parseNmStateParks } from "../src/worker/sources/nm/state-parks";
+import { nvCentralLyonBurnStatus } from "../src/worker/sources/nv/central-lyon";
+import { nvLocalBurningRules } from "../src/worker/sources/nv/local-rules";
 import { nvTmfpdPileBurning, parseTmfpdPileBurning } from "../src/worker/sources/nv/tmfpd";
 import { nvUsfsSpringMountains, parseSpringMountainsOrder } from "../src/worker/sources/nv/usfs";
 import { nwsFireWeather, parseNwsAlerts } from "../src/worker/sources/nws/alerts";
@@ -667,6 +669,15 @@ const parseNvTmfpdFixture = () => parseTmfpdPileBurning(nvTmfpdHtml, nvCaptured)
 const nvForestCaptured = new Date("2026-11-24T10:21:34Z");
 const nvForestHtml = utf8("nv/fixtures/usfs-current-fire-restrictions-2026-11-24.html");
 const parseNvForestFixture = async () => parseSpringMountainsOrder(await extractHtml(nvForestHtml, { links: true }), nvForestCaptured);
+const nvCountyCaptured = new Date("2026-11-26T12:03:58Z");
+const nvCountyFixtures = [
+  { ...nvCentralLyonBurnStatus, fixture: "central-lyon-zone.html" },
+  ...nvLocalBurningRules,
+].map(({ source, parse, fixture }) => {
+  const body = raw(`nv/fixtures/county-pass/${fixture}`);
+  const contentType = fixture.endsWith(".pdf") ? "application/pdf" : "text/html";
+  return { source, parse: () => parse(new Response(body, { headers: { "content-type": contentType } }), nvCountyCaptured) };
+});
 const arCaptured = new Date("2026-11-24T10:31:53Z");
 const arBanner = utf8("ar/fixtures/faulkner-banner-2026-11-24.html");
 const arOrder = raw("ar/fixtures/faulkner-order-26-204-2026-11-24.pdf");
@@ -1021,6 +1032,9 @@ recordedInputs.push(
   }))),
   { source: nvTmfpdPileBurning, rows: await parseNvTmfpdFixture(), checked: nvCaptured.toISOString() },
   { source: nvUsfsSpringMountains, rows: await parseNvForestFixture(), checked: nvForestCaptured.toISOString() },
+  ...await Promise.all(nvCountyFixtures.map(async ({ source, parse }) => ({
+    source, rows: await parse(), checked: nvCountyCaptured.toISOString(),
+  }))),
   { source: arFaulknerCountyOrders, rows: await parseArFaulknerFixture(), checked: arCaptured.toISOString() },
   { source: scAirQuality, rows: await parseScRegulationFixture(), checked: scCaptured.toISOString() },
   { source: ncForestOrders, rows: [], checked: ncNow.toISOString() },
@@ -1179,6 +1193,7 @@ const jobs: Array<[string, () => unknown]> = [
   ["DC DCRegs current rule and calendar", parseDcRuleFixture],
   ["DC Rock Creek compendium and calendar", parseDcParkFixture],
   ["NV Truckee Meadows WordPress / Oxygen", parseNvTmfpdFixture],
+  ...nvCountyFixtures.map(({ source, parse }): [string, typeof parse] => [source.id, parse]),
   ["AR Faulkner County WordPress / Elementor and PDF", parseArFaulknerFixture],
   ["AR Baxter County HTML flag", () => parseBaxterStatus(arBaxter, arCountyCaptured)],
   ["AR Conway city daily permit status", () => parseConwayStatus(arConway, arCountyCaptured)],

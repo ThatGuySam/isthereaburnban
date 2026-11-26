@@ -764,12 +764,16 @@
     "abbr": "NV",
     "name": "Nevada",
     "coverage": "restrictions",
-    "publisher": "Nevada Fire Info, Truckee Meadows Fire Protection District and U.S. Forest Service",
+    "publisher": "Nevada Fire Info, local fire districts, county air-quality agencies and U.S. Forest Service",
     "officialUrl": "https://www.nevadafireinfo.org/restrictions",
     "extraUrls": [
       {
         "label": "Truckee Meadows daily pile-burning status",
         "url": "https://tmfpd.us/outdoor-burning/?burn-status-check=1"
+      },
+      {
+        "label": "Clark County open-burning rules and permits",
+        "url": "https://www.clarkcountynv.gov/government/departments/environment_and_sustainability/division_of_air_quality/permitting/applications_forms/open-burning-forms"
       },
       {
         "label": "Nevada Division of Forestry state land restrictions",
@@ -792,7 +796,7 @@
         "url": "https://washoelife.washoecounty.gov/nnph/daily-burn-code-for-wood-burning-devices-is-underway/"
       }
     ],
-    "notes": "We track daily pile burning in the Truckee Meadows Fire Protection District in part of Washoe County and a campfire order on mapped National Forest lands in part of Clark County. Local fire authorities and air-quality agencies set separate rules. Check the agency that manages the land for current orders."
+    "notes": "We track selected district burn decisions, local permit rules and land-manager orders. A county can show restrictions for a particular fire district, community or type of burning. Check the local fire authority and the agency that manages your burn site for current orders."
   },
   {
     "abbr": "NH",

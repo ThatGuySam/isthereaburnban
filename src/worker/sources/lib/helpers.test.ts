@@ -7,7 +7,7 @@ import { activeRule, calendarDayWindows, calendarStatusRows, CALENDAR_RULES } fr
 import { civicPlusAlertDetails, civicPlusNotices, civicPlusPageParagraphs, civicPlusPageText, civicPlusUrl } from "./civicplus";
 import { localDayWindow, parseLocalIsoTimestamp, parseWeekdayDate, reportWindow, weekdayOnOrAfter } from "./dates";
 import { decodeFeed, parseCsv, parseDotNetJsonDate, parseFeed, parseJson } from "./feeds";
-import { blockAfterHeading, blocksBetweenMarkers, extractHtml, extractHtmlGrid, localClock, matchHtmlStatus, matchesReviewedHtmlSection, numberedRuleSection, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, reviewedHeadingDigest, statusTableRows, US_ZONES } from "./html";
+import { blockAfterHeading, blocksBetweenMarkers, extractHtml, extractHtmlGrid, localClock, matchHtmlStatus, matchesReviewedHtmlSection, numberedRuleSection, parseEndDate, parseHtml, parseLocalDateTime, parseUsDate, reviewedAnchoredHtmlDigest, reviewedHeadingDigest, statusTableRows, US_ZONES } from "./html";
 import { sha256 } from "./hash";
 import { BlockedError, fetchSource, HttpError, pacedSourceReader, pacedTextReader, USER_AGENT } from "./http";
 import { manualPdf } from "./pdf";
@@ -163,6 +163,19 @@ test("reviewed HTML headings isolate a rule from other subjects in the same widg
   expect(await read(rule.replace("Cooking.", "Cooking and camping."))).not.toBe(digest);
   await expect(read(rule + rule)).rejects.toThrow("Expected one nonempty reviewed HTML section");
   await expect(read("<h2>Open burning</h2><h2>Fees</h2>")).rejects.toThrow("Expected one nonempty reviewed HTML section");
+});
+
+test("reviewed named anchors isolate one section of a municipal code", async () => {
+  const first = '<p><a name=rule.20></a>Open burning</p><p>Permit required.</p>';
+  const next = '<p><a id="rule.25"></a>Fireworks</p>';
+  const read = (html) => reviewedAnchoredHtmlDigest(html, { startAnchor: "rule.20", endAnchor: "rule.25" });
+  const digest = await sha256("Open burning Permit required.");
+  expect(await read(first + next)).toBe(digest);
+  expect(await read(`<a href="#rule.20">Index</a>${first}${next}<p>Unrelated amendment.</p>`)).toBe(digest);
+  expect(await read(first.replace("required", "optional") + next)).not.toBe(digest);
+  for (const malformed of [first, next + first, first + first + next, first + next + next]) {
+    await expect(read(malformed)).rejects.toThrow("ordinance anchors");
+  }
 });
 
 test("HTML table cells separate adjacent paragraphs without splitting inline text", async () => {

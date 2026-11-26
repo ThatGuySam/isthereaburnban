@@ -1,0 +1,153 @@
+<div class="content subpage-content" id="burn-permits-content">
+		<div class="container">
+			<!-- <p>
+				Burn season will open November 1, 2022.
+			</p>
+			<p style="font-weight:bold; color:var(--blue);">
+				Expiration Date: May 14, 2023
+			</p> -->
+			<p style="font-weight:bold; color:var(--blue);">
+				Burn permits are only issued during the winter months and may be opened or suspended at the discretion of the Fire District, based on current and forecasted weather conditions.
+			</p>
+			<!-- <p>
+				Fill out the form below to apply for this years' burn permit.
+			</p> -->
+							<style>
+.captcha-error {
+	background-color: #fee;
+	border: 2px solid #c33;
+	color: #c33;
+	padding: 15px;
+	margin: 15px 0;
+	border-radius: 4px;
+	font-weight: bold;
+	display: none;
+}
+</style>
+
+<form class="permit-form" action="../burn-permit-registration.php" method="post" style="margin-top:40px;">
+	<p>
+		This permit is subject to the terms and conditions of use contained herein and must be produced at the request ofa Fire District Representative.
+	</p>
+	<input id="name" name="name" type="text" placeholder="Full Name*" required >
+	<input id="email" name="email" type="text" placeholder="Email Address*" required >
+	<input id="phone" name="phone" type="tel" placeholder="Phone*" required >
+	<p>
+		Address:
+	</p>
+	<input id="street" name="street" type="street" placeholder="Street Address*" required >
+	<div class="short-input-container">
+		<input id="state" name="state" type="state" placeholder="State*" class="short-input" required >
+		<input id="zip" name="zip" type="zip" placeholder="Zip*" class="short-input" required >
+	</div>
+	<input id="burn-location" name="burn-location" type="street" placeholder="Burn Location*" required >
+	<div class="form-question">
+		<p>
+			Before burning, call Storey County Fire Station 71 at 847-0954 to determine if it is a permissible burn day. Permittee will also need to notify Storey County Dispatch at 847-0950 to advise that they are burning at the permitted address:
+		</p>
+		<div class="radio-container">
+			<input type="radio" id="permissible-burn-day" name="permissible-burn-day" value="Yes" required>
+			<label for="permissible-burn-day"><b>Yes</b></label>
+		</div>
+	</div>
+
+	<div class="form-question">
+		<p>
+			Regular burn hours are 6:00 a.m. until 12 p.m., with absolutely no smoke visible after 1 p.m. Responsible party shall supervise the burning material until the fire has been extinguished and monitored for a minimum of two hours after extinguishment. Hours are subject to change:
+		</p>
+		<div class="radio-container">
+			<input type="radio" id="burn-hours" name="burn-hours" value="Yes" required>
+			<label for="burn-hours"><b>Yes</b></label>
+		</div>
+	</div>
+
+	<div class="form-question">
+		<p>
+			Burning of clean woody, forest, range, or yard debris is permitted. Burning of household trash and treated wood or lumber is prohibited!
+		</p>
+		<div class="radio-container">
+			<input type="radio" id="prohibited-materials" name="prohibited-materials" value="Yes" required>
+			<label for="prohibited-materials"><b>Yes</b></label>
+		</div>
+	</div>
+
+	<div class="form-question">
+		<p>
+			Burn only if the wind is blowing less than 10 mph. Burn only those materials that would not cause noxious odors or a large amount of smoke. (NO Plastics):
+		</p>
+		<div class="radio-container">
+			<input type="radio" id="burn-wind" name="burn-wind" value="Yes" required>
+			<label for="burn-wind"><b>Yes</b></label>
+		</div>
+	</div>
+
+	<div class="form-question">
+		<p>
+			Conduct open burning at least 30 feet from any structure or other combustible material. Conditions that could cause the fire to spread to within 30 feet of a structure shall be eliminated prior to ignition:
+		</p>
+		<div class="radio-container">
+			<input type="radio" id="burn-structures" name="burn-structures" value="Yes" required>
+			<label for="burn-structures"><b>Yes</b></label>
+		</div>
+	</div>
+
+	<div class="form-question">
+		<p>
+			Burn piles shall be kept no more than 3 feet in diameter, 2 feet high and not less than 30 feet from structures or other combustibles:
+		</p>
+		<div class="radio-container">
+			<input type="radio" id="burn-piles" name="burn-piles" value="Yes" required>
+			<label for="burn-piles"><b>Yes</b></label>
+		</div>
+	</div>
+
+	<div class="form-question">
+		<p>
+			Burn barrels are prohibited!
+		</p>
+		<div class="radio-container">
+			<input type="radio" id="burn-barrels" name="burn-barrels" value="Yes" required>
+			<label for="burn-barrels"><b>Yes</b></label>
+		</div>
+	</div>
+
+	<div class="form-question">
+		<p>
+			A garden hose connected to a water supply and other approved fire-extinguishing equipment such as shovels and rakes shall be readily available for use at the burn site:
+		</p>
+		<div class="radio-container">
+			<input type="radio" id="burn-hose" name="burn-hose" value="Yes" required>
+			<label for="burn-hose"><b>Yes</b></label>
+		</div>
+	</div>
+
+	<div class="form-question">
+		<p>
+			Open burning shall only be allowed on properties located in Mark Twain Estates and Painted Rock (Storey County):
+		</p>
+		<div class="radio-container">
+			<input type="radio" id="burn-area" name="burn-area" value="Yes" required>
+			<label for="burn-area"><b>Yes</b></label>
+		</div>
+	</div>
+
+	<p>
+		This permit is valid only under the conditions prescribed by law or by the District Chief relating to time, weather, burning specifications, firebreaks, and staffing requirements. The Permit does not relieve the user of any legal responsibility for the safe use of fire or allow burning to be done in violation of any State law, County ordinance, or local regulations restricting or regulating the use of fire. This permit may be temporarily NULL AND VOID during suspension of burning by the District Fire Chief or his authorized representative.
+	</p>
+	<p>
+		Any person who violates the terms or conditions of this Permit shall be guilty of a misdemeanor and may be cited as such. The expense of responses to and suppression of any emergency incident that is the result of a violation of this Permit may be charged to the Responsible Party (Property Owner) whose violation caused the response of equipment and personnel.
+	</p>
+	<p>
+		I own or legally control the above-described land. I agree to comply with all fire laws, ordinances, and regulations. I understand and agree to comply with the specific terms and conditions of this permit.
+	</p>
+	<p>
+		Expiration Date: <b>March 31, 2027</b>
+	</p>
+	<input id="signature" name="signature" type="text" placeholder="Type Out Full Name*" autocomplete="singature" required >
+
+
+	<input type="hidden" name="send" value="yes"/>
+	<input type="submit" name="submit" id="submit">
+</form>
+
+</div></div>

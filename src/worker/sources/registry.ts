@@ -94,6 +94,8 @@ import { njRestrictions } from "./nj/restrictions";
 import { nmAngelFirePermits } from "./nm/angel-fire";
 import { nmBernalilloOpenBurning, nmOpenBurning } from "./nm/open-burning";
 import { nmStateParks } from "./nm/state-parks";
+import { nvCentralLyonBurnStatus } from "./nv/central-lyon";
+import { nvLocalBurningRules } from "./nv/local-rules";
 import { nvTmfpdPileBurning } from "./nv/tmfpd";
 import { nvUsfsSpringMountains } from "./nv/usfs";
 import { nwsFireWeather } from "./nws/alerts";
@@ -293,8 +295,10 @@ export const SOURCES: readonly Source[] = [
   ndDesRestrictions,
   ...ndCountyBulletins,
   ...ndLocalBurningRules.map(({ source }) => source),
-  nvTmfpdPileBurning,
+  { ...nvTmfpdPileBurning, pollGroup: "nv-daily-burn-status" },
   nvUsfsSpringMountains,
+  nvCentralLyonBurnStatus.source,
+  ...nvLocalBurningRules.map(({ source }) => source),
   ...scfcDebris,
   scAirQuality,
   ncForestOrders,

@@ -2,7 +2,7 @@ import { apptegyPageText } from "./apptegy";
 import { calendarStatusRows, type CalendarCounty, type CalendarRule } from "./calendar";
 import { reviewedEcode360Digest } from "./ecode360";
 import { sha256 } from "./hash";
-import { htmlStatusBlocks, reviewedHeadingDigest, reviewedHtmlDigest } from "./html";
+import { htmlStatusBlocks, reviewedAnchoredHtmlDigest, reviewedHeadingDigest, reviewedHtmlDigest } from "./html";
 import { fetchSource, isSourceUnavailable } from "./http";
 import { manualPdf, matchesPdfEtag } from "./pdf";
 import { reviewedRuleFallback, RuleChangedError } from "../statutory-fallback";
@@ -13,6 +13,7 @@ export type LocalCalendarEvidence =
   | { kind: "html"; digest: string; selector: string; startsWith?: string }
   | { kind: "html-blocks"; digest: string; section: string; blocks: string }
   | { kind: "html-heading"; digest: string; selector: string; heading: string }
+  | ({ kind: "html-anchors"; digest: string } & Parameters<typeof reviewedAnchoredHtmlDigest>[1])
   | { kind: "html-apptegy-node"; digest: string; pageId: number; nodeId: string }
   | { kind: "html-ecode360"; digest: string; sections: readonly [string, ...string[]] }
   | { kind: "pdf"; digest: string }
@@ -40,6 +41,8 @@ async function matchesReview(input: Response, review: LocalCalendarEvidence): Pr
     }
     case "html-heading":
       return await reviewedHeadingDigest(input, review.selector, review.heading) === review.digest;
+    case "html-anchors":
+      return await reviewedAnchoredHtmlDigest(input, review) === review.digest;
     case "html-apptegy-node":
       return await sha256(apptegyPageText(await input.text(), review.pageId, review.nodeId)) === review.digest;
     case "html-ecode360":
