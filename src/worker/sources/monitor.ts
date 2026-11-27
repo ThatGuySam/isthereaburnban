@@ -44,9 +44,14 @@ const failures = (head: SourceHead | undefined) => head?.consecutiveFailures ?? 
 
 export async function runSourceMonitor(env: Env, sources: readonly Source[], now: number) {
   const { DB: db } = env;
-  await db.prepare("INSERT OR IGNORE INTO source_monitor VALUES (1, ?)").bind(now).run();
-  const [startedAt, heads, published] = await Promise.all([
-    db.prepare("SELECT started_at FROM source_monitor WHERE singleton = 1").first<number>("started_at"),
+  const watched = sources.filter((source) => isActive(source) && source.mode === "full").map(({ id }) => id);
+  // A source's grace period starts when the monitor first sees it, so a newly deployed source is not overdue before its first slots.
+  await db.prepare(`INSERT OR IGNORE INTO source_first_seen (source_id, first_seen) SELECT value, ? FROM json_each(?)`)
+    .bind(now, JSON.stringify(watched)).run();
+  const [firstSeen, heads, published] = await Promise.all([
+    db.prepare("SELECT source_id AS id, first_seen AS at FROM source_first_seen WHERE source_id IN (SELECT value FROM json_each(?))")
+      .bind(JSON.stringify(watched)).all<{ id: string; at: number }>()
+      .then(({ results }) => new Map(results.map(({ id, at }) => [id, at]))),
     readHeads(db),
     readPublication(db),
   ]);
@@ -60,7 +65,7 @@ export async function runSourceMonitor(env: Env, sources: readonly Source[], now
     const { overdue } = pollingSlots(source, now, clock);
     const pastDue = overdue[1] !== undefined && (
       head?.lastGood ? Date.parse(head.lastGood) < overdue[1]
-        : failures(head) >= 2 || (startedAt !== null && startedAt <= overdue[1])
+        : failures(head) >= 2 || (firstSeen.get(source.id) ?? now) <= overdue[1]
     );
     if (pastDue) issues.set(`overdue/${source.id}`, {
       state: source.state, sourceIds: [source.id], detail: `${source.id} missed two scheduled source checks.`,

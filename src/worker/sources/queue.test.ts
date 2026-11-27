@@ -27,7 +27,7 @@ function sandbox() {
   const sqlite = new Database(":memory:");
   stores.push(sqlite);
   sqlite.exec("PRAGMA foreign_keys = ON;");
-  for (const file of ["0001_init.sql", "0002_notification_ops.sql", "0003_source_refresh.sql", "0004_state_snapshots.sql", "0005_notification_outbox.sql", "0006_pipeline_monitor.sql", "0008_snapshot_chunks.sql"]) {
+  for (const file of ["0001_init.sql", "0002_notification_ops.sql", "0003_source_refresh.sql", "0004_state_snapshots.sql", "0005_notification_outbox.sql", "0006_pipeline_monitor.sql", "0008_snapshot_chunks.sql", "0009_source_first_seen.sql"]) {
     sqlite.exec(readFileSync(new URL(`../../../migrations/${file}`, import.meta.url), "utf8"));
   }
   const keys = new Map();
@@ -661,6 +661,23 @@ test("ops alerts once per overdue or incomplete roster incident and excludes pub
     body: "or missed two scheduled source checks.",
     incident: { sourceIds: ["or"], state: "OR", openedAt: twoMisses, nextStep: expect.stringContaining("last attempt") },
   });
+});
+
+test("a newly added source is not overdue before its own first two slots", async () => {
+  const box = sandbox();
+  box.env.OPS_ALERT_EMAIL = "ops@example.test";
+  const old = source("or", async ({ now }) => ({ rows: [row("none", now.toISOString())] }));
+  await poll(box, old, initial);
+  expect(await runSourceMonitor(box.env, [old], initial + 16 * 60_000)).toBe(false);
+  const added = source("wa", async () => ({}));
+  const deployedAt = initial + 5 * 3_600_000 + 20 * 60_000;
+  await poll(box, old, initial + 5 * 3_600_000);
+  expect(await runSourceMonitor(box.env, [old, added], deployedAt)).toBe(false);
+  expect(await runSourceMonitor(box.env, [old, added], deployedAt + 3_600_000)).toBe(false);
+  expect((await pipelineStatus(box.env, [added], deployedAt + 3_600_000)).issues).toEqual([]);
+  expect(await runSourceMonitor(box.env, [old, added], deployedAt + 2 * 3_600_000)).toBe(true);
+  expect((await pipelineStatus(box.env, [added], deployedAt + 2 * 3_600_000)).issues.map(({ id }) => id))
+    .toContain("overdue/wa");
 });
 
 test("a dead letter remains available until replay is successfully enqueued", async () => {
